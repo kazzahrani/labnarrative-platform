@@ -692,6 +692,13 @@ export default function AdminPage() {
                     type="button"
                     onClick={provisionDomain}
                     disabled={saving || provisioning}
+                    style={{
+                      backgroundColor: "#d7a85a",
+                      borderColor: "#d7a85a",
+                      color: "#101617",
+                      fontWeight: 700,
+                      opacity: saving || provisioning ? 0.65 : 1,
+                    }}
                   >
                     {provisioning ? "Connecting…" : "Connect subdomain"}
                   </button>
