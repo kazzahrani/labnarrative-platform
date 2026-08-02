@@ -30,8 +30,8 @@ function initials(name: string) {
     .join("");
 }
 
-function SiteNav({ site }: { site: LabSite }) {
-  const base = `/sites/${site.slug}`;
+function SiteNav({ site, basePath }: { site: LabSite; basePath?: string }) {
+  const base = basePath ?? `/sites/${site.slug}`;
 
   return (
     <nav className="site-nav" aria-label={`${site.labName} navigation`}>
@@ -162,9 +162,13 @@ function Publications({ site }: { site: LabSite }) {
 export default function SiteShell({
   site,
   section,
+  basePath,
+  previewMode = false,
 }: {
   site: LabSite;
   section: SiteSection;
+  basePath?: string;
+  previewMode?: boolean;
 }) {
   const template = resolveTemplate(site.template);
   const variables = {
@@ -178,13 +182,15 @@ export default function SiteShell({
   return (
     <main className={`site-theme site-template-${template}`} style={variables}>
       <div className="prototype-banner">
-        LabNarrative concept · prepared as an independent design proposal
+        {previewMode
+          ? "Private administrator preview · this draft is not publicly visible"
+          : "LabNarrative concept · prepared as an independent design proposal"}
       </div>
       <header className="site-header">
-        <Link className="wordmark" href={`/sites/${site.slug}`}>
+        <Link className="wordmark" href={basePath ?? `/sites/${site.slug}`}>
           {site.labName}
         </Link>
-        <SiteNav site={site} />
+        <SiteNav site={site} basePath={basePath} />
       </header>
 
       {section === "home" && <Home site={site} />}
