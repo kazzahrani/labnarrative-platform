@@ -160,6 +160,8 @@ export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [email, setEmail] = useState("hello@labnarrative.com");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [notice, setNotice] = useState("");
   const [role, setRole] = useState<string | null>(null);
   const [sites, setSites] = useState<SiteRow[]>([]);
@@ -238,27 +240,57 @@ export default function AdminPage() {
     return () => subscription.unsubscribe();
   }, [loadAdminData]);
 
-  async function requestMagicLink(event: FormEvent) {
+  async function requestOtp(event: FormEvent) {
     event.preventDefault();
     setNotice("");
+    setOtp("");
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/admin`,
       },
     });
 
-    setNotice(
-      error
-        ? error.message
-        : "A secure sign-in email has been sent. Open it in this browser to continue.",
-    );
+    if (error) {
+      setOtpSent(false);
+      setNotice(error.message);
+      return;
+    }
+
+    setOtpSent(true);
+    setNotice("A six-digit verification code has been sent to your email.");
+  }
+
+  async function verifyOtpCode(event: FormEvent) {
+    event.preventDefault();
+    setNotice("");
+
+    const token = otp.replace(/\D/g, "").slice(0, 6);
+
+    if (token.length !== 6) {
+      setNotice("Enter the complete six-digit verification code.");
+      return;
+    }
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token,
+      type: "email",
+    });
+
+    if (error) {
+      setNotice(error.message);
+      return;
+    }
+
+    setNotice("Signed in successfully. Loading the dashboard…");
   }
 
   async function signOut() {
     await supabase.auth.signOut();
+    setOtp("");
+    setOtpSent(false);
     setNotice("Signed out.");
   }
 
@@ -356,14 +388,35 @@ export default function AdminPage() {
           <p className="eyebrow">LabNarrative administration</p>
           <h1>Secure platform access.</h1>
           <p>
-            Sign in using the LabNarrative administrator email. No password is required.
+            Sign in using the LabNarrative administrator email and the six-digit code sent to it.
           </p>
-          <form onSubmit={requestMagicLink}>
+          <form onSubmit={requestOtp}>
             <Field label="Administrator email" value={email} onChange={setEmail} required />
             <button className="admin-primary-button" type="submit">
-              Send secure sign-in email
+              {otpSent ? "Send a new code" : "Send verification code"}
             </button>
           </form>
+          {otpSent && (
+            <form onSubmit={verifyOtpCode}>
+              <label className="admin-field">
+                <span>Six-digit verification code</span>
+                <input
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(event) =>
+                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  required
+                />
+              </label>
+              <button className="admin-primary-button" type="submit">
+                Verify code and sign in
+              </button>
+            </form>
+          )}
           {notice && <p className="admin-notice">{notice}</p>}
           <Link href="/">← Return to platform</Link>
         </section>
