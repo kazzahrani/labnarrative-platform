@@ -1,6 +1,34 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import type { LabSite, SiteSection } from "@/lib/sites";
+import type { LabSite, SiteSection, SiteTemplate } from "@/lib/sites";
+
+function resolveTemplate(value: LabSite["template"]): SiteTemplate {
+  return value === "editorial"
+    || value === "image-led"
+    || value === "institutional"
+    || value === "scientific-minimal"
+    ? value
+    : "scientific-minimal";
+}
+
+function safeImageUrl(value: LabSite["heroImage"]): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("");
+}
 
 function SiteNav({ site }: { site: LabSite }) {
   const base = `/sites/${site.slug}`;
@@ -16,6 +44,8 @@ function SiteNav({ site }: { site: LabSite }) {
 }
 
 function Home({ site }: { site: LabSite }) {
+  const heroImage = safeImageUrl(site.heroImage);
+
   return (
     <>
       <section className="hero">
@@ -30,29 +60,31 @@ function Home({ site }: { site: LabSite }) {
           </div>
         </div>
         <aside className="pi-card">
-          <div className="portrait-mark" aria-hidden="true">
-            {site.piName
-              .split(" ")
-              .map((part) => part[0])
-              .slice(0, 2)
-              .join("")}
+          <div
+            className={`portrait-mark${heroImage ? " has-image" : ""}`}
+            style={heroImage ? { backgroundImage: `url(${JSON.stringify(heroImage).slice(1, -1)})` } : undefined}
+            aria-label={heroImage ? `Portrait or laboratory image for ${site.piName}` : undefined}
+          >
+            {!heroImage && initials(site.piName)}
           </div>
-          <p className="card-label">Principal Investigator</p>
-          <h2>{site.piName}</h2>
-          <p>{site.title}</p>
-          <p>{site.institution}</p>
+          <div className="pi-card-copy">
+            <p className="card-label">Principal Investigator</p>
+            <h2>{site.piName}</h2>
+            <p>{site.title}</p>
+            <p>{site.institution}</p>
+          </div>
         </aside>
       </section>
 
       <section className="section-block">
         <div>
           <p className="eyebrow">Research programme</p>
-          <h2>Three connected lines of investigation.</h2>
+          <h2>{site.projects.length} connected lines of investigation.</h2>
         </div>
         <div className="grid-three">
           {site.projects.map((project, index) => (
-            <article className="content-card" key={project.title}>
-              <span className="card-number">0{index + 1}</span>
+            <article className="content-card" key={`${project.title}-${index}`}>
+              <span className="card-number">{String(index + 1).padStart(2, "0")}</span>
               <h3>{project.title}</h3>
               <p>{project.description}</p>
             </article>
@@ -70,8 +102,8 @@ function Research({ site }: { site: LabSite }) {
       <h1>Questions that organise the laboratory.</h1>
       <div className="stacked-list">
         {site.projects.map((project, index) => (
-          <article key={project.title}>
-            <span>0{index + 1}</span>
+          <article key={`${project.title}-${index}`}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
             <div>
               <h2>{project.title}</h2>
               <p>{project.description}</p>
@@ -89,8 +121,8 @@ function Team({ site }: { site: LabSite }) {
       <p className="eyebrow">People</p>
       <h1>The team behind the research.</h1>
       <div className="grid-three">
-        {site.team.map((member) => (
-          <article className="content-card" key={`${member.name}-${member.role}`}>
+        {site.team.map((member, index) => (
+          <article className="content-card" key={`${member.name}-${member.role}-${index}`}>
             <div className="member-mark">{member.name.slice(0, 1)}</div>
             <h2>{member.name}</h2>
             <p>{member.role}</p>
@@ -107,11 +139,17 @@ function Publications({ site }: { site: LabSite }) {
       <p className="eyebrow">Selected work</p>
       <h1>Publications and research outputs.</h1>
       <div className="publication-list">
-        {site.publications.map((publication) => (
-          <article key={`${publication.title}-${publication.year}`}>
+        {site.publications.map((publication, index) => (
+          <article key={`${publication.title}-${publication.year}-${index}`}>
             <span>{publication.year}</span>
             <div>
-              <h2>{publication.title}</h2>
+              <h2>
+                {publication.href ? (
+                  <a href={publication.href} target="_blank" rel="noreferrer">
+                    {publication.title}
+                  </a>
+                ) : publication.title}
+              </h2>
               <p>{publication.journal}</p>
             </div>
           </article>
@@ -128,6 +166,7 @@ export default function SiteShell({
   site: LabSite;
   section: SiteSection;
 }) {
+  const template = resolveTemplate(site.template);
   const variables = {
     "--site-background": site.theme.background,
     "--site-surface": site.theme.surface,
@@ -137,9 +176,9 @@ export default function SiteShell({
   } as CSSProperties;
 
   return (
-    <main className="site-theme" style={variables}>
+    <main className={`site-theme site-template-${template}`} style={variables}>
       <div className="prototype-banner">
-        Platform prototype · one application, multiple PI records
+        LabNarrative concept · prepared as an independent design proposal
       </div>
       <header className="site-header">
         <Link className="wordmark" href={`/sites/${site.slug}`}>
