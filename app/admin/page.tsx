@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
+type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
 
 type Project = { title: string; description: string };
 type TeamMember = { name: string; role: string };
@@ -39,6 +40,11 @@ type SiteRow = {
   status: SiteStatus;
   content: SiteContent;
   updated_at: string;
+  domain_status: DomainStatus;
+  domain_url: string | null;
+  domain_error: string | null;
+  domain_connected_at: string | null;
+  domain_checked_at: string | null;
 };
 
 type EditorState = {
@@ -102,6 +108,47 @@ function compactContent(content: SiteContent): SiteContent {
       }))
       .filter((item) => item.title || item.journal || item.year),
   };
+}
+
+const domainStatusLabels: Record<DomainStatus, string> = {
+  not_connected: "Not connected",
+  connecting: "Connecting",
+  https_pending: "HTTPS pending",
+  live: "Live",
+  error: "Connection error",
+  legacy: "Legacy site",
+};
+
+const domainStatusStyles: Record<DomainStatus, { background: string; color: string; border: string }> = {
+  not_connected: { background: "#eef1eb", color: "#50615a", border: "#bdc8c2" },
+  connecting: { background: "#e7eef2", color: "#244b5a", border: "#9fb6c0" },
+  https_pending: { background: "#f5ead1", color: "#6a4a0c", border: "#d7a85a" },
+  live: { background: "#dfeee7", color: "#12543f", border: "#6da58e" },
+  error: { background: "#f3dfdf", color: "#812d32", border: "#c77b80" },
+  legacy: { background: "#ece8f1", color: "#5c4b69", border: "#b7a9c2" },
+};
+
+function DomainBadge({ status }: { status: DomainStatus }) {
+  const style = domainStatusStyles[status];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        border: `1px solid ${style.border}`,
+        background: style.background,
+        color: style.color,
+        borderRadius: 999,
+        padding: "0.28rem 0.58rem",
+        fontSize: "0.72rem",
+        fontWeight: 700,
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {domainStatusLabels[status]}
+    </span>
+  );
 }
 
 function Field({
@@ -208,7 +255,7 @@ export default function AdminPage() {
 
     const { data, error } = await supabase
       .from("sites")
-      .select("id,slug,status,content,updated_at")
+      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at")
       .order("slug", { ascending: true });
 
     if (error) {
@@ -328,8 +375,27 @@ export default function AdminPage() {
     }));
   }
 
-  async function saveSite(event: FormEvent) {
-    event.preventDefault();
+  async function refreshSiteRow(id: string): Promise<SiteRow | null> {
+    const { data, error } = await supabase
+      .from("sites")
+      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      setNotice(error.message);
+      return null;
+    }
+
+    const refreshed = data as SiteRow;
+    setSites((current) => {
+      const remaining = current.filter((site) => site.id !== refreshed.id);
+      return [...remaining, refreshed].sort((a, b) => a.slug.localeCompare(b.slug));
+    });
+    return refreshed;
+  }
+
+  async function persistSite(): Promise<SiteRow | null> {
     setSaving(true);
     setNotice("");
 
@@ -339,7 +405,7 @@ export default function AdminPage() {
     if (!slug || !content.piName || !content.labName || !content.headline) {
       setNotice("Please complete the slug, PI name, lab name, and headline.");
       setSaving(false);
-      return;
+      return null;
     }
 
     const payload = { slug, status: editor.status, content: { ...content, slug } };
@@ -353,7 +419,7 @@ export default function AdminPage() {
     if (error) {
       setNotice(error.message);
       setSaving(false);
-      return;
+      return null;
     }
 
     const saved = data as SiteRow;
@@ -364,26 +430,51 @@ export default function AdminPage() {
     setEditor({ id: saved.id, status: saved.status, content: saved.content });
     setNotice(`Saved ${saved.slug}.`);
     setSaving(false);
+    return saved;
   }
 
-  async function provisionDomain() {
-    if (!editor.id) {
+  async function saveSite(event: FormEvent) {
+    event.preventDefault();
+    await persistSite();
+  }
+
+  async function provisionDomain(
+    action: "connect" | "check" = "connect",
+    targetSite?: SiteRow,
+  ) {
+    const site = targetSite ?? selectedSite;
+    if (!site) {
       setNotice("Save the website record before connecting its subdomain.");
       return;
     }
 
-    const slug = cleanSlug(editor.content.slug);
+    const slug = cleanSlug(site.slug || editor.content.slug);
     if (!slug) {
       setDomainNotice("Enter a valid subdomain slug first.");
       return;
     }
 
+    if (site.domain_status === "legacy") {
+      setDomainNotice(`${slug}.labnarrative.com is an existing legacy site and is protected from automatic replacement.`);
+      return;
+    }
+
     setProvisioning(true);
-    setDomainNotice(`Connecting ${slug}.labnarrative.com…`);
-    setDomainUrl("");
+    setDomainNotice(
+      action === "check"
+        ? `Checking HTTPS for ${slug}.labnarrative.com…`
+        : `Connecting ${slug}.labnarrative.com…`,
+    );
+    setDomainUrl(site.domain_url ?? "");
+
+    if (action === "connect") {
+      setSites((current) => current.map((item) =>
+        item.id === site.id ? { ...item, domain_status: "connecting", domain_error: null } : item
+      ));
+    }
 
     const { data, error } = await supabase.functions.invoke("provision-subdomain", {
-      body: { slug },
+      body: { slug, action },
     });
 
     if (error) {
@@ -391,28 +482,49 @@ export default function AdminPage() {
       const context = (error as { context?: Response }).context;
       if (context) {
         try {
-          const body = await context.clone().json() as { error?: string };
+          const body = await context.clone().json() as { error?: string; url?: string };
           if (body.error) message = body.error;
+          if (body.url) setDomainUrl(body.url);
         } catch {
           // Keep the Supabase error message if the response body is not JSON.
         }
       }
       setDomainNotice(message);
+      await refreshSiteRow(site.id);
       setProvisioning(false);
       return;
     }
 
-    const result = (data ?? {}) as { error?: string; url?: string; status?: string };
+    const result = (data ?? {}) as {
+      error?: string;
+      url?: string;
+      domainStatus?: DomainStatus;
+      message?: string;
+    };
+
     if (result.error) {
       setDomainNotice(result.error);
+      await refreshSiteRow(site.id);
       setProvisioning(false);
       return;
     }
 
     const url = result.url ?? `https://${slug}.labnarrative.com`;
     setDomainUrl(url);
-    setDomainNotice(`Connected ${slug}.labnarrative.com. HTTPS may take a few minutes.`);
+    setDomainNotice(
+      result.message
+        ?? (result.domainStatus === "live"
+          ? `${slug}.labnarrative.com is live over HTTPS.`
+          : `Connected ${slug}.labnarrative.com. HTTPS may take a few minutes.`),
+    );
+    await refreshSiteRow(site.id);
     setProvisioning(false);
+  }
+
+  async function saveAndConnect() {
+    const saved = await persistSite();
+    if (!saved) return;
+    await provisionDomain("connect", saved);
   }
 
   async function archiveSite() {
@@ -538,7 +650,10 @@ export default function AdminPage() {
                 type="button"
               >
                 <span>{site.content.labName || site.slug}</span>
-                <small>{site.slug} · {site.status}</small>
+                <small style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                  <span>{site.slug} · {site.status}</span>
+                  <DomainBadge status={site.domain_status} />
+                </small>
               </button>
             ))}
           </div>
@@ -549,6 +664,9 @@ export default function AdminPage() {
             <div>
               <p className="admin-kicker">{editor.id ? "Edit PI website" : "Create PI website"}</p>
               <h1>{content.labName || "New laboratory concept"}</h1>
+              <div style={{ marginTop: "0.75rem" }}>
+                <DomainBadge status={selectedSite?.domain_status ?? "not_connected"} />
+              </div>
             </div>
             {content.slug && (
               <Link target="_blank" href={`/sites/${cleanSlug(content.slug)}`}>
@@ -676,7 +794,17 @@ export default function AdminPage() {
             <div className="admin-save-bar">
               <div>
                 <strong>{editor.id ? `Editing ${content.slug}` : "New site record"}</strong>
-                <span>Changes become public when the status is Concept or Live.</span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+                  <DomainBadge status={selectedSite?.domain_status ?? "not_connected"} />
+                  <span>
+                    {selectedSite?.domain_status === "legacy"
+                      ? "This subdomain still points to the original external website."
+                      : "Changes become public when the status is Concept or Live."}
+                  </span>
+                </span>
+                {selectedSite?.domain_error && (
+                  <span style={{ color: "#f2b7ba", maxWidth: "52rem" }}>{selectedSite.domain_error}</span>
+                )}
               </div>
               <div>
                 {notice && <span className="admin-save-feedback" role="status" aria-live="polite">{notice}</span>}
@@ -686,25 +814,80 @@ export default function AdminPage() {
                     {domainUrl && <> <a href={domainUrl} target="_blank" rel="noreferrer">Open ↗</a></>}
                   </span>
                 )}
-                {editor.id && (
+
+                {(selectedSite?.domain_status === "https_pending" || selectedSite?.domain_status === "connecting") && (
                   <button
                     className="admin-secondary-button"
                     type="button"
-                    onClick={provisionDomain}
+                    onClick={() => void provisionDomain("check")}
                     disabled={saving || provisioning}
                     style={{
                       backgroundColor: "#d7a85a",
                       borderColor: "#d7a85a",
                       color: "#101617",
                       fontWeight: 700,
-                      opacity: saving || provisioning ? 0.65 : 1,
                     }}
                   >
-                    {provisioning ? "Connecting…" : "Connect subdomain"}
+                    {provisioning ? "Checking…" : "Check domain status"}
                   </button>
                 )}
+
+                {selectedSite?.domain_status === "live" && selectedSite.domain_url && (
+                  <a
+                    className="admin-secondary-button"
+                    href={selectedSite.domain_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                  >
+                    Open live website ↗
+                  </a>
+                )}
+
+                {editor.id
+                  && selectedSite?.domain_status !== "live"
+                  && selectedSite?.domain_status !== "https_pending"
+                  && selectedSite?.domain_status !== "connecting"
+                  && selectedSite?.domain_status !== "legacy" && (
+                    <button
+                      className="admin-secondary-button"
+                      type="button"
+                      onClick={() => void saveAndConnect()}
+                      disabled={saving || provisioning}
+                      style={{
+                        backgroundColor: "#d7a85a",
+                        borderColor: "#d7a85a",
+                        color: "#101617",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {saving || provisioning
+                        ? "Saving & connecting…"
+                        : selectedSite?.domain_status === "error"
+                          ? "Save & retry connection"
+                          : "Save & connect website"}
+                    </button>
+                  )}
+
+                {!editor.id && (
+                  <button
+                    className="admin-secondary-button"
+                    type="button"
+                    onClick={() => void saveAndConnect()}
+                    disabled={saving || provisioning}
+                    style={{
+                      backgroundColor: "#d7a85a",
+                      borderColor: "#d7a85a",
+                      color: "#101617",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {saving || provisioning ? "Saving & connecting…" : "Save & connect website"}
+                  </button>
+                )}
+
                 {editor.id && <button className="admin-danger-button" type="button" onClick={archiveSite} disabled={saving || provisioning}>Archive</button>}
-                <button className="admin-primary-button" type="submit" disabled={saving || provisioning}>{saving ? "Saving…" : saveSucceeded ? "Saved ✓" : "Save website"}</button>
+                <button className="admin-primary-button" type="submit" disabled={saving || provisioning}>{saving ? "Saving…" : saveSucceeded ? "Saved ✓" : "Save only"}</button>
               </div>
             </div>
           </form>
