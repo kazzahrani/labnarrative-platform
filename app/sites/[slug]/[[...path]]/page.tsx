@@ -15,7 +15,7 @@ export default async function LabSitePage({
   params: Promise<{ slug: string; path?: string[] }>;
 }) {
   const { slug, path } = await params;
-  const site = getSite(slug);
+  const site = await getSite(slug);
 
   if (!site) {
     notFound();
