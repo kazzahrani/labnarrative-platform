@@ -6,12 +6,22 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
+type SiteTemplate = "scientific-minimal" | "editorial" | "image-led" | "institutional";
 
 type Project = { title: string; description: string };
 type TeamMember = { name: string; role: string };
 type Publication = { title: string; journal: string; year: string; href?: string };
+type Theme = {
+  background: string;
+  surface: string;
+  foreground: string;
+  muted: string;
+  accent: string;
+};
 
 type SiteContent = {
+  template?: SiteTemplate;
+  heroImage?: string;
   slug: string;
   piName: string;
   labName: string;
@@ -24,13 +34,7 @@ type SiteContent = {
   projects: Project[];
   team: TeamMember[];
   publications: Publication[];
-  theme: {
-    background: string;
-    surface: string;
-    foreground: string;
-    muted: string;
-    accent: string;
-  };
+  theme: Theme;
   [key: string]: unknown;
 };
 
@@ -57,27 +61,113 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const emptyContent = (): SiteContent => ({
-  slug: "",
-  piName: "",
-  labName: "",
-  title: "",
-  institution: "",
-  eyebrow: "",
-  headline: "",
-  introduction: "",
-  focusAreas: [""],
-  projects: [{ title: "", description: "" }],
-  team: [{ name: "", role: "Principal Investigator" }],
-  publications: [{ title: "", journal: "", year: "", href: "" }],
-  theme: {
-    background: "#eef1eb",
-    surface: "#f8faf6",
-    foreground: "#153229",
-    muted: "#64726c",
-    accent: "#1b5a45",
+type TemplateDefinition = {
+  id: SiteTemplate;
+  label: string;
+  description: string;
+  bestFor: string;
+  theme: Theme;
+};
+
+const templateOrder: SiteTemplate[] = [
+  "scientific-minimal",
+  "editorial",
+  "image-led",
+  "institutional",
+];
+
+const templateDefinitions: Record<SiteTemplate, TemplateDefinition> = {
+  "scientific-minimal": {
+    id: "scientific-minimal",
+    label: "Scientific Minimal",
+    description: "Quiet, precise, and spacious. The research narrative remains the main visual element.",
+    bestFor: "Molecular biology · genetics · discovery science",
+    theme: {
+      background: "#eef1eb",
+      surface: "#f8faf6",
+      foreground: "#153229",
+      muted: "#64726c",
+      accent: "#1b5a45",
+    },
   },
-});
+  editorial: {
+    id: "editorial",
+    label: "Editorial",
+    description: "A publication-inspired composition with strong typography and an intellectual tone.",
+    bestFor: "Established PIs · broad programmes · thought leadership",
+    theme: {
+      background: "#f3eee5",
+      surface: "#fffaf2",
+      foreground: "#261f1a",
+      muted: "#6d6259",
+      accent: "#9a5839",
+    },
+  },
+  "image-led": {
+    id: "image-led",
+    label: "Image-led",
+    description: "A cinematic, high-contrast design built to make a strong portrait or laboratory image central.",
+    bestFor: "Translational research · technology · visually rich laboratories",
+    theme: {
+      background: "#101716",
+      surface: "#192321",
+      foreground: "#f4f0e8",
+      muted: "#acb8b3",
+      accent: "#d7a85a",
+    },
+  },
+  institutional: {
+    id: "institutional",
+    label: "Institutional",
+    description: "Structured, authoritative, and clear, with a visual language suited to universities and centres.",
+    bestFor: "Clinical groups · consortia · institutes · funded programmes",
+    theme: {
+      background: "#edf1f4",
+      surface: "#ffffff",
+      foreground: "#142534",
+      muted: "#62717d",
+      accent: "#1d4f73",
+    },
+  },
+};
+
+function normalizeTemplate(value: unknown): SiteTemplate {
+  return templateOrder.includes(value as SiteTemplate)
+    ? value as SiteTemplate
+    : "scientific-minimal";
+}
+
+function contentFromTemplate(template: SiteTemplate): SiteContent {
+  const definition = templateDefinitions[template];
+  return {
+    template,
+    heroImage: "",
+    slug: "",
+    piName: "",
+    labName: "",
+    title: "",
+    institution: "",
+    eyebrow: "",
+    headline: "",
+    introduction: "",
+    focusAreas: ["", "", ""],
+    projects: Array.from({ length: 4 }, () => ({ title: "", description: "" })),
+    team: [
+      { name: "", role: "Principal Investigator" },
+      { name: "", role: "Postdoctoral Researcher" },
+      { name: "", role: "Doctoral Researcher" },
+    ],
+    publications: Array.from({ length: 4 }, () => ({
+      title: "",
+      journal: "",
+      year: "",
+      href: "",
+    })),
+    theme: { ...definition.theme },
+  };
+}
+
+const emptyContent = (): SiteContent => contentFromTemplate("scientific-minimal");
 
 function cleanSlug(value: string) {
   return value
@@ -221,6 +311,8 @@ export default function AdminPage() {
   const [provisioning, setProvisioning] = useState(false);
   const [domainNotice, setDomainNotice] = useState("");
   const [domainUrl, setDomainUrl] = useState("");
+  const [factoryOpen, setFactoryOpen] = useState(true);
+  const [duplicateSourceId, setDuplicateSourceId] = useState("");
 
   const selectedSite = useMemo(
     () => sites.find((site) => site.id === editor.id),
@@ -346,9 +438,70 @@ export default function AdminPage() {
 
   function startNewSite() {
     setEditor({ status: "draft", content: emptyContent() });
+    setFactoryOpen(true);
+    setDuplicateSourceId("");
     setNotice("");
     setDomainNotice("");
     setDomainUrl("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function beginFromTemplate(template: SiteTemplate) {
+    setEditor({ status: "draft", content: contentFromTemplate(template) });
+    setFactoryOpen(false);
+    setDuplicateSourceId("");
+    setNotice(`${templateDefinitions[template].label} template selected. Add the PI content, then save when ready.`);
+    setDomainNotice("");
+    setDomainUrl("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function duplicateStructure(source: SiteRow) {
+    const sourceContent = structuredClone(source.content);
+    const template = normalizeTemplate(sourceContent.template);
+    const fresh = contentFromTemplate(template);
+
+    const duplicated: SiteContent = {
+      ...fresh,
+      template,
+      theme: { ...(sourceContent.theme ?? templateDefinitions[template].theme) },
+      focusAreas: Array.from(
+        { length: Math.max(sourceContent.focusAreas?.length ?? 0, 1) },
+        () => "",
+      ),
+      projects: Array.from(
+        { length: Math.max(sourceContent.projects?.length ?? 0, 1) },
+        () => ({ title: "", description: "" }),
+      ),
+      team: (sourceContent.team?.length ? sourceContent.team : fresh.team).map((member, index) => ({
+        name: "",
+        role: index === 0 ? "Principal Investigator" : member.role,
+      })),
+      publications: Array.from(
+        { length: Math.max(sourceContent.publications?.length ?? 0, 1) },
+        () => ({ title: "", journal: "", year: "", href: "" }),
+      ),
+    };
+
+    setEditor({ status: "draft", content: duplicated });
+    setFactoryOpen(false);
+    setDuplicateSourceId("");
+    setNotice(`Created a safe blank structure from ${source.content.labName || source.slug}. Its identity, scientific text, publications, image, slug, and domain were not copied.`);
+    setDomainNotice("");
+    setDomainUrl("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function applyTemplate(template: SiteTemplate) {
+    setNotice("");
+    setEditor((current) => ({
+      ...current,
+      content: {
+        ...current.content,
+        template,
+        theme: { ...templateDefinitions[template].theme },
+      },
+    }));
   }
 
   function openSite(site: SiteRow) {
@@ -357,6 +510,8 @@ export default function AdminPage() {
       status: site.status,
       content: structuredClone(site.content),
     });
+    setFactoryOpen(false);
+    setDuplicateSourceId("");
     setNotice("");
     setDomainNotice("");
     setDomainUrl("");
@@ -662,13 +817,24 @@ export default function AdminPage() {
         <section className="admin-workspace">
           <div className="admin-editor-heading">
             <div>
-              <p className="admin-kicker">{editor.id ? "Edit PI website" : "Create PI website"}</p>
-              <h1>{content.labName || "New laboratory concept"}</h1>
-              <div style={{ marginTop: "0.75rem" }}>
-                <DomainBadge status={selectedSite?.domain_status ?? "not_connected"} />
-              </div>
+              <p className="admin-kicker">
+                {factoryOpen ? "Concept Factory" : editor.id ? "Edit PI website" : "Create PI website"}
+              </p>
+              <h1>
+                {factoryOpen
+                  ? "Start from a design system."
+                  : content.labName || "New laboratory concept"}
+              </h1>
+              {!factoryOpen && (
+                <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.55rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <DomainBadge status={selectedSite?.domain_status ?? "not_connected"} />
+                  <span className="admin-template-label">
+                    {templateDefinitions[normalizeTemplate(content.template)].label}
+                  </span>
+                </div>
+              )}
             </div>
-            {content.slug && (
+            {!factoryOpen && content.slug && (
               <Link target="_blank" href={`/sites/${cleanSlug(content.slug)}`}>
                 Open preview ↗
               </Link>
@@ -677,6 +843,91 @@ export default function AdminPage() {
 
           {notice && <p className="admin-notice">{notice}</p>}
 
+          {factoryOpen && (
+            <section className="admin-factory" aria-label="LabNarrative concept factory">
+              <div className="admin-factory-intro">
+                <div>
+                  <span className="admin-kicker">Create from template</span>
+                  <h2>Choose the visual direction first.</h2>
+                </div>
+                <p>
+                  Every option uses the same secure LabNarrative platform. The template controls the composition,
+                  typography, palette, and starter structure; all PI-specific fields begin empty.
+                </p>
+              </div>
+
+              <div className="admin-template-grid">
+                {templateOrder.map((templateId) => {
+                  const definition = templateDefinitions[templateId];
+                  return (
+                    <button
+                      className="admin-template-card"
+                      key={templateId}
+                      onClick={() => beginFromTemplate(templateId)}
+                      type="button"
+                    >
+                      <div
+                        className={`admin-template-preview template-preview-${templateId}`}
+                        style={{
+                          background: definition.theme.background,
+                          color: definition.theme.foreground,
+                          borderColor: definition.theme.muted,
+                        }}
+                        aria-hidden="true"
+                      >
+                        <span style={{ background: definition.theme.accent }} />
+                        <strong>Research<br />with direction.</strong>
+                        <i style={{ background: definition.theme.surface }} />
+                      </div>
+                      <span className="admin-template-card-copy">
+                        <strong>{definition.label}</strong>
+                        <small>{definition.description}</small>
+                        <em>{definition.bestFor}</em>
+                      </span>
+                      <span className="admin-template-action">Use template →</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="admin-duplicate-panel">
+                <div>
+                  <span className="admin-kicker">Duplicate structure</span>
+                  <h2>Reuse the framework of an existing concept.</h2>
+                  <p>
+                    LabNarrative copies only the design template, color system, section counts, and team-role structure.
+                    PI identity, scientific writing, publications, images, slug, and domain connection remain blank.
+                  </p>
+                </div>
+                <div className="admin-duplicate-controls">
+                  <label className="admin-field">
+                    <span>Source website</span>
+                    <select value={duplicateSourceId} onChange={(event) => setDuplicateSourceId(event.target.value)}>
+                      <option value="">Choose an existing website…</option>
+                      {sites.filter((site) => site.status !== "archived").map((site) => (
+                        <option key={site.id} value={site.id}>
+                          {site.content.labName || site.slug} — {site.slug}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="admin-factory-primary"
+                    type="button"
+                    disabled={!duplicateSourceId}
+                    onClick={() => {
+                      const source = sites.find((site) => site.id === duplicateSourceId);
+                      if (source) duplicateStructure(source);
+                    }}
+                  >
+                    Duplicate safe structure
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {!factoryOpen && (
           <form className="admin-form" onSubmit={saveSite}>
             <section className="admin-panel">
               <div className="admin-panel-heading">
@@ -694,6 +945,25 @@ export default function AdminPage() {
                     <option value="archived">Archived — hidden</option>
                   </select>
                 </label>
+                <label className="admin-field">
+                  <span>Design template</span>
+                  <select
+                    value={normalizeTemplate(content.template)}
+                    onChange={(event) => applyTemplate(event.target.value as SiteTemplate)}
+                  >
+                    {templateOrder.map((templateId) => (
+                      <option key={templateId} value={templateId}>
+                        {templateDefinitions[templateId].label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Field
+                  label="Hero image URL (optional)"
+                  value={content.heroImage ?? ""}
+                  onChange={(value) => updateContent("heroImage", value)}
+                  placeholder="https://…"
+                />
                 <Field label="Principal investigator" value={content.piName} onChange={(value) => updateContent("piName", value)} required />
                 <Field label="Laboratory name" value={content.labName} onChange={(value) => updateContent("labName", value)} required />
                 <Field label="Academic title" value={content.title} onChange={(value) => updateContent("title", value)} />
@@ -891,6 +1161,7 @@ export default function AdminPage() {
               </div>
             </div>
           </form>
+          )}
         </section>
       </div>
     </main>
