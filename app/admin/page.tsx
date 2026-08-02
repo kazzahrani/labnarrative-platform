@@ -6,11 +6,41 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
-type SiteTemplate = "scientific-minimal" | "editorial" | "image-led" | "institutional";
+type SiteTemplate =
+  | "scientific-minimal"
+  | "editorial"
+  | "image-led"
+  | "institutional"
+  | "bourdon-full";
 
 type Project = { title: string; description: string };
 type TeamMember = { name: string; role: string };
 type Publication = { title: string; journal: string; year: string; href?: string };
+type RichResearchProject = {
+  slug: string;
+  title: string;
+  summary: string;
+  question: string;
+  body: string[];
+  methods: string[];
+  papers: string[];
+  figureImage: string;
+  figureCaption: string;
+};
+type RichMember = {
+  name: string;
+  role: string;
+  bio: string;
+  image: string;
+  href: string;
+};
+type Opportunity = {
+  title: string;
+  status: string;
+  description: string;
+  linkLabel: string;
+  href: string;
+};
 type Theme = {
   background: string;
   surface: string;
@@ -20,20 +50,33 @@ type Theme = {
 };
 
 type SiteContent = {
+  schemaVersion?: number;
+  design?: { key: string; version: number; settings?: Record<string, unknown> };
   template?: SiteTemplate;
   heroImage?: string;
   slug: string;
   piName: string;
   labName: string;
+  labSubtitle?: string;
   title: string;
   institution: string;
+  department?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+  profileUrl?: string;
+  pubmedUrl?: string;
   eyebrow: string;
   headline: string;
   introduction: string;
+  overview?: string;
   focusAreas: string[];
   projects: Project[];
+  research?: RichResearchProject[];
   team: TeamMember[];
+  members?: RichMember[];
   publications: Publication[];
+  opportunities?: Opportunity[];
   theme: Theme;
   [key: string]: unknown;
 };
@@ -49,6 +92,10 @@ type SiteRow = {
   domain_error: string | null;
   domain_connected_at: string | null;
   domain_checked_at: string | null;
+  content_schema_version: number;
+  design_key: string;
+  design_version: number;
+  design_settings: Record<string, unknown>;
 };
 
 type EditorState = {
@@ -74,6 +121,7 @@ const templateOrder: SiteTemplate[] = [
   "editorial",
   "image-led",
   "institutional",
+  "bourdon-full",
 ];
 
 const templateDefinitions: Record<SiteTemplate, TemplateDefinition> = {
@@ -129,6 +177,19 @@ const templateDefinitions: Record<SiteTemplate, TemplateDefinition> = {
       accent: "#1d4f73",
     },
   },
+  "bourdon-full": {
+    id: "bourdon-full",
+    label: "Bourdon Full",
+    description: "A complete multi-page laboratory website with detailed projects, people, publications, opportunities, contact information, and scientific figures.",
+    bestFor: "Premium PI concepts · detailed research programmes · full client websites",
+    theme: {
+      background: "#edf0ea",
+      surface: "#f9faf6",
+      foreground: "#153229",
+      muted: "#65736d",
+      accent: "#1d5946",
+    },
+  },
 };
 
 function normalizeTemplate(value: unknown): SiteTemplate {
@@ -137,32 +198,81 @@ function normalizeTemplate(value: unknown): SiteTemplate {
     : "scientific-minimal";
 }
 
+function blankRichProject(index: number): RichResearchProject {
+  return {
+    slug: `research-project-${index + 1}`,
+    title: "",
+    summary: "",
+    question: "",
+    body: [""],
+    methods: [""],
+    papers: [""],
+    figureImage: "",
+    figureCaption: "",
+  };
+}
+
+function blankRichMember(index: number): RichMember {
+  return {
+    name: "",
+    role: index === 0 ? "Principal Investigator" : "Researcher",
+    bio: "",
+    image: "",
+    href: "",
+  };
+}
+
+function blankOpportunity(index: number): Opportunity {
+  const titles = ["Postgraduate study", "Postdoctoral research", "Collaborate with us"];
+  return {
+    title: titles[index] ?? "",
+    status: "",
+    description: "",
+    linkLabel: "",
+    href: "",
+  };
+}
+
 function contentFromTemplate(template: SiteTemplate): SiteContent {
   const definition = templateDefinitions[template];
+  const isFull = template === "bourdon-full";
   return {
+    schemaVersion: isFull ? 2 : 1,
+    design: { key: template, version: 1, settings: {} },
     template,
     heroImage: "",
     slug: "",
     piName: "",
     labName: "",
+    labSubtitle: "",
     title: "",
     institution: "",
+    department: "",
+    address: "",
+    email: "",
+    phone: "",
+    profileUrl: "",
+    pubmedUrl: "",
     eyebrow: "",
     headline: "",
     introduction: "",
+    overview: "",
     focusAreas: ["", "", ""],
     projects: Array.from({ length: 4 }, () => ({ title: "", description: "" })),
+    research: isFull ? Array.from({ length: 4 }, (_, index) => blankRichProject(index)) : undefined,
     team: [
       { name: "", role: "Principal Investigator" },
       { name: "", role: "Postdoctoral Researcher" },
       { name: "", role: "Doctoral Researcher" },
     ],
-    publications: Array.from({ length: 4 }, () => ({
+    members: isFull ? Array.from({ length: 3 }, (_, index) => blankRichMember(index)) : undefined,
+    publications: Array.from({ length: isFull ? 8 : 4 }, () => ({
       title: "",
       journal: "",
       year: "",
       href: "",
     })),
+    opportunities: isFull ? Array.from({ length: 3 }, (_, index) => blankOpportunity(index)) : undefined,
     theme: { ...definition.theme },
   };
 }
@@ -179,15 +289,40 @@ function cleanSlug(value: string) {
 }
 
 function compactContent(content: SiteContent): SiteContent {
+  const template = normalizeTemplate(content.template);
   return {
     ...content,
+    schemaVersion: template === "bourdon-full" ? 2 : 1,
+    design: { key: template, version: 1, settings: content.design?.settings ?? {} },
     slug: cleanSlug(content.slug),
     focusAreas: content.focusAreas.map((item) => item.trim()).filter(Boolean),
     projects: content.projects
       .map((item) => ({ title: item.title.trim(), description: item.description.trim() }))
       .filter((item) => item.title || item.description),
+    research: content.research
+      ?.map((item) => ({
+        slug: cleanSlug(item.slug || item.title),
+        title: item.title.trim(),
+        summary: item.summary.trim(),
+        question: item.question.trim(),
+        body: item.body.map((paragraph) => paragraph.trim()).filter(Boolean),
+        methods: item.methods.map((method) => method.trim()).filter(Boolean),
+        papers: item.papers.map((paper) => paper.trim()).filter(Boolean),
+        figureImage: item.figureImage.trim(),
+        figureCaption: item.figureCaption.trim(),
+      }))
+      .filter((item) => item.title || item.summary),
     team: content.team
       .map((item) => ({ name: item.name.trim(), role: item.role.trim() }))
+      .filter((item) => item.name || item.role),
+    members: content.members
+      ?.map((item) => ({
+        name: item.name.trim(),
+        role: item.role.trim(),
+        bio: item.bio.trim(),
+        image: item.image.trim(),
+        href: item.href.trim(),
+      }))
       .filter((item) => item.name || item.role),
     publications: content.publications
       .map((item) => ({
@@ -197,6 +332,15 @@ function compactContent(content: SiteContent): SiteContent {
         href: item.href?.trim() || undefined,
       }))
       .filter((item) => item.title || item.journal || item.year),
+    opportunities: content.opportunities
+      ?.map((item) => ({
+        title: item.title.trim(),
+        status: item.status.trim(),
+        description: item.description.trim(),
+        linkLabel: item.linkLabel.trim(),
+        href: item.href.trim(),
+      }))
+      .filter((item) => item.title || item.description),
   };
 }
 
@@ -347,7 +491,7 @@ export default function AdminPage() {
 
     const { data, error } = await supabase
       .from("sites")
-      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at")
+      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at,content_schema_version,design_key,design_version,design_settings")
       .order("slug", { ascending: true });
 
     if (error) {
@@ -458,12 +602,14 @@ export default function AdminPage() {
 
   function duplicateStructure(source: SiteRow) {
     const sourceContent = structuredClone(source.content);
-    const template = normalizeTemplate(sourceContent.template);
+    const template = normalizeTemplate(sourceContent.template ?? source.design_key);
     const fresh = contentFromTemplate(template);
 
     const duplicated: SiteContent = {
       ...fresh,
       template,
+      schemaVersion: template === "bourdon-full" ? 2 : 1,
+      design: { key: template, version: 1, settings: structuredClone(source.design_settings ?? {}) },
       theme: { ...(sourceContent.theme ?? templateDefinitions[template].theme) },
       focusAreas: Array.from(
         { length: Math.max(sourceContent.focusAreas?.length ?? 0, 1) },
@@ -473,14 +619,32 @@ export default function AdminPage() {
         { length: Math.max(sourceContent.projects?.length ?? 0, 1) },
         () => ({ title: "", description: "" }),
       ),
+      research: template === "bourdon-full"
+        ? Array.from(
+            { length: Math.max(sourceContent.research?.length ?? 0, 1) },
+            (_, index) => blankRichProject(index),
+          )
+        : undefined,
       team: (sourceContent.team?.length ? sourceContent.team : fresh.team).map((member, index) => ({
         name: "",
         role: index === 0 ? "Principal Investigator" : member.role,
       })),
+      members: template === "bourdon-full"
+        ? (sourceContent.members?.length ? sourceContent.members : fresh.members ?? []).map((member, index) => ({
+            ...blankRichMember(index),
+            role: index === 0 ? "Principal Investigator" : member.role,
+          }))
+        : undefined,
       publications: Array.from(
         { length: Math.max(sourceContent.publications?.length ?? 0, 1) },
         () => ({ title: "", journal: "", year: "", href: "" }),
       ),
+      opportunities: template === "bourdon-full"
+        ? Array.from(
+            { length: Math.max(sourceContent.opportunities?.length ?? 0, 1) },
+            (_, index) => blankOpportunity(index),
+          )
+        : undefined,
     };
 
     setEditor({ status: "draft", content: duplicated });
@@ -494,21 +658,34 @@ export default function AdminPage() {
 
   function applyTemplate(template: SiteTemplate) {
     setNotice("");
-    setEditor((current) => ({
-      ...current,
-      content: {
-        ...current.content,
-        template,
-        theme: { ...templateDefinitions[template].theme },
-      },
-    }));
+    setEditor((current) => {
+      const next = { ...current.content };
+      next.template = template;
+      next.schemaVersion = template === "bourdon-full" ? 2 : 1;
+      next.design = { key: template, version: 1, settings: next.design?.settings ?? {} };
+      next.theme = { ...templateDefinitions[template].theme };
+      if (template === "bourdon-full") {
+        next.research = next.research?.length ? next.research : Array.from({ length: 4 }, (_, index) => blankRichProject(index));
+        next.members = next.members?.length ? next.members : Array.from({ length: 3 }, (_, index) => blankRichMember(index));
+        next.opportunities = next.opportunities?.length ? next.opportunities : Array.from({ length: 3 }, (_, index) => blankOpportunity(index));
+      }
+      return { ...current, content: next };
+    });
   }
 
   function openSite(site: SiteRow) {
+    const loaded = structuredClone(site.content);
+    loaded.template = normalizeTemplate(loaded.template ?? site.design_key);
+    loaded.schemaVersion = loaded.schemaVersion ?? site.content_schema_version ?? 1;
+    loaded.design = loaded.design ?? {
+      key: site.design_key || loaded.template,
+      version: site.design_version ?? 1,
+      settings: site.design_settings ?? {},
+    };
     setEditor({
       id: site.id,
       status: site.status,
-      content: structuredClone(site.content),
+      content: loaded,
     });
     setFactoryOpen(false);
     setDuplicateSourceId("");
@@ -533,7 +710,7 @@ export default function AdminPage() {
   async function refreshSiteRow(id: string): Promise<SiteRow | null> {
     const { data, error } = await supabase
       .from("sites")
-      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at")
+      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at,content_schema_version,design_key,design_version,design_settings")
       .eq("id", id)
       .single();
 
@@ -563,7 +740,16 @@ export default function AdminPage() {
       return null;
     }
 
-    const payload = { slug, status: editor.status, content: { ...content, slug } };
+    const template = normalizeTemplate(content.template);
+    const payload = {
+      slug,
+      status: editor.status,
+      content: { ...content, slug },
+      content_schema_version: template === "bourdon-full" ? 2 : 1,
+      design_key: template,
+      design_version: 1,
+      design_settings: content.design?.settings ?? {},
+    };
 
     const query = editor.id
       ? supabase.from("sites").update(payload).eq("id", editor.id).select().single()
@@ -768,6 +954,7 @@ export default function AdminPage() {
   }
 
   const content = editor.content;
+  const isFullWebsite = normalizeTemplate(content.template) === "bourdon-full";
   const saveSucceeded = notice.startsWith("Saved ");
 
   return (
@@ -968,6 +1155,17 @@ export default function AdminPage() {
                 <Field label="Laboratory name" value={content.labName} onChange={(value) => updateContent("labName", value)} required />
                 <Field label="Academic title" value={content.title} onChange={(value) => updateContent("title", value)} />
                 <Field label="Institution" value={content.institution} onChange={(value) => updateContent("institution", value)} />
+                {isFullWebsite && (
+                  <>
+                    <Field label="Laboratory subtitle" value={content.labSubtitle ?? ""} onChange={(value) => updateContent("labSubtitle", value)} placeholder="Molecular Oncology · University of Dundee" />
+                    <Field label="Department or school" value={content.department ?? ""} onChange={(value) => updateContent("department", value)} />
+                    <Field label="Email" value={content.email ?? ""} onChange={(value) => updateContent("email", value)} />
+                    <Field label="Phone" value={content.phone ?? ""} onChange={(value) => updateContent("phone", value)} />
+                    <Field label="PI profile URL" value={content.profileUrl ?? ""} onChange={(value) => updateContent("profileUrl", value)} placeholder="https://…" />
+                    <Field label="PubMed URL" value={content.pubmedUrl ?? ""} onChange={(value) => updateContent("pubmedUrl", value)} placeholder="https://…" />
+                    <TextArea label="Postal address" value={content.address ?? ""} onChange={(value) => updateContent("address", value)} rows={4} />
+                  </>
+                )}
               </div>
             </section>
 
@@ -981,6 +1179,9 @@ export default function AdminPage() {
                 <div />
                 <TextArea label="Main headline" value={content.headline} onChange={(value) => updateContent("headline", value)} rows={3} />
                 <TextArea label="Introduction" value={content.introduction} onChange={(value) => updateContent("introduction", value)} rows={6} />
+                {isFullWebsite && (
+                  <TextArea label="Detailed laboratory overview" value={content.overview ?? ""} onChange={(value) => updateContent("overview", value)} rows={8} placeholder="A longer explanation of the laboratory programme for the home page." />
+                )}
               </div>
 
               <div className="admin-list-heading"><h3>Focus areas</h3><button type="button" onClick={() => updateContent("focusAreas", [...content.focusAreas, ""])}>+ Add focus area</button></div>
@@ -995,37 +1196,97 @@ export default function AdminPage() {
             </section>
 
             <section className="admin-panel">
-              <div className="admin-panel-heading"><span>03</span><div><h2>Research projects</h2><p>Add, remove, and reorder later as the platform expands.</p></div></div>
-              <div className="admin-list-heading"><h3>{content.projects.length} projects</h3><button type="button" onClick={() => updateContent("projects", [...content.projects, { title: "", description: "" }])}>+ Add project</button></div>
-              <div className="admin-repeat-list">
-                {content.projects.map((project, index) => (
-                  <article key={`project-${index}`}>
-                    <div className="admin-repeat-number">{String(index + 1).padStart(2, "0")}</div>
-                    <div className="admin-repeat-fields">
-                      <Field label="Project title" value={project.title} onChange={(value) => updateContent("projects", content.projects.map((item, itemIndex) => itemIndex === index ? { ...item, title: value } : item))} />
-                      <TextArea label="Description" value={project.description} onChange={(value) => updateContent("projects", content.projects.map((item, itemIndex) => itemIndex === index ? { ...item, description: value } : item))} rows={3} />
-                    </div>
-                    <button className="admin-remove-button" type="button" onClick={() => updateContent("projects", content.projects.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
-                  </article>
-                ))}
-              </div>
+              <div className="admin-panel-heading"><span>03</span><div><h2>Research projects</h2><p>{isFullWebsite ? "Detailed project pages with scientific questions, methods, papers, and figures." : "Add the core research projects for this concept."}</p></div></div>
+              {isFullWebsite ? (
+                <>
+                  <div className="admin-list-heading"><h3>{content.research?.length ?? 0} detailed projects</h3><button type="button" onClick={() => updateContent("research", [...(content.research ?? []), blankRichProject(content.research?.length ?? 0)])}>+ Add detailed project</button></div>
+                  <div className="admin-repeat-list admin-rich-repeat-list">
+                    {(content.research ?? []).map((project, index) => (
+                      <article key={`rich-project-${index}`}>
+                        <div className="admin-repeat-number">{String(index + 1).padStart(2, "0")}</div>
+                        <div className="admin-repeat-fields">
+                          <div className="admin-inline-fields">
+                            <Field label="Project title" value={project.title} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, title: value } : item))} />
+                            <Field label="Project slug" value={project.slug} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, slug: cleanSlug(value) } : item))} placeholder="p53-isoform-network" />
+                          </div>
+                          <TextArea label="Project summary" value={project.summary} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, summary: value } : item))} rows={4} />
+                          <TextArea label="Central research question" value={project.question} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, question: value } : item))} rows={3} />
+                          <TextArea label="Project narrative — separate paragraphs with a blank line" value={project.body.join("\n\n")} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, body: value.split(/\n\s*\n/).map((part) => part.trim()) } : item))} rows={8} />
+                          <div className="admin-inline-fields">
+                            <TextArea label="Methods — one per line" value={project.methods.join("\n")} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, methods: value.split("\n") } : item))} rows={6} />
+                            <TextArea label="Research landmarks — one per line" value={project.papers.join("\n")} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, papers: value.split("\n") } : item))} rows={6} />
+                          </div>
+                          <div className="admin-inline-fields">
+                            <Field label="Scientific figure or image URL" value={project.figureImage} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, figureImage: value } : item))} placeholder="https://… or data:image/…" />
+                            <Field label="Figure caption" value={project.figureCaption} onChange={(value) => updateContent("research", (content.research ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, figureCaption: value } : item))} />
+                          </div>
+                        </div>
+                        <button className="admin-remove-button" type="button" onClick={() => updateContent("research", (content.research ?? []).filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="admin-list-heading"><h3>{content.projects.length} projects</h3><button type="button" onClick={() => updateContent("projects", [...content.projects, { title: "", description: "" }])}>+ Add project</button></div>
+                  <div className="admin-repeat-list">
+                    {content.projects.map((project, index) => (
+                      <article key={`project-${index}`}>
+                        <div className="admin-repeat-number">{String(index + 1).padStart(2, "0")}</div>
+                        <div className="admin-repeat-fields">
+                          <Field label="Project title" value={project.title} onChange={(value) => updateContent("projects", content.projects.map((item, itemIndex) => itemIndex === index ? { ...item, title: value } : item))} />
+                          <TextArea label="Description" value={project.description} onChange={(value) => updateContent("projects", content.projects.map((item, itemIndex) => itemIndex === index ? { ...item, description: value } : item))} rows={3} />
+                        </div>
+                        <button className="admin-remove-button" type="button" onClick={() => updateContent("projects", content.projects.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
             </section>
 
             <section className="admin-panel">
-              <div className="admin-panel-heading"><span>04</span><div><h2>Team</h2><p>The principal investigator should remain first.</p></div></div>
-              <div className="admin-list-heading"><h3>{content.team.length} members</h3><button type="button" onClick={() => updateContent("team", [...content.team, { name: "", role: "" }])}>+ Add member</button></div>
-              <div className="admin-repeat-list compact">
-                {content.team.map((member, index) => (
-                  <article key={`member-${index}`}>
-                    <div className="admin-repeat-number">{String(index + 1).padStart(2, "0")}</div>
-                    <div className="admin-inline-fields">
-                      <Field label="Name" value={member.name} onChange={(value) => updateContent("team", content.team.map((item, itemIndex) => itemIndex === index ? { ...item, name: value } : item))} />
-                      <Field label="Role" value={member.role} onChange={(value) => updateContent("team", content.team.map((item, itemIndex) => itemIndex === index ? { ...item, role: value } : item))} />
-                    </div>
-                    <button className="admin-remove-button" type="button" onClick={() => updateContent("team", content.team.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
-                  </article>
-                ))}
-              </div>
+              <div className="admin-panel-heading"><span>04</span><div><h2>Team</h2><p>{isFullWebsite ? "Detailed profiles with photographs, biographies, and external links." : "The principal investigator should remain first."}</p></div></div>
+              {isFullWebsite ? (
+                <>
+                  <div className="admin-list-heading"><h3>{content.members?.length ?? 0} detailed profiles</h3><button type="button" onClick={() => updateContent("members", [...(content.members ?? []), blankRichMember(content.members?.length ?? 0)])}>+ Add profile</button></div>
+                  <div className="admin-repeat-list admin-rich-repeat-list">
+                    {(content.members ?? []).map((member, index) => (
+                      <article key={`rich-member-${index}`}>
+                        <div className="admin-repeat-number">{String(index + 1).padStart(2, "0")}</div>
+                        <div className="admin-repeat-fields">
+                          <div className="admin-inline-fields">
+                            <Field label="Name" value={member.name} onChange={(value) => updateContent("members", (content.members ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, name: value } : item))} />
+                            <Field label="Role" value={member.role} onChange={(value) => updateContent("members", (content.members ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, role: value } : item))} />
+                          </div>
+                          <TextArea label="Biography" value={member.bio} onChange={(value) => updateContent("members", (content.members ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, bio: value } : item))} rows={5} />
+                          <div className="admin-inline-fields">
+                            <Field label="Photograph URL" value={member.image} onChange={(value) => updateContent("members", (content.members ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, image: value } : item))} placeholder="https://… or data:image/…" />
+                            <Field label="Profile URL" value={member.href} onChange={(value) => updateContent("members", (content.members ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, href: value } : item))} placeholder="https://…" />
+                          </div>
+                        </div>
+                        <button className="admin-remove-button" type="button" onClick={() => updateContent("members", (content.members ?? []).filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="admin-list-heading"><h3>{content.team.length} members</h3><button type="button" onClick={() => updateContent("team", [...content.team, { name: "", role: "" }])}>+ Add member</button></div>
+                  <div className="admin-repeat-list compact">
+                    {content.team.map((member, index) => (
+                      <article key={`member-${index}`}>
+                        <div className="admin-repeat-number">{String(index + 1).padStart(2, "0")}</div>
+                        <div className="admin-inline-fields">
+                          <Field label="Name" value={member.name} onChange={(value) => updateContent("team", content.team.map((item, itemIndex) => itemIndex === index ? { ...item, name: value } : item))} />
+                          <Field label="Role" value={member.role} onChange={(value) => updateContent("team", content.team.map((item, itemIndex) => itemIndex === index ? { ...item, role: value } : item))} />
+                        </div>
+                        <button className="admin-remove-button" type="button" onClick={() => updateContent("team", content.team.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
             </section>
 
             <section className="admin-panel">
@@ -1049,8 +1310,34 @@ export default function AdminPage() {
               </div>
             </section>
 
+            {isFullWebsite && (
+              <section className="admin-panel">
+                <div className="admin-panel-heading"><span>06</span><div><h2>Opportunities</h2><p>Postgraduate study, postdoctoral routes, collaborations, and other calls to action.</p></div></div>
+                <div className="admin-list-heading"><h3>{content.opportunities?.length ?? 0} opportunity cards</h3><button type="button" onClick={() => updateContent("opportunities", [...(content.opportunities ?? []), blankOpportunity(content.opportunities?.length ?? 0)])}>+ Add opportunity</button></div>
+                <div className="admin-repeat-list admin-rich-repeat-list">
+                  {(content.opportunities ?? []).map((opportunity, index) => (
+                    <article key={`opportunity-${index}`}>
+                      <div className="admin-repeat-number">{String(index + 1).padStart(2, "0")}</div>
+                      <div className="admin-repeat-fields">
+                        <div className="admin-inline-fields">
+                          <Field label="Title" value={opportunity.title} onChange={(value) => updateContent("opportunities", (content.opportunities ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, title: value } : item))} />
+                          <Field label="Status label" value={opportunity.status} onChange={(value) => updateContent("opportunities", (content.opportunities ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, status: value } : item))} placeholder="Enquiries welcome" />
+                        </div>
+                        <TextArea label="Description" value={opportunity.description} onChange={(value) => updateContent("opportunities", (content.opportunities ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, description: value } : item))} rows={5} />
+                        <div className="admin-inline-fields">
+                          <Field label="Link label" value={opportunity.linkLabel} onChange={(value) => updateContent("opportunities", (content.opportunities ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, linkLabel: value } : item))} placeholder="Explore research degrees" />
+                          <Field label="Link URL" value={opportunity.href} onChange={(value) => updateContent("opportunities", (content.opportunities ?? []).map((item, itemIndex) => itemIndex === index ? { ...item, href: value } : item))} placeholder="https://… or mailto:…" />
+                        </div>
+                      </div>
+                      <button className="admin-remove-button" type="button" onClick={() => updateContent("opportunities", (content.opportunities ?? []).filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section className="admin-panel">
-              <div className="admin-panel-heading"><span>06</span><div><h2>Visual theme</h2><p>Control the core color system for this concept.</p></div></div>
+              <div className="admin-panel-heading"><span>{isFullWebsite ? "07" : "06"}</span><div><h2>Visual theme</h2><p>Control the core color system for this concept.</p></div></div>
               <div className="admin-color-grid">
                 {Object.entries(content.theme).map(([key, value]) => (
                   <label key={key} className="admin-color-field">
