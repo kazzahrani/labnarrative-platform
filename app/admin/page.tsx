@@ -171,6 +171,9 @@ export default function AdminPage() {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
+  const [domainNotice, setDomainNotice] = useState("");
+  const [domainUrl, setDomainUrl] = useState("");
 
   const selectedSite = useMemo(
     () => sites.find((site) => site.id === editor.id),
@@ -297,6 +300,8 @@ export default function AdminPage() {
   function startNewSite() {
     setEditor({ status: "draft", content: emptyContent() });
     setNotice("");
+    setDomainNotice("");
+    setDomainUrl("");
   }
 
   function openSite(site: SiteRow) {
@@ -306,11 +311,17 @@ export default function AdminPage() {
       content: structuredClone(site.content),
     });
     setNotice("");
+    setDomainNotice("");
+    setDomainUrl("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function updateContent<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
     setNotice("");
+    if (key === "slug") {
+      setDomainNotice("");
+      setDomainUrl("");
+    }
     setEditor((current) => ({
       ...current,
       content: { ...current.content, [key]: value },
@@ -353,6 +364,55 @@ export default function AdminPage() {
     setEditor({ id: saved.id, status: saved.status, content: saved.content });
     setNotice(`Saved ${saved.slug}.`);
     setSaving(false);
+  }
+
+  async function provisionDomain() {
+    if (!editor.id) {
+      setNotice("Save the website record before connecting its subdomain.");
+      return;
+    }
+
+    const slug = cleanSlug(editor.content.slug);
+    if (!slug) {
+      setDomainNotice("Enter a valid subdomain slug first.");
+      return;
+    }
+
+    setProvisioning(true);
+    setDomainNotice(`Connecting ${slug}.labnarrative.com…`);
+    setDomainUrl("");
+
+    const { data, error } = await supabase.functions.invoke("provision-subdomain", {
+      body: { slug },
+    });
+
+    if (error) {
+      let message = error.message;
+      const context = (error as { context?: Response }).context;
+      if (context) {
+        try {
+          const body = await context.clone().json() as { error?: string };
+          if (body.error) message = body.error;
+        } catch {
+          // Keep the Supabase error message if the response body is not JSON.
+        }
+      }
+      setDomainNotice(message);
+      setProvisioning(false);
+      return;
+    }
+
+    const result = (data ?? {}) as { error?: string; url?: string; status?: string };
+    if (result.error) {
+      setDomainNotice(result.error);
+      setProvisioning(false);
+      return;
+    }
+
+    const url = result.url ?? `https://${slug}.labnarrative.com`;
+    setDomainUrl(url);
+    setDomainNotice(`Connected ${slug}.labnarrative.com. HTTPS may take a few minutes.`);
+    setProvisioning(false);
   }
 
   async function archiveSite() {
@@ -620,8 +680,24 @@ export default function AdminPage() {
               </div>
               <div>
                 {notice && <span className="admin-save-feedback" role="status" aria-live="polite">{notice}</span>}
-                {editor.id && <button className="admin-danger-button" type="button" onClick={archiveSite} disabled={saving}>Archive</button>}
-                <button className="admin-primary-button" type="submit" disabled={saving}>{saving ? "Saving…" : saveSucceeded ? "Saved ✓" : "Save website"}</button>
+                {domainNotice && (
+                  <span className="admin-save-feedback" role="status" aria-live="polite">
+                    {domainNotice}
+                    {domainUrl && <> <a href={domainUrl} target="_blank" rel="noreferrer">Open ↗</a></>}
+                  </span>
+                )}
+                {editor.id && (
+                  <button
+                    className="admin-secondary-button"
+                    type="button"
+                    onClick={provisionDomain}
+                    disabled={saving || provisioning}
+                  >
+                    {provisioning ? "Connecting…" : "Connect subdomain"}
+                  </button>
+                )}
+                {editor.id && <button className="admin-danger-button" type="button" onClick={archiveSite} disabled={saving || provisioning}>Archive</button>}
+                <button className="admin-primary-button" type="submit" disabled={saving || provisioning}>{saving ? "Saving…" : saveSucceeded ? "Saved ✓" : "Save website"}</button>
               </div>
             </div>
           </form>
