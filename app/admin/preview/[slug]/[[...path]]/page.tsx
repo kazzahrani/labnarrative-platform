@@ -5,28 +5,22 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import SiteShell from "@/components/SiteShell";
-import type { LabSite, SiteSection } from "@/lib/sites";
-
-const allowedSections = new Set<SiteSection>([
-  "home",
-  "research",
-  "team",
-  "publications",
-]);
+import { resolveSiteRoute, type LabSite } from "@/lib/sites";
 
 type SiteRow = {
   slug: string;
   status: "draft" | "concept" | "live" | "archived";
   content: LabSite;
+  content_schema_version?: number;
+  design_key?: string;
+  design_version?: number;
+  design_settings?: Record<string, unknown>;
 };
 
 export default function AdminSitePreviewPage() {
   const params = useParams<{ slug: string; path?: string[] }>();
   const slug = String(params.slug ?? "").toLowerCase();
-  const requestedSection = Array.isArray(params.path) ? params.path[0] : undefined;
-  const section = allowedSections.has(requestedSection as SiteSection)
-    ? (requestedSection as SiteSection)
-    : "home";
+  const path = Array.isArray(params.path) ? params.path : undefined;
 
   const supabase = useMemo(
     () => createClient(
@@ -59,9 +53,9 @@ export default function AdminSitePreviewPage() {
 
       const { data, error: queryError } = await supabase
         .from("sites")
-        .select("slug,status,content")
+        .select("slug,status,content,content_schema_version,design_key,design_version,design_settings")
         .eq("slug", slug)
-        .maybeSingle<SiteRow>();
+        .maybeSingle();
 
       if (!active) return;
 
@@ -70,8 +64,18 @@ export default function AdminSitePreviewPage() {
       } else if (!data) {
         setError("This website record could not be found, or your account is not authorised to preview it.");
       } else {
-        setSite(data.content);
-        setStatus(data.status);
+        const row = data as SiteRow;
+        setSite({
+          ...row.content,
+          slug: row.content.slug || row.slug,
+          schemaVersion: row.content.schemaVersion ?? row.content_schema_version ?? 1,
+          design: row.content.design ?? {
+            key: row.design_key || row.content.template || "scientific-minimal",
+            version: row.design_version ?? 1,
+            settings: row.design_settings ?? {},
+          },
+        });
+        setStatus(row.status);
       }
 
       setLoading(false);
@@ -136,7 +140,7 @@ export default function AdminSitePreviewPage() {
       </div>
       <SiteShell
         site={site}
-        section={section}
+        route={resolveSiteRoute(path)}
         basePath={`/admin/preview/${site.slug}`}
         previewMode
       />
