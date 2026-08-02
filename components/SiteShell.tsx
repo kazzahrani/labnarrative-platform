@@ -1,18 +1,28 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import type { LabSite, SiteSection, SiteTemplate } from "@/lib/sites";
+import BourdonDesign from "@/components/designs/BourdonDesign";
+import {
+  resolveDesignKey,
+  type LabSite,
+  type SiteRoute,
+  type SiteTemplate,
+} from "@/lib/sites";
 
 function resolveTemplate(value: LabSite["template"]): SiteTemplate {
   return value === "editorial"
     || value === "image-led"
     || value === "institutional"
     || value === "scientific-minimal"
+    || value === "bourdon-full"
     ? value
     : "scientific-minimal";
 }
 
 function safeImageUrl(value: LabSite["heroImage"]): string | undefined {
   if (!value) return undefined;
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value)) {
+    return value;
+  }
   try {
     const url = new URL(value);
     return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
@@ -30,15 +40,13 @@ function initials(name: string) {
     .join("");
 }
 
-function SiteNav({ site, basePath }: { site: LabSite; basePath?: string }) {
-  const base = basePath ?? `/sites/${site.slug}`;
-
+function SiteNav({ site, basePath }: { site: LabSite; basePath: string }) {
   return (
     <nav className="site-nav" aria-label={`${site.labName} navigation`}>
-      <Link href={base}>Home</Link>
-      <Link href={`${base}/research`}>Research</Link>
-      <Link href={`${base}/team`}>Team</Link>
-      <Link href={`${base}/publications`}>Publications</Link>
+      <Link href={basePath}>Home</Link>
+      <Link href={`${basePath}/research`}>Research</Link>
+      <Link href={`${basePath}/team`}>Team</Link>
+      <Link href={`${basePath}/publications`}>Publications</Link>
     </nav>
   );
 }
@@ -60,12 +68,11 @@ function Home({ site }: { site: LabSite }) {
           </div>
         </div>
         <aside className="pi-card">
-          <div
-            className={`portrait-mark${heroImage ? " has-image" : ""}`}
-            style={heroImage ? { backgroundImage: `url(${JSON.stringify(heroImage).slice(1, -1)})` } : undefined}
-            aria-label={heroImage ? `Portrait or laboratory image for ${site.piName}` : undefined}
-          >
-            {!heroImage && initials(site.piName)}
+          <div className={`portrait-mark${heroImage ? " has-image" : ""}`}>
+            {heroImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={heroImage} alt={`${site.piName} or ${site.labName}`} />
+            ) : initials(site.piName)}
           </div>
           <div className="pi-card-copy">
             <p className="card-label">Principal Investigator</p>
@@ -161,15 +168,29 @@ function Publications({ site }: { site: LabSite }) {
 
 export default function SiteShell({
   site,
-  section,
+  route,
   basePath,
   previewMode = false,
 }: {
   site: LabSite;
-  section: SiteSection;
+  route: SiteRoute;
   basePath?: string;
   previewMode?: boolean;
 }) {
+  const resolvedBasePath = basePath ?? `/sites/${site.slug}`;
+  const designKey = resolveDesignKey(site);
+
+  if (designKey === "bourdon-full") {
+    return (
+      <BourdonDesign
+        site={site}
+        route={route}
+        basePath={resolvedBasePath}
+        previewMode={previewMode}
+      />
+    );
+  }
+
   const template = resolveTemplate(site.template);
   const variables = {
     "--site-background": site.theme.background,
@@ -187,16 +208,17 @@ export default function SiteShell({
           : "LabNarrative concept · prepared as an independent design proposal"}
       </div>
       <header className="site-header">
-        <Link className="wordmark" href={basePath ?? `/sites/${site.slug}`}>
+        <Link className="wordmark" href={resolvedBasePath}>
           {site.labName}
         </Link>
-        <SiteNav site={site} basePath={basePath} />
+        <SiteNav site={site} basePath={resolvedBasePath} />
       </header>
 
-      {section === "home" && <Home site={site} />}
-      {section === "research" && <Research site={site} />}
-      {section === "team" && <Team site={site} />}
-      {section === "publications" && <Publications site={site} />}
+      {route.section === "home" && <Home site={site} />}
+      {route.section === "research" && <Research site={site} />}
+      {route.section === "team" && <Team site={site} />}
+      {route.section === "publications" && <Publications site={site} />}
+      {route.section === "opportunities" && <Home site={site} />}
 
       <footer className="site-footer">
         <span>{site.labName}</span>
