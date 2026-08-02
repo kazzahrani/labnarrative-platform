@@ -835,7 +835,7 @@ export default function AdminPage() {
               )}
             </div>
             {!factoryOpen && content.slug && (
-              <Link target="_blank" href={`/sites/${cleanSlug(content.slug)}`}>
+              <Link target="_blank" href={`/admin/preview/${cleanSlug(content.slug)}`}>
                 Open preview ↗
               </Link>
             )}
