@@ -310,6 +310,7 @@ export default function AdminPage() {
   }
 
   function updateContent<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
+    setNotice("");
     setEditor((current) => ({
       ...current,
       content: { ...current.content, [key]: value },
@@ -440,6 +441,7 @@ export default function AdminPage() {
   }
 
   const content = editor.content;
+  const saveSucceeded = notice.startsWith("Saved ");
 
   return (
     <main className="admin-shell">
@@ -507,7 +509,7 @@ export default function AdminPage() {
                 <Field label="Subdomain slug" value={content.slug} onChange={(value) => updateContent("slug", cleanSlug(value))} placeholder="wylie" required />
                 <label className="admin-field">
                   <span>Website status</span>
-                  <select value={editor.status} onChange={(event) => setEditor((current) => ({ ...current, status: event.target.value as SiteStatus }))}>
+                  <select value={editor.status} onChange={(event) => { setNotice(""); setEditor((current) => ({ ...current, status: event.target.value as SiteStatus })); }}>
                     <option value="draft">Draft — administrator only</option>
                     <option value="concept">Concept — publicly shareable</option>
                     <option value="live">Live — approved client website</option>
@@ -617,8 +619,9 @@ export default function AdminPage() {
                 <span>Changes become public when the status is Concept or Live.</span>
               </div>
               <div>
+                {notice && <span className="admin-save-feedback" role="status" aria-live="polite">{notice}</span>}
                 {editor.id && <button className="admin-danger-button" type="button" onClick={archiveSite} disabled={saving}>Archive</button>}
-                <button className="admin-primary-button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save website"}</button>
+                <button className="admin-primary-button" type="submit" disabled={saving}>{saving ? "Saving…" : saveSucceeded ? "Saved ✓" : "Save website"}</button>
               </div>
             </div>
           </form>
