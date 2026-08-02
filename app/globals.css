@@ -925,3 +925,496 @@ a {
     flex: 1;
   }
 }
+
+/* LabNarrative v0.5 — Concept Factory */
+.admin-template-label {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #b9c5be;
+  border-radius: 999px;
+  padding: 0.28rem 0.58rem;
+  color: #50615a;
+  background: #f8faf6;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.admin-factory {
+  display: grid;
+  gap: 28px;
+}
+
+.admin-factory-intro,
+.admin-duplicate-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(340px, 1.2fr);
+  gap: clamp(28px, 6vw, 88px);
+  align-items: end;
+  padding: clamp(26px, 4vw, 46px);
+  border: 1px solid #cbd4ce;
+  background: #f8faf6;
+}
+
+.admin-factory-intro h2,
+.admin-duplicate-panel h2 {
+  margin: 8px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.admin-factory-intro > p,
+.admin-duplicate-panel p {
+  margin: 0;
+  color: #64726c;
+  line-height: 1.7;
+}
+
+.admin-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.admin-template-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-rows: 1fr auto;
+  gap: 22px;
+  padding: 18px;
+  text-align: left;
+  border: 1px solid #cbd4ce;
+  background: #f8faf6;
+  color: #153229;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.admin-template-card:hover {
+  transform: translateY(-3px);
+  border-color: #829b8e;
+  box-shadow: 0 20px 46px rgba(21, 50, 41, 0.1);
+}
+
+.admin-template-preview {
+  position: relative;
+  min-height: 205px;
+  overflow: hidden;
+  border: 1px solid;
+  padding: 22px 18px;
+}
+
+.admin-template-preview > span {
+  display: block;
+  width: 38px;
+  height: 5px;
+  margin-bottom: 28px;
+}
+
+.admin-template-preview strong {
+  position: relative;
+  z-index: 2;
+  display: block;
+  max-width: 150px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 25px;
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+}
+
+.admin-template-preview i {
+  position: absolute;
+  right: 13px;
+  bottom: 13px;
+  width: 41%;
+  aspect-ratio: 0.88;
+  border: 1px solid currentColor;
+  opacity: 0.9;
+}
+
+.template-preview-editorial::after {
+  content: "01  /  04";
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.template-preview-image-led strong {
+  color: #fff;
+}
+
+.template-preview-image-led i {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  aspect-ratio: auto;
+  border: 0;
+  opacity: 0.45;
+}
+
+.template-preview-institutional {
+  display: grid;
+  grid-template-columns: 1fr 0.7fr;
+}
+
+.template-preview-institutional > span {
+  grid-column: 1 / -1;
+}
+
+.template-preview-institutional i {
+  position: static;
+  width: 100%;
+  align-self: end;
+}
+
+.admin-template-card-copy {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding-top: 5px;
+}
+
+.admin-template-card-copy > strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 27px;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
+.admin-template-card-copy small {
+  color: #64726c;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-template-card-copy em {
+  margin-top: 5px;
+  color: #4e6259;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.admin-template-action {
+  grid-column: 1 / -1;
+  padding-top: 14px;
+  border-top: 1px solid #d4ddd7;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.admin-duplicate-panel {
+  align-items: center;
+  background: #eef1eb;
+}
+
+.admin-duplicate-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.admin-factory-primary {
+  min-height: 45px;
+  border: 1px solid #153229;
+  background: #153229;
+  color: #f8faf6;
+  padding: 11px 18px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-factory-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Template system */
+.portrait-mark.has-image {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: transparent;
+}
+
+.pi-card-copy > p:last-child,
+.pi-card-copy > p:nth-last-child(2) {
+  color: var(--site-muted);
+  line-height: 1.5;
+}
+
+.site-template-editorial .prototype-banner {
+  background: transparent;
+  color: var(--site-muted);
+  border-bottom: 1px solid color-mix(in srgb, var(--site-foreground) 22%, transparent);
+}
+
+.site-template-editorial .site-header {
+  align-items: baseline;
+  padding-top: 34px;
+  padding-bottom: 18px;
+}
+
+.site-template-editorial .wordmark {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  font-weight: 400;
+}
+
+.site-template-editorial .hero {
+  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.45fr);
+  align-items: start;
+  min-height: 760px;
+  padding-top: clamp(80px, 12vw, 160px);
+}
+
+.site-template-editorial .hero h1,
+.site-template-editorial .inner-page > h1 {
+  max-width: 1060px;
+  font-size: clamp(4rem, 9.5vw, 9rem);
+  line-height: 0.87;
+}
+
+.site-template-editorial .pi-card,
+.site-template-editorial .content-card {
+  background: transparent;
+  border-width: 1px 0 0;
+}
+
+.site-template-editorial .pi-card {
+  padding: 24px 0 0;
+}
+
+.site-template-editorial .portrait-mark {
+  aspect-ratio: 0.82;
+  margin-bottom: 24px;
+}
+
+.site-template-editorial .section-block {
+  border-top-width: 2px;
+}
+
+.site-template-editorial .content-card {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.site-template-editorial .focus-list span {
+  border-radius: 0;
+  border-width: 0 0 1px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.site-template-image-led .prototype-banner {
+  background: var(--site-accent);
+  color: #101716;
+}
+
+.site-template-image-led .site-header {
+  position: relative;
+  z-index: 5;
+  border-bottom-color: color-mix(in srgb, var(--site-foreground) 25%, transparent);
+}
+
+.site-template-image-led .hero {
+  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+  gap: 0;
+  align-items: stretch;
+  min-height: 820px;
+  padding: 0;
+}
+
+.site-template-image-led .hero-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(56px, 8vw, 120px) clamp(28px, 6vw, 96px);
+}
+
+.site-template-image-led .hero h1,
+.site-template-image-led .inner-page > h1 {
+  font-size: clamp(3.6rem, 7.5vw, 7.4rem);
+  line-height: 0.91;
+}
+
+.site-template-image-led .pi-card {
+  position: relative;
+  min-height: 720px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--site-surface);
+}
+
+.site-template-image-led .portrait-mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  aspect-ratio: auto;
+  font-size: clamp(7rem, 15vw, 15rem);
+}
+
+.site-template-image-led .portrait-mark.has-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(5, 12, 10, 0.9), transparent 58%);
+}
+
+.site-template-image-led .pi-card-copy {
+  position: relative;
+  z-index: 2;
+  padding: clamp(28px, 5vw, 58px);
+  color: #fff;
+  background: linear-gradient(to top, rgba(5, 12, 10, 0.92), rgba(5, 12, 10, 0));
+}
+
+.site-template-image-led .pi-card-copy p {
+  color: rgba(255,255,255,0.72);
+}
+
+.site-template-image-led .content-card {
+  background: color-mix(in srgb, var(--site-surface) 88%, transparent);
+}
+
+.site-template-image-led .focus-list span {
+  border-color: color-mix(in srgb, var(--site-foreground) 38%, transparent);
+}
+
+.site-template-institutional .prototype-banner {
+  text-align: left;
+  padding-left: clamp(24px, 6vw, 96px);
+}
+
+.site-template-institutional .site-header {
+  border-bottom: 2px solid var(--site-accent);
+}
+
+.site-template-institutional .wordmark,
+.site-template-institutional .hero h1,
+.site-template-institutional .inner-page > h1,
+.site-template-institutional .section-block h2,
+.site-template-institutional .pi-card h2,
+.site-template-institutional .content-card h2,
+.site-template-institutional .content-card h3,
+.site-template-institutional .stacked-list h2,
+.site-template-institutional .publication-list h2 {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.site-template-institutional .hero {
+  align-items: stretch;
+  gap: 24px;
+  min-height: 680px;
+}
+
+.site-template-institutional .hero-copy,
+.site-template-institutional .pi-card {
+  border: 1px solid color-mix(in srgb, var(--site-foreground) 16%, transparent);
+}
+
+.site-template-institutional .hero-copy {
+  padding: clamp(32px, 5vw, 70px);
+  background: var(--site-surface);
+}
+
+.site-template-institutional .hero h1,
+.site-template-institutional .inner-page > h1 {
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 0.93;
+}
+
+.site-template-institutional .pi-card {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: 0;
+}
+
+.site-template-institutional .portrait-mark {
+  margin: 0;
+  aspect-ratio: auto;
+  min-height: 380px;
+}
+
+.site-template-institutional .pi-card-copy {
+  padding: 28px;
+  border-top: 6px solid var(--site-accent);
+}
+
+.site-template-institutional .focus-list span,
+.site-template-institutional .pi-card,
+.site-template-institutional .content-card {
+  border-radius: 0;
+}
+
+.site-template-institutional .content-card {
+  border-top: 5px solid var(--site-accent);
+}
+
+.site-template-institutional .card-number,
+.site-template-institutional .eyebrow,
+.site-template-institutional .card-label {
+  letter-spacing: 0.18em;
+}
+
+@media (max-width: 980px) {
+  .admin-template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-factory-intro,
+  .admin-duplicate-panel {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .site-template-image-led .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .site-template-image-led .pi-card {
+    min-height: 640px;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-template-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-template-preview {
+    min-height: 230px;
+  }
+
+  .admin-duplicate-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .site-template-editorial .hero,
+  .site-template-institutional .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .site-template-image-led .pi-card {
+    min-height: 520px;
+  }
+}
