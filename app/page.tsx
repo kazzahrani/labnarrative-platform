@@ -1,22 +1,22 @@
 import Link from "next/link";
 import { getAllSites } from "@/lib/sites";
 
-export default function PlatformHome() {
-  const sites = getAllSites();
+export default async function PlatformHome() {
+  const sites = await getAllSites();
 
   return (
     <main className="platform-home">
       <header className="platform-header">
         <span className="platform-wordmark">LabNarrative</span>
-        <span className="status-pill">Platform core v0.1</span>
+        <span className="status-pill">Platform core v0.2</span>
       </header>
 
       <section className="platform-hero">
-        <p className="eyebrow">Multi-tenant proof of concept</p>
+        <p className="eyebrow">Database-connected multi-tenant platform</p>
         <h1>One platform. Many scientific identities.</h1>
         <p>
-          These two pilot concepts are rendered by the same application. A future PI will be added as a
-          new content record—not as a new website codebase.
+          Every concept below is loaded from the LabNarrative database and rendered by the same
+          application. Adding another PI now means adding a database record—not another codebase.
         </p>
       </section>
 
@@ -33,7 +33,7 @@ export default function PlatformHome() {
 
       <section className="architecture-note">
         <span>Current stage</span>
-        <p>Content is stored in code for this first test. Supabase will replace it in the next milestone.</p>
+        <p>PI content is now stored securely in Supabase and loaded dynamically by Vercel.</p>
       </section>
     </main>
   );
