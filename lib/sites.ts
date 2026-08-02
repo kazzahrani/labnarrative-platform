@@ -1,6 +1,9 @@
 export type SiteSection = "home" | "research" | "team" | "publications";
+export type SiteTemplate = "scientific-minimal" | "editorial" | "image-led" | "institutional";
 
 export type LabSite = {
+  template?: SiteTemplate;
+  heroImage?: string;
   slug: string;
   piName: string;
   labName: string;
@@ -12,7 +15,7 @@ export type LabSite = {
   focusAreas: string[];
   projects: { title: string; description: string }[];
   team: { name: string; role: string }[];
-  publications: { title: string; journal: string; year: string }[];
+  publications: { title: string; journal: string; year: string; href?: string }[];
   theme: {
     background: string;
     surface: string;
