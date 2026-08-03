@@ -150,14 +150,17 @@
 
 .previewViewport {
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
   background: #ffffff;
 }
 
 .previewViewport > main {
   width: 200%;
+  max-width: none;
   min-height: 200%;
+  margin: 0;
   zoom: 0.5;
 }
 
@@ -230,9 +233,21 @@
   gap: 0.78rem;
 }
 
+:global(.advanced-editor .admin-inline-fields.three) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+:global(.advanced-editor .admin-inline-fields.three > *),
+:global(.advanced-editor .admin-field) {
+  min-width: 0;
+}
+
 :global(.advanced-editor .admin-field input),
 :global(.advanced-editor .admin-field select),
 :global(.advanced-editor .admin-field textarea) {
+  width: 100%;
+  min-width: 0;
   padding: 0.62rem 0.68rem;
   font-size: 0.78rem;
 }
@@ -285,6 +300,10 @@
 }
 
 @media (max-width: 1180px) {
+  :global(.advanced-editor .admin-inline-fields.three) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .split {
     grid-template-columns: 1fr;
   }
@@ -303,6 +322,10 @@
 }
 
 @media (max-width: 720px) {
+  :global(.advanced-editor .admin-inline-fields.three) {
+    grid-template-columns: 1fr;
+  }
+
   .previewPane {
     height: 680px;
     border-radius: 7px;
