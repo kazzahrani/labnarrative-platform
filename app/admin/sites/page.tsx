@@ -37,7 +37,6 @@ type SiteRow = {
 };
 
 type StatusFilter = "all" | SiteStatus;
-type DomainFilter = "not_connected" | "live";
 type SortKey =
   | "updated_desc"
   | "updated_asc"
@@ -88,7 +87,7 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
-function simplifiedDomainStatus(status: DomainStatus): DomainFilter {
+function simplifiedDomainStatus(status: DomainStatus): "not_connected" | "live" {
   return status === "live" ? "live" : "not_connected";
 }
 
@@ -101,8 +100,7 @@ export default function SiteMonitorPage() {
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [domainFilter, setDomainFilter] = useState<DomainFilter>("live");
-  const [sortKey, setSortKey] = useState<SortKey>("name_asc");
+  const [sortKey, setSortKey] = useState<SortKey>("created_asc");
   const [showArchived, setShowArchived] = useState(false);
 
   const loadSites = useCallback(async (activeSession: Session) => {
@@ -177,7 +175,6 @@ export default function SiteMonitorPage() {
       concept: sites.filter((site) => site.status === "concept").length,
       client: sites.filter((site) => site.status === "live").length,
       archived: sites.filter((site) => site.status === "archived").length,
-      domainNotConnected: sites.filter((site) => simplifiedDomainStatus(site.domain_status) === "not_connected").length,
     };
   }, [sites]);
 
@@ -187,10 +184,6 @@ export default function SiteMonitorPage() {
     const filtered = sites.filter((site) => {
       if (!showArchived && site.status === "archived") return false;
       if (statusFilter !== "all" && site.status !== statusFilter) return false;
-
-      if (simplifiedDomainStatus(site.domain_status) !== domainFilter) {
-        return false;
-      }
 
       if (!query) return true;
 
@@ -229,7 +222,7 @@ export default function SiteMonitorPage() {
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       }
     });
-  }, [sites, search, statusFilter, domainFilter, sortKey, showArchived]);
+  }, [sites, search, statusFilter, sortKey, showArchived]);
 
   async function copySlug(slug: string) {
     try {
@@ -366,14 +359,6 @@ export default function SiteMonitorPage() {
             <strong>{counts.client}</strong>
           </button>
           <button
-            className={domainFilter === "not_connected" ? styles.activeSummary : ""}
-            onClick={() => setDomainFilter("not_connected")}
-            type="button"
-          >
-            <span>Not connected</span>
-            <strong>{counts.domainNotConnected}</strong>
-          </button>
-          <button
             className={showArchived ? styles.activeSummary : ""}
             onClick={() => {
               const next = !showArchived;
@@ -412,17 +397,6 @@ export default function SiteMonitorPage() {
               <option value="concept">Concept</option>
               <option value="live">Client</option>
               <option value="archived">Archived</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Domain status</span>
-            <select
-              value={domainFilter}
-              onChange={(event) => setDomainFilter(event.target.value as DomainFilter)}
-            >
-              <option value="live">Live</option>
-              <option value="not_connected">Not connected</option>
             </select>
           </label>
 
