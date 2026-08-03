@@ -4,6 +4,7 @@ import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import BourdonEditor from "@/components/admin/BourdonEditor";
+import JsonImportPanel from "@/components/admin/JsonImportPanel";
 import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
@@ -463,6 +464,7 @@ export default function AdminPage() {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [domainNotice, setDomainNotice] = useState("");
   const [domainUrl, setDomainUrl] = useState("");
@@ -800,6 +802,56 @@ export default function AdminPage() {
     await persistSite();
   }
 
+  async function importDraftSite(importedContent: LabSite) {
+    setImporting(true);
+    setNotice("");
+    setDomainNotice("");
+    setDomainUrl("");
+
+    try {
+      const content = compactContent(importedContent as unknown as SiteContent);
+      const slug = cleanSlug(content.slug);
+      const template = normalizeTemplate(content.template ?? content.design?.key);
+
+      const { data: existing, error: existingError } = await supabase
+        .from("sites")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (existingError) throw new Error(existingError.message);
+      if (existing) throw new Error(`The slug “${slug}” was created by another session. Choose a different slug and validate again.`);
+
+      const payload = {
+        slug,
+        status: "draft" as const,
+        content: { ...content, slug },
+        content_schema_version: template === "bourdon-full" ? 3 : 1,
+        design_key: template,
+        design_version: designVersionFor(template),
+        design_settings: content.design?.settings ?? {},
+      };
+
+      const { data, error } = await supabase
+        .from("sites")
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+
+      const saved = data as SiteRow;
+      setSites((current) => [...current, saved].sort((a, b) => a.slug.localeCompare(b.slug)));
+      setEditor({ id: saved.id, status: "draft", content: saved.content });
+      setFactoryOpen(false);
+      setDuplicateSourceId("");
+      setNotice(`Imported ${saved.slug} as a private draft.`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function provisionDomain(
     action: "connect" | "check" = "connect",
     targetSite?: SiteRow,
@@ -1062,6 +1114,16 @@ export default function AdminPage() {
                   Every option uses the same secure LabNarrative platform. The template controls the composition,
                   typography, palette, and starter structure; all PI-specific fields begin empty.
                 </p>
+              </div>
+
+              <JsonImportPanel
+                existingSlugs={sites.map((site) => site.slug)}
+                importing={importing}
+                onImport={importDraftSite}
+              />
+
+              <div className="admin-template-divider">
+                <span>or build manually</span>
               </div>
 
               <div className="admin-template-grid">
