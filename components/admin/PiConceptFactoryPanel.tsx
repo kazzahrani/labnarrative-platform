@@ -141,7 +141,10 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
           profileUrl: profileUrl.trim(),
           country: country.trim(),
           slug: effectiveSlug,
-          notes: notes.trim(),
+          notes: [
+            notes.trim(),
+            "Images will be selected and uploaded manually by the LabNarrative editor. Leave all image fields empty.",
+          ].filter(Boolean).join("\n"),
         },
       });
 
@@ -191,8 +194,8 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
           <h2 id="pi-factory-title">Research one PI and prepare the complete website JSON.</h2>
           <p>
             The server searches current public sources, expands publication and opportunity coverage,
-            extracts an official profile image when possible, creates four research programmes, and sends the
-            result into the existing validator. Nothing is saved or published automatically.
+            creates four research programmes, and sends the result into the existing validator. Images remain
+            empty for manual selection and placement. Nothing is saved or published automatically.
           </p>
         </div>
         <span className="pi-factory-badge">Human approval required</span>
@@ -269,7 +272,7 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
         <div className="pi-factory-submit admin-field-wide">
           <div>
             <strong>One controlled research run</strong>
-            <span>Up to eight bounded web searches · structured JSON · no automatic database write</span>
+            <span>Up to six bounded web searches · structured JSON · images added manually · no automatic database write</span>
           </div>
           <button
             className="admin-factory-primary"
@@ -301,7 +304,7 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
                 <span>{quality.publicationCount ?? 0} publications</span>
                 <span>{quality.opportunityCount ?? 0} opportunities</span>
                 <span>{quality.memberCount ?? 0} verified member{quality.memberCount === 1 ? "" : "s"}</span>
-                <span>{quality.hasProfileImage ? "Profile image found" : "Profile image missing"}</span>
+                <span>Images selected manually</span>
                 <span>{quality.hasVerifiedEmail ? "Email verified" : "Email missing"}</span>
               </div>
               {costEstimate?.note && <small>{costEstimate.note}</small>}
