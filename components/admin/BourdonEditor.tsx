@@ -4,7 +4,10 @@ import { useMemo, useState, type ReactNode } from "react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import {
   createDefaultBourdonPages,
+  defaultBourdonDesignSettings,
+  getBourdonDesignSettings,
   getBourdonPages,
+  type BourdonDesignSettings,
   type BourdonPages,
   type LabMember,
   type LabSite,
@@ -14,7 +17,7 @@ import {
 } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
-type Tab = "home" | "research" | "publications" | "members" | "join" | "contact";
+type Tab = "home" | "research" | "publications" | "members" | "join" | "contact" | "design";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "home", label: "Home" },
@@ -23,6 +26,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "members", label: "Members" },
   { id: "join", label: "Join" },
   { id: "contact", label: "Contact" },
+  { id: "design", label: "Design" },
 ];
 
 function cleanSlug(value: string) {
@@ -40,6 +44,27 @@ function Field({ label, value, onChange, placeholder, required = false }: {
     <label className="admin-field">
       <span>{label}</span>
       <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} />
+    </label>
+  );
+}
+
+function SelectField<T extends string | number>({ label, value, onChange, options, help }: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<{ value: T; label: string }>;
+  help?: string;
+}) {
+  return (
+    <label className="admin-field design-option-field">
+      <span>{label}</span>
+      <select value={String(value)} onChange={(event) => {
+        const selected = options.find((option) => String(option.value) === event.target.value);
+        if (selected) onChange(selected.value);
+      }}>
+        {options.map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
+      </select>
+      {help && <small>{help}</small>}
     </label>
   );
 }
@@ -125,6 +150,7 @@ export default function BourdonEditor({
   const research = content.research ?? [];
   const members = content.members ?? [];
   const opportunities = content.opportunities ?? [];
+  const designSettings = useMemo(() => getBourdonDesignSettings(content), [content]);
 
   function replace(next: Partial<LabSite>) {
     onContentChange({ ...content, ...next });
@@ -132,6 +158,26 @@ export default function BourdonEditor({
 
   function replacePages(nextPages: BourdonPages) {
     replace({ pages: nextPages });
+  }
+
+  function patchDesignSettings(patch: Partial<BourdonDesignSettings>) {
+    replace({
+      design: {
+        key: "bourdon-full",
+        version: 3,
+        settings: { ...designSettings, ...patch },
+      },
+    });
+  }
+
+  function restoreDesignDefaults() {
+    replace({
+      design: {
+        key: "bourdon-full",
+        version: 3,
+        settings: { ...defaultBourdonDesignSettings },
+      },
+    });
   }
 
   function patchPage<K extends keyof BourdonPages>(page: K, patch: Partial<BourdonPages[K]>) {
@@ -161,7 +207,7 @@ export default function BourdonEditor({
       <div className="advanced-editor-top">
         <div>
           <strong>Website editor</strong>
-          <span>Advanced Bourdon Full editor · design version 1</span>
+          <span>Advanced Bourdon Full editor · design version 3</span>
         </div>
         <button type="button" onClick={resetPageDefaults}>Restore page-label defaults</button>
       </div>
@@ -479,6 +525,135 @@ export default function BourdonEditor({
           </Section>
         </div>
       )}
+
+      {activeTab === "design" && (
+        <div className="advanced-editor-page">
+          <div className="advanced-design-heading">
+            <div>
+              <h1>Design and layout</h1>
+              <p>Choose controlled layout variations. The original Bourdon v2 composition remains the default.</p>
+            </div>
+            <button type="button" onClick={restoreDesignDefaults}>Restore Bourdon defaults</button>
+          </div>
+
+          <Section title="Homepage composition">
+            <div className="admin-form-grid design-options-grid">
+              <SelectField
+                label="Hero layout"
+                value={designSettings.homeHeroLayout}
+                onChange={(value) => patchDesignSettings({ homeHeroLayout: value })}
+                options={[
+                  { value: "image-right", label: "Image on the right — Bourdon default" },
+                  { value: "image-left", label: "Image on the left" },
+                  { value: "text-only", label: "Text only" },
+                ]}
+                help="Controls the opening statement and hero-image position."
+              />
+              <SelectField
+                label="Research programmes"
+                value={designSettings.programmesLayout}
+                onChange={(value) => patchDesignSettings({ programmesLayout: value })}
+                options={[
+                  { value: "grid", label: "Two-column editorial grid — default" },
+                  { value: "rows", label: "Full-width programme rows" },
+                ]}
+                help="Changes only the homepage programme overview."
+              />
+              <SelectField
+                label="Principal-investigator section"
+                value={designSettings.piLayout}
+                onChange={(value) => patchDesignSettings({ piLayout: value })}
+                options={[
+                  { value: "image-left", label: "Image on the left — default" },
+                  { value: "image-right", label: "Image on the right" },
+                  { value: "text-only", label: "Text only" },
+                ]}
+                help="The Members page remains independently structured."
+              />
+            </div>
+          </Section>
+
+          <Section title="Internal pages">
+            <div className="admin-form-grid design-options-grid">
+              <SelectField
+                label="Research overview"
+                value={designSettings.researchIndexLayout}
+                onChange={(value) => patchDesignSettings({ researchIndexLayout: value })}
+                options={[
+                  { value: "image-right", label: "Figures on the right — default" },
+                  { value: "alternating", label: "Alternating figure positions" },
+                  { value: "text-only", label: "Text only" },
+                ]}
+                help="Detailed project pages continue to show their scientific figures."
+              />
+              <SelectField
+                label="Research project narrative"
+                value={designSettings.projectLayout}
+                onChange={(value) => patchDesignSettings({ projectLayout: value })}
+                options={[
+                  { value: "split", label: "Question and narrative side by side — default" },
+                  { value: "stacked", label: "Question above narrative" },
+                ]}
+                help="Useful for projects with longer central questions."
+              />
+              <SelectField
+                label="Additional-member columns"
+                value={designSettings.membersColumns}
+                onChange={(value) => patchDesignSettings({ membersColumns: value })}
+                options={[
+                  { value: 2, label: "Two columns" },
+                  { value: 3, label: "Three columns — default" },
+                  { value: 4, label: "Four columns" },
+                ]}
+                help="The principal investigator always remains in the leading profile section."
+              />
+            </div>
+          </Section>
+
+          <Section title="Global appearance">
+            <div className="admin-form-grid design-options-grid">
+              <SelectField
+                label="Page-introduction style"
+                value={designSettings.pageIntroStyle}
+                onChange={(value) => patchDesignSettings({ pageIntroStyle: value })}
+                options={[
+                  { value: "navy", label: "Navy — Bourdon default" },
+                  { value: "teal", label: "Teal" },
+                  { value: "paper", label: "Light paper" },
+                ]}
+                help="Applies consistently to Research, Publications, Members, Join and Contact."
+              />
+              <SelectField
+                label="Section spacing"
+                value={designSettings.sectionSpacing}
+                onChange={(value) => patchDesignSettings({ sectionSpacing: value })}
+                options={[
+                  { value: "compact", label: "Compact" },
+                  { value: "balanced", label: "Balanced — default" },
+                  { value: "generous", label: "Generous" },
+                ]}
+                help="Adjusts vertical rhythm without changing typography or content."
+              />
+              <SelectField
+                label="Corner treatment"
+                value={designSettings.cornerStyle}
+                onChange={(value) => patchDesignSettings({ cornerStyle: value })}
+                options={[
+                  { value: "square", label: "Square — Bourdon default" },
+                  { value: "soft", label: "Soft rounded corners" },
+                ]}
+                help="Applies to images, buttons, cards and the private-preview badge."
+              />
+            </div>
+          </Section>
+
+          <aside className="advanced-design-note">
+            <strong>Safe design system</strong>
+            <p>These choices are stored with this website only. They do not change other concepts, the locked Bourdon draft, or any legacy subdomain.</p>
+          </aside>
+        </div>
+      )}
+
     </div>
   );
 }
