@@ -5079,7 +5079,7 @@ a {
   }
 }
 
-/* LabNarrative v0.8 — Automated PI Concept Factory */
+/* LabNarrative v0.8.1 — Automated PI Concept Factory */
 .pi-factory-panel {
   border: 1px solid #cbd7d0;
   background:
@@ -5322,5 +5322,95 @@ a {
 
   .pi-factory-submit .admin-factory-primary {
     width: 100%;
+  }
+}
+
+/* LabNarrative v0.8.1 — Concept quality and cost reporting */
+.pi-factory-result-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pi-factory-result-meta > div:nth-child(3),
+.pi-factory-result-meta > div:nth-child(6) {
+  border-right: 0;
+}
+
+.pi-factory-result-meta > div:nth-child(-n + 3) {
+  border-bottom: 1px solid #cfdbd4;
+}
+
+.pi-factory-quality {
+  margin-top: 18px;
+  border: 1px solid #cfdbd4;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 15px 17px;
+}
+
+.pi-factory-quality > strong {
+  display: block;
+  color: #153229;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pi-factory-quality > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.pi-factory-quality span {
+  border: 1px solid #d3ddd7;
+  border-radius: 999px;
+  background: #f7faf8;
+  color: #405d53;
+  padding: 7px 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pi-factory-quality small {
+  display: block;
+  margin-top: 11px;
+  color: #718078;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .pi-factory-result-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pi-factory-result-meta > div {
+    border-bottom: 1px solid #cfdbd4;
+  }
+
+  .pi-factory-result-meta > div:nth-child(even) {
+    border-right: 0;
+  }
+
+  .pi-factory-result-meta > div:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .pi-factory-result-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .pi-factory-result-meta > div,
+  .pi-factory-result-meta > div:nth-child(even),
+  .pi-factory-result-meta > div:nth-child(3),
+  .pi-factory-result-meta > div:nth-child(6) {
+    border-right: 0;
+    border-bottom: 1px solid #cfdbd4;
+  }
+
+  .pi-factory-result-meta > div:last-child {
+    border-bottom: 0;
   }
 }
