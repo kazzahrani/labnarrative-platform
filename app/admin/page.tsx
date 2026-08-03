@@ -1103,6 +1103,7 @@ export default function AdminPage() {
         </div>
         <div className="admin-top-actions">
           <span>{session.user.email}</span>
+          <Link href="/admin/sites">Website monitor</Link>
           <Link href="/">View platform</Link>
           <button onClick={signOut} type="button">Sign out</button>
         </div>
