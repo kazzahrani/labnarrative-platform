@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
   getBourdonPages,
@@ -24,7 +24,12 @@ function safeAsset(value?: string): string | undefined {
 }
 
 function initials(name: string) {
-  return name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("");
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("");
 }
 
 function researchProjects(site: LabSite): ResearchProject[] {
@@ -41,53 +46,113 @@ function labMembers(site: LabSite): LabMember[] {
   return site.team.map((member) => ({ ...member }));
 }
 
-function opportunities(site: LabSite): Opportunity[] {
+function openOpportunities(site: LabSite): Opportunity[] {
   return site.opportunities?.filter((item) => item.title || item.description) ?? [];
 }
 
-function Portrait({ src, alt, fallback, className = "" }: { src?: string; alt: string; fallback: string; className?: string }) {
+function Picture({
+  src,
+  alt,
+  fallback,
+  className = "",
+}: {
+  src?: string;
+  alt: string;
+  fallback: string;
+  className?: string;
+}) {
   const image = safeAsset(src);
   return image ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img className={className} src={image} alt={alt} />
   ) : (
-    <div className={`bourdon-image-placeholder ${className}`}>{fallback}</div>
+    <div className={`bn-person-placeholder ${className}`} aria-label={alt}>
+      <span>{fallback}</span>
+    </div>
   );
 }
 
-function SiteHeader({ site, basePath }: { site: LabSite; basePath: string }) {
-  const pages = getBourdonPages(site);
+function PageIntro({ label, title, text }: { label: string; title: string; text: string }) {
   return (
-    <>
-      <div className="bourdon-concept-banner">Independent concept by LabNarrative · not an official laboratory website</div>
-      <header className="bourdon-header">
-        <Link href={basePath} className="bourdon-identity">
-          <Portrait src={pages.home.topPortrait} alt={site.piName} fallback={initials(site.piName)} className="bourdon-header-portrait" />
-          <span><strong>{site.labName}</strong><small>{site.labSubtitle || `${site.department || "Research"} · ${site.institution}`}</small></span>
+    <section className="bn-page-intro">
+      <div className="bn-page-shell">
+        <p className="bn-eyebrow">{label}</p>
+        <h1>{title}</h1>
+        <p className="bn-intro-text">{text}</p>
+      </div>
+    </section>
+  );
+}
+
+function activeSection(route: SiteRoute): SiteRoute["section"] {
+  return route.section;
+}
+
+function SiteHeader({ site, route, basePath }: { site: LabSite; route: SiteRoute; basePath: string }) {
+  const pages = getBourdonPages(site);
+  const active = activeSection(route);
+  const nav: Array<{ key: SiteRoute["section"]; label: string; href: string }> = [
+    { key: "home", label: pages.navigation.home, href: basePath },
+    { key: "research", label: pages.navigation.research, href: `${basePath}/research` },
+    { key: "publications", label: pages.navigation.publications, href: `${basePath}/publications` },
+    { key: "members", label: pages.navigation.members, href: `${basePath}/members` },
+    { key: "join", label: pages.navigation.join, href: `${basePath}/join` },
+    { key: "contact", label: pages.navigation.contact, href: `${basePath}/contact` },
+  ];
+
+  return (
+    <header className="bn-site-header">
+      <div className="bn-header-inner">
+        <Link href={basePath} className="bn-wordmark" aria-label={`${site.labName} home`}>
+          <span className="bn-wordmark-mark">
+            <Picture
+              src={pages.home.topPortrait}
+              alt=""
+              fallback={initials(site.piName)}
+            />
+          </span>
+          <span>
+            <strong>{site.labName}</strong>
+            <small>{site.labSubtitle || `${site.department || "Research"} · ${site.institution}`}</small>
+          </span>
         </Link>
-        <nav className="bourdon-nav" aria-label={`${site.labName} navigation`}>
-          <Link href={basePath}>{pages.navigation.home}</Link>
-          <Link href={`${basePath}/research`}>{pages.navigation.research}</Link>
-          <Link href={`${basePath}/publications`}>{pages.navigation.publications}</Link>
-          <Link href={`${basePath}/members`}>{pages.navigation.members}</Link>
-          <Link href={`${basePath}/join`}>{pages.navigation.join}</Link>
-          <Link href={`${basePath}/contact`}>{pages.navigation.contact}</Link>
+        <nav aria-label="Main navigation">
+          {nav.map((item) => (
+            <Link className={active === item.key ? "active" : ""} href={item.href} key={item.key}>
+              {item.label}
+            </Link>
+          ))}
         </nav>
-      </header>
-    </>
+      </div>
+    </header>
   );
 }
 
 function SiteFooter({ site, basePath }: { site: LabSite; basePath: string }) {
   const pages = getBourdonPages(site);
   return (
-    <footer className="bourdon-footer">
-      <div className="bourdon-footer-grid">
-        <div><strong>{pages.home.footerLabName}</strong><span>{pages.home.footerDepartment}</span><span>{pages.home.footerInstitution}</span></div>
-        <div><strong>{pages.home.footerContactHeading}</strong>{site.email && <a href={`mailto:${site.email}`}>{site.email}</a>}{site.phone && <a href={`tel:${site.phone}`}>{site.phone}</a>}</div>
-        <div><strong>{pages.home.footerExploreHeading}</strong><Link href={`${basePath}/research`}>{pages.home.footerResearchLink}</Link><Link href={`${basePath}/publications`}>{pages.home.footerPublicationsLink}</Link><Link href={`${basePath}/join`}>{pages.home.footerJoinLink}</Link></div>
+    <footer className="bn-footer">
+      <div className="bn-page-shell bn-footer-main">
+        <div>
+          <strong>{pages.home.footerLabName}</strong>
+          <p className="bn-preserve-lines">{`${pages.home.footerDepartment}\n${pages.home.footerInstitution}`}</p>
+        </div>
+        <div>
+          <span>{pages.home.footerContactHeading}</span>
+          {site.email && <a href={`mailto:${site.email}`}>{site.email}</a>}
+          {site.phone && <p>{site.phone}</p>}
+        </div>
+        <div>
+          <span>{pages.home.footerExploreHeading}</span>
+          <Link href={`${basePath}/research`}>{pages.home.footerResearchLink}</Link>
+          <Link href={`${basePath}/publications`}>{pages.home.footerPublicationsLink}</Link>
+          <Link href={`${basePath}/join`}>{pages.home.footerJoinLink}</Link>
+        </div>
       </div>
-      <p>{pages.home.footerNote}</p>
+      <div className="bn-page-shell bn-footer-bottom">
+        <span>{pages.home.footerNote}</span>
+        <span>© {new Date().getFullYear()} {site.labName}</span>
+      </div>
     </footer>
   );
 }
@@ -97,45 +162,88 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
   const projects = researchProjects(site);
   return (
     <>
-      <section className="bourdon-home-opening">
-        <div className="bourdon-home-copy">
-          <p className="bourdon-kicker">{pages.home.topicLine}</p>
-          <h1>{pages.home.mainHeading}</h1>
-          <p className="bourdon-lede">{pages.home.openingText}</p>
-          <div className="bourdon-actions">
-            <Link className="bourdon-primary-link" href={`${basePath}/research`}>{pages.home.researchButton}</Link>
-            <Link href={`${basePath}/publications`}>{pages.home.publicationsButton}</Link>
+      <section className="bn-home-hero">
+        <div className="bn-page-shell bn-hero-grid">
+          <div className="bn-hero-content">
+            <p className="bn-eyebrow">{pages.home.topicLine}</p>
+            <h1>{pages.home.mainHeading}</h1>
+            <p>{pages.home.openingText}</p>
+            <div className="bn-button-row">
+              <Link href={`${basePath}/research`} className="bn-button primary">{pages.home.researchButton}</Link>
+              <Link href={`${basePath}/publications`} className="bn-button">{pages.home.publicationsButton}</Link>
+            </div>
+          </div>
+          <div className="bn-hero-visual">
+            <Picture
+              src={pages.home.homepageImage}
+              alt={`${site.labName} research`}
+              fallback={initials(site.piName)}
+            />
           </div>
         </div>
-        <div className="bourdon-home-hero-image">
-          <Portrait src={pages.home.homepageImage} alt={`${site.labName} research`} fallback={initials(site.piName)} />
+      </section>
+
+      <section className="bn-home-overview bn-page-shell">
+        <div>
+          <p className="bn-eyebrow">{pages.home.overviewLabel}</p>
+          <h2 className="bn-preserve-lines">{pages.home.overviewHeading}</h2>
+        </div>
+        <div>
+          <p>{pages.home.researchOverview}</p>
+          <Link href={`${basePath}/research`} className="bn-text-link">
+            {pages.home.overviewLink} <span>→</span>
+          </Link>
         </div>
       </section>
 
-      <section className="bourdon-overview">
-        <div><p className="bourdon-kicker">{pages.home.overviewLabel}</p><h2>{pages.home.overviewHeading}</h2><Link href={`${basePath}/research`}>{pages.home.overviewLink} →</Link></div>
-        <p>{pages.home.researchOverview}</p>
-      </section>
-
-      <section className="bourdon-section">
-        <div className="bourdon-section-heading"><div><p className="bourdon-kicker">{pages.home.programmesLabel}</p><h2>{pages.home.programmesHeading}</h2></div><Link href={`${basePath}/research`}>{pages.home.overviewLink} →</Link></div>
-        <div className="bourdon-research-grid">
-          {projects.map((project, index) => (
-            <Link className="bourdon-research-card" href={`${basePath}/research/${project.slug}`} key={`${project.slug}-${index}`}>
-              <span className="bourdon-card-index">{String(index + 1).padStart(2, "0")}</span>
-              {safeAsset(project.figureImage) && <Portrait src={project.figureImage} alt={project.figureCaption || project.title} fallback="" />}
-              <div><h3>{project.title}</h3><p>{project.summary}</p><strong>{pages.home.programmeLinkLabel} →</strong></div>
-            </Link>
-          ))}
+      <section className="bn-home-programmes">
+        <div className="bn-page-shell">
+          <div className="bn-section-title">
+            <div>
+              <p className="bn-eyebrow">{pages.home.programmesLabel}</p>
+              <h2>{pages.home.programmesHeading}</h2>
+            </div>
+          </div>
+          <div className="bn-programme-grid">
+            {projects.map((project, index) => (
+              <Link href={`${basePath}/research/${project.slug}`} key={`${project.slug}-${index}`}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <h3>{project.title}</h3>
+                <p>{project.summary}</p>
+                <b>{pages.home.programmeLinkLabel} →</b>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="bourdon-pi-feature">
-        <div className="bourdon-pi-image"><Portrait src={pages.home.piImage} alt={pages.home.piName} fallback={initials(pages.home.piName)} /></div>
-        <div><p className="bourdon-kicker">{pages.home.piSectionLabel}</p><h2>{pages.home.piName}</h2><p className="bourdon-pi-role">{pages.home.piRole}</p><p>{pages.home.piBiography}</p><Link href={`${basePath}/members`}>{pages.home.piLinkLabel} →</Link></div>
+      <section className="bn-pi-home bn-page-shell">
+        <Picture
+          className="bn-person-image"
+          src={pages.home.piImage}
+          alt={pages.home.piName}
+          fallback={initials(pages.home.piName)}
+        />
+        <div>
+          <p className="bn-eyebrow">{pages.home.piSectionLabel}</p>
+          <h2>{pages.home.piName}</h2>
+          <h3>{pages.home.piRole}</h3>
+          <p>{pages.home.piBiography}</p>
+          <Link href={`${basePath}/members`} className="bn-text-link">
+            {pages.home.piLinkLabel} <span>→</span>
+          </Link>
+        </div>
       </section>
 
-      <section className="bourdon-join"><p className="bourdon-kicker">{pages.home.joinLabel}</p><h2>{pages.home.joinHeading}</h2><Link className="bourdon-primary-link" href={`${basePath}/join`}>{pages.home.joinButton}</Link></section>
+      <section className="bn-join-strip">
+        <div className="bn-page-shell">
+          <div>
+            <p className="bn-eyebrow">{pages.home.joinLabel}</p>
+            <h2>{pages.home.joinHeading}</h2>
+          </div>
+          <Link href={`${basePath}/join`} className="bn-button light">{pages.home.joinButton}</Link>
+        </div>
+      </section>
     </>
   );
 }
@@ -144,16 +252,38 @@ function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) 
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
   return (
-    <section className="bourdon-inner">
-      <header className="bourdon-inner-header"><p className="bourdon-kicker">{pages.research.pageLabel}</p><h1>{pages.research.pageHeading}</h1><p>{pages.research.introduction}</p></header>
-      <div className="bourdon-project-list">
-        {projects.map((project, index) => (
-          <Link href={`${basePath}/research/${project.slug}`} key={`${project.slug}-${index}`}>
-            <span>{String(index + 1).padStart(2, "0")}</span><div><h2>{project.title}</h2><p>{project.summary}</p>{project.question && <small>{pages.research.questionLabel}: {project.question}</small>}<strong>{pages.research.programmeLinkLabel} →</strong></div>
-          </Link>
-        ))}
-      </div>
-    </section>
+    <>
+      <PageIntro label={pages.research.pageLabel} title={pages.research.pageHeading} text={pages.research.introduction} />
+      <section className="bn-research-page bn-page-shell">
+        {projects.map((project, index) => {
+          const figure = safeAsset(project.figureImage);
+          return (
+            <article className={figure ? "has-figure" : ""} key={`${project.slug}-${index}`}>
+              <span className="bn-research-number">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h2>{project.title}</h2>
+                <p>{project.summary}</p>
+                {project.question && (
+                  <>
+                    <h3>{pages.research.questionLabel}</h3>
+                    <blockquote>{project.question}</blockquote>
+                  </>
+                )}
+                <Link className="bn-text-link" href={`${basePath}/research/${project.slug}`}>
+                  {pages.research.programmeLinkLabel} <span>→</span>
+                </Link>
+              </div>
+              {figure && (
+                <figure className="bn-research-card-figure">
+                  <Picture src={figure} alt={project.figureCaption || project.title} fallback="" />
+                  {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
+                </figure>
+              )}
+            </article>
+          );
+        })}
+      </section>
+    </>
   );
 }
 
@@ -164,19 +294,70 @@ function ProjectDetail({ site, basePath, slug }: { site: LabSite; basePath: stri
   const project = projects[index];
   if (!project) return <ResearchIndex site={site} basePath={basePath} />;
   const next = projects[(index + 1) % projects.length];
+  const figure = safeAsset(project.figureImage);
+
   return (
-    <article className="bourdon-project-detail">
-      <Link className="bourdon-back-link" href={`${basePath}/research`}>← {pages.research.backLink}</Link>
-      <header><p className="bourdon-kicker">{pages.research.programmeLabel} {String(index + 1).padStart(2, "0")}</p><h1>{project.title}</h1><p>{project.summary}</p></header>
-      {safeAsset(project.figureImage) && <figure><Portrait src={project.figureImage} alt={project.figureCaption || project.title} fallback="" />{project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}</figure>}
-      {project.question && <section className="bourdon-question"><span>{pages.research.questionLabel}</span><h2>{project.question}</h2></section>}
-      {(project.body || []).map((paragraph, paragraphIndex) => <p className="bourdon-project-paragraph" key={paragraphIndex}>{paragraph}</p>)}
-      {!!project.methods?.length && <section className="bourdon-detail-list"><h2>Approaches</h2><ul>{project.methods.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul></section>}
-      {!!project.papers?.length && <section className="bourdon-detail-list"><h2>Selected work</h2><ul>{project.papers.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul></section>}
-      {next && <Link className="bourdon-next-project" href={`${basePath}/research/${next.slug}`}><span>{pages.research.nextProgrammeLabel}</span><strong>{next.title} →</strong></Link>}
-      <Link className="bourdon-return-link" href={`${basePath}/research`}>{pages.research.returnLink}</Link>
-    </article>
+    <>
+      <section className="bn-project-intro">
+        <div className="bn-page-shell">
+          <Link className="bn-back-link" href={`${basePath}/research`}>← {pages.research.backLink}</Link>
+          <p className="bn-eyebrow">{pages.research.programmeLabel} {String(index + 1).padStart(2, "0")}</p>
+          <h1>{project.title}</h1>
+          <p>{project.summary}</p>
+        </div>
+      </section>
+
+      <section className="bn-project-content bn-page-shell">
+        <div>
+          <p className="bn-eyebrow">{pages.research.questionLabel}</p>
+          <h2>{project.question || project.title}</h2>
+        </div>
+        <div>
+          {(project.body || []).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}
+        </div>
+      </section>
+
+      {figure && (
+        <section className="bn-figure-wrap bn-page-shell">
+          <figure className="bn-research-figure">
+            <Picture src={figure} alt={project.figureCaption || project.title} fallback="" />
+            {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
+          </figure>
+        </section>
+      )}
+
+      {(!!project.methods?.length || !!project.papers?.length) && (
+        <section className="bn-project-lists bn-page-shell">
+          {!!project.methods?.length && (
+            <div>
+              <p className="bn-eyebrow">Approaches</p>
+              <ul>{project.methods.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul>
+            </div>
+          )}
+          {!!project.papers?.length && (
+            <div>
+              <p className="bn-eyebrow">Selected work</p>
+              <ul>{project.papers.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="bn-next-programme bn-page-shell">
+        {next && (
+          <Link href={`${basePath}/research/${next.slug}`}>
+            {pages.research.nextProgrammeLabel}
+            <span>{next.title} →</span>
+          </Link>
+        )}
+        <Link className="bn-return-link" href={`${basePath}/research`}>{pages.research.returnLink}</Link>
+      </section>
+    </>
   );
+}
+
+function PublicationRow({ children, href }: { children: ReactNode; href?: string }) {
+  return href ? <a href={href} target="_blank" rel="noreferrer">{children}</a> : <div className="bn-publication-row">{children}</div>;
 }
 
 function Publications({ site }: { site: LabSite }) {
@@ -187,77 +368,181 @@ function Publications({ site }: { site: LabSite }) {
     if (!term) return site.publications;
     return site.publications.filter((item) => `${item.title} ${item.journal} ${item.year}`.toLowerCase().includes(term));
   }, [query, site.publications]);
+
   return (
-    <section className="bourdon-inner">
-      <header className="bourdon-inner-header"><p className="bourdon-kicker">{pages.publications.pageLabel}</p><h1>{pages.publications.pageHeading}</h1><p>{pages.publications.introduction}</p></header>
-      <div className="bourdon-publication-controls"><label><span>{pages.publications.searchLabel}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={pages.publications.searchPlaceholder} /></label>{site.pubmedUrl && <a href={site.pubmedUrl} target="_blank" rel="noreferrer">{pages.publications.pubmedButton} ↗</a>}</div>
-      <div className="bourdon-publication-list">
-        {filtered.length ? filtered.map((publication, index) => <article key={`${publication.title}-${index}`}><span>{publication.year}</span><div><h2>{publication.href ? <a href={publication.href} target="_blank" rel="noreferrer">{publication.title}</a> : publication.title}</h2><p>{publication.journal}</p></div></article>) : <p className="bourdon-empty">{pages.publications.noResults}</p>}
-      </div>
-    </section>
+    <>
+      <PageIntro label={pages.publications.pageLabel} title={pages.publications.pageHeading} text={pages.publications.introduction} />
+      <section className="bn-publication-page bn-page-shell">
+        <div className="bn-publication-tools">
+          <label>
+            <span>{pages.publications.searchLabel}</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={pages.publications.searchPlaceholder} />
+          </label>
+          {site.pubmedUrl && <a className="bn-text-link" href={site.pubmedUrl} target="_blank" rel="noreferrer">{pages.publications.pubmedButton} ↗</a>}
+        </div>
+        <div className="bn-publication-list">
+          {filtered.length ? filtered.map((publication, index) => (
+            <PublicationRow href={publication.href} key={`${publication.title}-${index}`}>
+              <time>{publication.year}</time>
+              <div>
+                <h2>{publication.title}</h2>
+                <p>{publication.journal}</p>
+              </div>
+              <span>↗</span>
+            </PublicationRow>
+          )) : <p className="bn-no-results">{pages.publications.noResults}</p>}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function MemberContent({ member, roleLabel, linkLabel }: { member: LabMember; roleLabel: string; linkLabel: string }) {
+  return (
+    <div>
+      <p className="bn-member-role">{roleLabel}</p>
+      <h2>{member.name}</h2>
+      <p>{member.bio}</p>
+      {member.href && <a className="bn-text-link" href={member.href} target="_blank" rel="noreferrer">{linkLabel} ↗</a>}
+    </div>
   );
 }
 
 function Members({ site }: { site: LabSite }) {
   const pages = getBourdonPages(site);
   const members = labMembers(site);
+  const principal = members[0];
+  const additional = members.slice(1);
+
   return (
-    <section className="bourdon-inner">
-      <header className="bourdon-inner-header"><p className="bourdon-kicker">{pages.members.pageLabel}</p><h1>{pages.members.pageHeading}</h1><p>{pages.members.introduction}</p></header>
-      <div className="bourdon-member-grid">
-        {members.map((member, index) => <article className={index === 0 ? "principal" : ""} key={`${member.name}-${index}`}><Portrait src={member.image} alt={member.name} fallback={initials(member.name || member.role)} /><div><span>{index === 0 ? "Principal investigator" : member.role}</span><h2>{member.name}</h2><p>{member.bio}</p>{member.href && <a href={member.href} target="_blank" rel="noreferrer">{pages.members.profileLinkLabel} ↗</a>}</div></article>)}
-      </div>
-      <aside className="bourdon-member-notice"><strong>{pages.members.noticeHeading}</strong><p>{pages.members.noticeText}</p></aside>
-    </section>
+    <>
+      <PageIntro label={pages.members.pageLabel} title={pages.members.pageHeading} text={pages.members.introduction} />
+      {principal && (
+        <section className="bn-principal-member bn-page-shell">
+          <article>
+            <Picture className="bn-person-image" src={principal.image} alt={principal.name} fallback={initials(principal.name || principal.role)} />
+            <MemberContent member={principal} roleLabel="Principal investigator" linkLabel={pages.members.profileLinkLabel} />
+          </article>
+        </section>
+      )}
+      {!!additional.length && (
+        <section className="bn-members-grid bn-page-shell">
+          {additional.map((member, index) => (
+            <article key={`${member.name}-${index}`}>
+              <Picture className="bn-person-image" src={member.image} alt={member.name} fallback={initials(member.name || member.role)} />
+              <MemberContent member={member} roleLabel={member.role} linkLabel={pages.members.profileLinkLabel} />
+            </article>
+          ))}
+        </section>
+      )}
+      <aside className="bn-team-note">
+        <div className="bn-page-shell">
+          <p className="bn-eyebrow">{pages.members.noticeHeading}</p>
+          <h2>{pages.members.noticeText}</h2>
+        </div>
+      </aside>
+    </>
   );
 }
 
 function Join({ site, basePath }: { site: LabSite; basePath: string }) {
   const pages = getBourdonPages(site);
-  const items = opportunities(site);
+  const items = openOpportunities(site);
   return (
-    <section className="bourdon-inner">
-      <header className="bourdon-inner-header"><p className="bourdon-kicker">{pages.join.pageLabel}</p><h1>{pages.join.pageHeading}</h1><p>{pages.join.introduction}</p></header>
-      <section className="bourdon-guidance"><p className="bourdon-kicker">{pages.join.guidanceLabel}</p><h2>{pages.join.guidanceHeading}</h2><p>{pages.join.guidanceText}</p><Link className="bourdon-primary-link" href={`${basePath}/contact`}>{pages.join.contactButton}</Link></section>
-      <div className="bourdon-opportunity-list">{items.map((item, index) => <article key={`${item.title}-${index}`}><span>{item.status}</span><h2>{item.title}</h2><p>{item.description}</p>{item.href && <a href={item.href} target="_blank" rel="noreferrer">{item.linkLabel || "Learn more"} ↗</a>}</article>)}</div>
-    </section>
+    <>
+      <PageIntro label={pages.join.pageLabel} title={pages.join.pageHeading} text={pages.join.introduction} />
+      <section className="bn-opportunity-page bn-page-shell">
+        {items.map((item, index) => (
+          <article key={`${item.title}-${index}`}>
+            <span className="bn-opportunity-status">{item.status}</span>
+            <h2>{item.title}</h2>
+            <p>{item.description}</p>
+            {item.href && <a className="bn-text-link" href={item.href} target="_blank" rel="noreferrer">{item.linkLabel || "Learn more"} ↗</a>}
+          </article>
+        ))}
+      </section>
+      <section className="bn-application-note">
+        <div className="bn-page-shell">
+          <p className="bn-eyebrow">{pages.join.guidanceLabel}</p>
+          <h2>{pages.join.guidanceHeading}</h2>
+          <p>{pages.join.guidanceText}</p>
+          <Link className="bn-button light" href={`${basePath}/contact`}>{pages.join.contactButton}</Link>
+        </div>
+      </section>
+    </>
   );
 }
 
 function Contact({ site }: { site: LabSite }) {
   const pages = getBourdonPages(site);
   return (
-    <section className="bourdon-inner">
-      <header className="bourdon-inner-header"><p className="bourdon-kicker">{pages.contact.pageLabel}</p><h1>{pages.contact.pageHeading}</h1><p>{pages.contact.introduction}</p></header>
-      <div className="bourdon-contact-layout">
-        <div className="bourdon-contact-pi"><Portrait src={pages.contact.piImage} alt={pages.contact.piName} fallback={initials(pages.contact.piName)} /><div><h2>{pages.contact.piName}</h2><span>{pages.contact.piRole}</span><p>{pages.contact.piBiography}</p></div></div>
-        <div className="bourdon-contact-details"><dl><div><dt>{pages.contact.laboratoryLabel}</dt><dd>{site.labName}<br />{pages.contact.department}<br />{pages.contact.institution}</dd></div>{pages.contact.address && <div><dt>Address</dt><dd>{pages.contact.address}</dd></div>}{pages.contact.email && <div><dt>{pages.contact.emailLabel}</dt><dd><a href={`mailto:${pages.contact.email}`}>{pages.contact.email}</a></dd></div>}{pages.contact.phone && <div><dt>{pages.contact.telephoneLabel}</dt><dd><a href={`tel:${pages.contact.phone}`}>{pages.contact.phone}</a></dd></div>}{pages.contact.officialProfile && <div><dt>{pages.contact.profileLabel}</dt><dd><a href={pages.contact.officialProfile} target="_blank" rel="noreferrer">{pages.contact.profileLinkText} ↗</a></dd></div>}</dl>{pages.contact.email && <a className="bourdon-primary-link" href={`mailto:${pages.contact.email}`}>{pages.contact.emailButton}</a>}</div>
-      </div>
-      {(pages.contact.locationName || pages.contact.latitude || pages.contact.longitude) && <div className="bourdon-location-strip"><strong>{pages.contact.locationName}</strong><span>{pages.contact.latitude}</span><span>{pages.contact.longitude}</span><span>{pages.contact.locationSuffix}</span></div>}
-    </section>
+    <>
+      <PageIntro label={pages.contact.pageLabel} title={pages.contact.pageHeading} text={pages.contact.introduction} />
+      <section className="bn-contact-page bn-page-shell">
+        <div className="bn-contact-card">
+          <h2>{pages.contact.piName}</h2>
+          <h3>{pages.contact.piRole}</h3>
+          <p>{pages.contact.piBiography}</p>
+          <p className="bn-address-lines">{pages.contact.address}</p>
+        </div>
+        <div className="bn-contact-details">
+          <div>
+            <span>{pages.contact.laboratoryLabel}</span>
+            <p>{site.labName}<br />{pages.contact.department}<br />{pages.contact.institution}</p>
+          </div>
+          {pages.contact.email && <div><span>{pages.contact.emailLabel}</span><a href={`mailto:${pages.contact.email}`}>{pages.contact.email}</a></div>}
+          {pages.contact.phone && <div><span>{pages.contact.telephoneLabel}</span><p>{pages.contact.phone}</p></div>}
+          {pages.contact.officialProfile && <div><span>{pages.contact.profileLabel}</span><a href={pages.contact.officialProfile} target="_blank" rel="noreferrer">{pages.contact.profileLinkText} ↗</a></div>}
+          {pages.contact.pubmedRecord && <div><span>Publications</span><a href={pages.contact.pubmedRecord} target="_blank" rel="noreferrer">PubMed record ↗</a></div>}
+          {pages.contact.email && <a className="bn-button primary" href={`mailto:${pages.contact.email}`}>{pages.contact.emailButton}</a>}
+        </div>
+      </section>
+      {(pages.contact.locationName || pages.contact.latitude || pages.contact.longitude || pages.contact.locationSuffix) && (
+        <section className="bn-contact-map">
+          <div className="bn-page-shell">
+            <span>{pages.contact.locationName}</span>
+            <i />
+            {pages.contact.latitude && <strong>{pages.contact.latitude}</strong>}
+            {pages.contact.longitude && <strong>{pages.contact.longitude}</strong>}
+            {pages.contact.locationSuffix && <span>{pages.contact.locationSuffix}</span>}
+          </div>
+        </section>
+      )}
+    </>
   );
 }
 
-export default function BourdonDesign({ site, route, basePath, previewMode = false }: { site: LabSite; route: SiteRoute; basePath: string; previewMode?: boolean }) {
+export default function BourdonDesign({
+  site,
+  route,
+  basePath,
+  previewMode = false,
+}: {
+  site: LabSite;
+  route: SiteRoute;
+  basePath: string;
+  previewMode?: boolean;
+}) {
   const variables = {
-    "--bourdon-bg": site.theme.background,
-    "--bourdon-surface": site.theme.surface,
-    "--bourdon-ink": site.theme.foreground,
-    "--bourdon-muted": site.theme.muted,
-    "--bourdon-accent": site.theme.accent,
+    "--bn-paper": site.theme.background,
+    "--bn-white": site.theme.surface,
+    "--bn-navy": site.theme.foreground,
+    "--bn-muted": site.theme.muted,
+    "--bn-teal": site.theme.accent,
   } as CSSProperties;
+
   return (
-    <main className="bourdon-site" style={variables}>
-      {previewMode && <div className="bourdon-preview-banner">Private administrator preview · this draft is not publicly visible</div>}
-      <SiteHeader site={site} basePath={basePath} />
-      <div className="bourdon-page-shell">
-        {route.section === "home" && <Home site={site} basePath={basePath} />}
-        {route.section === "research" && (route.projectSlug ? <ProjectDetail site={site} basePath={basePath} slug={route.projectSlug} /> : <ResearchIndex site={site} basePath={basePath} />)}
-        {route.section === "publications" && <Publications site={site} />}
-        {route.section === "members" && <Members site={site} />}
-        {route.section === "join" && <Join site={site} basePath={basePath} />}
-        {route.section === "contact" && <Contact site={site} />}
-      </div>
+    <main className="bourdon-site bn-site" style={variables}>
+      {previewMode && <div className="bn-preview-badge">Private administrator preview · Draft</div>}
+      <SiteHeader site={site} route={route} basePath={basePath} />
+      {route.section === "home" && <Home site={site} basePath={basePath} />}
+      {route.section === "research" && (route.projectSlug
+        ? <ProjectDetail site={site} basePath={basePath} slug={route.projectSlug} />
+        : <ResearchIndex site={site} basePath={basePath} />)}
+      {route.section === "publications" && <Publications site={site} />}
+      {route.section === "members" && <Members site={site} />}
+      {route.section === "join" && <Join site={site} basePath={basePath} />}
+      {route.section === "contact" && <Contact site={site} />}
       <SiteFooter site={site} basePath={basePath} />
     </main>
   );
