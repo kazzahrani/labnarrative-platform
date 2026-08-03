@@ -156,9 +156,9 @@
 }
 
 .previewViewport > main {
-  width: 156.25%;
-  min-height: 156.25%;
-  zoom: 0.64;
+  width: 200%;
+  min-height: 200%;
+  zoom: 0.5;
 }
 
 .previewFooter {
