@@ -5078,3 +5078,249 @@ a {
     width: 100%;
   }
 }
+
+/* LabNarrative v0.8 — Automated PI Concept Factory */
+.pi-factory-panel {
+  border: 1px solid #cbd7d0;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(17, 123, 121, 0.13), transparent 31%),
+    linear-gradient(135deg, #f5f9f6 0%, #edf4ef 100%);
+  padding: clamp(24px, 4vw, 42px);
+  box-shadow: 0 18px 48px rgba(21, 50, 41, 0.08);
+}
+
+.pi-factory-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 28px;
+  margin-bottom: 30px;
+}
+
+.pi-factory-heading h2 {
+  max-width: 760px;
+  margin: 7px 0 12px;
+  color: #153229;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(29px, 3.4vw, 45px);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.pi-factory-heading p {
+  max-width: 790px;
+  margin: 0;
+  color: #5f6f67;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.pi-factory-badge {
+  border: 1px solid #a9bdb3;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #31594c;
+  padding: 9px 13px;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pi-factory-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px 20px;
+  border-top: 1px solid #c9d6cf;
+  padding-top: 28px;
+}
+
+.pi-factory-form .admin-field small {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.pi-factory-field-note {
+  color: #64756d;
+}
+
+.pi-factory-field-error {
+  color: #a13d3d;
+  font-weight: 700;
+}
+
+.pi-factory-submit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  border-top: 1px solid #c9d6cf;
+  margin-top: 8px;
+  padding-top: 22px;
+}
+
+.pi-factory-submit > div {
+  display: grid;
+  gap: 5px;
+}
+
+.pi-factory-submit strong {
+  color: #153229;
+  font-size: 13px;
+}
+
+.pi-factory-submit span {
+  color: #687970;
+  font-size: 11px;
+}
+
+.pi-factory-submit .admin-factory-primary {
+  min-width: 205px;
+}
+
+.pi-factory-message {
+  border-left: 3px solid #117b79;
+  background: rgba(255, 255, 255, 0.72);
+  color: #234f43;
+  margin: 24px 0 0;
+  padding: 13px 15px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.pi-factory-result {
+  border-top: 1px solid #c9d6cf;
+  margin-top: 28px;
+  padding-top: 24px;
+}
+
+.pi-factory-result-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #cfdbd4;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.pi-factory-result-meta > div {
+  display: grid;
+  gap: 7px;
+  padding: 15px 17px;
+  border-right: 1px solid #cfdbd4;
+}
+
+.pi-factory-result-meta > div:last-child {
+  border-right: 0;
+}
+
+.pi-factory-result-meta span {
+  color: #708078;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.pi-factory-result-meta strong {
+  color: #153229;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.pi-factory-warnings,
+.pi-factory-sources {
+  margin-top: 22px;
+}
+
+.pi-factory-warnings > strong,
+.pi-factory-sources > strong {
+  color: #153229;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pi-factory-warnings p {
+  border-left: 2px solid #b77b3d;
+  background: rgba(255, 249, 237, 0.85);
+  color: #72522f;
+  margin: 9px 0 0;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.pi-factory-sources > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.pi-factory-sources a {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #d3ddd7;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px 13px;
+}
+
+.pi-factory-sources a:hover {
+  border-color: #117b79;
+}
+
+.pi-factory-sources span {
+  color: #153229;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pi-factory-sources small {
+  color: #718078;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+}
+
+@media (max-width: 900px) {
+  .pi-factory-result-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pi-factory-result-meta > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .pi-factory-result-meta > div:nth-child(-n + 2) {
+    border-bottom: 1px solid #cfdbd4;
+  }
+}
+
+@media (max-width: 720px) {
+  .pi-factory-heading,
+  .pi-factory-form,
+  .pi-factory-sources > div {
+    grid-template-columns: 1fr;
+  }
+
+  .pi-factory-badge {
+    justify-self: start;
+  }
+
+  .pi-factory-submit {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pi-factory-submit .admin-factory-primary {
+    width: 100%;
+  }
+}
