@@ -139,7 +139,7 @@
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-bottom: 16px;
   overflow: hidden;
   border: 1px solid #d2dad5;
@@ -435,6 +435,18 @@
 
   .explanation {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .summary button:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .summary button:nth-child(-n + 3) {
+    border-bottom: 1px solid #e1e6e3;
   }
 
   .explanation article:nth-child(2) {

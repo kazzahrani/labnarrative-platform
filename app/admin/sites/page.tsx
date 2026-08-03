@@ -103,6 +103,7 @@ export default function SiteMonitorPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [domainFilter, setDomainFilter] = useState<DomainFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("updated_desc");
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadSites = useCallback(async (activeSession: Session) => {
     setLoading(true);
@@ -171,6 +172,7 @@ export default function SiteMonitorPage() {
   const counts = useMemo(() => {
     return {
       all: sites.length,
+      active: sites.filter((site) => site.status !== "archived").length,
       draft: sites.filter((site) => site.status === "draft").length,
       concept: sites.filter((site) => site.status === "concept").length,
       live: sites.filter((site) => site.status === "live").length,
@@ -183,6 +185,7 @@ export default function SiteMonitorPage() {
     const query = search.trim().toLowerCase();
 
     const filtered = sites.filter((site) => {
+      if (!showArchived && site.status === "archived") return false;
       if (statusFilter !== "all" && site.status !== statusFilter) return false;
 
       if (domainFilter === "attention") {
@@ -228,7 +231,7 @@ export default function SiteMonitorPage() {
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       }
     });
-  }, [sites, search, statusFilter, domainFilter, sortKey]);
+  }, [sites, search, statusFilter, domainFilter, sortKey, showArchived]);
 
   async function copySlug(slug: string) {
     try {
@@ -330,12 +333,15 @@ export default function SiteMonitorPage() {
 
         <section className={styles.summary} aria-label="Website totals">
           <button
-            className={statusFilter === "all" ? styles.activeSummary : ""}
-            onClick={() => setStatusFilter("all")}
+            className={statusFilter === "all" && !showArchived ? styles.activeSummary : ""}
+            onClick={() => {
+              setStatusFilter("all");
+              setShowArchived(false);
+            }}
             type="button"
           >
-            <span>All</span>
-            <strong>{counts.all}</strong>
+            <span>Active websites</span>
+            <strong>{counts.active}</strong>
           </button>
           <button
             className={statusFilter === "draft" ? styles.activeSummary : ""}
@@ -369,6 +375,18 @@ export default function SiteMonitorPage() {
             <span>Domain attention</span>
             <strong>{counts.attention}</strong>
           </button>
+          <button
+            className={showArchived ? styles.activeSummary : ""}
+            onClick={() => {
+              const next = !showArchived;
+              setShowArchived(next);
+              if (!next && statusFilter === "archived") setStatusFilter("all");
+            }}
+            type="button"
+          >
+            <span>{showArchived ? "Hide archived" : "Show archived"}</span>
+            <strong>{counts.archived}</strong>
+          </button>
         </section>
 
         <section className={styles.controls}>
@@ -385,7 +403,11 @@ export default function SiteMonitorPage() {
             <span>Website status</span>
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+              onChange={(event) => {
+                const nextStatus = event.target.value as StatusFilter;
+                setStatusFilter(nextStatus);
+                if (nextStatus === "archived") setShowArchived(true);
+              }}
             >
               <option value="all">All statuses</option>
               <option value="draft">Draft</option>
@@ -429,7 +451,11 @@ export default function SiteMonitorPage() {
         {notice && <p className={styles.notice}>{notice}</p>}
 
         <div className={styles.resultLine}>
-          Showing <strong>{visibleSites.length}</strong> of <strong>{sites.length}</strong> websites
+          Showing <strong>{visibleSites.length}</strong> of{" "}
+          <strong>{showArchived ? counts.all : counts.active}</strong> visible websites
+          {!showArchived && counts.archived > 0 && (
+            <span> · {counts.archived} archived hidden</span>
+          )}
         </div>
 
         <div className={styles.tableWrap}>
