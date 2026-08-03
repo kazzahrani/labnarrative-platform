@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import "./globals.css";
 import "./platform-overrides.css";
 
@@ -10,7 +11,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AdminLandingRedirect />
+        {children}
+      </body>
     </html>
   );
 }
