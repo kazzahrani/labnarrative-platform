@@ -116,7 +116,7 @@ export default function LiveSitePreview({
 
       <div className={styles.viewportLabel}>
         <span>Live editing view</span>
-        <span>Scroll independently</span>
+        <span>1440 px desktop · 50%</span>
       </div>
 
       <div
@@ -124,12 +124,14 @@ export default function LiveSitePreview({
         onClickCapture={handlePreviewClick}
         ref={viewportRef}
       >
-        <SiteShell
-          site={site}
-          route={route}
-          basePath={internalBasePath}
-          previewMode={status === "draft"}
-        />
+        <div className={styles.previewCanvas}>
+          <SiteShell
+            site={site}
+            route={route}
+            basePath={internalBasePath}
+            previewMode={status === "draft"}
+          />
+        </div>
       </div>
 
       <div className={styles.previewFooter}>
