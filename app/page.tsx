@@ -14,12 +14,6 @@ const primaryButtonStyle = {
   textDecoration: "none",
 } as const;
 
-const secondaryButtonStyle = {
-  ...primaryButtonStyle,
-  background: "#fffefa",
-  color: "#17211e",
-} as const;
-
 export default function PlatformHome() {
   return (
     <main className="platform-home">
@@ -32,8 +26,7 @@ export default function PlatformHome() {
         <p className="eyebrow">LabNarrative operations</p>
         <h1>One platform. Clear control.</h1>
         <p>
-          Monitor every PI website, review its publishing and domain status, or return to the
-          administrator platform to create and edit concepts.
+          Monitor every PI website and review its publishing, design, and domain status from one place.
         </p>
 
         <nav
@@ -47,9 +40,6 @@ export default function PlatformHome() {
         >
           <Link href="/admin/sites" style={primaryButtonStyle}>
             Website monitor →
-          </Link>
-          <Link href="/admin" style={secondaryButtonStyle}>
-            Administrator dashboard →
           </Link>
         </nav>
       </section>
