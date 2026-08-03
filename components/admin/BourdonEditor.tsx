@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import {
   createDefaultBourdonPages,
@@ -149,6 +149,8 @@ export default function BourdonEditor({
   onPreviewSectionChange?: (section: PreviewSection) => void;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("home");
+  const contentRef = useRef(content);
+  contentRef.current = content;
   const pages = useMemo(() => getBourdonPages(content), [content]);
   const research = content.research ?? [];
   const members = content.members ?? [];
@@ -156,7 +158,9 @@ export default function BourdonEditor({
   const designSettings = useMemo(() => getBourdonDesignSettings(content), [content]);
 
   function replace(next: Partial<LabSite>) {
-    onContentChange({ ...content, ...next });
+    const merged = { ...contentRef.current, ...next };
+    contentRef.current = merged;
+    onContentChange(merged);
   }
 
   function replacePages(nextPages: BourdonPages) {
@@ -184,7 +188,8 @@ export default function BourdonEditor({
   }
 
   function patchPage<K extends keyof BourdonPages>(page: K, patch: Partial<BourdonPages[K]>) {
-    replacePages({ ...pages, [page]: { ...pages[page], ...patch } });
+    const currentPages = getBourdonPages(contentRef.current);
+    replacePages({ ...currentPages, [page]: { ...currentPages[page], ...patch } });
   }
 
   function syncResearch(next: ResearchProject[]) {
@@ -202,7 +207,7 @@ export default function BourdonEditor({
   }
 
   function resetPageDefaults() {
-    replace({ pages: createDefaultBourdonPages(content) });
+    replace({ pages: createDefaultBourdonPages(contentRef.current) });
   }
 
   return (
