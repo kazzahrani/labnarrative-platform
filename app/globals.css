@@ -4361,3 +4361,365 @@ a {
   font-size: 10px;
   letter-spacing: 0;
 }
+
+/* LabNarrative v0.6d — reusable Bourdon design controls */
+.advanced-design-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.advanced-design-heading h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  color: #203b32;
+}
+
+.advanced-design-heading p {
+  max-width: 720px;
+  margin: 0.55rem 0 0;
+  color: #60716a;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.advanced-design-heading button {
+  flex: none;
+  appearance: none;
+  min-height: 42px;
+  padding: 0 0.9rem;
+  border: 1px solid #9fb0a8;
+  background: #fff;
+  color: #17372e;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.design-options-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.design-option-field {
+  align-content: start;
+  min-height: 132px;
+  padding: 1rem;
+  border: 1px solid #d5ddd9;
+  background: #fff;
+}
+
+.design-option-field small {
+  color: #6a7a74;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.advanced-design-note {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1.4rem;
+  padding: 1rem 1.1rem;
+  border-left: 4px solid #2b7b6a;
+  background: #edf5f1;
+}
+
+.advanced-design-note strong {
+  color: #17372e;
+  font-size: 0.84rem;
+}
+
+.advanced-design-note p {
+  margin: 0;
+  color: #5d7068;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+/* Hero composition */
+.bn-hero-grid.layout-image-left {
+  grid-template-columns: 0.9fr 1.1fr;
+}
+
+.bn-hero-grid.layout-image-left .bn-hero-visual {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bn-hero-grid.layout-image-left .bn-hero-content {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.bn-hero-grid.layout-text-only {
+  grid-template-columns: minmax(0, 900px);
+  justify-content: start;
+}
+
+.bn-hero-grid.layout-text-only .bn-hero-content h1 {
+  max-width: 850px;
+}
+
+.bn-hero-grid.layout-text-only .bn-hero-content > p:not(.bn-eyebrow) {
+  max-width: 760px;
+}
+
+/* Homepage programme layouts */
+.bn-programme-grid.layout-rows {
+  grid-template-columns: 1fr;
+}
+
+.bn-programme-grid.layout-rows > a,
+.bn-programme-grid.layout-rows > a:nth-child(even) {
+  display: grid;
+  grid-template-columns: 72px minmax(220px, 0.9fr) minmax(280px, 1.25fr) auto;
+  align-items: center;
+  gap: 30px;
+  min-height: 0;
+  padding: 30px 0;
+  border-right: 0;
+}
+
+.bn-programme-grid.layout-rows h3,
+.bn-programme-grid.layout-rows p {
+  margin: 0;
+}
+
+.bn-programme-grid.layout-rows b {
+  white-space: nowrap;
+}
+
+/* Homepage PI layouts */
+.bn-pi-home.layout-image-right {
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.bn-pi-home.layout-image-right > .bn-person-image,
+.bn-pi-home.layout-image-right > .bn-person-placeholder {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.bn-pi-home.layout-image-right > div {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bn-pi-home.layout-text-only {
+  grid-template-columns: minmax(0, 880px);
+}
+
+/* Research overview and detailed project layouts */
+.bn-research-page article.layout-alternating.is-even > div {
+  grid-column: 3;
+}
+
+.bn-research-page article.layout-alternating.is-even .bn-research-card-figure {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.bn-project-content.layout-stacked {
+  grid-template-columns: 1fr;
+  gap: 42px;
+}
+
+.bn-project-content.layout-stacked > div {
+  max-width: 880px;
+}
+
+/* Members grid */
+.bn-members-grid.columns-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bn-members-grid.columns-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.bn-members-grid.columns-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap-inline: 24px;
+}
+
+.bn-members-grid.columns-4 h2 {
+  font-size: 28px;
+}
+
+/* Internal page introduction styles */
+.bn-page-intro.style-teal,
+.bn-project-intro.style-teal {
+  background: var(--bn-teal);
+}
+
+.bn-page-intro.style-teal .bn-eyebrow,
+.bn-project-intro.style-teal .bn-eyebrow,
+.bn-page-intro.style-teal .bn-intro-text,
+.bn-project-intro.style-teal .bn-back-link,
+.bn-project-intro.style-teal > div > p:last-child {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.bn-page-intro.style-paper,
+.bn-project-intro.style-paper {
+  border-bottom: 1px solid var(--bn-line);
+  background: var(--bn-paper);
+  color: var(--bn-navy);
+}
+
+.bn-page-intro.style-paper .bn-eyebrow,
+.bn-project-intro.style-paper .bn-eyebrow {
+  color: var(--bn-teal);
+}
+
+.bn-page-intro.style-paper .bn-intro-text,
+.bn-project-intro.style-paper .bn-back-link,
+.bn-project-intro.style-paper > div > p:last-child {
+  color: var(--bn-muted);
+}
+
+/* Vertical rhythm */
+.bn-site.spacing-compact .bn-home-hero,
+.bn-site.spacing-compact .bn-hero-grid {
+  min-height: 560px;
+}
+
+.bn-site.spacing-compact .bn-hero-grid { padding-block: 52px; }
+.bn-site.spacing-compact .bn-home-overview { padding-block: 92px; }
+.bn-site.spacing-compact .bn-home-programmes { padding-block: 78px 90px; }
+.bn-site.spacing-compact .bn-pi-home { padding-block: 92px; }
+.bn-site.spacing-compact .bn-join-strip { padding-block: 58px; }
+.bn-site.spacing-compact .bn-page-intro { padding-block: 72px 78px; }
+.bn-site.spacing-compact .bn-research-page { padding-block: 72px 96px; }
+.bn-site.spacing-compact .bn-research-page article { padding-block: 52px; }
+.bn-site.spacing-compact .bn-project-intro { padding-block: 45px 76px; }
+.bn-site.spacing-compact .bn-project-content { padding-block: 84px; }
+.bn-site.spacing-compact .bn-figure-wrap { padding-bottom: 82px; }
+.bn-site.spacing-compact .bn-project-lists { padding-bottom: 88px; }
+.bn-site.spacing-compact .bn-next-programme { padding-bottom: 82px; }
+.bn-site.spacing-compact .bn-publication-page { padding-block: 64px 94px; }
+.bn-site.spacing-compact .bn-principal-member { padding-block: 76px; }
+.bn-site.spacing-compact .bn-members-grid { padding-block: 76px 96px; }
+.bn-site.spacing-compact .bn-team-note { padding-block: 58px; }
+.bn-site.spacing-compact .bn-opportunity-page { padding-block: 72px 94px; }
+.bn-site.spacing-compact .bn-application-note { padding-block: 76px; }
+.bn-site.spacing-compact .bn-contact-page { padding-block: 76px 96px; }
+.bn-site.spacing-compact .bn-footer { padding-top: 60px; }
+.bn-site.spacing-compact .bn-footer-main { padding-bottom: 58px; }
+
+.bn-site.spacing-generous .bn-home-hero,
+.bn-site.spacing-generous .bn-hero-grid {
+  min-height: 720px;
+}
+
+.bn-site.spacing-generous .bn-hero-grid { padding-block: 92px; }
+.bn-site.spacing-generous .bn-home-overview { padding-block: 152px; }
+.bn-site.spacing-generous .bn-home-programmes { padding-block: 132px 152px; }
+.bn-site.spacing-generous .bn-pi-home { padding-block: 152px; }
+.bn-site.spacing-generous .bn-join-strip { padding-block: 92px; }
+.bn-site.spacing-generous .bn-page-intro { padding-block: 118px 124px; }
+.bn-site.spacing-generous .bn-research-page { padding-block: 118px 152px; }
+.bn-site.spacing-generous .bn-research-page article { padding-block: 86px; }
+.bn-site.spacing-generous .bn-project-intro { padding-block: 70px 124px; }
+.bn-site.spacing-generous .bn-project-content { padding-block: 142px; }
+.bn-site.spacing-generous .bn-figure-wrap { padding-bottom: 138px; }
+.bn-site.spacing-generous .bn-project-lists { padding-bottom: 148px; }
+.bn-site.spacing-generous .bn-next-programme { padding-bottom: 138px; }
+.bn-site.spacing-generous .bn-publication-page { padding-block: 108px 148px; }
+.bn-site.spacing-generous .bn-principal-member { padding-block: 126px; }
+.bn-site.spacing-generous .bn-members-grid { padding-block: 126px 154px; }
+.bn-site.spacing-generous .bn-team-note { padding-block: 94px; }
+.bn-site.spacing-generous .bn-opportunity-page { padding-block: 118px 150px; }
+.bn-site.spacing-generous .bn-application-note { padding-block: 126px; }
+.bn-site.spacing-generous .bn-contact-page { padding-block: 126px 150px; }
+.bn-site.spacing-generous .bn-footer { padding-top: 98px; }
+.bn-site.spacing-generous .bn-footer-main { padding-bottom: 92px; }
+
+/* Corner treatment */
+.bn-site.corners-soft .bn-button,
+.bn-site.corners-soft .bn-hero-visual,
+.bn-site.corners-soft .bn-person-image,
+.bn-site.corners-soft .bn-person-placeholder,
+.bn-site.corners-soft .bn-research-card-figure img,
+.bn-site.corners-soft .bn-research-card-figure > div,
+.bn-site.corners-soft .bn-research-figure,
+.bn-site.corners-soft .bn-contact-card,
+.bn-site.corners-soft .bn-publication-tools input,
+.bn-site.corners-soft .bn-preview-badge {
+  border-radius: 18px;
+}
+
+.bn-site.corners-soft .bn-wordmark-mark,
+.bn-site.corners-soft .bn-wordmark-mark .bn-person-placeholder {
+  border-radius: 50%;
+}
+
+@media (max-width: 980px) {
+  .design-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bn-hero-grid.layout-image-left .bn-hero-content,
+  .bn-hero-grid.layout-image-left .bn-hero-visual,
+  .bn-pi-home.layout-image-right > div,
+  .bn-pi-home.layout-image-right > .bn-person-image,
+  .bn-pi-home.layout-image-right > .bn-person-placeholder {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .bn-research-page article.layout-alternating.is-even > div,
+  .bn-research-page article.layout-alternating.is-even .bn-research-card-figure {
+    grid-column: 2;
+  }
+
+  .bn-members-grid.columns-2,
+  .bn-members-grid.columns-3,
+  .bn-members-grid.columns-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .advanced-design-heading {
+    flex-direction: column;
+  }
+
+  .advanced-design-heading button {
+    width: 100%;
+  }
+
+  .bn-programme-grid.layout-rows > a,
+  .bn-programme-grid.layout-rows > a:nth-child(even) {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    padding: 35px 0;
+  }
+
+  .bn-programme-grid.layout-rows h3 {
+    margin: 65px 0 18px;
+  }
+
+  .bn-research-page article.layout-alternating.is-even > div,
+  .bn-research-page article.layout-alternating.is-even .bn-research-card-figure {
+    grid-column: auto;
+  }
+
+  .bn-members-grid.columns-2,
+  .bn-members-grid.columns-3,
+  .bn-members-grid.columns-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .bn-site.spacing-compact .bn-home-hero,
+  .bn-site.spacing-compact .bn-hero-grid,
+  .bn-site.spacing-generous .bn-home-hero,
+  .bn-site.spacing-generous .bn-hero-grid {
+    min-height: auto;
+  }
+}
