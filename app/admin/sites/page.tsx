@@ -37,7 +37,7 @@ type SiteRow = {
 };
 
 type StatusFilter = "all" | SiteStatus;
-type DomainFilter = "all" | "not_connected" | "live" | "others";
+type DomainFilter = "not_connected" | "live";
 type SortKey =
   | "updated_desc"
   | "updated_asc"
@@ -67,11 +67,11 @@ const statusLabels: Record<SiteStatus, string> = {
 
 const domainLabels: Record<DomainStatus, string> = {
   not_connected: "Not connected",
-  connecting: "Others",
-  https_pending: "Others",
+  connecting: "Not connected",
+  https_pending: "Not connected",
   live: "Live",
-  error: "Others",
-  legacy: "Others",
+  error: "Not connected",
+  legacy: "Not connected",
 };
 
 function siteName(site: SiteRow): string {
@@ -88,10 +88,8 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
-function simplifiedDomainStatus(status: DomainStatus): "not_connected" | "live" | "others" {
-  if (status === "not_connected") return "not_connected";
-  if (status === "live") return "live";
-  return "others";
+function simplifiedDomainStatus(status: DomainStatus): DomainFilter {
+  return status === "live" ? "live" : "not_connected";
 }
 
 export default function SiteMonitorPage() {
@@ -103,8 +101,8 @@ export default function SiteMonitorPage() {
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [domainFilter, setDomainFilter] = useState<DomainFilter>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("updated_desc");
+  const [domainFilter, setDomainFilter] = useState<DomainFilter>("live");
+  const [sortKey, setSortKey] = useState<SortKey>("name_asc");
   const [showArchived, setShowArchived] = useState(false);
 
   const loadSites = useCallback(async (activeSession: Session) => {
@@ -179,7 +177,7 @@ export default function SiteMonitorPage() {
       concept: sites.filter((site) => site.status === "concept").length,
       client: sites.filter((site) => site.status === "live").length,
       archived: sites.filter((site) => site.status === "archived").length,
-      domainOthers: sites.filter((site) => simplifiedDomainStatus(site.domain_status) === "others").length,
+      domainNotConnected: sites.filter((site) => simplifiedDomainStatus(site.domain_status) === "not_connected").length,
     };
   }, [sites]);
 
@@ -190,10 +188,7 @@ export default function SiteMonitorPage() {
       if (!showArchived && site.status === "archived") return false;
       if (statusFilter !== "all" && site.status !== statusFilter) return false;
 
-      if (
-        domainFilter !== "all"
-        && simplifiedDomainStatus(site.domain_status) !== domainFilter
-      ) {
+      if (simplifiedDomainStatus(site.domain_status) !== domainFilter) {
         return false;
       }
 
@@ -371,12 +366,12 @@ export default function SiteMonitorPage() {
             <strong>{counts.client}</strong>
           </button>
           <button
-            className={domainFilter === "others" ? styles.activeSummary : ""}
-            onClick={() => setDomainFilter(domainFilter === "others" ? "all" : "others")}
+            className={domainFilter === "not_connected" ? styles.activeSummary : ""}
+            onClick={() => setDomainFilter("not_connected")}
             type="button"
           >
-            <span>Domain others</span>
-            <strong>{counts.domainOthers}</strong>
+            <span>Not connected</span>
+            <strong>{counts.domainNotConnected}</strong>
           </button>
           <button
             className={showArchived ? styles.activeSummary : ""}
@@ -426,10 +421,8 @@ export default function SiteMonitorPage() {
               value={domainFilter}
               onChange={(event) => setDomainFilter(event.target.value as DomainFilter)}
             >
-              <option value="all">All domain states</option>
-              <option value="not_connected">Not connected</option>
               <option value="live">Live</option>
-              <option value="others">Others</option>
+              <option value="not_connected">Not connected</option>
             </select>
           </label>
 
@@ -491,8 +484,7 @@ export default function SiteMonitorPage() {
                   </td>
                   <td data-label="Domain status">
                     <span
-                      className={`${styles.badge} ${styles[`domain_${site.domain_status}`]}`}
-                      title={`Technical state: ${site.domain_status}`}
+                      className={`${styles.badge} ${styles[`domain_${simplifiedDomainStatus(site.domain_status)}`]}`}
                     >
                       {domainLabels[site.domain_status]}
                     </span>
