@@ -7,6 +7,7 @@ import BourdonEditor from "@/components/admin/BourdonEditor";
 import JsonImportPanel from "@/components/admin/JsonImportPanel";
 import PiConceptFactoryPanel from "@/components/admin/PiConceptFactoryPanel";
 import BatchConceptFactoryPanel from "@/components/admin/BatchConceptFactoryPanel";
+import SiteManagementTable, { type SiteManagerFilter } from "@/components/admin/SiteManagementTable";
 import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
@@ -94,6 +95,7 @@ type SiteRow = {
   slug: string;
   status: SiteStatus;
   content: SiteContent;
+  created_at: string;
   updated_at: string;
   domain_status: DomainStatus;
   domain_url: string | null;
@@ -473,13 +475,30 @@ export default function AdminPage() {
   const [provisioning, setProvisioning] = useState(false);
   const [domainNotice, setDomainNotice] = useState("");
   const [domainUrl, setDomainUrl] = useState("");
-  const [factoryOpen, setFactoryOpen] = useState(true);
+  const [dashboardOpen, setDashboardOpen] = useState(true);
+  const [dashboardFilter, setDashboardFilter] = useState<SiteManagerFilter>("all");
+  const [factoryOpen, setFactoryOpen] = useState(false);
   const [duplicateSourceId, setDuplicateSourceId] = useState("");
   const [generatedImport, setGeneratedImport] = useState<{ id: number; text: string; name: string } | null>(null);
 
   const selectedSite = useMemo(
     () => sites.find((site) => site.id === editor.id),
     [sites, editor.id],
+  );
+
+  const siteCounts = useMemo(() => ({
+    all: sites.length,
+    draft: sites.filter((site) => site.status === "draft").length,
+    concept: sites.filter((site) => site.status === "concept").length,
+    live: sites.filter((site) => site.status === "live").length,
+    archived: sites.filter((site) => site.status === "archived").length,
+    public: sites.filter((site) => site.status === "concept" || site.status === "live").length,
+    domainAttention: sites.filter((site) => ["connecting", "https_pending", "error"].includes(site.domain_status)).length,
+  }), [sites]);
+
+  const recentSites = useMemo(
+    () => [...sites].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)).slice(0, 5),
+    [sites],
   );
 
   const loadAdminData = useCallback(async (activeSession: Session) => {
@@ -510,7 +529,7 @@ export default function AdminPage() {
 
     const { data, error } = await supabase
       .from("sites")
-      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at,content_schema_version,design_key,design_version,design_settings")
+      .select("id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at,content_schema_version,design_key,design_version,design_settings")
       .order("slug", { ascending: true });
 
     if (error) {
@@ -608,6 +627,7 @@ export default function AdminPage() {
   }
 
   function startNewSite() {
+    setDashboardOpen(false);
     setEditor({ status: "draft", content: emptyContent() });
     setFactoryOpen(true);
     setDuplicateSourceId("");
@@ -618,6 +638,7 @@ export default function AdminPage() {
   }
 
   function beginFromTemplate(template: SiteTemplate) {
+    setDashboardOpen(false);
     setEditor({ status: "draft", content: contentFromTemplate(template) });
     setFactoryOpen(false);
     setDuplicateSourceId("");
@@ -628,6 +649,7 @@ export default function AdminPage() {
   }
 
   function duplicateStructure(source: SiteRow) {
+    setDashboardOpen(false);
     const sourceContent = structuredClone(source.content);
     const template = normalizeTemplate(sourceContent.template ?? source.design_key);
     const fresh = contentFromTemplate(template);
@@ -710,6 +732,7 @@ export default function AdminPage() {
   }
 
   function openSite(site: SiteRow) {
+    setDashboardOpen(false);
     const loaded = structuredClone(site.content);
     loaded.template = normalizeTemplate(loaded.template ?? site.design_key);
     loaded.schemaVersion = loaded.schemaVersion ?? site.content_schema_version ?? 1;
@@ -732,6 +755,16 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function openDashboard(filter: SiteManagerFilter = "all") {
+    setDashboardFilter(filter);
+    setDashboardOpen(true);
+    setFactoryOpen(false);
+    setNotice("");
+    setDomainNotice("");
+    setDomainUrl("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function updateContent<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
     setNotice("");
     if (key === "slug") {
@@ -747,7 +780,7 @@ export default function AdminPage() {
   async function refreshSiteRow(id: string): Promise<SiteRow | null> {
     const { data, error } = await supabase
       .from("sites")
-      .select("id,slug,status,content,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at,content_schema_version,design_key,design_version,design_settings")
+      .select("id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,domain_connected_at,domain_checked_at,content_schema_version,design_key,design_version,design_settings")
       .eq("id", id)
       .single();
 
@@ -1109,47 +1142,102 @@ export default function AdminPage() {
       </header>
 
       <div className="admin-layout">
-        <aside className="admin-sidebar">
+        <aside className="admin-sidebar admin-navigation-sidebar">
           <div className="admin-sidebar-heading">
             <div>
-              <span className="admin-kicker">PI websites</span>
-              <strong>{sites.length} records</strong>
+              <span className="admin-kicker">Workspace</span>
+              <strong>{sites.length} websites</strong>
             </div>
-            <button onClick={startNewSite} type="button">+ New</button>
           </div>
 
-          {loading && <p className="admin-muted">Loading sites…</p>}
+          <nav className="admin-navigation" aria-label="Administrator workspace">
+            <button
+              className={dashboardOpen && dashboardFilter === "all" ? "active" : ""}
+              onClick={() => openDashboard("all")}
+              type="button"
+            >
+              <span>All websites</span><strong>{siteCounts.all}</strong>
+            </button>
+            <button
+              className={dashboardOpen && dashboardFilter === "draft" ? "active" : ""}
+              onClick={() => openDashboard("draft")}
+              type="button"
+            >
+              <span>Drafts</span><strong>{siteCounts.draft}</strong>
+            </button>
+            <button
+              className={dashboardOpen && dashboardFilter === "public" ? "active" : ""}
+              onClick={() => openDashboard("public")}
+              type="button"
+            >
+              <span>Public concepts</span><strong>{siteCounts.public}</strong>
+            </button>
+            <button
+              className={dashboardOpen && dashboardFilter === "live" ? "active" : ""}
+              onClick={() => openDashboard("live")}
+              type="button"
+            >
+              <span>Live websites</span><strong>{siteCounts.live}</strong>
+            </button>
+            <button
+              className={dashboardOpen && dashboardFilter === "archived" ? "active" : ""}
+              onClick={() => openDashboard("archived")}
+              type="button"
+            >
+              <span>Archived</span><strong>{siteCounts.archived}</strong>
+            </button>
+            <button
+              className={dashboardOpen && dashboardFilter === "domain_attention" ? "active" : ""}
+              onClick={() => openDashboard("domain_attention")}
+              type="button"
+            >
+              <span>Domain attention</span><strong>{siteCounts.domainAttention}</strong>
+            </button>
+          </nav>
 
-          <div className="admin-site-list">
-            {sites.map((site) => (
-              <button
-                className={site.id === editor.id ? "active" : ""}
-                key={site.id}
-                onClick={() => openSite(site)}
-                type="button"
-              >
-                <span>{site.content.labName || site.slug}</span>
-                <small style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
-                  <span>{site.slug} · {site.status}</span>
-                  <DomainBadge status={site.domain_status} />
-                </small>
-              </button>
-            ))}
+          <button className="admin-create-button" onClick={startNewSite} type="button">
+            <span>+ New</span>
+            <small>Create, generate or import</small>
+          </button>
+
+          <div className="admin-sidebar-section">
+            <span className="admin-kicker">Recently updated</span>
+            <div className="admin-recent-sites">
+              {recentSites.map((site) => (
+                <button key={site.id} type="button" onClick={() => openSite(site)}>
+                  <span>{site.content.labName || site.content.piName || site.slug}</span>
+                  <small>{site.slug} · {site.status}</small>
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
 
         <section className="admin-workspace">
-          <div className="admin-editor-heading">
+          <div className={`admin-editor-heading ${dashboardOpen ? "admin-dashboard-heading" : ""}`}>
             <div>
               <p className="admin-kicker">
-                {factoryOpen ? "Concept Factory" : editor.id ? "Edit PI website" : "Create PI website"}
+                {dashboardOpen
+                  ? "Website management"
+                  : factoryOpen
+                    ? "Concept Factory"
+                    : editor.id
+                      ? "Edit PI website"
+                      : "Create PI website"}
               </p>
               <h1>
-                {factoryOpen
-                  ? "Start from a design system."
-                  : content.labName || "New laboratory concept"}
+                {dashboardOpen
+                  ? "All PI websites."
+                  : factoryOpen
+                    ? "Start from a design system."
+                    : content.labName || "New laboratory concept"}
               </h1>
-              {!factoryOpen && (
+              {dashboardOpen && (
+                <p className="admin-dashboard-intro">
+                  Search, filter and sort the complete LabNarrative pipeline from private Drafts to connected live websites.
+                </p>
+              )}
+              {!dashboardOpen && !factoryOpen && (
                 <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.55rem", alignItems: "center", flexWrap: "wrap" }}>
                   <DomainBadge status={selectedSite?.domain_status ?? "not_connected"} />
                   <span className="admin-template-label">
@@ -1158,7 +1246,7 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-            {!factoryOpen && content.slug && (
+            {!dashboardOpen && !factoryOpen && content.slug && (
               <Link target="_blank" href={`/admin/preview/${cleanSlug(content.slug)}`}>
                 Open preview ↗
               </Link>
@@ -1167,7 +1255,18 @@ export default function AdminPage() {
 
           {notice && <p className="admin-notice">{notice}</p>}
 
-          {factoryOpen && (
+          {dashboardOpen && (
+            <SiteManagementTable
+              sites={sites}
+              loading={loading}
+              activeFilter={dashboardFilter}
+              onFilterChange={setDashboardFilter}
+              onOpen={(site) => openSite(site as SiteRow)}
+              onNew={startNewSite}
+            />
+          )}
+
+          {!dashboardOpen && factoryOpen && (
             <section className="admin-factory" aria-label="LabNarrative concept factory">
               <div className="admin-factory-intro">
                 <div>
@@ -1281,7 +1380,7 @@ export default function AdminPage() {
             </section>
           )}
 
-          {!factoryOpen && (
+          {!dashboardOpen && !factoryOpen && (
           <form className="admin-form" onSubmit={saveSite}>
             {isFullWebsite ? (
               <BourdonEditor
