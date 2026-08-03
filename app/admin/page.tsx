@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import BourdonEditor from "@/components/admin/BourdonEditor";
 import JsonImportPanel from "@/components/admin/JsonImportPanel";
 import PiConceptFactoryPanel from "@/components/admin/PiConceptFactoryPanel";
+import BatchConceptFactoryPanel from "@/components/admin/BatchConceptFactoryPanel";
 import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
@@ -1127,6 +1128,15 @@ export default function AdminPage() {
               </div>
 
               <PiConceptFactoryPanel
+                existingSlugs={sites.map((site) => site.slug)}
+                onGenerated={loadGeneratedImport}
+              />
+
+              <div className="admin-template-divider">
+                <span>or produce a controlled batch</span>
+              </div>
+
+              <BatchConceptFactoryPanel
                 existingSlugs={sites.map((site) => site.slug)}
                 onGenerated={loadGeneratedImport}
               />
