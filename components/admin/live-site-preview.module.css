@@ -1,6 +1,6 @@
 .split {
   display: grid;
-  grid-template-columns: minmax(480px, 0.92fr) minmax(560px, 1.08fr);
+  grid-template-columns: minmax(480px, 0.92fr) minmax(720px, 1.08fr);
   gap: 14px;
   align-items: start;
   width: 100%;
@@ -156,8 +156,16 @@
   background: #ffffff;
 }
 
-.previewViewport > main {
-  width: 200%;
+.previewCanvas {
+  width: 720px;
+  min-height: 100%;
+  margin-inline: auto;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.previewCanvas > main {
+  width: 1440px;
   max-width: none;
   min-height: 200%;
   margin: 0;
@@ -299,7 +307,7 @@
   font-size: 0.63rem !important;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1320px) {
   :global(.advanced-editor .admin-inline-fields.three) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -314,8 +322,13 @@
     height: 760px;
   }
 
-  .previewViewport > main {
-    width: 125%;
+  .previewCanvas {
+    width: 960px;
+    max-width: 100%;
+  }
+
+  .previewCanvas > main {
+    width: 1200px;
     min-height: 125%;
     zoom: 0.8;
   }
@@ -335,7 +348,11 @@
     align-items: flex-start;
   }
 
-  .previewViewport > main {
+  .previewCanvas {
+    width: 100%;
+  }
+
+  .previewCanvas > main {
     width: 100%;
     min-height: 100%;
     zoom: 1;
