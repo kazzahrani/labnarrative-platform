@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./platform-overrides.css";
 
 export const metadata: Metadata = {
   title: "LabNarrative Platform",
