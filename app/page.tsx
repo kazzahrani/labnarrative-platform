@@ -49,7 +49,7 @@ export default function PlatformHome() {
             Website monitor →
           </Link>
           <Link href="/admin" style={secondaryButtonStyle}>
-            View platform →
+            Administrator dashboard →
           </Link>
         </nav>
       </section>
