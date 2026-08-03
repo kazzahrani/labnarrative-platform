@@ -3,6 +3,8 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import BourdonEditor from "@/components/admin/BourdonEditor";
+import type { LabSite } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
@@ -237,7 +239,7 @@ function contentFromTemplate(template: SiteTemplate): SiteContent {
   const definition = templateDefinitions[template];
   const isFull = template === "bourdon-full";
   return {
-    schemaVersion: isFull ? 2 : 1,
+    schemaVersion: isFull ? 3 : 1,
     design: { key: template, version: 1, settings: {} },
     template,
     heroImage: "",
@@ -292,7 +294,7 @@ function compactContent(content: SiteContent): SiteContent {
   const template = normalizeTemplate(content.template);
   return {
     ...content,
-    schemaVersion: template === "bourdon-full" ? 2 : 1,
+    schemaVersion: template === "bourdon-full" ? 3 : 1,
     design: { key: template, version: 1, settings: content.design?.settings ?? {} },
     slug: cleanSlug(content.slug),
     focusAreas: content.focusAreas.map((item) => item.trim()).filter(Boolean),
@@ -608,7 +610,7 @@ export default function AdminPage() {
     const duplicated: SiteContent = {
       ...fresh,
       template,
-      schemaVersion: template === "bourdon-full" ? 2 : 1,
+      schemaVersion: template === "bourdon-full" ? 3 : 1,
       design: { key: template, version: 1, settings: structuredClone(source.design_settings ?? {}) },
       theme: { ...(sourceContent.theme ?? templateDefinitions[template].theme) },
       focusAreas: Array.from(
@@ -661,7 +663,7 @@ export default function AdminPage() {
     setEditor((current) => {
       const next = { ...current.content };
       next.template = template;
-      next.schemaVersion = template === "bourdon-full" ? 2 : 1;
+      next.schemaVersion = template === "bourdon-full" ? 3 : 1;
       next.design = { key: template, version: 1, settings: next.design?.settings ?? {} };
       next.theme = { ...templateDefinitions[template].theme };
       if (template === "bourdon-full") {
@@ -745,7 +747,7 @@ export default function AdminPage() {
       slug,
       status: editor.status,
       content: { ...content, slug },
-      content_schema_version: template === "bourdon-full" ? 2 : 1,
+      content_schema_version: template === "bourdon-full" ? 3 : 1,
       design_key: template,
       design_version: 1,
       design_settings: content.design?.settings ?? {},
@@ -1116,6 +1118,24 @@ export default function AdminPage() {
 
           {!factoryOpen && (
           <form className="admin-form" onSubmit={saveSite}>
+            {isFullWebsite ? (
+              <BourdonEditor
+                content={content as unknown as LabSite}
+                status={editor.status}
+                onContentChange={(nextContent) => {
+                  setNotice("");
+                  setEditor((current) => ({
+                    ...current,
+                    content: nextContent as unknown as SiteContent,
+                  }));
+                }}
+                onStatusChange={(nextStatus) => {
+                  setNotice("");
+                  setEditor((current) => ({ ...current, status: nextStatus }));
+                }}
+              />
+            ) : (
+              <>
             <section className="admin-panel">
               <div className="admin-panel-heading">
                 <span>01</span>
@@ -1347,6 +1367,9 @@ export default function AdminPage() {
                 ))}
               </div>
             </section>
+
+              </>
+            )}
 
             <div className="admin-save-bar">
               <div>
