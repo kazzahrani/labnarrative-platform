@@ -5793,3 +5793,27 @@ a {
     flex-direction: column;
   }
 }
+
+
+/* LabNarrative v0.9.2 — improve live-site action contrast */
+.admin-save-bar .admin-secondary-button {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #b7c7bd;
+  color: #f8faf6;
+}
+
+.admin-save-bar .admin-secondary-button:hover {
+  background: #f8faf6;
+  border-color: #f8faf6;
+  color: #153229;
+}
+
+.admin-save-bar .admin-secondary-button:focus-visible {
+  outline: 3px solid #d7a85a;
+  outline-offset: 3px;
+}
+
+.admin-save-bar .admin-secondary-button:disabled {
+  color: #f8faf6;
+  opacity: 0.55;
+}
