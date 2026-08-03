@@ -18,6 +18,7 @@ import {
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type Tab = "home" | "research" | "publications" | "members" | "join" | "contact" | "design";
+type PreviewSection = Exclude<Tab, "design">;
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "home", label: "Home" },
@@ -139,11 +140,13 @@ export default function BourdonEditor({
   status,
   onContentChange,
   onStatusChange,
+  onPreviewSectionChange,
 }: {
   content: LabSite;
   status: SiteStatus;
   onContentChange: (content: LabSite) => void;
   onStatusChange: (status: SiteStatus) => void;
+  onPreviewSectionChange?: (section: PreviewSection) => void;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const pages = useMemo(() => getBourdonPages(content), [content]);
@@ -214,7 +217,15 @@ export default function BourdonEditor({
 
       <nav className="advanced-editor-tabs" aria-label="Website page editor">
         {tabs.map((tab) => (
-          <button key={tab.id} type="button" className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>
+          <button
+            key={tab.id}
+            type="button"
+            className={activeTab === tab.id ? "active" : ""}
+            onClick={() => {
+              setActiveTab(tab.id);
+              if (tab.id !== "design") onPreviewSectionChange?.(tab.id);
+            }}
+          >
             {tab.label}
           </button>
         ))}

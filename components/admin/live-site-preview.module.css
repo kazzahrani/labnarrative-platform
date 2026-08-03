@@ -1,0 +1,192 @@
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(430px, 1fr);
+  gap: 18px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+
+.editorPane {
+  min-width: 0;
+}
+
+.previewPane {
+  position: sticky;
+  top: 82px;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  min-width: 0;
+  height: calc(100vh - 98px);
+  overflow: hidden;
+  border: 1px solid #cbd4cf;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 12px 34px rgba(19, 45, 58, 0.09);
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #dde4df;
+  background: #f7f9f6;
+}
+
+.previewHeader > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.previewHeader strong {
+  overflow: hidden;
+  color: #153229;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewHeader small {
+  color: #6c7a73;
+  font-size: 0.67rem;
+}
+
+.kicker {
+  color: #52675e;
+  font-size: 0.59rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.61rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.status_draft {
+  border-color: #c4cbc7;
+  background: #eef0ed;
+  color: #53605a;
+}
+
+.status_concept {
+  border-color: #d8a94d;
+  background: #fff0c9;
+  color: #745219;
+}
+
+.status_live {
+  border-color: #72a189;
+  background: #e1efe7;
+  color: #174936;
+}
+
+.status_archived {
+  border-color: #a99bb8;
+  background: #eee9f2;
+  color: #584b65;
+}
+
+.previewNavigation {
+  display: flex;
+  gap: 4px;
+  padding: 9px 10px;
+  overflow-x: auto;
+  border-bottom: 1px solid #dde4df;
+  background: #ffffff;
+}
+
+.previewNavigation button {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #64736c;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.previewNavigation button:hover {
+  background: #edf2ef;
+  color: #153229;
+}
+
+.previewNavigation .activePage {
+  border-color: #153229;
+  background: #153229;
+  color: #ffffff;
+}
+
+.viewportLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #e5e9e6;
+  background: #eef2ef;
+  color: #6b7972;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.previewViewport {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #ffffff;
+}
+
+.previewViewport > main {
+  min-height: 100%;
+}
+
+.previewFooter {
+  padding: 8px 12px;
+  border-top: 1px solid #dde4df;
+  background: #f7f9f6;
+  color: #6b7972;
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 1180px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .previewPane {
+    position: relative;
+    top: auto;
+    height: 760px;
+  }
+}
+
+@media (max-width: 720px) {
+  .previewPane {
+    height: 680px;
+    border-radius: 7px;
+  }
+
+  .previewHeader {
+    align-items: flex-start;
+  }
+}
