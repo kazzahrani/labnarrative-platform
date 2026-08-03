@@ -108,6 +108,108 @@ function suggestedSlug(name: string): string {
   );
 }
 
+
+type MutableRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is MutableRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function ensureRecord(parent: MutableRecord, key: string): MutableRecord {
+  const current = parent[key];
+  if (isRecord(current)) return current;
+  const created: MutableRecord = {};
+  parent[key] = created;
+  return created;
+}
+
+function fallbackLabName(piName: string): string {
+  const cleaned = piName
+    .replace(/\b(professor|prof|doctor|dr|associate|assistant)\.?\b/gi, " ")
+    .split(",")[0]
+    .replace(/\s+/g, " ")
+    .trim();
+  const surname = cleaned.split(" ").filter(Boolean).at(-1) || "Research";
+  return `${surname} Lab`;
+}
+
+function supportedLink(value: unknown): string {
+  const text = textValue(value);
+  if (!text) return "";
+  if (text.startsWith("/") || text.startsWith("#")) return text;
+  try {
+    const parsed = new URL(text);
+    return ["http:", "https:", "mailto:"].includes(parsed.protocol) ? text : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizedColor(value: unknown, fallback: string): string {
+  const text = textValue(value).toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(text)) return text;
+  if (/^#[0-9a-f]{3}$/.test(text)) {
+    return `#${text.slice(1).split("").map((character) => character.repeat(2)).join("")}`;
+  }
+  const embedded = text.match(/#[0-9a-f]{6}/)?.[0];
+  return embedded || fallback;
+}
+
+function normalizeGeneratedImportData(input: unknown, requestedPiName: string): unknown {
+  if (!isRecord(input)) return input;
+
+  const clone = JSON.parse(JSON.stringify(input)) as MutableRecord;
+  const site = isRecord(clone.site) ? clone.site : clone;
+  const identity = ensureRecord(site, "identity");
+  const contact = ensureRecord(site, "contact");
+  const pages = ensureRecord(site, "pages");
+  const home = ensureRecord(pages, "home");
+  const contactPage = ensureRecord(pages, "contact");
+
+  const piName = textValue(site.piName) || textValue(identity.piName) || requestedPiName.trim();
+  if (piName) {
+    site.piName = piName;
+    identity.piName = piName;
+  }
+
+  const labName = textValue(site.labName)
+    || textValue(identity.labName)
+    || textValue(home.footerLabName)
+    || fallbackLabName(piName || requestedPiName);
+  site.labName = labName;
+  identity.labName = labName;
+  if (!textValue(home.footerLabName)) home.footerLabName = labName;
+
+  const profileFallback = supportedLink(contact.profileUrl)
+    || supportedLink(site.profileUrl)
+    || supportedLink(identity.profileUrl);
+  contactPage.officialProfile = supportedLink(contactPage.officialProfile) || profileFallback;
+
+  // Images are deliberately selected and uploaded manually by the LabNarrative editor.
+  site.heroImage = "";
+  for (const field of ["topPortrait", "homepageImage", "piImage"]) home[field] = "";
+  contactPage.piImage = "";
+  if (Array.isArray(site.research)) {
+    site.research = site.research.map((item) => isRecord(item) ? { ...item, figureImage: "" } : item);
+  }
+  if (Array.isArray(site.members)) {
+    site.members = site.members.map((item) => isRecord(item) ? { ...item, image: "" } : item);
+  }
+
+  const theme = ensureRecord(site, "theme");
+  theme.background = normalizedColor(theme.background, "#f8f8f5");
+  theme.surface = normalizedColor(theme.surface, "#ffffff");
+  theme.foreground = normalizedColor(theme.foreground, "#132d3a");
+  theme.muted = normalizedColor(theme.muted, "#647178");
+  theme.accent = normalizedColor(theme.accent, "#117b79");
+
+  return clone;
+}
+
 function uniqueSlug(baseValue: string, used: Set<string>): string {
   const base = cleanSlug(baseValue) || "pi-concept";
   let candidate = base;
@@ -475,7 +577,8 @@ export default function BatchConceptFactoryPanel({ existingSlugs, onGenerated }:
 
         try {
           const result = await invokeGenerator(row);
-          row.jsonText = JSON.stringify(result.importData, null, 2);
+          const normalizedImportData = normalizeGeneratedImportData(result.importData, row.piName);
+          row.jsonText = JSON.stringify(normalizedImportData, null, 2);
           row.fileName = `${row.slug}-labnarrative-import.json`;
           row.status = "ready";
           row.qualityScore = result.quality?.score;
@@ -548,9 +651,19 @@ export default function BatchConceptFactoryPanel({ existingSlugs, onGenerated }:
     setRows((current) => current.filter((row) => row.id !== id));
   }
 
+  function normalizedRowJson(row: BatchRow): string {
+    if (!row.jsonText) return "";
+    try {
+      return JSON.stringify(normalizeGeneratedImportData(JSON.parse(row.jsonText), row.piName), null, 2);
+    } catch {
+      return row.jsonText;
+    }
+  }
+
   function loadIntoValidator(row: BatchRow) {
-    if (!row.jsonText) return;
-    onGenerated(row.jsonText, row.fileName || `${row.slug}-labnarrative-import.json`);
+    const jsonText = normalizedRowJson(row);
+    if (!jsonText) return;
+    onGenerated(jsonText, row.fileName || `${row.slug}-labnarrative-import.json`);
     window.setTimeout(() => document.querySelector(".json-import-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }
 
@@ -568,7 +681,7 @@ export default function BatchConceptFactoryPanel({ existingSlugs, onGenerated }:
         qualityLabel: row.qualityLabel,
         cost: row.cost,
         warnings: row.warnings,
-        importData: JSON.parse(row.jsonText),
+        importData: JSON.parse(normalizedRowJson(row)),
       })),
     };
     downloadText(JSON.stringify(archive, null, 2), `labnarrative-batch-${new Date().toISOString().slice(0, 10)}.json`);
@@ -695,7 +808,7 @@ export default function BatchConceptFactoryPanel({ existingSlugs, onGenerated }:
                     <td>
                       <div className="batch-row-actions">
                         {row.status === "ready" && <button type="button" onClick={() => loadIntoValidator(row)}>Validate</button>}
-                        {row.status === "ready" && <button type="button" onClick={() => downloadText(row.jsonText, row.fileName)}>Download</button>}
+                        {row.status === "ready" && <button type="button" onClick={() => downloadText(normalizedRowJson(row), row.fileName)}>Download</button>}
                         {row.status === "failed" && <button type="button" onClick={() => retryRow(row.id)} disabled={running}>Retry</button>}
                         {row.status === "pending" && <button type="button" onClick={() => skipRow(row.id)} disabled={running}>Skip</button>}
                         {row.status === "skipped" && <button type="button" onClick={() => restoreRow(row.id)} disabled={running}>Restore</button>}

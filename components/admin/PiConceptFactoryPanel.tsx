@@ -70,6 +70,108 @@ function suggestedSlug(name: string): string {
   );
 }
 
+
+type MutableRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is MutableRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function ensureRecord(parent: MutableRecord, key: string): MutableRecord {
+  const current = parent[key];
+  if (isRecord(current)) return current;
+  const created: MutableRecord = {};
+  parent[key] = created;
+  return created;
+}
+
+function fallbackLabName(piName: string): string {
+  const cleaned = piName
+    .replace(/\b(professor|prof|doctor|dr|associate|assistant)\.?\b/gi, " ")
+    .split(",")[0]
+    .replace(/\s+/g, " ")
+    .trim();
+  const surname = cleaned.split(" ").filter(Boolean).at(-1) || "Research";
+  return `${surname} Lab`;
+}
+
+function supportedLink(value: unknown): string {
+  const text = textValue(value);
+  if (!text) return "";
+  if (text.startsWith("/") || text.startsWith("#")) return text;
+  try {
+    const parsed = new URL(text);
+    return ["http:", "https:", "mailto:"].includes(parsed.protocol) ? text : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizedColor(value: unknown, fallback: string): string {
+  const text = textValue(value).toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(text)) return text;
+  if (/^#[0-9a-f]{3}$/.test(text)) {
+    return `#${text.slice(1).split("").map((character) => character.repeat(2)).join("")}`;
+  }
+  const embedded = text.match(/#[0-9a-f]{6}/)?.[0];
+  return embedded || fallback;
+}
+
+function normalizeGeneratedImportData(input: unknown, requestedPiName: string): unknown {
+  if (!isRecord(input)) return input;
+
+  const clone = JSON.parse(JSON.stringify(input)) as MutableRecord;
+  const site = isRecord(clone.site) ? clone.site : clone;
+  const identity = ensureRecord(site, "identity");
+  const contact = ensureRecord(site, "contact");
+  const pages = ensureRecord(site, "pages");
+  const home = ensureRecord(pages, "home");
+  const contactPage = ensureRecord(pages, "contact");
+
+  const piName = textValue(site.piName) || textValue(identity.piName) || requestedPiName.trim();
+  if (piName) {
+    site.piName = piName;
+    identity.piName = piName;
+  }
+
+  const labName = textValue(site.labName)
+    || textValue(identity.labName)
+    || textValue(home.footerLabName)
+    || fallbackLabName(piName || requestedPiName);
+  site.labName = labName;
+  identity.labName = labName;
+  if (!textValue(home.footerLabName)) home.footerLabName = labName;
+
+  const profileFallback = supportedLink(contact.profileUrl)
+    || supportedLink(site.profileUrl)
+    || supportedLink(identity.profileUrl);
+  contactPage.officialProfile = supportedLink(contactPage.officialProfile) || profileFallback;
+
+  // Images are deliberately selected and uploaded manually by the LabNarrative editor.
+  site.heroImage = "";
+  for (const field of ["topPortrait", "homepageImage", "piImage"]) home[field] = "";
+  contactPage.piImage = "";
+  if (Array.isArray(site.research)) {
+    site.research = site.research.map((item) => isRecord(item) ? { ...item, figureImage: "" } : item);
+  }
+  if (Array.isArray(site.members)) {
+    site.members = site.members.map((item) => isRecord(item) ? { ...item, image: "" } : item);
+  }
+
+  const theme = ensureRecord(site, "theme");
+  theme.background = normalizedColor(theme.background, "#f8f8f5");
+  theme.surface = normalizedColor(theme.surface, "#ffffff");
+  theme.foreground = normalizedColor(theme.foreground, "#132d3a");
+  theme.muted = normalizedColor(theme.muted, "#647178");
+  theme.accent = normalizedColor(theme.accent, "#117b79");
+
+  return clone;
+}
+
 export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Props) {
   const [piName, setPiName] = useState("");
   const [institution, setInstitution] = useState("");
@@ -170,7 +272,8 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
         throw new Error(result.error || "The research generator returned no import package.");
       }
 
-      const jsonText = JSON.stringify(result.importData, null, 2);
+      const normalizedImportData = normalizeGeneratedImportData(result.importData, piName);
+      const jsonText = JSON.stringify(normalizedImportData, null, 2);
       onGenerated(jsonText, `${effectiveSlug}-labnarrative-import.json`);
       setSources(result.sources ?? []);
       setWarnings(result.warnings ?? []);
