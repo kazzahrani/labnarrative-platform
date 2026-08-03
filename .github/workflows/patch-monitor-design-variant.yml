@@ -1,0 +1,65 @@
+name: Patch monitor design variant display
+
+on:
+  push:
+    paths:
+      - ".github/workflows/patch-monitor-design-variant.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update Website Monitor design display
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/admin/sites/page.tsx")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  "  design_key: string;\n  design_version: number;",
+                  "  design_key: string;\n  design_settings: { variant?: string } | null;\n  design_version: number;",
+              ),
+              (
+                  '"id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_version,content_schema_version",',
+                  '"id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_settings,design_version,content_schema_version",',
+              ),
+              (
+                  "        site.design_key,\n      ].join",
+                  "        site.design_key,\n        site.design_settings?.variant ?? \"\",\n      ].join",
+              ),
+              (
+                  "function simplifiedDomainStatus(status: DomainStatus): \"not_connected\" | \"live\" {\n  return status === \"live\" ? \"live\" : \"not_connected\";\n}\n",
+                  "function simplifiedDomainStatus(status: DomainStatus): \"not_connected\" | \"live\" {\n  return status === \"live\" ? \"live\" : \"not_connected\";\n}\n\nfunction humanizeDesignName(value: string): string {\n  return value\n    .trim()\n    .replace(/-v(\\d+)$/i, \" v$1\")\n    .split(/[-_\\s]+/)\n    .filter(Boolean)\n    .map((part) => (/^v\\d+$/i.test(part) ? part.toLowerCase() : `${part.charAt(0).toUpperCase()}${part.slice(1)}`))\n    .join(\" \ ").trim();\n}\n\nfunction designPrimaryLabel(site: SiteRow): string {\n  const variant = site.design_settings?.variant?.trim();\n  return humanizeDesignName(variant || site.design_key || \"\") || \"—\";\n}\n\nfunction designSecondaryLabel(site: SiteRow): string {\n  const variant = site.design_settings?.variant?.trim();\n  if (variant) {\n    return `Base ${site.design_key || \"—\"} · schema ${site.content_schema_version || 1}`;\n  }\n\n  return `v${site.design_version || 1} · schema ${site.content_schema_version || 1}`;\n}\n",
+              ),
+              (
+                  "                  <td data-label=\"Design\">\n                    <strong>{site.design_key || \"—\"}</strong>\n                    <span>v{site.design_version || 1} · schema {site.content_schema_version || 1}</span>\n                  </td>",
+                  "                  <td data-label=\"Design\">\n                    <strong>{designPrimaryLabel(site)}</strong>\n                    <span>{designSecondaryLabel(site)}</span>\n                  </td>",
+              ),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one match, found {count}: {old[:90]!r}")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          Path(".github/workflows/patch-monitor-design-variant.yml").unlink()
+
+      - name: Commit patch
+        run: |
+          git config user.name "LabNarrative Automation"
+          git config user.email "hello@labnarrative.com"
+          git add -A
+          git commit -m "Show design variants in website monitor"
+          git push
