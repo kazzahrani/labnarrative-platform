@@ -66,7 +66,7 @@ export default function LiveSitePreview({
   const viewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    viewportRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    viewportRef.current?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }, [route.section, route.projectSlug]);
 
   function handlePreviewClick(event: MouseEvent<HTMLDivElement>) {
