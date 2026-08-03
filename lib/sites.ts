@@ -21,6 +21,30 @@ export type Theme = {
   accent: string;
 };
 
+export type BourdonDesignSettings = {
+  homeHeroLayout: "image-right" | "image-left" | "text-only";
+  programmesLayout: "grid" | "rows";
+  piLayout: "image-left" | "image-right" | "text-only";
+  researchIndexLayout: "image-right" | "alternating" | "text-only";
+  projectLayout: "split" | "stacked";
+  membersColumns: 2 | 3 | 4;
+  pageIntroStyle: "navy" | "teal" | "paper";
+  sectionSpacing: "compact" | "balanced" | "generous";
+  cornerStyle: "square" | "soft";
+};
+
+export const defaultBourdonDesignSettings: BourdonDesignSettings = {
+  homeHeroLayout: "image-right",
+  programmesLayout: "grid",
+  piLayout: "image-left",
+  researchIndexLayout: "image-right",
+  projectLayout: "split",
+  membersColumns: 3,
+  pageIntroStyle: "navy",
+  sectionSpacing: "balanced",
+  cornerStyle: "square",
+};
+
 export type ResearchProject = {
   slug: string;
   title: string;
@@ -214,6 +238,25 @@ export type LabSite = {
   theme: Theme;
   [key: string]: unknown;
 };
+
+export function getBourdonDesignSettings(site: Partial<LabSite> = {}): BourdonDesignSettings {
+  const raw = site.design?.settings ?? {};
+  const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+    allowed.includes(value as T) ? value as T : fallback;
+  const columns = Number(raw.membersColumns);
+
+  return {
+    homeHeroLayout: pick(raw.homeHeroLayout, ["image-right", "image-left", "text-only"] as const, defaultBourdonDesignSettings.homeHeroLayout),
+    programmesLayout: pick(raw.programmesLayout, ["grid", "rows"] as const, defaultBourdonDesignSettings.programmesLayout),
+    piLayout: pick(raw.piLayout, ["image-left", "image-right", "text-only"] as const, defaultBourdonDesignSettings.piLayout),
+    researchIndexLayout: pick(raw.researchIndexLayout, ["image-right", "alternating", "text-only"] as const, defaultBourdonDesignSettings.researchIndexLayout),
+    projectLayout: pick(raw.projectLayout, ["split", "stacked"] as const, defaultBourdonDesignSettings.projectLayout),
+    membersColumns: columns === 2 || columns === 4 ? columns : 3,
+    pageIntroStyle: pick(raw.pageIntroStyle, ["navy", "teal", "paper"] as const, defaultBourdonDesignSettings.pageIntroStyle),
+    sectionSpacing: pick(raw.sectionSpacing, ["compact", "balanced", "generous"] as const, defaultBourdonDesignSettings.sectionSpacing),
+    cornerStyle: pick(raw.cornerStyle, ["square", "soft"] as const, defaultBourdonDesignSettings.cornerStyle),
+  };
+}
 
 export type SiteRoute = {
   section: SiteSection;
