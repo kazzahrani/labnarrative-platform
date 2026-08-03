@@ -185,11 +185,11 @@ const templateDefinitions: Record<SiteTemplate, TemplateDefinition> = {
     description: "A complete multi-page laboratory website with detailed projects, people, publications, opportunities, contact information, and scientific figures.",
     bestFor: "Premium PI concepts · detailed research programmes · full client websites",
     theme: {
-      background: "#edf0ea",
-      surface: "#f9faf6",
-      foreground: "#153229",
-      muted: "#65736d",
-      accent: "#1d5946",
+      background: "#f8f8f5",
+      surface: "#ffffff",
+      foreground: "#132d3a",
+      muted: "#647178",
+      accent: "#117b79",
     },
   },
 };
@@ -198,6 +198,10 @@ function normalizeTemplate(value: unknown): SiteTemplate {
   return templateOrder.includes(value as SiteTemplate)
     ? value as SiteTemplate
     : "scientific-minimal";
+}
+
+function designVersionFor(template: SiteTemplate): number {
+  return template === "bourdon-full" ? 2 : 1;
 }
 
 function blankRichProject(index: number): RichResearchProject {
@@ -240,7 +244,7 @@ function contentFromTemplate(template: SiteTemplate): SiteContent {
   const isFull = template === "bourdon-full";
   return {
     schemaVersion: isFull ? 3 : 1,
-    design: { key: template, version: 1, settings: {} },
+    design: { key: template, version: designVersionFor(template), settings: {} },
     template,
     heroImage: "",
     slug: "",
@@ -295,7 +299,7 @@ function compactContent(content: SiteContent): SiteContent {
   return {
     ...content,
     schemaVersion: template === "bourdon-full" ? 3 : 1,
-    design: { key: template, version: 1, settings: content.design?.settings ?? {} },
+    design: { key: template, version: designVersionFor(template), settings: content.design?.settings ?? {} },
     slug: cleanSlug(content.slug),
     focusAreas: content.focusAreas.map((item) => item.trim()).filter(Boolean),
     projects: content.projects
@@ -611,7 +615,7 @@ export default function AdminPage() {
       ...fresh,
       template,
       schemaVersion: template === "bourdon-full" ? 3 : 1,
-      design: { key: template, version: 1, settings: structuredClone(source.design_settings ?? {}) },
+      design: { key: template, version: designVersionFor(template), settings: structuredClone(source.design_settings ?? {}) },
       theme: { ...(sourceContent.theme ?? templateDefinitions[template].theme) },
       focusAreas: Array.from(
         { length: Math.max(sourceContent.focusAreas?.length ?? 0, 1) },
@@ -664,7 +668,7 @@ export default function AdminPage() {
       const next = { ...current.content };
       next.template = template;
       next.schemaVersion = template === "bourdon-full" ? 3 : 1;
-      next.design = { key: template, version: 1, settings: next.design?.settings ?? {} };
+      next.design = { key: template, version: designVersionFor(template), settings: next.design?.settings ?? {} };
       next.theme = { ...templateDefinitions[template].theme };
       if (template === "bourdon-full") {
         next.research = next.research?.length ? next.research : Array.from({ length: 4 }, (_, index) => blankRichProject(index));
@@ -749,7 +753,7 @@ export default function AdminPage() {
       content: { ...content, slug },
       content_schema_version: template === "bourdon-full" ? 3 : 1,
       design_key: template,
-      design_version: 1,
+      design_version: designVersionFor(template),
       design_settings: content.design?.settings ?? {},
     };
 
