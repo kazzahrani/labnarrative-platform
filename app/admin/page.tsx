@@ -476,6 +476,7 @@ export default function AdminPage() {
   const [factoryOpen, setFactoryOpen] = useState(true);
   const [duplicateSourceId, setDuplicateSourceId] = useState("");
   const [generatedImport, setGeneratedImport] = useState<{ id: number; text: string; name: string } | null>(null);
+  const [requestedSiteHandled, setRequestedSiteHandled] = useState(false);
 
   const selectedSite = useMemo(
     () => sites.find((site) => site.id === editor.id),
@@ -709,7 +710,7 @@ export default function AdminPage() {
     });
   }
 
-  function openSite(site: SiteRow) {
+  const openSite = useCallback((site: SiteRow) => {
     const loaded = structuredClone(site.content);
     loaded.template = normalizeTemplate(loaded.template ?? site.design_key);
     loaded.schemaVersion = loaded.schemaVersion ?? site.content_schema_version ?? 1;
@@ -730,7 +731,44 @@ export default function AdminPage() {
     setDomainNotice("");
     setDomainUrl("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+  }, []);
+
+  useEffect(() => {
+    if (
+      requestedSiteHandled
+      || !authReady
+      || !session
+      || role !== "admin"
+      || loading
+      || sites.length === 0
+    ) {
+      return;
+    }
+
+    const requestedSlug = new URLSearchParams(window.location.search).get("site");
+    setRequestedSiteHandled(true);
+
+    if (!requestedSlug) return;
+
+    const requestedSite = sites.find(
+      (site) => cleanSlug(site.slug) === cleanSlug(requestedSlug),
+    );
+
+    if (!requestedSite) {
+      setNotice(`Website "${requestedSlug}" was not found.`);
+      return;
+    }
+
+    openSite(requestedSite);
+  }, [
+    authReady,
+    loading,
+    openSite,
+    requestedSiteHandled,
+    role,
+    session,
+    sites,
+  ]);
 
   function updateContent<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
     setNotice("");
@@ -1312,10 +1350,10 @@ export default function AdminPage() {
                 <label className="admin-field">
                   <span>Website status</span>
                   <select value={editor.status} onChange={(event) => { setNotice(""); setEditor((current) => ({ ...current, status: event.target.value as SiteStatus })); }}>
-                    <option value="draft">Draft — administrator only</option>
-                    <option value="concept">Concept — publicly shareable</option>
-                    <option value="live">Live — approved client website</option>
-                    <option value="archived">Archived — hidden</option>
+                    <option value="draft">Draft — private administrator-only work</option>
+                    <option value="concept">Concept — public outreach concept for a prospective PI</option>
+                    <option value="live">Client — approved official client website</option>
+                    <option value="archived">Archived — retired and hidden</option>
                   </select>
                 </label>
                 <label className="admin-field">
