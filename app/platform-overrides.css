@@ -3,6 +3,7 @@
   display: none !important;
 }
 
-.admin-top-actions > button:first-of-type {
+.admin-top-actions > button:first-of-type,
+header nav a[href="/admin"] {
   display: none !important;
 }
