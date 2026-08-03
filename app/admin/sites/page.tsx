@@ -33,6 +33,7 @@ type SiteRow = {
   domain_url: string | null;
   domain_error: string | null;
   design_key: string;
+  design_settings: { variant?: string } | null;
   design_version: number;
   content_schema_version: number;
 };
@@ -112,6 +113,30 @@ function simplifiedDomainStatus(status: DomainStatus): "not_connected" | "live" 
   return status === "live" ? "live" : "not_connected";
 }
 
+function humanizeDesignName(value: string): string {
+  return value
+    .trim()
+    .replace(/-v(\d+)$/i, " v$1")
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => (/^v\d+$/i.test(part) ? part.toLowerCase() : `${part.charAt(0).toUpperCase()}${part.slice(1)}`))
+    .join(" ").trim();
+}
+
+function designPrimaryLabel(site: SiteRow): string {
+  const variant = site.design_settings?.variant?.trim();
+  return humanizeDesignName(variant || site.design_key || "") || "—";
+}
+
+function designSecondaryLabel(site: SiteRow): string {
+  const variant = site.design_settings?.variant?.trim();
+  if (variant) {
+    return `Base ${site.design_key || "—"} · schema ${site.content_schema_version || 1}`;
+  }
+
+  return `v${site.design_version || 1} · schema ${site.content_schema_version || 1}`;
+}
+
 export default function SiteMonitorPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -152,7 +177,7 @@ export default function SiteMonitorPage() {
     const { data, error } = await supabase
       .from("sites")
       .select(
-        "id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_version,content_schema_version",
+        "id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_settings,design_version,content_schema_version",
       )
       .order("created_at", { ascending: false })
       .order("updated_at", { ascending: false })
@@ -229,6 +254,7 @@ export default function SiteMonitorPage() {
         site.status,
         site.domain_status,
         site.design_key,
+        site.design_settings?.variant ?? "",
       ].join(" ").toLowerCase().includes(query);
     });
 
@@ -438,8 +464,8 @@ export default function SiteMonitorPage() {
                     </span>
                   </td>
                   <td data-label="Design">
-                    <strong>{site.design_key || "—"}</strong>
-                    <span>v{site.design_version || 1} · schema {site.content_schema_version || 1}</span>
+                    <strong>{designPrimaryLabel(site)}</strong>
+                    <span>{designSecondaryLabel(site)}</span>
                   </td>
                   <td data-label="Created (Riyadh)">
                     <time dateTime={site.created_at} title={site.created_at}>{formatDateTime(site.created_at)}</time>
