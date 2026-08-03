@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
+import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import {
   resolveDesignKey,
   type LabSite,
@@ -72,6 +73,12 @@ function Publications({ site }: { site: LabSite }) {
 export default function SiteShell({ site, route, basePath, previewMode = false }: { site: LabSite; route: SiteRoute; basePath?: string; previewMode?: boolean }) {
   const resolvedBasePath = basePath ?? `/sites/${site.slug}`;
   const designKey = resolveDesignKey(site);
+  const designVariant = site.design?.settings?.variant;
+
+  if (designVariant === "editorial-image-v1") {
+    return <EditorialImageDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
   if (designKey === "bourdon-full") return <BourdonDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
 
   const template = resolveTemplate(site.template);
