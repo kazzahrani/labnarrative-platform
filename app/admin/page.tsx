@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import BourdonEditor from "@/components/admin/BourdonEditor";
 import JsonImportPanel from "@/components/admin/JsonImportPanel";
+import PiConceptFactoryPanel from "@/components/admin/PiConceptFactoryPanel";
 import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
@@ -470,6 +471,7 @@ export default function AdminPage() {
   const [domainUrl, setDomainUrl] = useState("");
   const [factoryOpen, setFactoryOpen] = useState(true);
   const [duplicateSourceId, setDuplicateSourceId] = useState("");
+  const [generatedImport, setGeneratedImport] = useState<{ id: number; text: string; name: string } | null>(null);
 
   const selectedSite = useMemo(
     () => sites.find((site) => site.id === editor.id),
@@ -591,6 +593,14 @@ export default function AdminPage() {
     setOtp("");
     setOtpSent(false);
     setNotice("Signed out.");
+  }
+
+  function loadGeneratedImport(text: string, name: string) {
+    setGeneratedImport({ id: Date.now(), text, name });
+    setNotice("");
+    window.setTimeout(() => {
+      document.getElementById("json-import-title")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   }
 
   function startNewSite() {
@@ -1116,10 +1126,20 @@ export default function AdminPage() {
                 </p>
               </div>
 
+              <PiConceptFactoryPanel
+                existingSlugs={sites.map((site) => site.slug)}
+                onGenerated={loadGeneratedImport}
+              />
+
+              <div className="admin-template-divider">
+                <span>or import an existing JSON file</span>
+              </div>
+
               <JsonImportPanel
                 existingSlugs={sites.map((site) => site.slug)}
                 importing={importing}
                 onImport={importDraftSite}
+                seed={generatedImport}
               />
 
               <div className="admin-template-divider">
