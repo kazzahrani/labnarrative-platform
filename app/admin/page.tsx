@@ -1141,42 +1141,17 @@ export default function AdminPage() {
         </div>
         <div className="admin-top-actions">
           <span>{session.user.email}</span>
+          <button onClick={startNewSite} type="button">New PI website</button>
           <Link href="/admin/sites">Website monitor</Link>
           <Link href="/">View platform</Link>
           <button onClick={signOut} type="button">Sign out</button>
         </div>
       </header>
 
-      <div className="admin-layout">
-        <aside className="admin-sidebar">
-          <div className="admin-sidebar-heading">
-            <div>
-              <span className="admin-kicker">PI websites</span>
-              <strong>{sites.length} records</strong>
-            </div>
-            <button onClick={startNewSite} type="button">+ New</button>
-          </div>
-
-          {loading && <p className="admin-muted">Loading sites…</p>}
-
-          <div className="admin-site-list">
-            {sites.map((site) => (
-              <button
-                className={site.id === editor.id ? "active" : ""}
-                key={site.id}
-                onClick={() => openSite(site)}
-                type="button"
-              >
-                <span>{site.content.labName || site.slug}</span>
-                <small style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
-                  <span>{site.slug} · {site.status}</span>
-                  <DomainBadge status={site.domain_status} />
-                </small>
-              </button>
-            ))}
-          </div>
-        </aside>
-
+      <div
+        className="admin-layout"
+        style={{ gridTemplateColumns: "minmax(0, 1fr)" }}
+      >
         <section className="admin-workspace">
           <div className="admin-editor-heading">
             <div>
