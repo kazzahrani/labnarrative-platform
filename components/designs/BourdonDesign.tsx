@@ -4,7 +4,9 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
+  getBourdonDesignSettings,
   getBourdonPages,
+  type BourdonDesignSettings,
   type LabMember,
   type LabSite,
   type Opportunity,
@@ -72,9 +74,9 @@ function Picture({
   );
 }
 
-function PageIntro({ label, title, text }: { label: string; title: string; text: string }) {
+function PageIntro({ label, title, text, style }: { label: string; title: string; text: string; style: BourdonDesignSettings["pageIntroStyle"] }) {
   return (
-    <section className="bn-page-intro">
+    <section className={`bn-page-intro style-${style}`}>
       <div className="bn-page-shell">
         <p className="bn-eyebrow">{label}</p>
         <h1>{title}</h1>
@@ -157,13 +159,13 @@ function SiteFooter({ site, basePath }: { site: LabSite; basePath: string }) {
   );
 }
 
-function Home({ site, basePath }: { site: LabSite; basePath: string }) {
+function Home({ site, basePath, settings }: { site: LabSite; basePath: string; settings: BourdonDesignSettings }) {
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
   return (
     <>
-      <section className="bn-home-hero">
-        <div className="bn-page-shell bn-hero-grid">
+      <section className={`bn-home-hero layout-${settings.homeHeroLayout}`}>
+        <div className={`bn-page-shell bn-hero-grid layout-${settings.homeHeroLayout}`}>
           <div className="bn-hero-content">
             <p className="bn-eyebrow">{pages.home.topicLine}</p>
             <h1>{pages.home.mainHeading}</h1>
@@ -173,13 +175,15 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
               <Link href={`${basePath}/publications`} className="bn-button">{pages.home.publicationsButton}</Link>
             </div>
           </div>
-          <div className="bn-hero-visual">
-            <Picture
-              src={pages.home.homepageImage}
-              alt={`${site.labName} research`}
-              fallback={initials(site.piName)}
-            />
-          </div>
+          {settings.homeHeroLayout !== "text-only" && (
+            <div className="bn-hero-visual">
+              <Picture
+                src={pages.home.homepageImage}
+                alt={`${site.labName} research`}
+                fallback={initials(site.piName)}
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -196,7 +200,7 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
         </div>
       </section>
 
-      <section className="bn-home-programmes">
+      <section className={`bn-home-programmes layout-${settings.programmesLayout}`}>
         <div className="bn-page-shell">
           <div className="bn-section-title">
             <div>
@@ -204,7 +208,7 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
               <h2>{pages.home.programmesHeading}</h2>
             </div>
           </div>
-          <div className="bn-programme-grid">
+          <div className={`bn-programme-grid layout-${settings.programmesLayout}`}>
             {projects.map((project, index) => (
               <Link href={`${basePath}/research/${project.slug}`} key={`${project.slug}-${index}`}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
@@ -217,13 +221,15 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
         </div>
       </section>
 
-      <section className="bn-pi-home bn-page-shell">
-        <Picture
-          className="bn-person-image"
-          src={pages.home.piImage}
-          alt={pages.home.piName}
-          fallback={initials(pages.home.piName)}
-        />
+      <section className={`bn-pi-home bn-page-shell layout-${settings.piLayout}`}>
+        {settings.piLayout !== "text-only" && (
+          <Picture
+            className="bn-person-image"
+            src={pages.home.piImage}
+            alt={pages.home.piName}
+            fallback={initials(pages.home.piName)}
+          />
+        )}
         <div>
           <p className="bn-eyebrow">{pages.home.piSectionLabel}</p>
           <h2>{pages.home.piName}</h2>
@@ -248,17 +254,22 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
   );
 }
 
-function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) {
+function ResearchIndex({ site, basePath, settings }: { site: LabSite; basePath: string; settings: BourdonDesignSettings }) {
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
   return (
     <>
-      <PageIntro label={pages.research.pageLabel} title={pages.research.pageHeading} text={pages.research.introduction} />
+      <PageIntro label={pages.research.pageLabel} title={pages.research.pageHeading} text={pages.research.introduction} style={settings.pageIntroStyle} />
       <section className="bn-research-page bn-page-shell">
         {projects.map((project, index) => {
-          const figure = safeAsset(project.figureImage);
+          const figure = settings.researchIndexLayout === "text-only" ? undefined : safeAsset(project.figureImage);
+          const articleClass = [
+            figure ? "has-figure" : "",
+            settings.researchIndexLayout === "alternating" ? "layout-alternating" : "",
+            settings.researchIndexLayout === "alternating" && index % 2 === 1 ? "is-even" : "",
+          ].filter(Boolean).join(" ");
           return (
-            <article className={figure ? "has-figure" : ""} key={`${project.slug}-${index}`}>
+            <article className={articleClass} key={`${project.slug}-${index}`}>
               <span className="bn-research-number">{String(index + 1).padStart(2, "0")}</span>
               <div>
                 <h2>{project.title}</h2>
@@ -287,18 +298,18 @@ function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) 
   );
 }
 
-function ProjectDetail({ site, basePath, slug }: { site: LabSite; basePath: string; slug: string }) {
+function ProjectDetail({ site, basePath, slug, settings }: { site: LabSite; basePath: string; slug: string; settings: BourdonDesignSettings }) {
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
   const index = projects.findIndex((item) => item.slug === slug);
   const project = projects[index];
-  if (!project) return <ResearchIndex site={site} basePath={basePath} />;
+  if (!project) return <ResearchIndex site={site} basePath={basePath} settings={settings} />;
   const next = projects[(index + 1) % projects.length];
   const figure = safeAsset(project.figureImage);
 
   return (
     <>
-      <section className="bn-project-intro">
+      <section className={`bn-project-intro style-${settings.pageIntroStyle}`}>
         <div className="bn-page-shell">
           <Link className="bn-back-link" href={`${basePath}/research`}>← {pages.research.backLink}</Link>
           <p className="bn-eyebrow">{pages.research.programmeLabel} {String(index + 1).padStart(2, "0")}</p>
@@ -307,7 +318,7 @@ function ProjectDetail({ site, basePath, slug }: { site: LabSite; basePath: stri
         </div>
       </section>
 
-      <section className="bn-project-content bn-page-shell">
+      <section className={`bn-project-content bn-page-shell layout-${settings.projectLayout}`}>
         <div>
           <p className="bn-eyebrow">{pages.research.questionLabel}</p>
           <h2>{project.question || project.title}</h2>
@@ -360,7 +371,7 @@ function PublicationRow({ children, href }: { children: ReactNode; href?: string
   return href ? <a href={href} target="_blank" rel="noreferrer">{children}</a> : <div className="bn-publication-row">{children}</div>;
 }
 
-function Publications({ site }: { site: LabSite }) {
+function Publications({ site, settings }: { site: LabSite; settings: BourdonDesignSettings }) {
   const pages = getBourdonPages(site);
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
@@ -371,7 +382,7 @@ function Publications({ site }: { site: LabSite }) {
 
   return (
     <>
-      <PageIntro label={pages.publications.pageLabel} title={pages.publications.pageHeading} text={pages.publications.introduction} />
+      <PageIntro label={pages.publications.pageLabel} title={pages.publications.pageHeading} text={pages.publications.introduction} style={settings.pageIntroStyle} />
       <section className="bn-publication-page bn-page-shell">
         <div className="bn-publication-tools">
           <label>
@@ -408,7 +419,7 @@ function MemberContent({ member, roleLabel, linkLabel }: { member: LabMember; ro
   );
 }
 
-function Members({ site }: { site: LabSite }) {
+function Members({ site, settings }: { site: LabSite; settings: BourdonDesignSettings }) {
   const pages = getBourdonPages(site);
   const members = labMembers(site);
   const principal = members[0];
@@ -416,7 +427,7 @@ function Members({ site }: { site: LabSite }) {
 
   return (
     <>
-      <PageIntro label={pages.members.pageLabel} title={pages.members.pageHeading} text={pages.members.introduction} />
+      <PageIntro label={pages.members.pageLabel} title={pages.members.pageHeading} text={pages.members.introduction} style={settings.pageIntroStyle} />
       {principal && (
         <section className="bn-principal-member bn-page-shell">
           <article>
@@ -426,7 +437,7 @@ function Members({ site }: { site: LabSite }) {
         </section>
       )}
       {!!additional.length && (
-        <section className="bn-members-grid bn-page-shell">
+        <section className={`bn-members-grid bn-page-shell columns-${settings.membersColumns}`}>
           {additional.map((member, index) => (
             <article key={`${member.name}-${index}`}>
               <Picture className="bn-person-image" src={member.image} alt={member.name} fallback={initials(member.name || member.role)} />
@@ -445,12 +456,12 @@ function Members({ site }: { site: LabSite }) {
   );
 }
 
-function Join({ site, basePath }: { site: LabSite; basePath: string }) {
+function Join({ site, basePath, settings }: { site: LabSite; basePath: string; settings: BourdonDesignSettings }) {
   const pages = getBourdonPages(site);
   const items = openOpportunities(site);
   return (
     <>
-      <PageIntro label={pages.join.pageLabel} title={pages.join.pageHeading} text={pages.join.introduction} />
+      <PageIntro label={pages.join.pageLabel} title={pages.join.pageHeading} text={pages.join.introduction} style={settings.pageIntroStyle} />
       <section className="bn-opportunity-page bn-page-shell">
         {items.map((item, index) => (
           <article key={`${item.title}-${index}`}>
@@ -473,11 +484,11 @@ function Join({ site, basePath }: { site: LabSite; basePath: string }) {
   );
 }
 
-function Contact({ site }: { site: LabSite }) {
+function Contact({ site, settings }: { site: LabSite; settings: BourdonDesignSettings }) {
   const pages = getBourdonPages(site);
   return (
     <>
-      <PageIntro label={pages.contact.pageLabel} title={pages.contact.pageHeading} text={pages.contact.introduction} />
+      <PageIntro label={pages.contact.pageLabel} title={pages.contact.pageHeading} text={pages.contact.introduction} style={settings.pageIntroStyle} />
       <section className="bn-contact-page bn-page-shell">
         <div className="bn-contact-card">
           <h2>{pages.contact.piName}</h2>
@@ -523,6 +534,7 @@ export default function BourdonDesign({
   basePath: string;
   previewMode?: boolean;
 }) {
+  const settings = getBourdonDesignSettings(site);
   const variables = {
     "--bn-paper": site.theme.background,
     "--bn-white": site.theme.surface,
@@ -532,17 +544,17 @@ export default function BourdonDesign({
   } as CSSProperties;
 
   return (
-    <main className="bourdon-site bn-site" style={variables}>
+    <main className={`bourdon-site bn-site spacing-${settings.sectionSpacing} corners-${settings.cornerStyle}`} style={variables}>
       {previewMode && <div className="bn-preview-badge">Private administrator preview · Draft</div>}
       <SiteHeader site={site} route={route} basePath={basePath} />
-      {route.section === "home" && <Home site={site} basePath={basePath} />}
+      {route.section === "home" && <Home site={site} basePath={basePath} settings={settings} />}
       {route.section === "research" && (route.projectSlug
-        ? <ProjectDetail site={site} basePath={basePath} slug={route.projectSlug} />
-        : <ResearchIndex site={site} basePath={basePath} />)}
-      {route.section === "publications" && <Publications site={site} />}
-      {route.section === "members" && <Members site={site} />}
-      {route.section === "join" && <Join site={site} basePath={basePath} />}
-      {route.section === "contact" && <Contact site={site} />}
+        ? <ProjectDetail site={site} basePath={basePath} slug={route.projectSlug} settings={settings} />
+        : <ResearchIndex site={site} basePath={basePath} settings={settings} />)}
+      {route.section === "publications" && <Publications site={site} settings={settings} />}
+      {route.section === "members" && <Members site={site} settings={settings} />}
+      {route.section === "join" && <Join site={site} basePath={basePath} settings={settings} />}
+      {route.section === "contact" && <Contact site={site} settings={settings} />}
       <SiteFooter site={site} basePath={basePath} />
     </main>
   );
