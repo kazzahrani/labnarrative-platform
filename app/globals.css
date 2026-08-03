@@ -2119,3 +2119,909 @@ a {
     grid-template-columns: 62px 1fr;
   }
 }
+
+/* LabNarrative v0.6b — advanced Bourdon editor */
+.advanced-editor {
+  border: 1px solid #c7d1cc;
+  background: #f7f8f4;
+  box-shadow: 0 18px 45px rgba(18, 45, 37, 0.08);
+}
+
+.advanced-editor-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #182d3a;
+  color: white;
+}
+
+.advanced-editor-top > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.advanced-editor-top strong {
+  font-size: 1rem;
+}
+
+.advanced-editor-top span {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.advanced-editor-top button,
+.advanced-editor-tabs button,
+.advanced-list-heading button,
+.advanced-repeat-title button,
+.advanced-image-actions button {
+  appearance: none;
+  border: 1px solid #b8c5bf;
+  background: #fff;
+  color: #17372e;
+  border-radius: 0;
+  padding: 0.62rem 0.85rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.advanced-editor-top button {
+  border-color: rgba(255,255,255,0.38);
+  background: transparent;
+  color: white;
+}
+
+.advanced-editor-tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  background: white;
+  border-bottom: 1px solid #c7d1cc;
+  padding: 0 0.75rem;
+}
+
+.advanced-editor-tabs button {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #52655e;
+  padding: 0.95rem 1rem 0.8rem;
+  white-space: nowrap;
+}
+
+.advanced-editor-tabs button.active {
+  color: #17372e;
+  border-bottom-color: #2b7b6a;
+}
+
+.advanced-editor-page {
+  padding: 1.5rem;
+}
+
+.advanced-editor-page > h1 {
+  margin: 0 0 1.25rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  color: #203b32;
+}
+
+.advanced-editor-section {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border-top: 1px solid #d9e0dc;
+}
+
+.advanced-editor-section > h2 {
+  margin: 0;
+  padding: 1rem 0 0.75rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #2f4a41;
+}
+
+.advanced-editor-section-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.advanced-image-field {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #d5ddd9;
+  background: white;
+}
+
+.advanced-image-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.advanced-image-heading > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.advanced-image-heading small {
+  color: #65756f;
+  line-height: 1.4;
+}
+
+.advanced-image-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.advanced-image-actions button.danger,
+.advanced-repeat-title button.danger {
+  border-color: #d3a2a5;
+  color: #8a3137;
+}
+
+.advanced-image-preview {
+  width: min(100%, 620px);
+  aspect-ratio: 16 / 9;
+  background: #edf1ee;
+  overflow: hidden;
+  border: 1px solid #d5ddd9;
+}
+
+.advanced-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.advanced-image-notice {
+  margin: 0;
+  color: #38584e;
+  font-size: 0.8rem;
+}
+
+.advanced-list-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0 0.8rem;
+}
+
+.advanced-list-heading h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  font-weight: 500;
+}
+
+.advanced-repeat-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.advanced-repeat-list > article {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #d5ddd9;
+  background: white;
+}
+
+.advanced-repeat-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.advanced-repeat-title > div {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.advanced-repeat-title button {
+  padding: 0.42rem 0.62rem;
+}
+
+.advanced-repeat-title button:disabled,
+.advanced-editor-top button:disabled,
+.advanced-image-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* LabNarrative v0.6b — Bourdon Full renderer */
+.bourdon-site {
+  min-height: 100vh;
+  background: var(--bourdon-bg);
+  color: var(--bourdon-ink);
+}
+
+.bourdon-preview-banner,
+.bourdon-concept-banner {
+  padding: 0.55rem 1rem;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bourdon-preview-banner {
+  background: #d8ad5c;
+  color: #17241f;
+}
+
+.bourdon-concept-banner {
+  background: var(--bourdon-ink);
+  color: var(--bourdon-surface);
+}
+
+.bourdon-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--bourdon-ink) 18%, transparent);
+  background: color-mix(in srgb, var(--bourdon-bg) 94%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.bourdon-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.bourdon-identity > span {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.bourdon-identity strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  color: var(--bourdon-ink);
+}
+
+.bourdon-identity small {
+  color: var(--bourdon-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 360px;
+}
+
+.bourdon-header-portrait {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.bourdon-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  font-size: 0.8rem;
+}
+
+.bourdon-nav a {
+  color: var(--bourdon-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bourdon-nav a:hover {
+  color: var(--bourdon-accent);
+}
+
+.bourdon-page-shell {
+  width: min(1420px, 100%);
+  margin: 0 auto;
+}
+
+.bourdon-home-opening {
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(420px, 0.94fr);
+  min-height: 720px;
+  border-bottom: 1px solid color-mix(in srgb, var(--bourdon-ink) 14%, transparent);
+}
+
+.bourdon-home-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 6vw, 6rem);
+}
+
+.bourdon-home-copy h1,
+.bourdon-inner-header h1,
+.bourdon-project-detail > header h1 {
+  margin: 0.25rem 0 1.2rem;
+  max-width: 950px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.8rem, 7vw, 7.6rem);
+  line-height: 0.91;
+  font-weight: 500;
+  letter-spacing: -0.055em;
+}
+
+.bourdon-home-hero-image {
+  min-height: 620px;
+  background: var(--bourdon-surface);
+}
+
+.bourdon-home-hero-image > img,
+.bourdon-home-hero-image > div,
+.bourdon-pi-image > img,
+.bourdon-pi-image > div,
+.bourdon-contact-pi > img,
+.bourdon-contact-pi > div,
+.bourdon-member-grid article > img,
+.bourdon-member-grid article > div.bourdon-image-placeholder,
+.bourdon-project-detail figure img,
+.bourdon-research-card > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bourdon-image-placeholder {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 75% 20%, color-mix(in srgb, var(--bourdon-accent) 45%, transparent), transparent 32%),
+    linear-gradient(145deg, var(--bourdon-accent), color-mix(in srgb, var(--bourdon-accent) 35%, var(--bourdon-ink)));
+  color: var(--bourdon-surface);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 5vw, 5rem);
+}
+
+.bourdon-kicker {
+  margin: 0 0 0.75rem;
+  color: var(--bourdon-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.bourdon-lede,
+.bourdon-inner-header > p,
+.bourdon-home-copy > p {
+  max-width: 760px;
+  color: var(--bourdon-muted);
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  line-height: 1.65;
+}
+
+.bourdon-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.75rem;
+}
+
+.bourdon-actions a,
+.bourdon-primary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.8rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--bourdon-ink) 30%, transparent);
+  text-decoration: none;
+}
+
+.bourdon-primary-link {
+  background: var(--bourdon-accent);
+  color: var(--bourdon-surface) !important;
+  border-color: var(--bourdon-accent);
+}
+
+.bourdon-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(2rem, 7vw, 8rem);
+  padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 6vw, 6rem);
+  background: var(--bourdon-accent);
+  color: var(--bourdon-surface);
+}
+
+.bourdon-overview .bourdon-kicker {
+  color: color-mix(in srgb, var(--bourdon-surface) 70%, transparent);
+}
+
+.bourdon-overview h2,
+.bourdon-section-heading h2,
+.bourdon-pi-feature h2,
+.bourdon-join h2,
+.bourdon-guidance h2,
+.bourdon-question h2 {
+  margin: 0 0 1rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.4rem, 5vw, 5rem);
+  line-height: 0.98;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.bourdon-overview p {
+  margin: 0;
+  font-size: clamp(1.1rem, 1.7vw, 1.45rem);
+  line-height: 1.7;
+}
+
+.bourdon-overview a {
+  color: var(--bourdon-surface);
+}
+
+.bourdon-section,
+.bourdon-inner,
+.bourdon-project-detail {
+  padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 6vw, 6rem);
+}
+
+.bourdon-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.bourdon-research-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.bourdon-research-card {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 1rem;
+  min-height: 260px;
+  padding: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--bourdon-ink) 16%, transparent);
+  background: var(--bourdon-surface);
+  text-decoration: none;
+}
+
+.bourdon-research-card > img {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 220px;
+}
+
+.bourdon-card-index {
+  color: var(--bourdon-accent);
+  font-weight: 800;
+}
+
+.bourdon-research-card h3 {
+  margin: 0 0 0.6rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  font-weight: 500;
+}
+
+.bourdon-research-card p {
+  color: var(--bourdon-muted);
+  line-height: 1.6;
+}
+
+.bourdon-pi-feature {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(2rem, 7vw, 8rem);
+  align-items: center;
+  padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 6vw, 6rem);
+  background: var(--bourdon-surface);
+}
+
+.bourdon-pi-image {
+  min-height: 560px;
+}
+
+.bourdon-pi-role {
+  color: var(--bourdon-accent);
+  font-weight: 700;
+}
+
+.bourdon-pi-feature p {
+  line-height: 1.7;
+}
+
+.bourdon-join {
+  padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 6vw, 6rem);
+  text-align: center;
+}
+
+.bourdon-join h2 {
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+.bourdon-inner-header {
+  max-width: 1050px;
+  margin-bottom: 3rem;
+}
+
+.bourdon-project-list {
+  display: grid;
+  border-top: 1px solid color-mix(in srgb, var(--bourdon-ink) 18%, transparent);
+}
+
+.bourdon-project-list > a {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 1.2rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--bourdon-ink) 18%, transparent);
+  text-decoration: none;
+}
+
+.bourdon-project-list h2 {
+  margin: 0 0 0.45rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.7rem, 3vw, 3rem);
+  font-weight: 500;
+}
+
+.bourdon-project-list p,
+.bourdon-project-list small {
+  color: var(--bourdon-muted);
+}
+
+.bourdon-project-list strong {
+  display: block;
+  margin-top: 0.8rem;
+}
+
+.bourdon-project-detail {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.bourdon-back-link,
+.bourdon-return-link {
+  display: inline-flex;
+  margin-bottom: 2rem;
+}
+
+.bourdon-project-detail > header > p {
+  max-width: 800px;
+  color: var(--bourdon-muted);
+  font-size: 1.2rem;
+  line-height: 1.7;
+}
+
+.bourdon-project-detail figure {
+  margin: 2.5rem 0;
+}
+
+.bourdon-project-detail figure img {
+  max-height: 720px;
+  background: var(--bourdon-surface);
+}
+
+.bourdon-project-detail figcaption {
+  padding-top: 0.7rem;
+  color: var(--bourdon-muted);
+  font-size: 0.85rem;
+}
+
+.bourdon-question,
+.bourdon-guidance {
+  margin: 2rem 0;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--bourdon-accent);
+  color: var(--bourdon-surface);
+}
+
+.bourdon-question span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.bourdon-project-paragraph {
+  max-width: 860px;
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+.bourdon-detail-list {
+  margin: 2rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--bourdon-ink) 18%, transparent);
+}
+
+.bourdon-next-project {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 3rem 0 1rem;
+  padding: 1.3rem;
+  background: var(--bourdon-surface);
+  text-decoration: none;
+}
+
+.bourdon-publication-controls {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.bourdon-publication-controls label {
+  display: grid;
+  gap: 0.45rem;
+  width: min(620px, 100%);
+}
+
+.bourdon-publication-controls input {
+  min-height: 48px;
+  border: 1px solid color-mix(in srgb, var(--bourdon-ink) 22%, transparent);
+  background: var(--bourdon-surface);
+  color: var(--bourdon-ink);
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.bourdon-publication-list {
+  display: grid;
+  border-top: 1px solid color-mix(in srgb, var(--bourdon-ink) 18%, transparent);
+}
+
+.bourdon-publication-list article {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 1rem;
+  padding: 1.3rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--bourdon-ink) 18%, transparent);
+}
+
+.bourdon-publication-list h2 {
+  margin: 0 0 0.3rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.25rem, 2vw, 1.9rem);
+  font-weight: 500;
+}
+
+.bourdon-member-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.bourdon-member-grid article {
+  display: grid;
+  background: var(--bourdon-surface);
+  border: 1px solid color-mix(in srgb, var(--bourdon-ink) 16%, transparent);
+}
+
+.bourdon-member-grid article.principal {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr);
+}
+
+.bourdon-member-grid article > img,
+.bourdon-member-grid article > div.bourdon-image-placeholder {
+  aspect-ratio: 4 / 3;
+}
+
+.bourdon-member-grid article > div:last-child {
+  padding: 1.2rem;
+}
+
+.bourdon-member-grid h2 {
+  margin: 0.35rem 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.7rem;
+  font-weight: 500;
+}
+
+.bourdon-member-notice {
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--bourdon-ink) 16%, transparent);
+}
+
+.bourdon-opportunity-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.bourdon-opportunity-list article {
+  padding: 1.25rem;
+  background: var(--bourdon-surface);
+  border: 1px solid color-mix(in srgb, var(--bourdon-ink) 16%, transparent);
+}
+
+.bourdon-opportunity-list h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+.bourdon-contact-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 2rem;
+}
+
+.bourdon-contact-pi {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(0, 1.25fr);
+  background: var(--bourdon-surface);
+}
+
+.bourdon-contact-pi > img,
+.bourdon-contact-pi > div.bourdon-image-placeholder {
+  min-height: 420px;
+}
+
+.bourdon-contact-pi > div:last-child {
+  padding: 1.5rem;
+}
+
+.bourdon-contact-pi h2 {
+  margin: 0 0 0.4rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.3rem;
+  font-weight: 500;
+}
+
+.bourdon-contact-details {
+  padding: 1.5rem;
+  background: var(--bourdon-accent);
+  color: var(--bourdon-surface);
+}
+
+.bourdon-contact-details dl {
+  display: grid;
+  gap: 1.2rem;
+  margin: 0 0 1.5rem;
+}
+
+.bourdon-contact-details dt {
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.72;
+}
+
+.bourdon-contact-details dd {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.bourdon-contact-details a {
+  color: var(--bourdon-surface);
+}
+
+.bourdon-location-strip {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--bourdon-ink) 16%, transparent);
+}
+
+.bourdon-footer {
+  display: block;
+  padding: 2.5rem clamp(1.25rem, 6vw, 6rem) 1.5rem;
+  background: var(--bourdon-ink);
+  color: var(--bourdon-surface);
+}
+
+.bourdon-footer-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 2rem;
+}
+
+.bourdon-footer-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+}
+
+.bourdon-footer a,
+.bourdon-footer span {
+  color: color-mix(in srgb, var(--bourdon-surface) 72%, transparent);
+}
+
+.bourdon-footer > p {
+  margin: 2rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.15);
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+@media (max-width: 1050px) {
+  .bourdon-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .bourdon-nav {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+  .bourdon-home-opening,
+  .bourdon-overview,
+  .bourdon-pi-feature,
+  .bourdon-contact-layout {
+    grid-template-columns: 1fr;
+  }
+  .bourdon-home-hero-image,
+  .bourdon-pi-image {
+    min-height: 520px;
+  }
+  .bourdon-member-grid,
+  .bourdon-opportunity-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .advanced-editor-page {
+    padding: 1rem;
+  }
+  .advanced-editor-top,
+  .advanced-image-heading,
+  .advanced-list-heading,
+  .advanced-repeat-title,
+  .bourdon-section-heading,
+  .bourdon-publication-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .bourdon-home-opening {
+    min-height: 0;
+  }
+  .bourdon-home-copy h1,
+  .bourdon-inner-header h1,
+  .bourdon-project-detail > header h1 {
+    font-size: clamp(3rem, 16vw, 5rem);
+  }
+  .bourdon-research-grid,
+  .bourdon-member-grid,
+  .bourdon-opportunity-list,
+  .bourdon-footer-grid,
+  .bourdon-location-strip,
+  .bourdon-contact-pi {
+    grid-template-columns: 1fr;
+  }
+  .bourdon-member-grid article.principal {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+  .bourdon-research-card {
+    grid-template-columns: 42px 1fr;
+  }
+}
