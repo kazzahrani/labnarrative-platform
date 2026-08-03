@@ -4,10 +4,12 @@ import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import BourdonEditor from "@/components/admin/BourdonEditor";
+import LiveSitePreview from "@/components/admin/LiveSitePreview";
+import livePreviewStyles from "@/components/admin/live-site-preview.module.css";
 import JsonImportPanel from "@/components/admin/JsonImportPanel";
 import PiConceptFactoryPanel from "@/components/admin/PiConceptFactoryPanel";
 import BatchConceptFactoryPanel from "@/components/admin/BatchConceptFactoryPanel";
-import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
+import { defaultBourdonDesignSettings, type LabSite, type SiteRoute } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
@@ -477,11 +479,16 @@ export default function AdminPage() {
   const [duplicateSourceId, setDuplicateSourceId] = useState("");
   const [generatedImport, setGeneratedImport] = useState<{ id: number; text: string; name: string } | null>(null);
   const [requestedSiteHandled, setRequestedSiteHandled] = useState(false);
+  const [livePreviewRoute, setLivePreviewRoute] = useState<SiteRoute>({ section: "home" });
 
   const selectedSite = useMemo(
     () => sites.find((site) => site.id === editor.id),
     [sites, editor.id],
   );
+
+  useEffect(() => {
+    setLivePreviewRoute({ section: "home" });
+  }, [editor.id]);
 
   const loadAdminData = useCallback(async (activeSession: Session) => {
     setLoading(true);
@@ -1296,6 +1303,8 @@ export default function AdminPage() {
           )}
 
           {!factoryOpen && (
+          <div className={livePreviewStyles.split}>
+            <div className={livePreviewStyles.editorPane}>
           <form className="admin-form" onSubmit={saveSite}>
             {isFullWebsite ? (
               <BourdonEditor
@@ -1311,6 +1320,9 @@ export default function AdminPage() {
                 onStatusChange={(nextStatus) => {
                   setNotice("");
                   setEditor((current) => ({ ...current, status: nextStatus }));
+                }}
+                onPreviewSectionChange={(section) => {
+                  setLivePreviewRoute({ section });
                 }}
               />
             ) : (
@@ -1558,7 +1570,7 @@ export default function AdminPage() {
                   <span>
                     {selectedSite?.domain_status === "legacy"
                       ? "This subdomain still points to the original external website."
-                      : "Changes become public when the status is Concept or Live."}
+                      : "Changes become public when the status is Concept or Client."}
                   </span>
                 </span>
                 {selectedSite?.domain_error && (
@@ -1650,6 +1662,15 @@ export default function AdminPage() {
               </div>
             </div>
           </form>
+            </div>
+
+            <LiveSitePreview
+              site={content as unknown as LabSite}
+              status={editor.status}
+              route={livePreviewRoute}
+              onRouteChange={setLivePreviewRoute}
+            />
+          </div>
           )}
         </section>
       </div>
