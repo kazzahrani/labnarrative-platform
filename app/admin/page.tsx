@@ -11,6 +11,9 @@ import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
+type BulkImportFailure = { slug: string; message: string };
+type BulkImportResult = { imported: string[]; failed: BulkImportFailure[] };
+type ImportedDraftBatch = { rows: SiteRow[]; failed: BulkImportFailure[] };
 type SiteTemplate =
   | "scientific-minimal"
   | "editorial"
@@ -813,54 +816,104 @@ export default function AdminPage() {
     await persistSite();
   }
 
-  async function importDraftSite(importedContent: LabSite) {
+  async function insertImportedDrafts(importedContents: LabSite[]): Promise<ImportedDraftBatch> {
     setImporting(true);
     setNotice("");
     setDomainNotice("");
     setDomainUrl("");
 
+    const rows: SiteRow[] = [];
+    const failed: BulkImportFailure[] = [];
+    const reservedSlugs = new Set(sites.map((site) => cleanSlug(site.slug)));
+
     try {
-      const content = compactContent(importedContent as unknown as SiteContent);
-      const slug = cleanSlug(content.slug);
-      const template = normalizeTemplate(content.template ?? content.design?.key);
+      for (const importedContent of importedContents.slice(0, 10)) {
+        let slug = cleanSlug(importedContent.slug ?? "");
+        try {
+          const content = compactContent(importedContent as unknown as SiteContent);
+          slug = cleanSlug(content.slug);
+          if (!slug) throw new Error("A valid slug is required.");
+          if (reservedSlugs.has(slug)) throw new Error(`The slug “${slug}” already exists.`);
 
-      const { data: existing, error: existingError } = await supabase
-        .from("sites")
-        .select("id")
-        .eq("slug", slug)
-        .maybeSingle();
+          const template = normalizeTemplate(content.template ?? content.design?.key);
+          const { data: existing, error: existingError } = await supabase
+            .from("sites")
+            .select("id")
+            .eq("slug", slug)
+            .maybeSingle();
 
-      if (existingError) throw new Error(existingError.message);
-      if (existing) throw new Error(`The slug “${slug}” was created by another session. Choose a different slug and validate again.`);
+          if (existingError) throw new Error(existingError.message);
+          if (existing) throw new Error(`The slug “${slug}” was created by another session.`);
 
-      const payload = {
-        slug,
-        status: "draft" as const,
-        content: { ...content, slug },
-        content_schema_version: template === "bourdon-full" ? 3 : 1,
-        design_key: template,
-        design_version: designVersionFor(template),
-        design_settings: content.design?.settings ?? {},
-      };
+          const payload = {
+            slug,
+            status: "draft" as const,
+            content: { ...content, slug },
+            content_schema_version: template === "bourdon-full" ? 3 : 1,
+            design_key: template,
+            design_version: designVersionFor(template),
+            design_settings: content.design?.settings ?? {},
+          };
 
-      const { data, error } = await supabase
-        .from("sites")
-        .insert(payload)
-        .select()
-        .single();
+          const { data, error } = await supabase
+            .from("sites")
+            .insert(payload)
+            .select()
+            .single();
 
-      if (error) throw new Error(error.message);
+          if (error) throw new Error(error.message);
 
-      const saved = data as SiteRow;
-      setSites((current) => [...current, saved].sort((a, b) => a.slug.localeCompare(b.slug)));
-      setEditor({ id: saved.id, status: "draft", content: saved.content });
-      setFactoryOpen(false);
-      setDuplicateSourceId("");
-      setNotice(`Imported ${saved.slug} as a private draft.`);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+          const saved = data as SiteRow;
+          rows.push(saved);
+          reservedSlugs.add(slug);
+        } catch (error) {
+          failed.push({
+            slug: slug || "unknown-slug",
+            message: error instanceof Error ? error.message : "The private Draft could not be imported.",
+          });
+        }
+      }
+
+      if (rows.length > 0) {
+        setSites((current) => {
+          const merged = new Map(current.map((site) => [site.id, site]));
+          rows.forEach((site) => merged.set(site.id, site));
+          return [...merged.values()].sort((a, b) => a.slug.localeCompare(b.slug));
+        });
+      }
+
+      return { rows, failed };
     } finally {
       setImporting(false);
     }
+  }
+
+  async function importDraftSite(importedContent: LabSite) {
+    const result = await insertImportedDrafts([importedContent]);
+    if (result.failed.length > 0) throw new Error(result.failed[0].message);
+
+    const saved = result.rows[0];
+    if (!saved) throw new Error("The private Draft could not be imported.");
+
+    setEditor({ id: saved.id, status: "draft", content: saved.content });
+    setFactoryOpen(false);
+    setDuplicateSourceId("");
+    setNotice(`Imported ${saved.slug} as a private Draft.`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function importDraftSites(importedContents: LabSite[]): Promise<BulkImportResult> {
+    const result = await insertImportedDrafts(importedContents);
+    const imported = result.rows.map((site) => site.slug);
+
+    setNotice(
+      imported.length > 0
+        ? `Imported ${imported.length} private Draft${imported.length === 1 ? "" : "s"}.`
+          + (result.failed.length ? ` ${result.failed.length} file${result.failed.length === 1 ? "" : "s"} failed.` : "")
+        : result.failed[0]?.message ?? "No private Drafts were imported.",
+    );
+
+    return { imported, failed: result.failed };
   }
 
   async function provisionDomain(
@@ -1142,13 +1195,14 @@ export default function AdminPage() {
               />
 
               <div className="admin-template-divider">
-                <span>or import an existing JSON file</span>
+                <span>or import existing JSON files</span>
               </div>
 
               <JsonImportPanel
                 existingSlugs={sites.map((site) => site.slug)}
                 importing={importing}
                 onImport={importDraftSite}
+                onImportMany={importDraftSites}
                 seed={generatedImport}
               />
 
