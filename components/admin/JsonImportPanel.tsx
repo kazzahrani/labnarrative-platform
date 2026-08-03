@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   analyseSiteImport,
   exampleSiteImport,
@@ -12,11 +12,12 @@ type Props = {
   existingSlugs: string[];
   importing: boolean;
   onImport: (content: LabSite) => Promise<void>;
+  seed?: { id: number; text: string; name: string } | null;
 };
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
-export default function JsonImportPanel({ existingSlugs, importing, onImport }: Props) {
+export default function JsonImportPanel({ existingSlugs, importing, onImport, seed }: Props) {
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [jsonText, setJsonText] = useState("");
   const [fileName, setFileName] = useState("");
@@ -42,6 +43,14 @@ export default function JsonImportPanel({ existingSlugs, importing, onImport }: 
     setFileName(name);
     resetResult();
   }
+
+  useEffect(() => {
+    if (!seed) return;
+    setJsonText(seed.text);
+    setFileName(seed.name);
+    setAnalysis(null);
+    setMessage("Generated concept loaded. Validate it before creating the private draft.");
+  }, [seed]);
 
   async function readFile(file?: File) {
     if (!file) return;
@@ -116,6 +125,19 @@ export default function JsonImportPanel({ existingSlugs, importing, onImport }: 
     URL.revokeObjectURL(url);
   }
 
+  function downloadCurrent() {
+    if (!jsonText.trim()) return;
+    const blob = new Blob([jsonText], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName || "labnarrative-site-import.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section className="json-import-panel" aria-labelledby="json-import-title">
       <div className="json-import-heading">
@@ -143,6 +165,7 @@ export default function JsonImportPanel({ existingSlugs, importing, onImport }: 
         </button>
         <button className="admin-secondary-button" type="button" onClick={loadExample}>Load example</button>
         <button className="admin-secondary-button" type="button" onClick={downloadExample}>Download example</button>
+        {jsonText && <button className="admin-secondary-button" type="button" onClick={downloadCurrent}>Download current JSON</button>}
         {jsonText && <button className="admin-quiet-button" type="button" onClick={() => updateText("")}>Clear</button>}
       </div>
 
