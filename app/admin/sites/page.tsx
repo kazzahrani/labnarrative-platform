@@ -77,19 +77,35 @@ function siteName(site: SiteRow): string {
   return site.content?.labName?.trim() || site.slug;
 }
 
-function formatDate(value: string): string {
+function timestamp(value: string): number {
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function compareStable(a: SiteRow, b: SiteRow): number {
+  return b.id.localeCompare(a.id);
+}
+
+function formatDateTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
+
+  const datePart = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Riyadh",
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(date);
-}
 
-function timestamp(value: string): number {
-  const parsed = new Date(value).getTime();
-  return Number.isNaN(parsed) ? 0 : parsed;
+  const timePart = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Riyadh",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).format(date);
+
+  return `${datePart} · ${timePart}`;
 }
 
 function simplifiedDomainStatus(status: DomainStatus): "not_connected" | "live" {
@@ -138,7 +154,9 @@ export default function SiteMonitorPage() {
       .select(
         "id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_version,content_schema_version",
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false });
 
     if (error) {
       setNotice(error.message);
@@ -172,29 +190,22 @@ export default function SiteMonitorPage() {
     return () => subscription.unsubscribe();
   }, [loadSites]);
 
-  const counts = useMemo(() => {
-    return {
-      active: sites.filter((site) => site.status !== "archived").length,
-      draft: sites.filter((site) => site.status === "draft").length,
-      concept: sites.filter((site) => site.status === "concept").length,
-      client: sites.filter((site) => site.status === "live").length,
-      archived: sites.filter((site) => site.status === "archived").length,
-    };
-  }, [sites]);
+  const counts = useMemo(() => ({
+    active: sites.filter((site) => site.status !== "archived").length,
+    draft: sites.filter((site) => site.status === "draft").length,
+    concept: sites.filter((site) => site.status === "concept").length,
+    client: sites.filter((site) => site.status === "live").length,
+    archived: sites.filter((site) => site.status === "archived").length,
+  }), [sites]);
 
   const selectedTotal = useMemo(() => {
     switch (summaryFilter) {
-      case "draft":
-        return counts.draft;
-      case "concept":
-        return counts.concept;
-      case "live":
-        return counts.client;
-      case "archived":
-        return counts.archived;
+      case "draft": return counts.draft;
+      case "concept": return counts.concept;
+      case "live": return counts.client;
+      case "archived": return counts.archived;
       case "active":
-      default:
-        return counts.active;
+      default: return counts.active;
     }
   }, [counts, summaryFilter]);
 
@@ -202,15 +213,14 @@ export default function SiteMonitorPage() {
     const query = search.trim().toLowerCase();
 
     const filtered = sites.filter((site) => {
-      const matchesSummary =
-        summaryFilter === "active"
-          ? site.status !== "archived"
-          : site.status === summaryFilter;
+      const matchesSummary = summaryFilter === "active"
+        ? site.status !== "archived"
+        : site.status === summaryFilter;
 
       if (!matchesSummary) return false;
       if (!query) return true;
 
-      const haystack = [
+      return [
         siteName(site),
         site.slug,
         site.content?.piName ?? "",
@@ -219,38 +229,32 @@ export default function SiteMonitorPage() {
         site.status,
         site.domain_status,
         site.design_key,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(query);
+      ].join(" ").toLowerCase().includes(query);
     });
 
     return [...filtered].sort((a, b) => {
       switch (sortKey) {
         case "updated_asc":
-          return timestamp(a.updated_at) - timestamp(b.updated_at) || siteName(a).localeCompare(siteName(b));
+          return timestamp(a.updated_at) - timestamp(b.updated_at) || compareStable(a, b);
         case "created_desc":
-          return (
-            timestamp(b.created_at) - timestamp(a.created_at)
+          return timestamp(b.created_at) - timestamp(a.created_at)
             || timestamp(b.updated_at) - timestamp(a.updated_at)
-            || siteName(a).localeCompare(siteName(b))
-          );
+            || compareStable(a, b);
         case "created_asc":
-          return (
-            timestamp(a.created_at) - timestamp(b.created_at)
+          return timestamp(a.created_at) - timestamp(b.created_at)
             || timestamp(a.updated_at) - timestamp(b.updated_at)
-            || siteName(a).localeCompare(siteName(b))
-          );
+            || compareStable(b, a);
         case "name_asc":
-          return siteName(a).localeCompare(siteName(b));
+          return siteName(a).localeCompare(siteName(b)) || compareStable(a, b);
         case "name_desc":
-          return siteName(b).localeCompare(siteName(a));
+          return siteName(b).localeCompare(siteName(a)) || compareStable(a, b);
         case "status_asc":
-          return statusOrder[a.status] - statusOrder[b.status] || siteName(a).localeCompare(siteName(b));
+          return statusOrder[a.status] - statusOrder[b.status]
+            || siteName(a).localeCompare(siteName(b))
+            || compareStable(a, b);
         case "updated_desc":
         default:
-          return timestamp(b.updated_at) - timestamp(a.updated_at) || siteName(a).localeCompare(siteName(b));
+          return timestamp(b.updated_at) - timestamp(a.updated_at) || compareStable(a, b);
       }
     });
   }, [sites, search, sortKey, summaryFilter]);
@@ -275,9 +279,7 @@ export default function SiteMonitorPage() {
           <p className={styles.kicker}>LabNarrative website monitor</p>
           <h1>Administrator sign-in required.</h1>
           <p>Sign in through the existing administrator dashboard, then return to this page.</p>
-          <Link className={styles.primaryLink} href="/admin">
-            Open administrator dashboard
-          </Link>
+          <Link className={styles.primaryLink} href="/admin">Open administrator dashboard</Link>
         </section>
       </main>
     );
@@ -290,9 +292,7 @@ export default function SiteMonitorPage() {
           <p className={styles.kicker}>Access restricted</p>
           <h1>Administrator permission required.</h1>
           <p>{loading ? "Checking administrator permission…" : notice}</p>
-          <Link className={styles.primaryLink} href="/admin">
-            Return to dashboard
-          </Link>
+          <Link className={styles.primaryLink} href="/admin">Return to dashboard</Link>
         </section>
       </main>
     );
@@ -312,9 +312,7 @@ export default function SiteMonitorPage() {
     <main className={styles.page}>
       <header className={styles.topbar}>
         <div>
-          <Link className={styles.brand} href="/admin">
-            LabNarrative
-          </Link>
+          <Link className={styles.brand} href="/admin">LabNarrative</Link>
           <span>Website monitor</span>
         </div>
         <nav>
@@ -345,22 +343,10 @@ export default function SiteMonitorPage() {
         </div>
 
         <section className={styles.explanation} aria-label="Status definitions">
-          <article>
-            <strong>Draft</strong>
-            <span>Administrator-only working version. It is not publicly visible.</span>
-          </article>
-          <article>
-            <strong>Concept</strong>
-            <span>Public outreach preview. Suitable for sending to a prospective PI.</span>
-          </article>
-          <article>
-            <strong>Client</strong>
-            <span>Approved official client website intended for ongoing public use.</span>
-          </article>
-          <article>
-            <strong>Archived</strong>
-            <span>Hidden by default but available through the Archived summary filter.</span>
-          </article>
+          <article><strong>Draft</strong><span>Administrator-only working version. It is not publicly visible.</span></article>
+          <article><strong>Concept</strong><span>Public outreach preview. Suitable for sending to a prospective PI.</span></article>
+          <article><strong>Client</strong><span>Approved official client website intended for ongoing public use.</span></article>
+          <article><strong>Archived</strong><span>Hidden by default but available through the Archived summary filter.</span></article>
         </section>
 
         <section
@@ -425,8 +411,8 @@ export default function SiteMonitorPage() {
                 <th>Website status</th>
                 <th>Domain status</th>
                 <th>Design</th>
-                <th>Created</th>
-                <th>Updated</th>
+                <th>Created (Riyadh)</th>
+                <th>Updated (Riyadh)</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -444,14 +430,10 @@ export default function SiteMonitorPage() {
                     <span>{site.content?.institution || "—"}</span>
                   </td>
                   <td data-label="Website status">
-                    <span className={`${styles.badge} ${styles[`status_${site.status}`]}`}>
-                      {statusLabels[site.status]}
-                    </span>
+                    <span className={`${styles.badge} ${styles[`status_${site.status}`]}`}>{statusLabels[site.status]}</span>
                   </td>
                   <td data-label="Domain status">
-                    <span
-                      className={`${styles.badge} ${styles[`domain_${simplifiedDomainStatus(site.domain_status)}`]}`}
-                    >
+                    <span className={`${styles.badge} ${styles[`domain_${simplifiedDomainStatus(site.domain_status)}`]}`}>
                       {domainLabels[site.domain_status]}
                     </span>
                   </td>
@@ -459,18 +441,18 @@ export default function SiteMonitorPage() {
                     <strong>{site.design_key || "—"}</strong>
                     <span>v{site.design_version || 1} · schema {site.content_schema_version || 1}</span>
                   </td>
-                  <td data-label="Created">{formatDate(site.created_at)}</td>
-                  <td data-label="Updated">{formatDate(site.updated_at)}</td>
+                  <td data-label="Created (Riyadh)">
+                    <time dateTime={site.created_at} title={site.created_at}>{formatDateTime(site.created_at)}</time>
+                  </td>
+                  <td data-label="Updated (Riyadh)">
+                    <time dateTime={site.updated_at} title={site.updated_at}>{formatDateTime(site.updated_at)}</time>
+                  </td>
                   <td data-label="Actions">
                     <div className={styles.actions}>
                       <Link href={`/admin?site=${encodeURIComponent(site.slug)}`}>Edit PI website</Link>
-                      <Link href={`/admin/preview/${site.slug}`} target="_blank">
-                        Preview
-                      </Link>
+                      <Link href={`/admin/preview/${site.slug}`} target="_blank">Preview</Link>
                       {site.domain_url && site.domain_status === "live" && (
-                        <a href={site.domain_url} target="_blank" rel="noreferrer">
-                          Open live
-                        </a>
+                        <a href={site.domain_url} target="_blank" rel="noreferrer">Open live</a>
                       )}
                     </div>
                   </td>
