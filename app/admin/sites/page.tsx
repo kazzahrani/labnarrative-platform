@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./site-monitor.module.css";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
+type SummaryFilter = "active" | SiteStatus;
 type DomainStatus =
   | "not_connected"
   | "connecting"
@@ -86,6 +87,11 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
+function timestamp(value: string): number {
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 function simplifiedDomainStatus(status: DomainStatus): "not_connected" | "live" {
   return status === "live" ? "live" : "not_connected";
 }
@@ -98,6 +104,7 @@ export default function SiteMonitorPage() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
+  const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>("active");
   const [sortKey, setSortKey] = useState<SortKey>("created_desc");
 
   const loadSites = useCallback(async (activeSession: Session) => {
@@ -130,7 +137,8 @@ export default function SiteMonitorPage() {
       .from("sites")
       .select(
         "id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_version,content_schema_version",
-      );
+      )
+      .order("created_at", { ascending: false });
 
     if (error) {
       setNotice(error.message);
@@ -174,11 +182,32 @@ export default function SiteMonitorPage() {
     };
   }, [sites]);
 
+  const selectedTotal = useMemo(() => {
+    switch (summaryFilter) {
+      case "draft":
+        return counts.draft;
+      case "concept":
+        return counts.concept;
+      case "live":
+        return counts.client;
+      case "archived":
+        return counts.archived;
+      case "active":
+      default:
+        return counts.active;
+    }
+  }, [counts, summaryFilter]);
+
   const visibleSites = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     const filtered = sites.filter((site) => {
-      if (site.status === "archived") return false;
+      const matchesSummary =
+        summaryFilter === "active"
+          ? site.status !== "archived"
+          : site.status === summaryFilter;
+
+      if (!matchesSummary) return false;
       if (!query) return true;
 
       const haystack = [
@@ -200,11 +229,19 @@ export default function SiteMonitorPage() {
     return [...filtered].sort((a, b) => {
       switch (sortKey) {
         case "updated_asc":
-          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+          return timestamp(a.updated_at) - timestamp(b.updated_at) || siteName(a).localeCompare(siteName(b));
         case "created_desc":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return (
+            timestamp(b.created_at) - timestamp(a.created_at)
+            || timestamp(b.updated_at) - timestamp(a.updated_at)
+            || siteName(a).localeCompare(siteName(b))
+          );
         case "created_asc":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          return (
+            timestamp(a.created_at) - timestamp(b.created_at)
+            || timestamp(a.updated_at) - timestamp(b.updated_at)
+            || siteName(a).localeCompare(siteName(b))
+          );
         case "name_asc":
           return siteName(a).localeCompare(siteName(b));
         case "name_desc":
@@ -213,10 +250,10 @@ export default function SiteMonitorPage() {
           return statusOrder[a.status] - statusOrder[b.status] || siteName(a).localeCompare(siteName(b));
         case "updated_desc":
         default:
-          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+          return timestamp(b.updated_at) - timestamp(a.updated_at) || siteName(a).localeCompare(siteName(b));
       }
     });
-  }, [sites, search, sortKey]);
+  }, [sites, search, sortKey, summaryFilter]);
 
   async function copySlug(slug: string) {
     try {
@@ -261,13 +298,15 @@ export default function SiteMonitorPage() {
     );
   }
 
-  const summaryItems = [
-    ["Active websites", counts.active],
-    ["Drafts", counts.draft],
-    ["Concepts", counts.concept],
-    ["Clients", counts.client],
-    ["Archived hidden", counts.archived],
-  ] as const;
+  const summaryItems: Array<{ label: string; value: number; filter: SummaryFilter }> = [
+    { label: "Active websites", value: counts.active, filter: "active" },
+    { label: "Drafts", value: counts.draft, filter: "draft" },
+    { label: "Concepts", value: counts.concept, filter: "concept" },
+    { label: "Clients", value: counts.client, filter: "live" },
+    { label: "Archived hidden", value: counts.archived, filter: "archived" },
+  ];
+
+  const selectedLabel = summaryItems.find((item) => item.filter === summaryFilter)?.label ?? "Websites";
 
   return (
     <main className={styles.page}>
@@ -292,7 +331,7 @@ export default function SiteMonitorPage() {
             <h1>Monitor every PI website.</h1>
             <p>
               Website status and domain status are shown separately. Archived websites remain hidden from
-              the operational table.
+              the default operational table.
             </p>
           </div>
           <button
@@ -320,32 +359,26 @@ export default function SiteMonitorPage() {
           </article>
           <article>
             <strong>Archived</strong>
-            <span>Hidden from this monitor table but retained safely in the database.</span>
+            <span>Hidden by default but available through the Archived summary filter.</span>
           </article>
         </section>
 
         <section
           className={styles.summary}
-          aria-label="Website totals"
+          aria-label="Website totals and status filters"
           style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
         >
-          {summaryItems.map(([label, value], index) => (
-            <article
-              key={label}
-              style={{
-                display: "grid",
-                gap: 6,
-                minHeight: 76,
-                padding: "14px 17px",
-                borderRight: index === summaryItems.length - 1 ? 0 : "1px solid #e1e6e3",
-                background: "transparent",
-                color: "#65736d",
-                textAlign: "left",
-              }}
+          {summaryItems.map((item) => (
+            <button
+              aria-pressed={summaryFilter === item.filter}
+              className={summaryFilter === item.filter ? styles.activeSummary : undefined}
+              key={item.filter}
+              onClick={() => setSummaryFilter(item.filter)}
+              type="button"
             >
-              <span>{label}</span>
-              <strong>{value}</strong>
-            </article>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </button>
           ))}
         </section>
 
@@ -379,8 +412,8 @@ export default function SiteMonitorPage() {
         {notice && <p className={styles.notice}>{notice}</p>}
 
         <div className={styles.resultLine}>
-          Showing <strong>{visibleSites.length}</strong> of <strong>{counts.active}</strong> active websites
-          {counts.archived > 0 && <span> · {counts.archived} archived hidden</span>}
+          Showing <strong>{visibleSites.length}</strong> of <strong>{selectedTotal}</strong> {selectedLabel.toLowerCase()}
+          {summaryFilter !== "archived" && counts.archived > 0 && <span> · {counts.archived} archived hidden</span>}
         </div>
 
         <div className={styles.tableWrap}>
@@ -448,8 +481,8 @@ export default function SiteMonitorPage() {
 
           {!loading && visibleSites.length === 0 && (
             <div className={styles.empty}>
-              <strong>No websites match your search.</strong>
-              <span>Clear the search field to show every active website.</span>
+              <strong>No websites match this view.</strong>
+              <span>Clear the search field or choose another summary filter.</span>
             </div>
           )}
         </div>
