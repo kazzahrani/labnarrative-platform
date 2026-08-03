@@ -36,7 +36,6 @@ type SiteRow = {
   content_schema_version: number;
 };
 
-type StatusFilter = "all" | SiteStatus;
 type SortKey =
   | "updated_desc"
   | "updated_asc"
@@ -99,9 +98,7 @@ export default function SiteMonitorPage() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("created_asc");
-  const [showArchived, setShowArchived] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("created_desc");
 
   const loadSites = useCallback(async (activeSession: Session) => {
     setLoading(true);
@@ -169,7 +166,6 @@ export default function SiteMonitorPage() {
 
   const counts = useMemo(() => {
     return {
-      all: sites.length,
       active: sites.filter((site) => site.status !== "archived").length,
       draft: sites.filter((site) => site.status === "draft").length,
       concept: sites.filter((site) => site.status === "concept").length,
@@ -182,9 +178,7 @@ export default function SiteMonitorPage() {
     const query = search.trim().toLowerCase();
 
     const filtered = sites.filter((site) => {
-      if (!showArchived && site.status === "archived") return false;
-      if (statusFilter !== "all" && site.status !== statusFilter) return false;
-
+      if (site.status === "archived") return false;
       if (!query) return true;
 
       const haystack = [
@@ -222,7 +216,7 @@ export default function SiteMonitorPage() {
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       }
     });
-  }, [sites, search, statusFilter, sortKey, showArchived]);
+  }, [sites, search, sortKey]);
 
   async function copySlug(slug: string) {
     try {
@@ -267,6 +261,14 @@ export default function SiteMonitorPage() {
     );
   }
 
+  const summaryItems = [
+    ["Active websites", counts.active],
+    ["Drafts", counts.draft],
+    ["Concepts", counts.concept],
+    ["Clients", counts.client],
+    ["Archived hidden", counts.archived],
+  ] as const;
+
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
@@ -289,8 +291,8 @@ export default function SiteMonitorPage() {
             <p className={styles.kicker}>Portfolio operations</p>
             <h1>Monitor every PI website.</h1>
             <p>
-              Website status and domain status are shown separately, because a connected domain does not
-              automatically make Draft content public.
+              Website status and domain status are shown separately. Archived websites remain hidden from
+              the operational table.
             </p>
           </div>
           <button
@@ -318,61 +320,39 @@ export default function SiteMonitorPage() {
           </article>
           <article>
             <strong>Archived</strong>
-            <span>Hidden from public use but retained safely in the database.</span>
+            <span>Hidden from this monitor table but retained safely in the database.</span>
           </article>
         </section>
 
-        <section className={styles.summary} aria-label="Website totals">
-          <button
-            className={statusFilter === "all" && !showArchived ? styles.activeSummary : ""}
-            onClick={() => {
-              setStatusFilter("all");
-              setShowArchived(false);
-            }}
-            type="button"
-          >
-            <span>Active websites</span>
-            <strong>{counts.active}</strong>
-          </button>
-          <button
-            className={statusFilter === "draft" ? styles.activeSummary : ""}
-            onClick={() => setStatusFilter("draft")}
-            type="button"
-          >
-            <span>Drafts</span>
-            <strong>{counts.draft}</strong>
-          </button>
-          <button
-            className={statusFilter === "concept" ? styles.activeSummary : ""}
-            onClick={() => setStatusFilter("concept")}
-            type="button"
-          >
-            <span>Concepts</span>
-            <strong>{counts.concept}</strong>
-          </button>
-          <button
-            className={statusFilter === "live" ? styles.activeSummary : ""}
-            onClick={() => setStatusFilter("live")}
-            type="button"
-          >
-            <span>Clients</span>
-            <strong>{counts.client}</strong>
-          </button>
-          <button
-            className={showArchived ? styles.activeSummary : ""}
-            onClick={() => {
-              const next = !showArchived;
-              setShowArchived(next);
-              if (!next && statusFilter === "archived") setStatusFilter("all");
-            }}
-            type="button"
-          >
-            <span>{showArchived ? "Hide archived" : "Show archived"}</span>
-            <strong>{counts.archived}</strong>
-          </button>
+        <section
+          className={styles.summary}
+          aria-label="Website totals"
+          style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}
+        >
+          {summaryItems.map(([label, value], index) => (
+            <article
+              key={label}
+              style={{
+                display: "grid",
+                gap: 6,
+                minHeight: 76,
+                padding: "14px 17px",
+                borderRight: index === summaryItems.length - 1 ? 0 : "1px solid #e1e6e3",
+                background: "transparent",
+                color: "#65736d",
+                textAlign: "left",
+              }}
+            >
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </article>
+          ))}
         </section>
 
-        <section className={styles.controls}>
+        <section
+          className={styles.controls}
+          style={{ gridTemplateColumns: "minmax(260px, 1.5fr) minmax(180px, 0.7fr)" }}
+        >
           <label className={styles.search}>
             <span>Search</span>
             <input
@@ -383,30 +363,12 @@ export default function SiteMonitorPage() {
           </label>
 
           <label>
-            <span>Website status</span>
-            <select
-              value={statusFilter}
-              onChange={(event) => {
-                const nextStatus = event.target.value as StatusFilter;
-                setStatusFilter(nextStatus);
-                if (nextStatus === "archived") setShowArchived(true);
-              }}
-            >
-              <option value="all">All statuses</option>
-              <option value="draft">Draft</option>
-              <option value="concept">Concept</option>
-              <option value="live">Client</option>
-              <option value="archived">Archived</option>
-            </select>
-          </label>
-
-          <label>
             <span>Sort by</span>
             <select value={sortKey} onChange={(event) => setSortKey(event.target.value as SortKey)}>
-              <option value="updated_desc">Recently updated</option>
-              <option value="updated_asc">Least recently updated</option>
               <option value="created_desc">Newest created</option>
               <option value="created_asc">Oldest created</option>
+              <option value="updated_desc">Recently updated</option>
+              <option value="updated_asc">Least recently updated</option>
               <option value="name_asc">Name A–Z</option>
               <option value="name_desc">Name Z–A</option>
               <option value="status_asc">Website status</option>
@@ -417,11 +379,8 @@ export default function SiteMonitorPage() {
         {notice && <p className={styles.notice}>{notice}</p>}
 
         <div className={styles.resultLine}>
-          Showing <strong>{visibleSites.length}</strong> of{" "}
-          <strong>{showArchived ? counts.all : counts.active}</strong> visible websites
-          {!showArchived && counts.archived > 0 && (
-            <span> · {counts.archived} archived hidden</span>
-          )}
+          Showing <strong>{visibleSites.length}</strong> of <strong>{counts.active}</strong> active websites
+          {counts.archived > 0 && <span> · {counts.archived} archived hidden</span>}
         </div>
 
         <div className={styles.tableWrap}>
@@ -471,9 +430,7 @@ export default function SiteMonitorPage() {
                   <td data-label="Updated">{formatDate(site.updated_at)}</td>
                   <td data-label="Actions">
                     <div className={styles.actions}>
-                      <Link href={`/admin?site=${encodeURIComponent(site.slug)}`}>
-                        Edit PI website
-                      </Link>
+                      <Link href={`/admin?site=${encodeURIComponent(site.slug)}`}>Edit PI website</Link>
                       <Link href={`/admin/preview/${site.slug}`} target="_blank">
                         Preview
                       </Link>
@@ -491,8 +448,8 @@ export default function SiteMonitorPage() {
 
           {!loading && visibleSites.length === 0 && (
             <div className={styles.empty}>
-              <strong>No websites match these filters.</strong>
-              <span>Clear the search or choose a different status.</span>
+              <strong>No websites match your search.</strong>
+              <span>Clear the search field to show every active website.</span>
             </div>
           )}
         </div>
