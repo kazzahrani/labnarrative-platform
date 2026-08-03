@@ -4,7 +4,7 @@ import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import BourdonEditor from "@/components/admin/BourdonEditor";
-import type { LabSite } from "@/lib/sites";
+import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
@@ -201,7 +201,12 @@ function normalizeTemplate(value: unknown): SiteTemplate {
 }
 
 function designVersionFor(template: SiteTemplate): number {
-  return template === "bourdon-full" ? 2 : 1;
+  return template === "bourdon-full" ? 3 : 1;
+}
+
+function designSettingsFor(template: SiteTemplate, existing?: Record<string, unknown>): Record<string, unknown> {
+  if (template !== "bourdon-full") return existing ?? {};
+  return { ...defaultBourdonDesignSettings, ...(existing ?? {}) };
 }
 
 function blankRichProject(index: number): RichResearchProject {
@@ -244,7 +249,7 @@ function contentFromTemplate(template: SiteTemplate): SiteContent {
   const isFull = template === "bourdon-full";
   return {
     schemaVersion: isFull ? 3 : 1,
-    design: { key: template, version: designVersionFor(template), settings: {} },
+    design: { key: template, version: designVersionFor(template), settings: designSettingsFor(template) },
     template,
     heroImage: "",
     slug: "",
@@ -299,7 +304,7 @@ function compactContent(content: SiteContent): SiteContent {
   return {
     ...content,
     schemaVersion: template === "bourdon-full" ? 3 : 1,
-    design: { key: template, version: designVersionFor(template), settings: content.design?.settings ?? {} },
+    design: { key: template, version: designVersionFor(template), settings: designSettingsFor(template, content.design?.settings) },
     slug: cleanSlug(content.slug),
     focusAreas: content.focusAreas.map((item) => item.trim()).filter(Boolean),
     projects: content.projects
@@ -615,7 +620,11 @@ export default function AdminPage() {
       ...fresh,
       template,
       schemaVersion: template === "bourdon-full" ? 3 : 1,
-      design: { key: template, version: designVersionFor(template), settings: structuredClone(source.design_settings ?? {}) },
+      design: {
+        key: template,
+        version: designVersionFor(template),
+        settings: designSettingsFor(template, structuredClone(sourceContent.design?.settings ?? source.design_settings ?? {})),
+      },
       theme: { ...(sourceContent.theme ?? templateDefinitions[template].theme) },
       focusAreas: Array.from(
         { length: Math.max(sourceContent.focusAreas?.length ?? 0, 1) },
@@ -666,9 +675,14 @@ export default function AdminPage() {
     setNotice("");
     setEditor((current) => {
       const next = { ...current.content };
+      const previousDesign = next.design;
       next.template = template;
       next.schemaVersion = template === "bourdon-full" ? 3 : 1;
-      next.design = { key: template, version: designVersionFor(template), settings: next.design?.settings ?? {} };
+      next.design = {
+        key: template,
+        version: designVersionFor(template),
+        settings: designSettingsFor(template, previousDesign?.key === template ? previousDesign.settings : undefined),
+      };
       next.theme = { ...templateDefinitions[template].theme };
       if (template === "bourdon-full") {
         next.research = next.research?.length ? next.research : Array.from({ length: 4 }, (_, index) => blankRichProject(index));
@@ -683,10 +697,11 @@ export default function AdminPage() {
     const loaded = structuredClone(site.content);
     loaded.template = normalizeTemplate(loaded.template ?? site.design_key);
     loaded.schemaVersion = loaded.schemaVersion ?? site.content_schema_version ?? 1;
-    loaded.design = loaded.design ?? {
-      key: site.design_key || loaded.template,
-      version: site.design_version ?? 1,
-      settings: site.design_settings ?? {},
+    const designKey = normalizeTemplate(loaded.design?.key ?? site.design_key ?? loaded.template);
+    loaded.design = {
+      key: designKey,
+      version: designVersionFor(designKey),
+      settings: designSettingsFor(designKey, loaded.design?.settings ?? site.design_settings ?? {}),
     };
     setEditor({
       id: site.id,
