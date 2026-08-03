@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import { ChangeEvent, useMemo, useRef, useState } from "react";
 
 const BUCKET = "labnarrative-images";
+const MAX_IMAGE_SIZE_MB = 25;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 
 function safeSegment(value: string) {
   return value
@@ -70,8 +72,8 @@ export default function ImageUploadField({
       setNotice("Choose a JPG, PNG, WebP, or GIF image.");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setNotice("The image must be smaller than 10 MB.");
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setNotice(`The image must be smaller than ${MAX_IMAGE_SIZE_MB} MB.`);
       return;
     }
 
@@ -127,7 +129,7 @@ export default function ImageUploadField({
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={upload} />
       <label className="admin-field">
         <span>Image URL</span>
-        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Upload a file or paste an image URL" />
+        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Upload an image up to ${MAX_IMAGE_SIZE_MB} MB or paste an image URL`} />
       </label>
       {value && (
         <div className="advanced-image-preview">
