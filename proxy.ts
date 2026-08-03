@@ -24,8 +24,19 @@ export function proxy(request: NextRequest) {
     }
 
     const url = request.nextUrl.clone();
-    const suffix = url.pathname === "/" ? "" : url.pathname;
-    url.pathname = `/sites/${subdomain}${suffix}`;
+    const internalPrefix = `/sites/${subdomain}`;
+
+    // Public subdomains should expose clean paths such as /research. Older
+    // renderer links may already include /sites/{slug}; strip that prefix
+    // before applying the hostname rewrite so it is never duplicated.
+    const publicPath = url.pathname === internalPrefix
+      ? "/"
+      : url.pathname.startsWith(`${internalPrefix}/`)
+        ? url.pathname.slice(internalPrefix.length)
+        : url.pathname;
+
+    const suffix = publicPath === "/" ? "" : publicPath;
+    url.pathname = `${internalPrefix}${suffix}`;
     return NextResponse.rewrite(url);
   }
 
