@@ -19,6 +19,25 @@ type GenerationResponse = {
     output_tokens?: number;
     total_tokens?: number;
   };
+  costEstimate?: {
+    currency?: string;
+    inputCost?: number;
+    outputCost?: number;
+    webSearchCost?: number;
+    totalCost?: number;
+    webSearchCalls?: number;
+    note?: string;
+  };
+  quality?: {
+    score?: number;
+    label?: string;
+    sourceCount?: number;
+    publicationCount?: number;
+    opportunityCount?: number;
+    memberCount?: number;
+    hasProfileImage?: boolean;
+    hasVerifiedEmail?: boolean;
+  };
   error?: string;
   setupRequired?: boolean;
 };
@@ -63,6 +82,8 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
   const [sources, setSources] = useState<SourceItem[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [usage, setUsage] = useState<GenerationResponse["usage"]>(undefined);
+  const [costEstimate, setCostEstimate] = useState<GenerationResponse["costEstimate"]>(undefined);
+  const [quality, setQuality] = useState<GenerationResponse["quality"]>(undefined);
   const [model, setModel] = useState("");
 
   const effectiveSlug = useMemo(
@@ -83,6 +104,8 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
     setSources([]);
     setWarnings([]);
     setUsage(undefined);
+    setCostEstimate(undefined);
+    setQuality(undefined);
     setModel("");
 
     if (!piName.trim() || !institution.trim()) {
@@ -149,6 +172,8 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
       setSources(result.sources ?? []);
       setWarnings(result.warnings ?? []);
       setUsage(result.usage);
+      setCostEstimate(result.costEstimate);
+      setQuality(result.quality);
       setModel(result.model ?? "");
       setMessage("Concept research completed. The generated JSON is loaded below for validation and human review.");
     } catch (error) {
@@ -165,9 +190,9 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
           <span className="admin-kicker">Automated PI Concept Factory</span>
           <h2 id="pi-factory-title">Research one PI and prepare the complete website JSON.</h2>
           <p>
-            The server searches current public sources, prioritises institutional and publication records,
-            creates four research programmes, and sends the result into the existing validator. Nothing is
-            saved or published automatically.
+            The server searches current public sources, expands publication and opportunity coverage,
+            extracts an official profile image when possible, creates four research programmes, and sends the
+            result into the existing validator. Nothing is saved or published automatically.
           </p>
         </div>
         <span className="pi-factory-badge">Human approval required</span>
@@ -244,7 +269,7 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
         <div className="pi-factory-submit admin-field-wide">
           <div>
             <strong>One controlled research run</strong>
-            <span>Current web research · structured JSON · no automatic database write</span>
+            <span>Up to eight bounded web searches · structured JSON · no automatic database write</span>
           </div>
           <button
             className="admin-factory-primary"
@@ -258,14 +283,30 @@ export default function PiConceptFactoryPanel({ existingSlugs, onGenerated }: Pr
 
       {message && <p className="pi-factory-message" role="status" aria-live="polite">{message}</p>}
 
-      {(sources.length > 0 || warnings.length > 0 || usage || model) && (
+      {(sources.length > 0 || warnings.length > 0 || usage || model || quality || costEstimate) && (
         <div className="pi-factory-result">
           <div className="pi-factory-result-meta">
-            <div><span>Model</span><strong>{model || "—"}</strong></div>
+            <div><span>Quality</span><strong>{quality?.label ? `${quality.label} · ${quality.score ?? 0}/100` : "—"}</strong></div>
             <div><span>Sources</span><strong>{sources.length}</strong></div>
+            <div><span>Search calls</span><strong>{costEstimate?.webSearchCalls ?? "—"}</strong></div>
             <div><span>Input tokens</span><strong>{usage?.input_tokens?.toLocaleString() ?? "—"}</strong></div>
             <div><span>Output tokens</span><strong>{usage?.output_tokens?.toLocaleString() ?? "—"}</strong></div>
+            <div><span>Estimated API cost</span><strong>{typeof costEstimate?.totalCost === "number" ? `$${costEstimate.totalCost.toFixed(4)}` : "—"}</strong></div>
           </div>
+
+          {quality && (
+            <div className="pi-factory-quality">
+              <strong>Quality coverage</strong>
+              <div>
+                <span>{quality.publicationCount ?? 0} publications</span>
+                <span>{quality.opportunityCount ?? 0} opportunities</span>
+                <span>{quality.memberCount ?? 0} verified member{quality.memberCount === 1 ? "" : "s"}</span>
+                <span>{quality.hasProfileImage ? "Profile image found" : "Profile image missing"}</span>
+                <span>{quality.hasVerifiedEmail ? "Email verified" : "Email missing"}</span>
+              </div>
+              {costEstimate?.note && <small>{costEstimate.note}</small>}
+            </div>
+          )}
 
           {warnings.length > 0 && (
             <div className="pi-factory-warnings">
