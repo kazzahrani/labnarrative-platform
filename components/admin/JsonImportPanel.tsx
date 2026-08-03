@@ -87,7 +87,7 @@ export default function JsonImportPanel({
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [items, setItems] = useState<ImportItem[]>([]);
   const [message, setMessage] = useState("");
-  const [removeImages, setRemoveImages] = useState(true);
+  const [removeImages, setRemoveImages] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const readyItems = useMemo(
@@ -392,8 +392,8 @@ export default function JsonImportPanel({
             disabled={busy}
           />
           <span>
-            <strong>Keep images manual</strong>
-            Clear image URLs during import so portraits and research images can be selected and uploaded later.
+            <strong>Clear imported images</strong>
+            Optional: remove all image URLs during import. Leave this unchecked to preserve every image contained in the JSON file.
           </span>
         </label>
         <p>Every imported website is created as a private Draft. No subdomain is connected.</p>
