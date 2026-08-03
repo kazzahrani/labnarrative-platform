@@ -37,7 +37,7 @@ type SiteRow = {
 };
 
 type StatusFilter = "all" | SiteStatus;
-type DomainFilter = "all" | "attention" | DomainStatus;
+type DomainFilter = "all" | "not_connected" | "live" | "others";
 type SortKey =
   | "updated_desc"
   | "updated_asc"
@@ -61,17 +61,17 @@ const statusOrder: Record<SiteStatus, number> = {
 const statusLabels: Record<SiteStatus, string> = {
   draft: "Draft",
   concept: "Concept",
-  live: "Live",
+  live: "Client",
   archived: "Archived",
 };
 
 const domainLabels: Record<DomainStatus, string> = {
   not_connected: "Not connected",
-  connecting: "Connecting",
-  https_pending: "HTTPS pending",
+  connecting: "Others",
+  https_pending: "Others",
   live: "Live",
-  error: "Error",
-  legacy: "Legacy site",
+  error: "Others",
+  legacy: "Others",
 };
 
 function siteName(site: SiteRow): string {
@@ -88,8 +88,10 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
-function domainNeedsAttention(status: DomainStatus): boolean {
-  return status === "connecting" || status === "https_pending" || status === "error";
+function simplifiedDomainStatus(status: DomainStatus): "not_connected" | "live" | "others" {
+  if (status === "not_connected") return "not_connected";
+  if (status === "live") return "live";
+  return "others";
 }
 
 export default function SiteMonitorPage() {
@@ -175,9 +177,9 @@ export default function SiteMonitorPage() {
       active: sites.filter((site) => site.status !== "archived").length,
       draft: sites.filter((site) => site.status === "draft").length,
       concept: sites.filter((site) => site.status === "concept").length,
-      live: sites.filter((site) => site.status === "live").length,
+      client: sites.filter((site) => site.status === "live").length,
       archived: sites.filter((site) => site.status === "archived").length,
-      attention: sites.filter((site) => domainNeedsAttention(site.domain_status)).length,
+      domainOthers: sites.filter((site) => simplifiedDomainStatus(site.domain_status) === "others").length,
     };
   }, [sites]);
 
@@ -188,9 +190,10 @@ export default function SiteMonitorPage() {
       if (!showArchived && site.status === "archived") return false;
       if (statusFilter !== "all" && site.status !== statusFilter) return false;
 
-      if (domainFilter === "attention") {
-        if (!domainNeedsAttention(site.domain_status)) return false;
-      } else if (domainFilter !== "all" && site.domain_status !== domainFilter) {
+      if (
+        domainFilter !== "all"
+        && simplifiedDomainStatus(site.domain_status) !== domainFilter
+      ) {
         return false;
       }
 
@@ -322,8 +325,8 @@ export default function SiteMonitorPage() {
             <span>Public outreach preview. Suitable for sending to a prospective PI.</span>
           </article>
           <article>
-            <strong>Live</strong>
-            <span>Active public website intended for ongoing use.</span>
+            <strong>Client</strong>
+            <span>Approved official client website intended for ongoing public use.</span>
           </article>
           <article>
             <strong>Archived</strong>
@@ -364,16 +367,16 @@ export default function SiteMonitorPage() {
             onClick={() => setStatusFilter("live")}
             type="button"
           >
-            <span>Live</span>
-            <strong>{counts.live}</strong>
+            <span>Clients</span>
+            <strong>{counts.client}</strong>
           </button>
           <button
-            className={domainFilter === "attention" ? styles.activeSummary : ""}
-            onClick={() => setDomainFilter(domainFilter === "attention" ? "all" : "attention")}
+            className={domainFilter === "others" ? styles.activeSummary : ""}
+            onClick={() => setDomainFilter(domainFilter === "others" ? "all" : "others")}
             type="button"
           >
-            <span>Domain attention</span>
-            <strong>{counts.attention}</strong>
+            <span>Domain others</span>
+            <strong>{counts.domainOthers}</strong>
           </button>
           <button
             className={showArchived ? styles.activeSummary : ""}
@@ -412,7 +415,7 @@ export default function SiteMonitorPage() {
               <option value="all">All statuses</option>
               <option value="draft">Draft</option>
               <option value="concept">Concept</option>
-              <option value="live">Live</option>
+              <option value="live">Client</option>
               <option value="archived">Archived</option>
             </select>
           </label>
@@ -424,13 +427,9 @@ export default function SiteMonitorPage() {
               onChange={(event) => setDomainFilter(event.target.value as DomainFilter)}
             >
               <option value="all">All domain states</option>
-              <option value="attention">Needs attention</option>
               <option value="not_connected">Not connected</option>
-              <option value="connecting">Connecting</option>
-              <option value="https_pending">HTTPS pending</option>
               <option value="live">Live</option>
-              <option value="error">Error</option>
-              <option value="legacy">Legacy site</option>
+              <option value="others">Others</option>
             </select>
           </label>
 
@@ -491,10 +490,12 @@ export default function SiteMonitorPage() {
                     </span>
                   </td>
                   <td data-label="Domain status">
-                    <span className={`${styles.badge} ${styles[`domain_${site.domain_status}`]}`}>
+                    <span
+                      className={`${styles.badge} ${styles[`domain_${site.domain_status}`]}`}
+                      title={`Technical state: ${site.domain_status}`}
+                    >
                       {domainLabels[site.domain_status]}
                     </span>
-                    {site.domain_error && <small title={site.domain_error}>{site.domain_error}</small>}
                   </td>
                   <td data-label="Design">
                     <strong>{site.design_key || "—"}</strong>
@@ -504,6 +505,9 @@ export default function SiteMonitorPage() {
                   <td data-label="Updated">{formatDate(site.updated_at)}</td>
                   <td data-label="Actions">
                     <div className={styles.actions}>
+                      <Link href={`/admin?site=${encodeURIComponent(site.slug)}`}>
+                        Edit PI website
+                      </Link>
                       <Link href={`/admin/preview/${site.slug}`} target="_blank">
                         Preview
                       </Link>
