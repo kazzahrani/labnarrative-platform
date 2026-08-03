@@ -9,6 +9,7 @@ import PiConceptFactoryPanel from "@/components/admin/PiConceptFactoryPanel";
 import BatchConceptFactoryPanel from "@/components/admin/BatchConceptFactoryPanel";
 import SiteManagementTable, { type SiteManagerFilter } from "@/components/admin/SiteManagementTable";
 import { defaultBourdonDesignSettings, type LabSite } from "@/lib/sites";
+import managerStyles from "./admin-manager.module.css";
 
 type SiteStatus = "draft" | "concept" | "live" | "archived";
 type DomainStatus = "not_connected" | "connecting" | "https_pending" | "live" | "error" | "legacy";
@@ -1141,8 +1142,8 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <div className="admin-layout">
-        <aside className="admin-sidebar admin-navigation-sidebar">
+      <div className={`admin-layout ${managerStyles.layout}`}>
+        <aside className={`admin-sidebar ${managerStyles.sidebar}`}>
           <div className="admin-sidebar-heading">
             <div>
               <span className="admin-kicker">Workspace</span>
@@ -1150,44 +1151,44 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <nav className="admin-navigation" aria-label="Administrator workspace">
+          <nav className={managerStyles.navigation} aria-label="Administrator workspace">
             <button
-              className={dashboardOpen && dashboardFilter === "all" ? "active" : ""}
+              className={`${managerStyles.navButton} ${dashboardOpen && dashboardFilter === "all" ? managerStyles.active : ""}`}
               onClick={() => openDashboard("all")}
               type="button"
             >
               <span>All websites</span><strong>{siteCounts.all}</strong>
             </button>
             <button
-              className={dashboardOpen && dashboardFilter === "draft" ? "active" : ""}
+              className={`${managerStyles.navButton} ${dashboardOpen && dashboardFilter === "draft" ? managerStyles.active : ""}`}
               onClick={() => openDashboard("draft")}
               type="button"
             >
               <span>Drafts</span><strong>{siteCounts.draft}</strong>
             </button>
             <button
-              className={dashboardOpen && dashboardFilter === "public" ? "active" : ""}
+              className={`${managerStyles.navButton} ${dashboardOpen && dashboardFilter === "public" ? managerStyles.active : ""}`}
               onClick={() => openDashboard("public")}
               type="button"
             >
               <span>Public concepts</span><strong>{siteCounts.public}</strong>
             </button>
             <button
-              className={dashboardOpen && dashboardFilter === "live" ? "active" : ""}
+              className={`${managerStyles.navButton} ${dashboardOpen && dashboardFilter === "live" ? managerStyles.active : ""}`}
               onClick={() => openDashboard("live")}
               type="button"
             >
               <span>Live websites</span><strong>{siteCounts.live}</strong>
             </button>
             <button
-              className={dashboardOpen && dashboardFilter === "archived" ? "active" : ""}
+              className={`${managerStyles.navButton} ${dashboardOpen && dashboardFilter === "archived" ? managerStyles.active : ""}`}
               onClick={() => openDashboard("archived")}
               type="button"
             >
               <span>Archived</span><strong>{siteCounts.archived}</strong>
             </button>
             <button
-              className={dashboardOpen && dashboardFilter === "domain_attention" ? "active" : ""}
+              className={`${managerStyles.navButton} ${dashboardOpen && dashboardFilter === "domain_attention" ? managerStyles.active : ""}`}
               onClick={() => openDashboard("domain_attention")}
               type="button"
             >
@@ -1195,14 +1196,14 @@ export default function AdminPage() {
             </button>
           </nav>
 
-          <button className="admin-create-button" onClick={startNewSite} type="button">
+          <button className={managerStyles.createButton} onClick={startNewSite} type="button">
             <span>+ New</span>
             <small>Create, generate or import</small>
           </button>
 
-          <div className="admin-sidebar-section">
+          <div className={managerStyles.recentSection}>
             <span className="admin-kicker">Recently updated</span>
-            <div className="admin-recent-sites">
+            <div className={managerStyles.recentSites}>
               {recentSites.map((site) => (
                 <button key={site.id} type="button" onClick={() => openSite(site)}>
                   <span>{site.content.labName || site.content.piName || site.slug}</span>
@@ -1214,7 +1215,7 @@ export default function AdminPage() {
         </aside>
 
         <section className="admin-workspace">
-          <div className={`admin-editor-heading ${dashboardOpen ? "admin-dashboard-heading" : ""}`}>
+          <div className={`admin-editor-heading ${dashboardOpen ? managerStyles.dashboardHeading : ""}`}>
             <div>
               <p className="admin-kicker">
                 {dashboardOpen
@@ -1233,7 +1234,7 @@ export default function AdminPage() {
                     : content.labName || "New laboratory concept"}
               </h1>
               {dashboardOpen && (
-                <p className="admin-dashboard-intro">
+                <p className={managerStyles.dashboardIntro}>
                   Search, filter and sort the complete LabNarrative pipeline from private Drafts to connected live websites.
                 </p>
               )}
