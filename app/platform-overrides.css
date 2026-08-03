@@ -2,3 +2,7 @@
 .bn-next-programme {
   display: none !important;
 }
+
+.admin-top-actions > button:first-of-type {
+  display: none !important;
+}
