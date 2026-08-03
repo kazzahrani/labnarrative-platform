@@ -229,10 +229,10 @@ export default function BourdonEditor({
               <label className="admin-field">
                 <span>Website status</span>
                 <select value={status} onChange={(event) => onStatusChange(event.target.value as SiteStatus)}>
-                  <option value="draft">Draft — administrator only</option>
-                  <option value="concept">Concept — publicly shareable</option>
-                  <option value="live">Live — client website</option>
-                  <option value="archived">Archived</option>
+                  <option value="draft">Draft — private administrator-only work</option>
+                  <option value="concept">Concept — public outreach concept for a prospective PI</option>
+                  <option value="live">Client — approved official client website</option>
+                  <option value="archived">Archived — retired and hidden</option>
                 </select>
               </label>
               <Field label="Principal investigator" value={content.piName} onChange={(value) => replace({ piName: value })} required />
