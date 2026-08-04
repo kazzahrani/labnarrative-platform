@@ -379,20 +379,20 @@
 .researchListCopy p { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 19px; line-height: 1.65; }
 .researchListCopy b { margin-top: 28px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
 
-.projectPage { padding-bottom: 100px; }
+.projectPage { padding-bottom: 72px; }
 .projectPage .pageHero { width: 100vw; margin-left: calc(50% - 50vw); }
-.projectQuestion { padding: clamp(70px, 9vw, 120px) 0; border-bottom: 1px solid #d6d6d6; }
-.projectQuestion h2 { max-width: 1000px; font-size: clamp(40px, 5.5vw, 72px); line-height: 1.15; }
-.projectNarrative { display: grid; grid-template-columns: minmax(0, .9fr) minmax(340px, 1.1fr); gap: clamp(42px, 7vw, 100px); padding: clamp(70px, 9vw, 120px) 0; }
-.projectBody p { margin: 0 0 28px; font-family: Georgia, "Times New Roman", serif; font-size: 21px; line-height: 1.75; }
+.projectQuestion { padding: clamp(48px, 6vw, 76px) 0; border-bottom: 1px solid #d6d6d6; }
+.projectQuestion h2 { max-width: 900px; font-size: clamp(28px, 3.5vw, 46px); line-height: 1.16; }
+.projectNarrative { display: grid; grid-template-columns: minmax(0, .9fr) minmax(340px, 1.1fr); gap: clamp(32px, 5vw, 72px); padding: clamp(48px, 6vw, 78px) 0; }
+.projectBody p { margin: 0 0 22px; font-family: Georgia, "Times New Roman", serif; font-size: 18px; line-height: 1.65; }
 .projectNarrative figure { margin: 0; }
 .projectNarrative figure img,
-.projectNarrative figure .placeholder { min-height: 420px; object-fit: cover; background: #e6e4e1; }
-.projectNarrative figcaption { margin-top: 12px; color: var(--pl-muted); font-size: 13px; line-height: 1.5; }
+.projectNarrative figure .placeholder { min-height: 360px; object-fit: cover; background: #e6e4e1; }
+.projectNarrative figcaption { margin-top: 10px; color: var(--pl-muted); font-size: 12px; line-height: 1.45; }
 .detailList { padding: 40px 0; border-top: 1px solid #d6d6d6; }
 .detailList > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 34px; }
 .detailList span { padding: 15px 0; border-bottom: 1px solid #e2e2e2; font-family: Georgia, "Times New Roman", serif; font-size: 18px; }
-.returnLink { display: inline-block; margin-top: 46px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.returnLink { display: inline-block; margin-top: 32px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 
 .publications { padding: clamp(70px, 8vw, 112px) 0; }
 .publications > a,
