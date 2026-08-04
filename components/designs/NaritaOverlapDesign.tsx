@@ -97,7 +97,13 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           top: var(--narita-header-height) !important;
           z-index: 1 !important;
           margin-bottom: 0 !important;
-          transform: translateZ(0);
+          transform: translate3d(
+            0,
+            calc(var(--narita-overlap-progress, 0) * -138px),
+            0
+          );
+          transform-origin: center top;
+          will-change: transform;
         }
 
         .narita-overlap-design .narita-overlap-hero.kinetic-inner-hero,
@@ -112,10 +118,10 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img {
           transform: translate3d(
               0,
-              calc(var(--narita-overlap-progress, 0) * -72px),
+              calc(var(--narita-overlap-progress, 0) * -38px),
               0
             )
-            scale(1.08) !important;
+            scale(1.1) !important;
           transform-origin: center center;
           will-change: transform;
         }
@@ -123,7 +129,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > div:nth-of-type(2) {
           transform: translate3d(
             0,
-            calc(var(--narita-overlap-progress, 0) * -118px),
+            calc(var(--narita-overlap-progress, 0) * -66px),
             0
           );
           will-change: transform;
@@ -170,6 +176,14 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         }
 
         @media (max-width: 980px) {
+          .narita-overlap-design .narita-overlap-hero {
+            transform: translate3d(
+              0,
+              calc(var(--narita-overlap-progress, 0) * -96px),
+              0
+            );
+          }
+
           .narita-overlap-design .narita-overlap-hero.kinetic-inner-hero,
           .narita-overlap-design main > article > .narita-overlap-hero {
             height: clamp(390px, 58vw, 500px) !important;
@@ -181,6 +195,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           .narita-overlap-design .narita-overlap-hero {
             position: relative !important;
             top: auto !important;
+            transform: none !important;
           }
 
           .narita-overlap-design .narita-overlap-hero.kinetic-inner-hero,
@@ -198,6 +213,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         }
 
         @media (prefers-reduced-motion: reduce) {
+          .narita-overlap-design .narita-overlap-hero,
           .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img,
           .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > div:nth-of-type(2) {
             transform: none !important;
