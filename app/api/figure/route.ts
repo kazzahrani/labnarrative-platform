@@ -4,8 +4,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ALLOWED_IMAGE_HOSTS = new Set([
+  "ars.els-cdn.com",
   "cdn.ncbi.nlm.nih.gov",
   "dm5migu4zj3pb.cloudfront.net",
+  "journals.plos.org",
   "mdpi-res.com",
   "media.springernature.com",
   "oup.silverchair-cdn.com",
