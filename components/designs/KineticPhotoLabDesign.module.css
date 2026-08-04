@@ -26,6 +26,10 @@
   z-index: 80;
 }
 
+.home :global(main > section:first-of-type > img) {
+  opacity: 0;
+}
+
 .root :global(.kinetic-photo-hero) {
   isolation: isolate;
   min-height: clamp(620px, 78vh, 900px);
