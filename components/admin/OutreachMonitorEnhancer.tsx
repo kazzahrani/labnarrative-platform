@@ -11,7 +11,6 @@ type OutreachStatus =
   | "replied"
   | "interested"
   | "meeting_scheduled"
-  | "follow_up_needed"
   | "proposal_sent"
   | "client"
   | "not_pursuing";
@@ -30,7 +29,6 @@ const outreachOptions: Array<{ value: OutreachStatus; label: string }> = [
   { value: "replied", label: "Replied" },
   { value: "interested", label: "Interested" },
   { value: "meeting_scheduled", label: "Meeting scheduled" },
-  { value: "follow_up_needed", label: "Follow-up needed" },
   { value: "proposal_sent", label: "Proposal sent" },
   { value: "client", label: "Client" },
   { value: "not_pursuing", label: "Closed / not pursuing" },
