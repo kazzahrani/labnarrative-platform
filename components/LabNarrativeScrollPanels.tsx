@@ -70,7 +70,7 @@ export default function LabNarrativeScrollPanels() {
 
       measurements.forEach(({ element, start }) => {
         const distance = Math.max(0, window.scrollY - start);
-        const offset = -(distance * 0.28);
+        const offset = -(distance * 0.36);
         element.style.setProperty("--ln-panel-offset", `${offset.toFixed(2)}px`);
       });
     };
