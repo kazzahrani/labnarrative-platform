@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">MYB–MuvB activation of mitotic genes</title>
+  <desc id="desc">A molecular switch diagram showing MuvB changing from DREAM repression to MYB and FOXM1 activation of CHR-containing mitotic promoters.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101d26"/><stop offset="1" stop-color="#273a45"/></linearGradient>
+    <linearGradient id="active" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ef8468"/><stop offset="1" stop-color="#e35c3d"/></linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6 0 12Z" fill="#e35c3d"/></marker>
+    <filter id="shadow"><feDropShadow dx="0" dy="15" stdDeviation="22" flood-color="#000" flood-opacity=".3"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <text x="90" y="108" fill="#f4f0ea" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">MYB–MuvB ACTIVATION OF MITOTIC GENES</text>
+  <text x="90" y="152" fill="#aab5bb" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="4">COMPLEX SWITCHING · TRANSCRIPTIONAL ACTIVATION · G2/M</text>
+  <g transform="translate(105 235)" font-family="Arial, Helvetica, sans-serif" filter="url(#shadow)">
+    <rect width="610" height="300" rx="34" fill="#13251f" stroke="#72b6a1" stroke-width="5"/>
+    <text x="45" y="58" fill="#8fd1bc" font-size="18" letter-spacing="3" font-weight="800">QUIESCENCE / EARLY CELL CYCLE</text>
+    <g transform="translate(72 102)">
+      <rect width="190" height="90" rx="22" fill="#d8ebe5"/>
+      <text x="95" y="56" text-anchor="middle" fill="#215a4b" font-size="28" font-weight="800">p130–E2F4</text>
+    </g>
+    <g transform="translate(335 102)">
+      <rect width="190" height="90" rx="22" fill="#d8ebe5"/>
+      <text x="95" y="56" text-anchor="middle" fill="#215a4b" font-size="31" font-weight="800">MuvB</text>
+    </g>
+    <path d="M263 147H330" stroke="#72b6a1" stroke-width="7"/>
+    <text x="305" y="246" text-anchor="middle" fill="#c8e8de" font-size="32" font-weight="800">DREAM</text>
+    <text x="305" y="276" text-anchor="middle" fill="#8dbbac" font-size="17">CHR-associated repression</text>
+  </g>
+  <g transform="translate(885 235)" font-family="Arial, Helvetica, sans-serif" filter="url(#shadow)">
+    <rect width="610" height="300" rx="34" fill="#351b17" stroke="#e35c3d" stroke-width="5"/>
+    <text x="45" y="58" fill="#ffad99" font-size="18" letter-spacing="3" font-weight="800">G2 / MITOTIC ENTRY</text>
+    <g transform="translate(38 100)">
+      <rect width="150" height="90" rx="22" fill="#f2d7d0"/><text x="75" y="56" text-anchor="middle" fill="#7d2e1f" font-size="26" font-weight="800">A-MYB</text>
+    </g>
+    <g transform="translate(218 100)">
+      <rect width="150" height="90" rx="22" fill="#f0c9bf"/><text x="75" y="56" text-anchor="middle" fill="#7d2e1f" font-size="26" font-weight="800">B-MYB</text>
+    </g>
+    <g transform="translate(398 100)">
+      <rect width="170" height="90" rx="22" fill="#efb9ab"/><text x="85" y="56" text-anchor="middle" fill="#7d2e1f" font-size="26" font-weight="800">FOXM1</text>
+    </g>
+    <path d="M110 205H500" stroke="#e35c3d" stroke-width="7"/>
+    <rect x="205" y="215" width="200" height="64" rx="18" fill="url(#active)"/>
+    <text x="305" y="256" text-anchor="middle" fill="#fff" font-size="29" font-weight="800">MuvB core</text>
+  </g>
+  <path d="M720 385C790 330 825 330 880 385" fill="none" stroke="#e35c3d" stroke-width="10" marker-end="url(#arrow)"/>
+  <text x="800" y="305" text-anchor="middle" fill="#f3b3a3" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">partner exchange</text>
+  <g transform="translate(150 660)" font-family="Arial, Helvetica, sans-serif">
+    <rect width="1300" height="220" rx="32" fill="#f7f8f6" stroke="#cbd4d7" stroke-width="4"/>
+    <text x="45" y="55" fill="#657279" font-size="18" font-weight="800" letter-spacing="3">CHR-CONTAINING MITOTIC PROMOTER</text>
+    <path d="M80 140H1160" stroke="#556b76" stroke-width="10" stroke-linecap="round"/>
+    <rect x="505" y="94" width="150" height="92" rx="18" fill="#f3d8d1" stroke="#e35c3d" stroke-width="5"/>
+    <text x="580" y="150" text-anchor="middle" fill="#7d2e1f" font-size="30" font-weight="800">CHR</text>
+    <g transform="translate(690 78)">
+      <rect width="300" height="122" rx="24" fill="#101d26"/>
+      <text x="150" y="52" text-anchor="middle" fill="#fff" font-size="25" font-weight="800">MMB / FOXM1–MuvB</text>
+      <text x="150" y="88" text-anchor="middle" fill="#b9c5cb" font-size="17">activation complex</text>
+    </g>
+    <path d="M995 140H1210" stroke="#e35c3d" stroke-width="8" marker-end="url(#arrow)"/>
+    <text x="1270" y="130" text-anchor="middle" fill="#7d2e1f" font-size="24" font-weight="800">mitotic genes</text>
+    <text x="1270" y="163" text-anchor="middle" fill="#9a5d50" font-size="17">ON</text>
+  </g>
+  <text x="1510" y="955" text-anchor="end" fill="#89969c" font-family="Arial, Helvetica, sans-serif" font-size="18">Original LabNarrative scientific illustration</text>
+</svg>
