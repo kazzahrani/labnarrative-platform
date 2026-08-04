@@ -265,16 +265,18 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     homeHero.appendChild(credit);
     addedNodes.push(credit);
 
-    const scrollCue = document.createElement("div");
-    scrollCue.className = "kinetic-scroll-cue";
-    scrollCue.textContent = "Scroll to explore";
-    homeHero.appendChild(scrollCue);
-    addedNodes.push(scrollCue);
+    if (!isPrives) {
+      const scrollCue = document.createElement("div");
+      scrollCue.className = "kinetic-scroll-cue";
+      scrollCue.textContent = "Scroll to explore";
+      homeHero.appendChild(scrollCue);
+      addedNodes.push(scrollCue);
+    }
 
     const controls = document.createElement("div");
     controls.className = "kinetic-gallery-controls";
-    const previous = makeButton("kinetic-gallery-arrow", "Previous microscopy image", "←");
-    const next = makeButton("kinetic-gallery-arrow", "Next microscopy image", "→");
+    const previous = isPrives ? undefined : makeButton("kinetic-gallery-arrow", "Previous microscopy image", "←");
+    const next = isPrives ? undefined : makeButton("kinetic-gallery-arrow", "Next microscopy image", "→");
     const dots = document.createElement("div");
     dots.className = "kinetic-gallery-dots";
     dots.setAttribute("role", "tablist");
@@ -287,7 +289,8 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       dots.appendChild(dot);
       return dot;
     });
-    controls.append(previous, dots, next);
+    if (previous && next) controls.append(previous, dots, next);
+    else controls.append(dots);
     homeHero.appendChild(controls);
     addedNodes.push(controls);
 
@@ -317,7 +320,8 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     };
     const startTimer = () => {
       stopTimer();
-      if (!reducedMotion && !paused && !document.hidden) timer = window.setInterval(() => showSlide(activeIndex + 1), 6500);
+      const interval = isPrives ? 10000 : 6500;
+      if (!reducedMotion && !paused && !document.hidden) timer = window.setInterval(() => showSlide(activeIndex + 1), interval);
     };
     const pause = () => { paused = true; stopTimer(); };
     const resume = () => { paused = false; startTimer(); };
@@ -332,8 +336,8 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       if (Math.abs(distance) > 55) distance > 0 ? goPrevious() : goNext();
     };
 
-    previous.addEventListener("click", goPrevious);
-    next.addEventListener("click", goNext);
+    previous?.addEventListener("click", goPrevious);
+    next?.addEventListener("click", goNext);
     dotNodes.forEach((dot, index) => dot.addEventListener("click", () => { showSlide(index); startTimer(); }));
     homeHero.addEventListener("mouseenter", pause);
     homeHero.addEventListener("mouseleave", resume);
@@ -348,8 +352,8 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       stopTimer();
       cleanSharedEffects();
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      previous.removeEventListener("click", goPrevious);
-      next.removeEventListener("click", goNext);
+      previous?.removeEventListener("click", goPrevious);
+      next?.removeEventListener("click", goNext);
       homeHero.removeEventListener("mouseenter", pause);
       homeHero.removeEventListener("mouseleave", resume);
       homeHero.removeEventListener("focusin", pause);
@@ -376,10 +380,57 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
 
   return (
     <div
-      className={`${styles.root} ${props.route.section === "home" ? styles.home : ""} ${isEngeland ? `${styles.light} engeland-kinetic` : ""}`}
+      className={`${styles.root} ${props.route.section === "home" ? styles.home : ""} ${isPrives ? "prives-kinetic" : ""} ${isEngeland ? `${styles.light} engeland-kinetic` : ""}`}
       ref={rootRef}
     >
       <PhotoLabDesign {...props} />
+      {isPrives && (
+        <style jsx global>{`
+          .prives-kinetic .kinetic-scroll-cue,
+          .prives-kinetic .kinetic-gallery-arrow {
+            display: none !important;
+          }
+
+          .prives-kinetic .kinetic-gallery-controls {
+            bottom: 20px !important;
+            left: auto !important;
+            right: 22px !important;
+            transform: none !important;
+          }
+
+          .prives-kinetic .kinetic-gallery-dots {
+            background: rgba(0, 0, 0, 0.12) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            gap: 5px !important;
+            opacity: 0.48;
+            padding: 5px 7px !important;
+            transition: opacity 220ms ease;
+          }
+
+          .prives-kinetic .kinetic-gallery-controls:hover .kinetic-gallery-dots,
+          .prives-kinetic .kinetic-gallery-controls:focus-within .kinetic-gallery-dots {
+            opacity: 0.72;
+          }
+
+          .prives-kinetic .kinetic-gallery-dot {
+            background: rgba(255, 255, 255, 0.46) !important;
+            height: 4px !important;
+            width: 4px !important;
+          }
+
+          .prives-kinetic .kinetic-gallery-dot.is-active {
+            background: rgba(255, 255, 255, 0.82) !important;
+            width: 12px !important;
+          }
+
+          @media (max-width: 820px) {
+            .prives-kinetic .kinetic-gallery-controls {
+              bottom: 14px !important;
+              right: 14px !important;
+            }
+          }
+        `}</style>
+      )}
       {isEngeland && (
         <style jsx global>{`
           @media (min-width: 821px) {
