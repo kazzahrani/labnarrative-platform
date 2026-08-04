@@ -87,6 +87,7 @@ function makeButton(className: string, label: string, text: string): HTMLButtonE
 export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const isEngeland = props.site.slug === "engeland";
+  const isPrives = props.site.slug === "prives";
 
   useEffect(() => {
     const root = rootRef.current;
@@ -100,7 +101,14 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     );
 
     const isHome = props.route.section === "home";
-    const revealSections = directSections.slice(isHome ? 1 : 0);
+    const hiddenHomeSections = isHome && isPrives ? directSections.slice(3, 5) : [];
+    hiddenHomeSections.forEach((section) => {
+      section.hidden = true;
+    });
+
+    const revealSections = directSections
+      .slice(isHome ? 1 : 0)
+      .filter((section) => !hiddenHomeSections.includes(section));
     revealSections.forEach((section) => section.classList.add("kinetic-reveal"));
 
     let observer: IntersectionObserver | undefined;
@@ -143,6 +151,9 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     const cleanSharedEffects = () => {
       observer?.disconnect();
       revealSections.forEach((section) => section.classList.remove("kinetic-reveal", "is-visible"));
+      hiddenHomeSections.forEach((section) => {
+        section.hidden = false;
+      });
       window.removeEventListener("scroll", requestScrollUpdate);
       window.removeEventListener("resize", requestScrollUpdate);
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
@@ -334,7 +345,7 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       homeHero.removeAttribute("aria-label");
       homeHero.style.removeProperty("--kinetic-progress");
     };
-  }, [props.route.projectSlug, props.route.section, props.site.labName, props.site.slug]);
+  }, [isPrives, props.route.projectSlug, props.route.section, props.site.labName, props.site.slug]);
 
   return (
     <div
