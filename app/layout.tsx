@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
+import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
 import "./platform-overrides.css";
 
@@ -10,9 +11,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <AdminLandingRedirect />
+        <PlatformThemeToggle />
         {children}
       </body>
     </html>
