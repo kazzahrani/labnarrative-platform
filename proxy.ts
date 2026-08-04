@@ -6,6 +6,12 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
 
+  // API routes are platform infrastructure and must remain addressable from
+  // every custom laboratory subdomain without being rewritten as site pages.
+  if (request.nextUrl.pathname === "/api" || request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   if (
     !host ||
     host === rootDomain ||
