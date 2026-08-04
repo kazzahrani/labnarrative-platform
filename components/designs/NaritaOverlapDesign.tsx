@@ -234,6 +234,66 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
     };
   }, [props.route.projectSlug, props.route.section]);
 
+  useEffect(() => {
+    if (props.route.section !== "home") return;
+
+    const root = rootRef.current;
+    if (!root) return;
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    let timer = 0;
+
+    const stopTimer = () => {
+      if (timer) window.clearInterval(timer);
+      timer = 0;
+    };
+
+    const advanceSlide = () => {
+      const dots = Array.from(
+        root.querySelectorAll<HTMLButtonElement>(".kinetic-gallery-dot"),
+      );
+      if (dots.length < 2) return;
+
+      const currentIndex = dots.findIndex((dot) =>
+        dot.classList.contains("is-active"),
+      );
+      const nextIndex = currentIndex >= 0
+        ? (currentIndex + 1) % dots.length
+        : 0;
+      dots[nextIndex]?.click();
+    };
+
+    const startTimer = () => {
+      stopTimer();
+      if (!reducedMotion && !document.hidden) {
+        timer = window.setInterval(advanceSlide, 3000);
+      }
+    };
+
+    const observeGallery = new MutationObserver(() => {
+      if (root.querySelectorAll(".kinetic-gallery-dot").length > 1) {
+        startTimer();
+      }
+    });
+
+    const onVisibilityChange = () => {
+      if (document.hidden) stopTimer();
+      else startTimer();
+    };
+
+    observeGallery.observe(root, { childList: true, subtree: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    startTimer();
+
+    return () => {
+      stopTimer();
+      observeGallery.disconnect();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [props.route.section]);
+
   return (
     <div
       className={`narita-overlap-design narita-route-${props.route.section}`}
@@ -298,6 +358,11 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           padding: 7px 0 9px !important;
           font-size: 10px !important;
           letter-spacing: 0.145em !important;
+        }
+
+        .narita-route-home .kinetic-scroll-cue,
+        .narita-route-home .kinetic-gallery-arrow {
+          display: none !important;
         }
 
         .narita-route-home main > section:nth-of-type(4),
