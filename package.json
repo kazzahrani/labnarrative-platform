@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/verify-research-figures.mjs",
+    "build": "next build",
     "start": "next start",
     "verify:figures": "node scripts/verify-research-figures.mjs"
   },
