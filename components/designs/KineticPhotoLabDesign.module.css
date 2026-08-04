@@ -341,3 +341,21 @@
     animation: none;
   }
 }
+
+@media (min-width: 821px) {
+  .root :global(.kinetic-photo-hero) {
+    height: calc(100svh - 112px);
+    min-height: 520px;
+    max-height: 720px;
+  }
+
+  .root :global(.kinetic-photo-hero > div:nth-of-type(2)) {
+    bottom: clamp(48px, 6vh, 72px) !important;
+  }
+
+  .root :global(.kinetic-photo-hero > div:nth-of-type(2) > h1) {
+    font-size: clamp(46px, 6.2vw, 88px) !important;
+    line-height: 0.94 !important;
+    max-width: 720px !important;
+  }
+}
