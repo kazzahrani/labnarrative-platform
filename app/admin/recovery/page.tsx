@@ -1,10 +1,10 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function AdminRecoveryPage() {
+function AdminRecoveryContent() {
   const searchParams = useSearchParams();
   const [message, setMessage] = useState("Verifying the one-time administrator link…");
   const supabase = useMemo(
@@ -54,5 +54,19 @@ export default function AdminRecoveryPage() {
     <main className="admin-loading">
       <p>{message}</p>
     </main>
+  );
+}
+
+export default function AdminRecoveryPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="admin-loading">
+          <p>Verifying the one-time administrator link…</p>
+        </main>
+      }
+    >
+      <AdminRecoveryContent />
+    </Suspense>
   );
 }
