@@ -41,6 +41,13 @@ const MICROSCOPY_SLIDES: GallerySlide[] = [
   },
 ];
 
+function microscopyForRoute(route: SiteRoute): GallerySlide {
+  if (route.section === "members") return MICROSCOPY_SLIDES[1];
+  if (route.section === "publications") return MICROSCOPY_SLIDES[2];
+  if (route.section === "join" || route.section === "contact") return MICROSCOPY_SLIDES[3];
+  return MICROSCOPY_SLIDES[0];
+}
+
 function makeButton(className: string, label: string, text: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
@@ -63,7 +70,8 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       (element): element is HTMLElement => element instanceof HTMLElement && element.tagName === "SECTION",
     );
 
-    const revealSections = directSections.slice(props.route.section === "home" ? 1 : 0);
+    const isHome = props.route.section === "home";
+    const revealSections = directSections.slice(isHome ? 1 : 0);
     revealSections.forEach((section) => section.classList.add("kinetic-reveal"));
 
     let observer: IntersectionObserver | undefined;
@@ -84,7 +92,8 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       revealSections.forEach((section) => observer?.observe(section));
     }
 
-    const homeHero = props.route.section === "home" ? directSections[0] : undefined;
+    const homeHero = isHome ? directSections[0] : undefined;
+    const innerHero = !isHome ? directSections[0] : undefined;
     let animationFrame = 0;
 
     const updateScrollEffects = () => {
@@ -116,12 +125,39 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     window.addEventListener("scroll", requestScrollUpdate, { passive: true });
     window.addEventListener("resize", requestScrollUpdate);
 
+    if (innerHero) {
+      const image = innerHero.querySelector(":scope > img");
+      if (!(image instanceof HTMLImageElement)) return cleanSharedEffects;
+
+      const originalSource = image.getAttribute("src") || "";
+      const originalSrcset = image.getAttribute("srcset");
+      const originalAlt = image.alt;
+      const microscopy = microscopyForRoute(props.route);
+
+      image.removeAttribute("srcset");
+      image.src = microscopy.src;
+      image.alt = microscopy.alt;
+      image.decoding = "async";
+      innerHero.classList.add("kinetic-inner-hero");
+      innerHero.setAttribute("data-microscopy-credit", microscopy.credit);
+
+      return () => {
+        cleanSharedEffects();
+        image.src = originalSource;
+        image.alt = originalAlt;
+        if (originalSrcset) image.setAttribute("srcset", originalSrcset);
+        innerHero.classList.remove("kinetic-inner-hero");
+        innerHero.removeAttribute("data-microscopy-credit");
+      };
+    }
+
     if (!homeHero) return cleanSharedEffects;
 
     const originalImage = homeHero.querySelector(":scope > img");
     if (!(originalImage instanceof HTMLImageElement)) return cleanSharedEffects;
 
     const originalSource = originalImage.getAttribute("src") || "";
+    const originalSrcset = originalImage.getAttribute("srcset");
     const originalAlt = originalImage.alt;
 
     homeHero.classList.add("kinetic-photo-hero");
@@ -285,13 +321,14 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       originalImage.removeAttribute("aria-hidden");
       originalImage.src = originalSource;
       originalImage.alt = originalAlt;
+      if (originalSrcset) originalImage.setAttribute("srcset", originalSrcset);
       homeHero.classList.remove("kinetic-photo-hero");
       homeHero.removeAttribute("aria-roledescription");
       homeHero.removeAttribute("aria-label");
       homeHero.removeAttribute("data-gallery-index");
       homeHero.style.removeProperty("--kinetic-progress");
     };
-  }, [props.route.section, props.site.labName, props.site.slug]);
+  }, [props.route.projectSlug, props.route.section, props.site.labName, props.site.slug]);
 
   return (
     <div className={`${styles.root} ${props.route.section === "home" ? styles.home : ""}`} ref={rootRef}>
