@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
+import CiribilliResearchDesign from "@/components/designs/CiribilliResearchDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
@@ -90,6 +91,9 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
   }
 
   if (designVariant === "ciribilli-narita-v1") {
+    if (route.section === "research") {
+      return <CiribilliResearchDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+    }
     return <NaritaOverlapDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
