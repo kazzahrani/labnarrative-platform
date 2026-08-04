@@ -5,6 +5,7 @@ import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import PhotoLabDesign from "@/components/designs/PhotoLabDesign";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
+import SourcedBourdonResearchDesign from "@/components/designs/SourcedBourdonResearchDesign";
 import {
   resolveDesignKey,
   type LabSite,
@@ -100,6 +101,11 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
 
   if (designVariant === "editorial-image-v1") {
     return <EditorialImageDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
+  const hasSourcedResearchFigures = site.research?.some((project) => project.figureImage && Boolean((project as { figureSource?: string }).figureSource)) ?? false;
+  if (designKey === "bourdon-full" && hasSourcedResearchFigures) {
+    return <SourcedBourdonResearchDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designKey === "bourdon-full") return <BourdonDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
