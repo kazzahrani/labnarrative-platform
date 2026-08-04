@@ -1,0 +1,268 @@
+/* Public LabNarrative landing-page refinement.
+   Scoped structurally to the root page that owns the #top hero. */
+
+body main:has(> section#top) {
+  --ln-black: #111816;
+  --ln-ink: #192126;
+  --ln-green: #284c3d;
+  --ln-lime: #e0fe7b;
+  --ln-paper: #f8f8f5;
+  --ln-line: #dfe3e2;
+}
+
+/* Connected wordmark: Lab stays near-black, Narrative carries the brand green. */
+body main:has(> section#top) > header > a:first-child,
+body main:has(> section#top) > footer > a:first-child {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  color: var(--ln-black);
+  font-size: 1.34rem;
+  font-weight: 820;
+  letter-spacing: -0.06em;
+}
+
+body main:has(> section#top) > header > a:first-child span:first-child,
+body main:has(> section#top) > footer > a:first-child span:first-child {
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > header > a:first-child span:last-child,
+body main:has(> section#top) > footer > a:first-child span:last-child {
+  color: var(--ln-green);
+}
+
+body main:has(> section#top) > header nav {
+  font-size: 0.82rem;
+}
+
+body main:has(> section#top) > header > a:last-child {
+  font-size: 0.8rem;
+}
+
+body main:has(> section#top) .sectionLabel,
+body main:has(> section#top) section#top > p:first-child {
+  font-size: 0.68rem;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div p {
+  font-size: clamp(1.08rem, 1.35vw, 1.3rem);
+  line-height: 1.72;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div a {
+  font-size: 0.8rem;
+}
+
+body main:has(> section#top) section#top > div:last-child {
+  font-size: 0.65rem;
+}
+
+/* Approach: substantially larger and easier to scan, while retaining the original structure. */
+body main:has(> section#top) > section:nth-of-type(2) > h2 {
+  max-width: 1180px;
+  font-size: clamp(3.35rem, 5.45vw, 5.8rem);
+  line-height: 1.01;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) > div {
+  border-top-color: var(--ln-black);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article {
+  min-height: 430px;
+  padding-top: 34px;
+  border-right-color: var(--ln-line);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 25px;
+  padding: 0 9px;
+  background: var(--ln-lime);
+  color: var(--ln-black);
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article h3 {
+  max-width: 390px;
+  margin-top: clamp(68px, 7vw, 100px);
+  color: var(--ln-black);
+  font-size: clamp(1.55rem, 2vw, 2rem);
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article p {
+  max-width: 430px;
+  margin-top: 25px;
+  color: #435e53;
+  font-size: clamp(1rem, 1.15vw, 1.13rem);
+  line-height: 1.65;
+}
+
+/* Selected work uses the same near-black language as the closing panel. */
+body main:has(> section#top) > section#work {
+  border-top-color: var(--ln-black);
+  background: var(--ln-black);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work .sectionLabel,
+body main:has(> section#top) > section#work small,
+body main:has(> section#top) > section#work article > span,
+body main:has(> section#top) > section#work a > span:first-child,
+body main:has(> section#top) > section#work a > span:last-child {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section#work > div:first-child > p:last-child,
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work a > p {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work a > p {
+  font-size: clamp(0.9rem, 1vw, 1rem);
+  line-height: 1.68;
+}
+
+body main:has(> section#top) > section#work h2,
+body main:has(> section#top) > section#work h3 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work > div:last-of-type,
+body main:has(> section#top) > section#work > div:last-of-type > a {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+body main:has(> section#top) > section#work > div:last-of-type > a:hover {
+  background: rgba(224, 254, 123, 0.07);
+}
+
+body main:has(> section#top) > section#work a h3 {
+  font-size: clamp(1.65rem, 2.35vw, 2.35rem);
+}
+
+/* Keep the green process panel, but make its content more readable. */
+body main:has(> section#top) > section#process > div:first-child > p:last-child {
+  font-size: 0.78rem;
+}
+
+body main:has(> section#top) > section#process article h3 {
+  font-size: clamp(1.18rem, 1.45vw, 1.42rem);
+  font-weight: 500;
+}
+
+body main:has(> section#top) > section#process article p {
+  max-width: 300px;
+  font-size: clamp(0.82rem, 0.95vw, 0.94rem);
+  line-height: 1.65;
+}
+
+body main:has(> section#top) > section#process > div:last-child > p {
+  font-size: clamp(0.9rem, 1.05vw, 1.02rem);
+  line-height: 1.68;
+}
+
+/* Pricing retains the reference layout, with larger copy and stronger contrast. */
+body main:has(> section#top) > section#pricing > div:first-child > p:last-child {
+  font-size: 0.78rem;
+}
+
+body main:has(> section#top) > section#pricing article {
+  border-color: #cbd2cf;
+}
+
+body main:has(> section#top) > section#pricing article h3 {
+  color: var(--ln-black);
+  font-size: 1.12rem;
+  font-weight: 500;
+}
+
+body main:has(> section#top) > section#pricing article > strong {
+  color: var(--ln-black);
+  font-size: clamp(2.65rem, 3.75vw, 3.85rem);
+}
+
+body main:has(> section#top) > section#pricing article > p {
+  font-size: 0.76rem;
+}
+
+body main:has(> section#top) > section#pricing article li {
+  padding-top: 13px;
+  padding-bottom: 13px;
+  color: #445c52;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+body main:has(> section#top) > section#pricing article:nth-child(2) h3,
+body main:has(> section#top) > section#pricing article:nth-child(2) > strong {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#pricing article:nth-child(2) > span:first-child {
+  background: var(--ln-lime);
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section#pricing > div:last-child {
+  font-size: 0.72rem;
+}
+
+/* Founder and closing copy receive the same larger reading size. */
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div p {
+  font-size: clamp(0.93rem, 1.05vw, 1.03rem);
+  line-height: 1.72;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div span {
+  font-size: 0.77rem;
+}
+
+body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
+  font-size: clamp(0.9rem, 1.02vw, 1rem);
+}
+
+body main:has(> section#top) > section:last-of-type > a:last-child {
+  min-height: 56px;
+  padding-right: 23px;
+  padding-left: 23px;
+  background: var(--ln-lime);
+  color: var(--ln-black);
+  font-size: 0.78rem;
+}
+
+body main:has(> section#top) > footer {
+  font-size: 0.68rem;
+}
+
+@media (max-width: 980px) {
+  body main:has(> section#top) > section:nth-of-type(2) article {
+    min-height: auto;
+  }
+
+  body main:has(> section#top) > section:nth-of-type(2) article h3 {
+    margin-top: 48px;
+  }
+}
+
+@media (max-width: 760px) {
+  body main:has(> section#top) > header > a:first-child,
+  body main:has(> section#top) > footer > a:first-child {
+    font-size: 1.12rem;
+  }
+
+  body main:has(> section#top) > section:nth-of-type(2) article p {
+    font-size: 1rem;
+  }
+}
