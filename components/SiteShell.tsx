@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesign from "@/components/designs/EngelandDesign";
+import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import {
   resolveDesignKey,
   type LabSite,
@@ -78,6 +79,18 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
 
   if (designVariant === "engeland-modern-v1") {
     return <EngelandDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
+  if (designVariant === "zhang-transcription-v1") {
+    return <SignatureAcademicDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="zhang" />;
+  }
+
+  if (designVariant === "gao-ecosystem-v1") {
+    return <SignatureAcademicDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="gao" />;
+  }
+
+  if (designVariant === "goyette-evolution-v1") {
+    return <SignatureAcademicDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="goyette" />;
   }
 
   if (designVariant === "editorial-image-v1") {
