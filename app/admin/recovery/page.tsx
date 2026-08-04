@@ -24,11 +24,12 @@ export default function AdminRecoveryPage() {
       return;
     }
 
+    const verifiedTokenHash = tokenHash;
     let cancelled = false;
 
     async function verify() {
       const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
+        token_hash: verifiedTokenHash,
         type,
       });
 
