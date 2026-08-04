@@ -12,6 +12,11 @@ import {
   type SiteRoute,
 } from "@/lib/sites";
 
+type SourcedResearchProject = ResearchProject & {
+  figureAlt?: string;
+  figureSource?: string;
+};
+
 function safeAsset(value?: string): string | undefined {
   if (!value) return undefined;
   if (/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value)) return value;
@@ -27,8 +32,8 @@ function initials(name: string): string {
   return name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("");
 }
 
-function researchProjects(site: LabSite): ResearchProject[] {
-  if (site.research?.length) return site.research;
+function researchProjects(site: LabSite): SourcedResearchProject[] {
+  if (site.research?.length) return site.research as SourcedResearchProject[];
   return site.projects.map((project, index) => ({
     slug: `project-${index + 1}`,
     title: project.title,
@@ -89,7 +94,7 @@ function PageIntro({ label, title, text, style }: { label: string; title: string
   return <section className={`bn-page-intro style-${style}`}><div className="bn-page-shell"><p className="bn-eyebrow">{label}</p><h1>{title}</h1><p className="bn-intro-text">{text}</p></div></section>;
 }
 
-function FigureCaption({ project }: { project: ResearchProject }) {
+function FigureCaption({ project }: { project: SourcedResearchProject }) {
   const source = safeAsset(project.figureSource);
   if (!project.figureCaption && !source) return null;
   return (
