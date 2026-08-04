@@ -1,3 +1,4 @@
+import LabNarrativeScrollPanels from "@/components/LabNarrativeScrollPanels";
 import styles from "./page.module.css";
 
 const approach = [
@@ -94,6 +95,8 @@ function Wordmark() {
 export default function HomePage() {
   return (
     <main className={styles.page}>
+      <LabNarrativeScrollPanels />
+
       <header className={styles.header}>
         <a className={styles.wordmark} href="#top" aria-label="LabNarrative home">
           <Wordmark />
@@ -143,7 +146,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.approachSection}>
+      <section
+        className={styles.approachSection}
+        data-ln-overlap-panel="approach"
+      >
         <p className={styles.sectionLabel}>The LabNarrative approach</p>
         <h2>
           Not a generic template filled with scientific words. A considered digital home built
@@ -161,7 +167,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.workSection} id="work">
+      <section
+        className={styles.workSection}
+        id="work"
+        data-ln-overlap-panel="direction"
+      >
         <div className={styles.sectionTopline}>
           <p className={styles.sectionLabel}>A tailored direction</p>
           <p>Different science. Different identity.</p>
@@ -206,7 +216,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.pricingSection} id="pricing">
+      <section
+        className={styles.pricingSection}
+        id="pricing"
+        data-ln-overlap-panel="pricing"
+      >
         <div className={styles.sectionTopline}>
           <p className={styles.sectionLabel}>Simple packages</p>
           <p>Clear scope. No technical learning curve.</p>
@@ -238,7 +252,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.founderSection}>
+      <section
+        className={styles.founderSection}
+        data-ln-overlap-panel="founder"
+      >
         <p className={styles.sectionLabel}>Built by a scientist, for scientists</p>
         <div>
           <h2>Scientific credibility is part of the design.</h2>
