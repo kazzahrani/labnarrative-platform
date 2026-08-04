@@ -6,6 +6,7 @@ import "./globals.css";
 import "./platform-overrides.css";
 import "./dark-theme-refinement.css";
 import "./gao-layout-fix.css";
+import "./labnarrative-public-refinement.css";
 
 export const metadata: Metadata = {
   title: {
