@@ -18,37 +18,6 @@ const approach = [
   },
 ];
 
-const concepts = [
-  {
-    number: "01",
-    lab: "Bremner Laboratory",
-    focus: "Cancer states · Retinal biology",
-    copy: "An editorial concept connecting transformation competence, retinoblastoma and retinal regeneration.",
-    href: "https://bremner.labnarrative.com",
-  },
-  {
-    number: "02",
-    lab: "Litovchick Laboratory",
-    focus: "DREAM · Cell-cycle control",
-    copy: "A structured scientific identity for a laboratory studying transcriptional regulation and cancer biology.",
-    href: "https://litovchick.labnarrative.com",
-  },
-  {
-    number: "03",
-    lab: "Bourdon Laboratory",
-    focus: "p53 isoforms · Cell fate",
-    copy: "A complete multi-page website presenting connected programmes in p53 biology, cancer and ageing.",
-    href: "https://bourdon.labnarrative.com",
-  },
-  {
-    number: "04",
-    lab: "Chen Laboratory",
-    focus: "Tumour suppressors · Cancer biology",
-    copy: "A modern image-led direction built around tumour-suppressor research and genomic stability.",
-    href: "https://chen.labnarrative.com",
-  },
-];
-
 const process = [
   {
     number: "01",
@@ -131,7 +100,7 @@ export default function HomePage() {
         </a>
 
         <nav className={styles.nav} aria-label="Primary navigation">
-          <a href="#work">Work</a>
+          <a href="#work">Approach</a>
           <a href="#process">Process</a>
           <a href="#pricing">Pricing</a>
         </nav>
@@ -194,31 +163,17 @@ export default function HomePage() {
 
       <section className={styles.workSection} id="work">
         <div className={styles.sectionTopline}>
-          <p className={styles.sectionLabel}>Selected concepts</p>
+          <p className={styles.sectionLabel}>A tailored direction</p>
           <p>Different science. Different identity.</p>
         </div>
 
         <div className={styles.workIntro}>
-          <h2>A tailored direction for every laboratory.</h2>
+          <h2>A distinct scientific presence for every laboratory.</h2>
           <p>
-            Each concept begins with the research rather than a generic visual theme. These
-            independent examples were created from publicly available information to demonstrate the
-            LabNarrative approach.
+            Every project begins with the research rather than a generic visual theme. The design
+            direction is shaped around the laboratory’s scientific identity, priorities and
+            audience.
           </p>
-        </div>
-
-        <div className={styles.workList}>
-          {concepts.map((item) => (
-            <a href={item.href} key={item.lab} target="_blank" rel="noreferrer">
-              <span className={styles.number}>{item.number}</span>
-              <div>
-                <small>{item.focus}</small>
-                <h3>{item.lab}</h3>
-              </div>
-              <p>{item.copy}</p>
-              <span className={styles.arrow} aria-hidden="true">↗</span>
-            </a>
-          ))}
         </div>
       </section>
 
