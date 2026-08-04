@@ -17,6 +17,8 @@ import {
   type SiteTemplate,
 } from "@/lib/sites";
 
+const CIRIBILLI_RESEARCH_HERO = "https://upload.wikimedia.org/wikipedia/commons/b/b3/HeLa-I.jpg";
+
 function resolveTemplate(value: LabSite["template"]): SiteTemplate {
   return value === "editorial"
     || value === "image-led"
@@ -92,7 +94,8 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
 
   if (designVariant === "ciribilli-narita-v1") {
     if (route.section === "research") {
-      return <CiribilliResearchDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+      const researchSite = { ...site, heroImage: CIRIBILLI_RESEARCH_HERO };
+      return <CiribilliResearchDesign site={researchSite} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
     }
     return <NaritaOverlapDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
