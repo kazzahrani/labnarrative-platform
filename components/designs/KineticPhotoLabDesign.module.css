@@ -80,8 +80,9 @@
   bottom: 26px;
   display: flex;
   gap: 10px;
+  left: 50%;
   position: absolute;
-  right: 30px;
+  transform: translateX(-50%);
   z-index: 8;
 }
 
@@ -151,7 +152,6 @@
 
 .root :global(.kinetic-scroll-cue) {
   align-items: center;
-  bottom: 28px;
   color: rgba(255, 255, 255, 0.82);
   display: flex;
   font-size: 10px;
@@ -161,6 +161,7 @@
   letter-spacing: 0.18em;
   position: absolute;
   text-transform: uppercase;
+  top: 24px;
   z-index: 8;
 }
 
@@ -209,21 +210,21 @@
   }
 
   .root :global(.kinetic-gallery-credit) {
-    left: 20px;
+    left: auto;
     max-width: calc(100% - 40px);
-    right: auto;
-    text-align: left;
+    right: 20px;
+    text-align: right;
     top: 18px;
   }
 
   .root :global(.kinetic-gallery-controls) {
-    bottom: 20px;
-    right: 18px;
+    bottom: 18px;
+    left: 50%;
   }
 
   .root :global(.kinetic-scroll-cue) {
-    bottom: 22px;
     left: 20px;
+    top: 18px;
   }
 }
 
