@@ -14,10 +14,9 @@ type NaritaOverlapDesignProps = {
 type PanelMeasurement = {
   element: HTMLElement;
   start: number;
-  range: number;
-  drift: number;
-  imageDrift: number;
-  copyDrift: number;
+  panelSpeed: number;
+  imageSpeed: number;
+  copySpeed: number;
 };
 
 function documentTop(element: HTMLElement) {
@@ -30,10 +29,6 @@ function documentTop(element: HTMLElement) {
   }
 
   return top;
-}
-
-function clamp(value: number) {
-  return Math.min(1, Math.max(0, value));
 }
 
 export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
@@ -104,17 +99,13 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       root.style.setProperty("--narita-header-height", `${headerHeight}px`);
       measurements = panels.map((panel, index) => {
         const isHero = index === 0;
-        const panelDrift = isHero
-          ? 138
-          : Math.min(138, Math.max(90, panel.offsetHeight * 0.145));
 
         return {
           element: panel,
           start: documentTop(panel) - headerHeight,
-          range: Math.max(panel.offsetHeight * 0.76, window.innerHeight * 0.48, 1),
-          drift: panelDrift,
-          imageDrift: isHero ? 38 : Math.min(42, Math.max(27, panel.offsetHeight * 0.042)),
-          copyDrift: isHero ? 66 : Math.min(56, Math.max(32, panel.offsetHeight * 0.055)),
+          panelSpeed: isHero ? 0.18 : 0.12,
+          imageSpeed: isHero ? 0.05 : 0.035,
+          copySpeed: isHero ? 0.085 : 0.045,
         };
       });
     };
@@ -123,21 +114,20 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       frame = 0;
 
       measurements.forEach(
-        ({ element, start, range, drift, imageDrift, copyDrift }) => {
-          const progress = clamp((window.scrollY - start) / range);
+        ({ element, start, panelSpeed, imageSpeed, copySpeed }) => {
+          const distance = Math.max(0, window.scrollY - start);
 
-          element.style.setProperty("--narita-panel-progress", String(progress));
           element.style.setProperty(
             "--narita-panel-offset",
-            `${-(progress * drift).toFixed(2)}px`,
+            `${-(distance * panelSpeed).toFixed(2)}px`,
           );
           element.style.setProperty(
             "--narita-image-offset",
-            `${-(progress * imageDrift).toFixed(2)}px`,
+            `${-(distance * imageSpeed).toFixed(2)}px`,
           );
           element.style.setProperty(
             "--narita-copy-offset",
-            `${-(progress * copyDrift).toFixed(2)}px`,
+            `${-(distance * copySpeed).toFixed(2)}px`,
           );
         },
       );
@@ -169,7 +159,6 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       panels.forEach((panel) => {
         panel.classList.remove("narita-overlap-panel", "narita-overlap-hero");
         panel.style.removeProperty("--narita-panel-layer");
-        panel.style.removeProperty("--narita-panel-progress");
         panel.style.removeProperty("--narita-panel-offset");
         panel.style.removeProperty("--narita-image-offset");
         panel.style.removeProperty("--narita-copy-offset");
