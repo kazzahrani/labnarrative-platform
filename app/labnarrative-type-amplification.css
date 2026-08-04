@@ -62,13 +62,13 @@ body main:has(> section#top) > section:last-of-type h2 {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: 780;
   letter-spacing: -0.075em;
-  line-height: 0.92;
+  line-height: 0.94;
 }
 
 body main:has(> section#top) > section:nth-of-type(2) > h2 {
-  max-width: 1380px;
+  max-width: 1180px;
   margin-top: 34px;
-  font-size: clamp(4.2rem, 7.2vw, 8rem);
+  font-size: clamp(3.2rem, 5.2vw, 5.8rem);
 }
 
 body main:has(> section#top) > section:nth-of-type(2) > div {
@@ -161,9 +161,12 @@ body main:has(> section#top) > section#process article > span:first-child {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 48px;
   min-width: 48px;
-  min-height: 30px;
-  padding: 0 11px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 50%;
   background: var(--ln-lime);
   color: var(--ln-black);
   font-size: 0.76rem;
@@ -193,8 +196,8 @@ body main:has(> section#top) > section#process > div:last-child {
 }
 
 body main:has(> section#top) > section#process > div:last-child h2 {
-  max-width: 980px;
-  font-size: clamp(4.2rem, 7vw, 7.6rem);
+  max-width: 850px;
+  font-size: clamp(3rem, 4.8vw, 5.2rem);
 }
 
 body main:has(> section#top) > section#process > div:last-child > p {
@@ -268,9 +271,9 @@ body main:has(> section#top) > section:nth-last-of-type(2) > div > div span {
 }
 
 body main:has(> section#top) > section:last-of-type h2 {
-  max-width: 1280px;
+  max-width: 1080px;
   margin-top: 42px;
-  font-size: clamp(4.3rem, 7.4vw, 8rem);
+  font-size: clamp(3.2rem, 5.4vw, 5.9rem);
 }
 
 body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
@@ -308,12 +311,21 @@ body main:has(> section#top) > footer {
 }
 
 @media (max-width: 760px) {
-  body main:has(> section#top) > section:nth-of-type(2) > h2,
   body main:has(> section#top) > section#work > div:nth-child(2) > h2,
-  body main:has(> section#top) > section#process > div:last-child h2,
-  body main:has(> section#top) > section:nth-last-of-type(2) h2,
-  body main:has(> section#top) > section:last-of-type h2 {
+  body main:has(> section#top) > section:nth-last-of-type(2) h2 {
     font-size: clamp(3.2rem, 14vw, 5rem);
+  }
+
+  body main:has(> section#top) > section:nth-of-type(2) > h2 {
+    font-size: clamp(2.7rem, 11vw, 4rem);
+  }
+
+  body main:has(> section#top) > section#process > div:last-child h2 {
+    font-size: clamp(2.6rem, 10.5vw, 3.9rem);
+  }
+
+  body main:has(> section#top) > section:last-of-type h2 {
+    font-size: clamp(2.8rem, 11vw, 4.2rem);
   }
 
   body main:has(> section#top) > section#process article h3 {
