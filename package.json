@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "build": "next build && node scripts/verify-research-figures.mjs",
+    "start": "next start",
+    "verify:figures": "node scripts/verify-research-figures.mjs"
   },
   "dependencies": {
     "next": "16.2.12",
