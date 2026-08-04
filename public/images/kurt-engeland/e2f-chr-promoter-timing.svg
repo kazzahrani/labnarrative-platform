@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">E2F/CHR promoter architecture and cell-cycle timing</title>
+  <desc id="desc">A promoter logic diagram showing E2F, CDE and CHR elements aligned with phase-specific waves of cell-cycle transcription.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0f2ef"/><stop offset="1" stop-color="#dce3e4"/></linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#72b6a1"/><stop offset=".52" stop-color="#e7a260"/><stop offset="1" stop-color="#e35c3d"/></linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0L12 6 0 12Z" fill="#101d26"/></marker>
+    <filter id="shadow"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#253743" flood-opacity=".16"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <text x="90" y="110" fill="#101d26" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">E2F/CHR PROMOTER ARCHITECTURE</text>
+  <text x="90" y="154" fill="#657279" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="4">PROMOTER LOGIC · PHASE SPECIFICITY · TRANSCRIPTIONAL TIMING</text>
+  <g transform="translate(120 245)" font-family="Arial, Helvetica, sans-serif" filter="url(#shadow)">
+    <rect width="1360" height="300" rx="34" fill="#fff" stroke="#c8d1d4" stroke-width="4"/>
+    <text x="45" y="55" fill="#657279" font-size="18" font-weight="700" letter-spacing="3">COMPACT CELL-CYCLE PROMOTER</text>
+    <path d="M85 170H1270" stroke="#526771" stroke-width="12" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <rect x="225" y="112" width="150" height="115" rx="18" fill="#d8ebe5" stroke="#72b6a1" stroke-width="5"/>
+    <text x="300" y="160" text-anchor="middle" fill="#215a4b" font-size="31" font-weight="800">E2F</text>
+    <text x="300" y="196" text-anchor="middle" fill="#517970" font-size="16">G1/S control</text>
+    <rect x="535" y="112" width="150" height="115" rx="18" fill="#f2dfca" stroke="#e7a260" stroke-width="5"/>
+    <text x="610" y="160" text-anchor="middle" fill="#75471c" font-size="31" font-weight="800">CDE</text>
+    <text x="610" y="196" text-anchor="middle" fill="#8c6d4e" font-size="16">repressor support</text>
+    <rect x="850" y="112" width="150" height="115" rx="18" fill="#f3d8d1" stroke="#e35c3d" stroke-width="5"/>
+    <text x="925" y="160" text-anchor="middle" fill="#7d2e1f" font-size="31" font-weight="800">CHR</text>
+    <text x="925" y="196" text-anchor="middle" fill="#9a5d50" font-size="16">G2/M timing</text>
+    <g transform="translate(1085 92)">
+      <path d="M0 75H150" stroke="#101d26" stroke-width="6"/>
+      <path d="M80 35V115" stroke="#101d26" stroke-width="6"/>
+      <text x="75" y="150" text-anchor="middle" fill="#657279" font-size="16">transcription start</text>
+    </g>
+  </g>
+  <g transform="translate(120 620)" font-family="Arial, Helvetica, sans-serif">
+    <text x="0" y="0" fill="#101d26" font-size="24" font-weight="800">CELL-CYCLE TRANSCRIPTION WAVE</text>
+    <path d="M55 210C180 205 195 85 335 92S500 225 650 210 790 35 950 65 1090 210 1280 112" fill="none" stroke="url(#wave)" stroke-width="18" stroke-linecap="round"/>
+    <path d="M55 250H1325" stroke="#839096" stroke-width="4"/>
+    <g font-size="22" font-weight="800" text-anchor="middle">
+      <text x="140" y="305" fill="#3f6f61">G0/G1</text>
+      <text x="385" y="305" fill="#3f6f61">S</text>
+      <text x="690" y="305" fill="#9b6b33">G2</text>
+      <text x="1005" y="305" fill="#a5412b">M</text>
+      <text x="1260" y="305" fill="#657279">cytokinesis</text>
+    </g>
+    <g stroke="#aab4b8" stroke-width="3"><path d="M250 230V275M520 230V275M845 230V275M1165 230V275"/></g>
+    <g>
+      <rect x="90" y="55" width="265" height="72" rx="18" fill="#e0eee9"/>
+      <text x="223" y="100" text-anchor="middle" fill="#215a4b" font-size="20" font-weight="700">E2F-dependent entry genes</text>
+      <rect x="755" y="-5" width="330" height="72" rx="18" fill="#f4ddd7"/>
+      <text x="920" y="40" text-anchor="middle" fill="#7d2e1f" font-size="20" font-weight="700">CHR-controlled mitotic genes</text>
+    </g>
+  </g>
+  <text x="1510" y="955" text-anchor="end" fill="#7d898e" font-family="Arial, Helvetica, sans-serif" font-size="18">Original LabNarrative scientific illustration</text>
+</svg>
