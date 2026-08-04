@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
+import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
 import "./platform-overrides.css";
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <AdminLandingRedirect />
         <PlatformThemeToggle />
+        <OutreachMonitorEnhancer />
         {children}
       </body>
     </html>
