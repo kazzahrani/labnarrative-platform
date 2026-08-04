@@ -277,6 +277,62 @@
   transform: scale(1.018);
 }
 
+.light {
+  --pl-accent: #1f5e7a;
+}
+
+.light::before {
+  background: linear-gradient(90deg, #dcecf2, #1f5e7a);
+}
+
+.light :global(main > header) {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid rgba(21, 51, 68, 0.16) !important;
+  color: #102c3c !important;
+  box-shadow: 0 10px 34px rgba(24, 53, 68, 0.06);
+}
+
+.light :global(main > header > a) {
+  color: #102c3c !important;
+  font-weight: 400 !important;
+}
+
+.light :global(main > header nav a) {
+  color: #66757d !important;
+}
+
+.light :global(main > header nav a:hover) {
+  color: #102c3c !important;
+}
+
+.light :global(main > header nav a::after) {
+  background: #1f5e7a !important;
+}
+
+.light.home :global(main > section:nth-of-type(2)) {
+  background: #f8fafb;
+}
+
+.light.home :global(main > section:nth-of-type(3)) {
+  background: #e9eff2 !important;
+}
+
+.light :global(main > footer) {
+  background: #f3f7f8 !important;
+  border-top: 1px solid rgba(21, 51, 68, 0.15) !important;
+  color: #102c3c !important;
+}
+
+.light :global(main > footer a),
+.light :global(main > footer p),
+.light :global(main > footer span) {
+  color: #586b74 !important;
+}
+
+.light :global(main > footer strong) {
+  color: #102c3c !important;
+}
+
 @keyframes kineticPulse {
   0%, 100% { opacity: 0.45; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(4px); }
