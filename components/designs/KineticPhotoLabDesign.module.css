@@ -104,6 +104,27 @@
   width: auto !important;
 }
 
+.root :global(main > article > section:first-of-type) {
+  height: clamp(180px, 15vw, 230px) !important;
+  min-height: 0 !important;
+}
+
+.root :global(main > article > section:first-of-type > div:nth-of-type(2)) {
+  gap: 9px !important;
+  padding: 18px clamp(32px, 7vw, 110px) !important;
+}
+
+.root :global(main > article > section:first-of-type > div:nth-of-type(2) > p) {
+  font-size: 9px !important;
+  letter-spacing: 0.24em !important;
+}
+
+.root :global(main > article > section:first-of-type > div:nth-of-type(2) > h1) {
+  font-size: clamp(28px, 3vw, 44px) !important;
+  line-height: 1.02 !important;
+  max-width: 680px !important;
+}
+
 .root :global(.kinetic-photo-hero) {
   isolation: isolate;
   min-height: clamp(620px, 78vh, 900px);
