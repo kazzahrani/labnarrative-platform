@@ -7,8 +7,12 @@ import "./dark-theme-refinement.css";
 import "./gao-layout-fix.css";
 
 export const metadata: Metadata = {
-  title: "LabNarrative Platform",
-  description: "Multi-tenant scientific laboratory website platform.",
+  title: {
+    default: "LabNarrative — Scientific Laboratory Websites",
+    template: "%s | LabNarrative",
+  },
+  description:
+    "LabNarrative researches, writes, designs and launches modern websites for scientific laboratories.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
