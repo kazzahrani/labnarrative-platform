@@ -3,6 +3,7 @@ import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
 import "./platform-overrides.css";
+import "./gao-layout-fix.css";
 
 export const metadata: Metadata = {
   title: "LabNarrative Platform",
