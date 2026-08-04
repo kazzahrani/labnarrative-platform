@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
+import EngelandDesign from "@/components/designs/EngelandDesign";
 import {
   resolveDesignKey,
   type LabSite,
@@ -74,6 +75,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
   const resolvedBasePath = basePath ?? `/sites/${site.slug}`;
   const designKey = resolveDesignKey(site);
   const designVariant = site.design?.settings?.variant;
+
+  if (designVariant === "engeland-modern-v1") {
+    return <EngelandDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
 
   if (designVariant === "editorial-image-v1") {
     return <EditorialImageDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
