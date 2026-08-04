@@ -55,6 +55,8 @@ export type ResearchProject = {
   papers?: string[];
   figureImage?: string;
   figureCaption?: string;
+  figureSource?: string;
+  figureAlt?: string;
 };
 
 export type LabMember = {
