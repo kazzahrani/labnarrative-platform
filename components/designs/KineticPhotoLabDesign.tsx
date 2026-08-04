@@ -331,7 +331,10 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
   }, [props.route.projectSlug, props.route.section, props.site.labName, props.site.slug]);
 
   return (
-    <div className={`${styles.root} ${props.route.section === "home" ? styles.home : ""}`} ref={rootRef}>
+    <div
+      className={`${styles.root} ${props.route.section === "home" ? styles.home : ""} ${props.site.slug === "engeland" ? styles.light : ""}`}
+      ref={rootRef}
+    >
       <PhotoLabDesign {...props} />
     </div>
   );
