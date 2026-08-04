@@ -32,18 +32,26 @@ export default function LabNarrativeScrollPanels() {
 
     if (sections.length === 0) return;
 
+    const staticPanels = sections.filter((section) => section.id === "process");
+    const movingPanels = sections.filter((section) => !staticPanels.includes(section));
+
     main.classList.add("ln-overlap-ready");
 
     sections.forEach((section, index) => {
-      section.classList.add("ln-narita-panel");
       section.style.setProperty("--ln-panel-layer", String(index));
+
+      if (movingPanels.includes(section)) {
+        section.classList.add("ln-narita-panel");
+      } else {
+        section.classList.add("ln-narita-static");
+      }
     });
 
     let frame = 0;
     let measurements: PanelMeasurement[] = [];
 
     const measure = () => {
-      measurements = sections.map((panel) => ({
+      measurements = movingPanels.map((panel) => ({
         element: panel,
         start: documentTop(panel),
       }));
@@ -89,7 +97,7 @@ export default function LabNarrativeScrollPanels() {
       if (frame) window.cancelAnimationFrame(frame);
 
       sections.forEach((section) => {
-        section.classList.remove("ln-narita-panel");
+        section.classList.remove("ln-narita-panel", "ln-narita-static");
         section.style.removeProperty("--ln-panel-layer");
         section.style.removeProperty("--ln-panel-offset");
       });
@@ -99,6 +107,19 @@ export default function LabNarrativeScrollPanels() {
 
   return (
     <style jsx global>{`
+      body main:has(> section#top) > header {
+        position: relative !important;
+        top: auto !important;
+        z-index: 100 !important;
+        background: var(--ln-paper) !important;
+        background-image: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        filter: none !important;
+        transform: none !important;
+      }
+
       main:has(> section#top)
         > section[data-ln-overlap-panel="approach"]
         article
@@ -132,6 +153,19 @@ export default function LabNarrativeScrollPanels() {
           box-shadow: 0 -16px 38px rgba(8, 13, 11, 0.1);
         }
 
+        main.ln-overlap-ready > section#top.ln-narita-panel {
+          box-shadow: none !important;
+        }
+
+        main.ln-overlap-ready > .ln-narita-static {
+          position: relative !important;
+          top: auto !important;
+          z-index: calc(10 + var(--ln-panel-layer, 0)) !important;
+          transform: none !important;
+          will-change: auto;
+          box-shadow: none !important;
+        }
+
         main.ln-overlap-ready > footer {
           position: relative;
           z-index: 100;
@@ -140,7 +174,8 @@ export default function LabNarrativeScrollPanels() {
       }
 
       @media (max-width: 900px), (prefers-reduced-motion: reduce) {
-        main.ln-overlap-ready > .ln-narita-panel {
+        main.ln-overlap-ready > .ln-narita-panel,
+        main.ln-overlap-ready > .ln-narita-static {
           position: relative !important;
           top: auto !important;
           transform: none !important;
