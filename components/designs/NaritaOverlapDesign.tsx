@@ -19,11 +19,28 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
     const main = root?.querySelector("main");
     if (!root || !main) return;
 
+    const directSections = Array.from(main.children).filter(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement && element.tagName === "SECTION",
+    );
+    const hiddenHomeSections = props.route.section === "home"
+      ? directSections.slice(3, 5)
+      : [];
+
+    hiddenHomeSections.forEach((section) => {
+      section.hidden = true;
+    });
+
     const hero = props.route.section === "home"
       ? main.querySelector(":scope > section:first-of-type")
       : main.querySelector(":scope > section:first-of-type, :scope > article > section:first-child");
 
-    if (!(hero instanceof HTMLElement)) return;
+    if (!(hero instanceof HTMLElement)) {
+      hiddenHomeSections.forEach((section) => {
+        section.hidden = false;
+      });
+      return;
+    }
 
     hero.classList.add("narita-overlap-hero");
     let frame = 0;
@@ -63,6 +80,9 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", onResize);
       if (frame) window.cancelAnimationFrame(frame);
+      hiddenHomeSections.forEach((section) => {
+        section.hidden = false;
+      });
       hero.classList.remove("narita-overlap-hero");
       hero.style.removeProperty("--narita-overlap-progress");
       root.style.removeProperty("--narita-header-height");
