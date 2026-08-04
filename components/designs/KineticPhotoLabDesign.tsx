@@ -18,7 +18,7 @@ type GallerySlide = {
   credit: string;
 };
 
-const MICROSCOPY_SLIDES: GallerySlide[] = [
+const PRIVES_SLIDES: GallerySlide[] = [
   {
     src: "https://upload.wikimedia.org/wikipedia/commons/b/b3/HeLa-I.jpg",
     alt: "Multiphoton fluorescence microscopy of HeLa cells showing Golgi apparatus, microtubules and DNA",
@@ -41,11 +41,38 @@ const MICROSCOPY_SLIDES: GallerySlide[] = [
   },
 ];
 
-function microscopyForRoute(route: SiteRoute): GallerySlide {
-  if (route.section === "members") return MICROSCOPY_SLIDES[1];
-  if (route.section === "publications") return MICROSCOPY_SLIDES[2];
-  if (route.section === "join" || route.section === "contact") return MICROSCOPY_SLIDES[3];
-  return MICROSCOPY_SLIDES[0];
+const ENGELAND_SLIDES: GallerySlide[] = [
+  {
+    src: "https://upload.wikimedia.org/wikipedia/commons/0/0d/0300_Flourescence_Stained.jpg",
+    alt: "Fluorescence microscopy of a cell in anaphase showing chromosomes, spindle microtubules and cell cortex",
+    credit: "Anaphase · chromosomes, spindle & cortex · OpenStax · CC BY 4.0",
+  },
+  {
+    src: "https://upload.wikimedia.org/wikipedia/commons/6/69/HeLa_multipolar_mitosis.jpg",
+    alt: "Microscopy of a HeLa cell undergoing multipolar mitosis",
+    credit: "HeLa multipolar mitosis · Catfaster · CC BY-SA 4.0",
+  },
+  {
+    src: "https://upload.wikimedia.org/wikipedia/commons/b/b3/HeLa-I.jpg",
+    alt: "Fluorescence microscopy of HeLa cells showing microtubules and DNA",
+    credit: "HeLa cells · microtubules & DNA · NIH · Public domain",
+  },
+  {
+    src: "https://upload.wikimedia.org/wikipedia/commons/4/4d/Multicolor_fluorescence_image_of_a_living_HeLa_cell.jpg",
+    alt: "Confocal microscopy of living HeLa cells showing the microtubule network, mitochondria and nuclei",
+    credit: "Living HeLa cells · microtubules, mitochondria & nuclei · 8x57is · CC BY-SA 4.0",
+  },
+];
+
+function slidesForSite(slug: string): GallerySlide[] {
+  return slug === "engeland" ? ENGELAND_SLIDES : PRIVES_SLIDES;
+}
+
+function microscopyForRoute(route: SiteRoute, slides: GallerySlide[]): GallerySlide {
+  if (route.section === "members") return slides[1] ?? slides[0];
+  if (route.section === "publications") return slides[2] ?? slides[0];
+  if (route.section === "join" || route.section === "contact") return slides[3] ?? slides[0];
+  return slides[0];
 }
 
 function makeButton(className: string, label: string, text: string): HTMLButtonElement {
@@ -59,12 +86,14 @@ function makeButton(className: string, label: string, text: string): HTMLButtonE
 
 export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const isEngeland = props.site.slug === "engeland";
 
   useEffect(() => {
     const root = rootRef.current;
     const main = root?.querySelector("main");
     if (!root || !main) return;
 
+    const slides = slidesForSite(props.site.slug);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const directSections = Array.from(main.children).filter(
       (element): element is HTMLElement => element instanceof HTMLElement && element.tagName === "SECTION",
@@ -100,7 +129,6 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       animationFrame = 0;
       const pageRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       root.style.setProperty("--kinetic-page-progress", String(Math.min(1, Math.max(0, window.scrollY / pageRange))));
-
       if (homeHero && !reducedMotion) {
         const rect = homeHero.getBoundingClientRect();
         const progress = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height)));
@@ -128,11 +156,10 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     if (innerHero) {
       const image = innerHero.querySelector(":scope > img");
       if (!(image instanceof HTMLImageElement)) return cleanSharedEffects;
-
       const originalSource = image.getAttribute("src") || "";
       const originalSrcset = image.getAttribute("srcset");
       const originalAlt = image.alt;
-      const microscopy = microscopyForRoute(props.route);
+      const microscopy = microscopyForRoute(props.route, slides);
 
       image.removeAttribute("srcset");
       image.src = microscopy.src;
@@ -152,41 +179,45 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     }
 
     if (!homeHero) return cleanSharedEffects;
-
     const originalImage = homeHero.querySelector(":scope > img");
-    if (!(originalImage instanceof HTMLImageElement)) return cleanSharedEffects;
+    const placeholder = homeHero.querySelector(":scope > div:first-child");
+    const image = originalImage instanceof HTMLImageElement ? originalImage : document.createElement("img");
+    const insertedImage = !(originalImage instanceof HTMLImageElement);
+    if (insertedImage) {
+      image.className = "kinetic-gallery-slide is-active";
+      homeHero.insertBefore(image, placeholder ?? homeHero.firstChild);
+      if (placeholder instanceof HTMLElement) placeholder.style.display = "none";
+    }
 
-    const originalSource = originalImage.getAttribute("src") || "";
-    const originalSrcset = originalImage.getAttribute("srcset");
-    const originalAlt = originalImage.alt;
+    const originalSource = image.getAttribute("src") || "";
+    const originalSrcset = image.getAttribute("srcset");
+    const originalAlt = image.alt;
 
     homeHero.classList.add("kinetic-photo-hero");
     homeHero.setAttribute("aria-roledescription", "carousel");
     homeHero.setAttribute("aria-label", `${props.site.labName} microscopy gallery`);
 
-    const slides = MICROSCOPY_SLIDES;
-    const slideNodes: HTMLImageElement[] = [originalImage];
+    const slideNodes: HTMLImageElement[] = [image];
     const addedNodes: HTMLElement[] = [];
-
-    originalImage.removeAttribute("srcset");
-    originalImage.src = slides[0].src;
-    originalImage.alt = slides[0].alt;
-    originalImage.classList.add("kinetic-gallery-slide", "is-active");
-    originalImage.dataset.galleryIndex = "0";
-    originalImage.setAttribute("aria-hidden", "false");
+    image.removeAttribute("srcset");
+    image.src = slides[0].src;
+    image.alt = slides[0].alt;
+    image.classList.add("kinetic-gallery-slide", "is-active");
+    image.dataset.galleryIndex = "0";
+    image.setAttribute("aria-hidden", "false");
 
     slides.slice(1).forEach((slide, offset) => {
-      const image = document.createElement("img");
-      image.src = slide.src;
-      image.alt = slide.alt;
-      image.decoding = "async";
-      image.loading = offset === 0 ? "eager" : "lazy";
-      image.className = "kinetic-gallery-slide";
-      image.dataset.galleryIndex = String(offset + 1);
-      image.setAttribute("aria-hidden", "true");
-      homeHero.appendChild(image);
-      slideNodes.push(image);
-      addedNodes.push(image);
+      const nextImage = document.createElement("img");
+      nextImage.src = slide.src;
+      nextImage.alt = slide.alt;
+      nextImage.decoding = "async";
+      nextImage.loading = offset === 0 ? "eager" : "lazy";
+      nextImage.className = "kinetic-gallery-slide";
+      nextImage.dataset.galleryIndex = String(offset + 1);
+      nextImage.setAttribute("aria-hidden", "true");
+      homeHero.appendChild(nextImage);
+      slideNodes.push(nextImage);
+      addedNodes.push(nextImage);
     });
 
     const credit = document.createElement("div");
@@ -210,7 +241,6 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     dots.className = "kinetic-gallery-dots";
     dots.setAttribute("role", "tablist");
     dots.setAttribute("aria-label", "Choose microscopy image");
-
     const dotNodes = slides.map((slide, index) => {
       const dot = makeButton("kinetic-gallery-dot", `Show image ${index + 1}: ${slide.alt}`, "");
       dot.setAttribute("role", "tab");
@@ -219,7 +249,6 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       dots.appendChild(dot);
       return dot;
     });
-
     controls.append(previous, dots, next);
     homeHero.appendChild(controls);
     addedNodes.push(controls);
@@ -231,11 +260,10 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
 
     const showSlide = (nextIndex: number) => {
       activeIndex = (nextIndex + slides.length) % slides.length;
-      homeHero.dataset.galleryIndex = String(activeIndex);
-      slideNodes.forEach((image, index) => {
+      slideNodes.forEach((slideImage, index) => {
         const active = index === activeIndex;
-        image.classList.toggle("is-active", active);
-        image.setAttribute("aria-hidden", active ? "false" : "true");
+        slideImage.classList.toggle("is-active", active);
+        slideImage.setAttribute("aria-hidden", active ? "false" : "true");
       });
       dotNodes.forEach((dot, index) => {
         const active = index === activeIndex;
@@ -249,38 +277,16 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       if (timer) window.clearInterval(timer);
       timer = 0;
     };
-
     const startTimer = () => {
       stopTimer();
-      if (!reducedMotion && !paused && !document.hidden) {
-        timer = window.setInterval(() => showSlide(activeIndex + 1), 6500);
-      }
+      if (!reducedMotion && !paused && !document.hidden) timer = window.setInterval(() => showSlide(activeIndex + 1), 6500);
     };
-
-    const pause = () => {
-      paused = true;
-      stopTimer();
-    };
-
-    const resume = () => {
-      paused = false;
-      startTimer();
-    };
-
-    const goPrevious = () => {
-      showSlide(activeIndex - 1);
-      startTimer();
-    };
-
-    const goNext = () => {
-      showSlide(activeIndex + 1);
-      startTimer();
-    };
-
+    const pause = () => { paused = true; stopTimer(); };
+    const resume = () => { paused = false; startTimer(); };
+    const goPrevious = () => { showSlide(activeIndex - 1); startTimer(); };
+    const goNext = () => { showSlide(activeIndex + 1); startTimer(); };
     const onVisibilityChange = () => startTimer();
-    const onPointerDown = (event: PointerEvent) => {
-      pointerStartX = event.clientX;
-    };
+    const onPointerDown = (event: PointerEvent) => { pointerStartX = event.clientX; };
     const onPointerUp = (event: PointerEvent) => {
       if (pointerStartX === undefined) return;
       const distance = event.clientX - pointerStartX;
@@ -290,10 +296,7 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
 
     previous.addEventListener("click", goPrevious);
     next.addEventListener("click", goNext);
-    dotNodes.forEach((dot, index) => dot.addEventListener("click", () => {
-      showSlide(index);
-      startTimer();
-    }));
+    dotNodes.forEach((dot, index) => dot.addEventListener("click", () => { showSlide(index); startTimer(); }));
     homeHero.addEventListener("mouseenter", pause);
     homeHero.addEventListener("mouseleave", resume);
     homeHero.addEventListener("focusin", pause);
@@ -316,26 +319,82 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       homeHero.removeEventListener("pointerdown", onPointerDown);
       homeHero.removeEventListener("pointerup", onPointerUp);
       addedNodes.forEach((node) => node.remove());
-      originalImage.classList.remove("kinetic-gallery-slide", "is-active");
-      originalImage.removeAttribute("data-gallery-index");
-      originalImage.removeAttribute("aria-hidden");
-      originalImage.src = originalSource;
-      originalImage.alt = originalAlt;
-      if (originalSrcset) originalImage.setAttribute("srcset", originalSrcset);
+      if (insertedImage) image.remove();
+      else {
+        image.classList.remove("kinetic-gallery-slide", "is-active");
+        image.removeAttribute("data-gallery-index");
+        image.removeAttribute("aria-hidden");
+        image.src = originalSource;
+        image.alt = originalAlt;
+        if (originalSrcset) image.setAttribute("srcset", originalSrcset);
+      }
+      if (placeholder instanceof HTMLElement) placeholder.style.removeProperty("display");
       homeHero.classList.remove("kinetic-photo-hero");
       homeHero.removeAttribute("aria-roledescription");
       homeHero.removeAttribute("aria-label");
-      homeHero.removeAttribute("data-gallery-index");
       homeHero.style.removeProperty("--kinetic-progress");
     };
   }, [props.route.projectSlug, props.route.section, props.site.labName, props.site.slug]);
 
   return (
     <div
-      className={`${styles.root} ${props.route.section === "home" ? styles.home : ""} ${props.site.slug === "engeland" ? styles.light : ""}`}
+      className={`${styles.root} ${props.route.section === "home" ? styles.home : ""} ${isEngeland ? `${styles.light} engeland-kinetic` : ""}`}
       ref={rootRef}
     >
       <PhotoLabDesign {...props} />
+      {isEngeland && (
+        <style jsx global>{`
+          @media (min-width: 821px) {
+            .engeland-kinetic main > header {
+              min-height: 92px !important;
+              padding-top: 0 !important;
+              padding-bottom: 0 !important;
+            }
+            .engeland-kinetic .kinetic-photo-hero {
+              height: calc(100svh - 92px) !important;
+              min-height: 500px !important;
+              max-height: 690px !important;
+            }
+            .engeland-kinetic .kinetic-photo-hero > div:nth-of-type(2) {
+              bottom: clamp(42px, 5vh, 62px) !important;
+            }
+            .engeland-kinetic .kinetic-photo-hero > div:nth-of-type(2) > h1 {
+              font-size: clamp(44px, 5.6vw, 78px) !important;
+              max-width: 700px !important;
+            }
+            .engeland-kinetic main > section:nth-of-type(2) {
+              height: min(680px, calc(100svh - 92px)) !important;
+              min-height: 520px !important;
+              padding-top: 34px !important;
+              padding-bottom: 34px !important;
+            }
+            .engeland-kinetic main > section:nth-of-type(2) > h2 {
+              font-size: clamp(34px, 3.8vw, 54px) !important;
+              max-width: 880px !important;
+            }
+            .engeland-kinetic main > section:nth-of-type(2) > div:first-of-type {
+              font-size: clamp(17px, 1.45vw, 21px) !important;
+              line-height: 1.5 !important;
+              max-width: 780px !important;
+            }
+            .engeland-kinetic main > section:nth-of-type(3) {
+              height: min(720px, calc(100svh - 92px)) !important;
+              min-height: 560px !important;
+              max-height: 720px !important;
+            }
+            .engeland-kinetic main > section:nth-of-type(3) > div:last-child {
+              padding: clamp(30px, 3.8vw, 56px) !important;
+            }
+            .engeland-kinetic main > section:nth-of-type(3) > div:last-child > h2 {
+              font-size: clamp(40px, 4.3vw, 62px) !important;
+            }
+            .engeland-kinetic main > section:nth-of-type(3) > div:last-child > div {
+              font-size: clamp(15px, 1.18vw, 18px) !important;
+              line-height: 1.48 !important;
+            }
+          }
+        `}</style>
+      )}
     </div>
   );
 }
