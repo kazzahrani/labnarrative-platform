@@ -239,11 +239,7 @@ function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) 
                 </div>
                 <figure className={styles.researchEditorialFigure}>
                   <Picture src={figure} alt={project.figureCaption || project.title} fallback={String(index + 1).padStart(2, "0")} />
-                  {project.figureCaption && (
-                    <figcaption>
-                      {project.figureSource ? <a href={project.figureSource} target="_blank" rel="noreferrer">{project.figureCaption}</a> : project.figureCaption}
-                    </figcaption>
-                  )}
+                  {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
                 </figure>
               </article>
             );
