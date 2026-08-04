@@ -6,6 +6,8 @@ import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFi
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import SourcedBourdonResearchDesign from "@/components/designs/SourcedBourdonResearchDesign";
+import SourcedEditorialProjectDesign from "@/components/designs/SourcedEditorialProjectDesign";
+import SourcedSignatureProjectDesign from "@/components/designs/SourcedSignatureProjectDesign";
 import {
   resolveDesignKey,
   type LabSite,
@@ -78,6 +80,9 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
   const resolvedBasePath = basePath ?? `/sites/${site.slug}`;
   const designKey = resolveDesignKey(site);
   const designVariant = site.design?.settings?.variant;
+  const isSourcedProjectRoute = route.section === "research"
+    && Boolean(route.projectSlug)
+    && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
 
   if (designVariant === "engeland-modern-v1") {
     return <EngelandDesignWithFigures site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
@@ -88,18 +93,30 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
   }
 
   if (designVariant === "zhang-transcription-v1") {
+    if (isSourcedProjectRoute) {
+      return <SourcedSignatureProjectDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="zhang" />;
+    }
     return <SignatureAcademicDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="zhang" />;
   }
 
   if (designVariant === "gao-ecosystem-v1") {
+    if (isSourcedProjectRoute) {
+      return <SourcedSignatureProjectDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="gao" />;
+    }
     return <SignatureAcademicDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="gao" />;
   }
 
   if (designVariant === "goyette-evolution-v1") {
+    if (isSourcedProjectRoute) {
+      return <SourcedSignatureProjectDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="goyette" />;
+    }
     return <SignatureAcademicDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} mode="goyette" />;
   }
 
   if (designVariant === "editorial-image-v1") {
+    if (isSourcedProjectRoute) {
+      return <SourcedEditorialProjectDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+    }
     return <EditorialImageDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
