@@ -17,6 +17,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
   "pmc.ncbi.nlm.nih.gov",
   "www.aging-us.com",
   "www.frontiersin.org",
+  "www.irb.hr",
 ]);
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -37,6 +38,7 @@ function sourceReferer(sourceUrl: URL): string {
   if (host === "i1.rgstatic.net") return "https://www.researchgate.net/";
   if (host === "loop.frontiersin.org") return "https://loop.frontiersin.org/";
   if (host === "lh3.googleusercontent.com") return "https://www.societa-sirr.com/";
+  if (host === "www.irb.hr") return "https://www.irb.hr/";
   return `${sourceUrl.protocol}//${sourceUrl.host}/`;
 }
 
