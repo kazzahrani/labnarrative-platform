@@ -5,6 +5,7 @@ import { useEffect } from "react";
 type PanelMeasurement = {
   element: HTMLElement;
   start: number;
+  end?: number;
   speed: number;
 };
 
@@ -33,28 +34,26 @@ export default function LabNarrativeScrollPanels() {
 
     if (sections.length === 0) return;
 
-    const staticPanels = sections.filter((section) => section.id === "process");
-    const movingPanels = sections.filter((section) => !staticPanels.includes(section));
+    const movingPanels = sections;
 
     main.classList.add("ln-overlap-ready");
 
     sections.forEach((section, index) => {
       section.style.setProperty("--ln-panel-layer", String(index));
-
-      if (movingPanels.includes(section)) {
-        section.classList.add("ln-narita-panel");
-      } else {
-        section.classList.add("ln-narita-static");
-      }
+      section.classList.add("ln-narita-panel");
     });
 
     let frame = 0;
     let measurements: PanelMeasurement[] = [];
 
     const measure = () => {
+      const pricingPanel = sections.find((section) => section.id === "pricing");
+      const pricingStart = pricingPanel ? documentTop(pricingPanel) : undefined;
+
       measurements = movingPanels.map((panel) => ({
         element: panel,
         start: documentTop(panel),
+        end: panel.id === "process" ? pricingStart : undefined,
         speed: panel.id === "pricing" ? 0.4 : 0.36,
       }));
     };
@@ -62,8 +61,12 @@ export default function LabNarrativeScrollPanels() {
     const update = () => {
       frame = 0;
 
-      measurements.forEach(({ element, start, speed }) => {
-        const distance = Math.max(0, window.scrollY - start);
+      measurements.forEach(({ element, start, end, speed }) => {
+        const travelled = Math.max(0, window.scrollY - start);
+        const distance =
+          typeof end === "number"
+            ? Math.min(travelled, Math.max(0, end - start))
+            : travelled;
         const offset = -(distance * speed);
         element.style.setProperty("--ln-panel-offset", `${offset.toFixed(2)}px`);
       });
@@ -156,18 +159,6 @@ export default function LabNarrativeScrollPanels() {
         }
 
         main.ln-overlap-ready > section#top.ln-narita-panel {
-          box-shadow: none !important;
-        }
-
-        /* The process chapter is excluded from drift, but remains pinned while
-           the pricing panel enters so the two sections do not move as one block. */
-        main.ln-overlap-ready > .ln-narita-static {
-          position: sticky !important;
-          top: 0 !important;
-          z-index: calc(10 + var(--ln-panel-layer, 0)) !important;
-          transform: none !important;
-          will-change: auto;
-          backface-visibility: hidden;
           box-shadow: none !important;
         }
 
