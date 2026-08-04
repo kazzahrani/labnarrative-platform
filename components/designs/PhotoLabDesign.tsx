@@ -213,6 +213,46 @@ function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) 
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
   const hero = site.heroImage || pages.home.homepageImage || pages.home.topPortrait;
+
+  if (site.slug === "prives") {
+    return (
+      <>
+        <PageHero image={hero} label={site.labName} title="Research" />
+        <section className={styles.researchEditorial}>
+          <header className={styles.researchEditorialIntro}>
+            <p>{pages.research.pageLabel}</p>
+            <h2>{pages.research.pageHeading}</h2>
+            {pages.research.introduction && <div>{pages.research.introduction}</div>}
+          </header>
+
+          {projects.map((project, index) => {
+            const figure = project.figureImage || hero;
+            return (
+              <article className={`${styles.researchEditorialTopic} ${index % 2 === 1 ? styles.researchEditorialTopicReverse : ""}`} id={project.slug} key={`${project.slug}-${index}`}>
+                <div className={styles.researchEditorialCopy}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <h2>{project.title}</h2>
+                  {project.summary && <p className={styles.researchEditorialLead}>{project.summary}</p>}
+                  <div className={styles.researchEditorialBody}>
+                    {(project.body || []).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}
+                  </div>
+                </div>
+                <figure className={styles.researchEditorialFigure}>
+                  <Picture src={figure} alt={project.figureCaption || project.title} fallback={String(index + 1).padStart(2, "0")} />
+                  {project.figureCaption && (
+                    <figcaption>
+                      {project.figureSource ? <a href={project.figureSource} target="_blank" rel="noreferrer">{project.figureCaption}</a> : project.figureCaption}
+                    </figcaption>
+                  )}
+                </figure>
+              </article>
+            );
+          })}
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
       <PageHero image={hero} label={pages.research.pageLabel} title={pages.research.pageHeading} text={pages.research.introduction} />
@@ -346,7 +386,7 @@ export default function PhotoLabDesign({ site, route, basePath, previewMode = fa
       {previewMode && <div className={styles.previewBadge}>Private administrator preview · Draft</div>}
       <Header site={site} route={route} basePath={basePath} />
       {route.section === "home" && <Home site={site} basePath={basePath} />}
-      {route.section === "research" && (route.projectSlug ? <ProjectDetail site={site} slug={route.projectSlug} basePath={basePath} /> : <ResearchIndex site={site} basePath={basePath} />)}
+      {route.section === "research" && (site.slug === "prives" ? <ResearchIndex site={site} basePath={basePath} /> : route.projectSlug ? <ProjectDetail site={site} slug={route.projectSlug} basePath={basePath} /> : <ResearchIndex site={site} basePath={basePath} />)}
       {route.section === "publications" && <Publications site={site} />}
       {route.section === "members" && <Members site={site} />}
       {route.section === "join" && <Join site={site} />}
