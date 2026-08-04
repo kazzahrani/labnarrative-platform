@@ -1,0 +1,16 @@
+/* Yang Gao signature design: keep the ecosystem legend clear of the focus rail. */
+@media (min-width: 761px) {
+  [class*="gaoHero"] [class*="ecosystemLegend"] {
+    z-index: 8;
+    right: max(4vw, 28px);
+    bottom: 138px;
+    max-width: calc(100% - 10vw);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 12px;
+  }
+
+  [class*="gaoHero"] [class*="gaoFocus"] {
+    z-index: 7;
+  }
+}
