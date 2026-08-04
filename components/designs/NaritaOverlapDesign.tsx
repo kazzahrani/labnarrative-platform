@@ -250,6 +250,44 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           position: sticky !important;
           top: 0;
           z-index: 100 !important;
+          min-height: 136px !important;
+          padding: 22px clamp(24px, 5vw, 76px) 19px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: flex-start !important;
+          justify-content: center !important;
+          gap: 13px !important;
+        }
+
+        .narita-overlap-design main > header > a {
+          max-width: 100%;
+          font-size: clamp(22px, 2.15vw, 34px) !important;
+          line-height: 1.08 !important;
+          white-space: nowrap !important;
+        }
+
+        .narita-overlap-design main > header > nav {
+          width: 100%;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: flex-start !important;
+          gap: clamp(15px, 1.8vw, 28px) !important;
+          flex-wrap: nowrap !important;
+          white-space: nowrap;
+          overflow-x: auto;
+          overflow-y: hidden;
+          scrollbar-width: none;
+        }
+
+        .narita-overlap-design main > header > nav::-webkit-scrollbar {
+          display: none;
+        }
+
+        .narita-overlap-design main > header > nav a {
+          flex: 0 0 auto;
+          padding: 7px 0 9px !important;
+          font-size: 10px !important;
+          letter-spacing: 0.145em !important;
         }
 
         .narita-route-home main > section:nth-of-type(4),
@@ -383,6 +421,26 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         }
 
         @media (max-width: 980px) {
+          .narita-overlap-design main > header {
+            min-height: 124px !important;
+            padding-top: 18px !important;
+            padding-bottom: 15px !important;
+            gap: 10px !important;
+          }
+
+          .narita-overlap-design main > header > a {
+            font-size: clamp(19px, 3vw, 28px) !important;
+          }
+
+          .narita-overlap-design main > header > nav {
+            gap: 17px !important;
+          }
+
+          .narita-overlap-design main > header > nav a {
+            font-size: 9px !important;
+            letter-spacing: 0.13em !important;
+          }
+
           .narita-overlap-design:not(.narita-route-home) .narita-overlap-hero.kinetic-inner-hero,
           .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
             height: clamp(235px, 38vw, 320px) !important;
@@ -398,6 +456,25 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         }
 
         @media (max-width: 700px) {
+          .narita-overlap-design main > header {
+            min-height: 112px !important;
+            padding: 16px 20px 13px !important;
+            gap: 9px !important;
+          }
+
+          .narita-overlap-design main > header > a {
+            font-size: clamp(16px, 4.7vw, 22px) !important;
+            white-space: normal !important;
+          }
+
+          .narita-overlap-design main > header > nav {
+            gap: 15px !important;
+          }
+
+          .narita-overlap-design main > header > nav a {
+            font-size: 8.5px !important;
+          }
+
           .narita-overlap-design .narita-overlap-panel,
           .narita-overlap-design .narita-overlap-hero {
             position: relative !important;
