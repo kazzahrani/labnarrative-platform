@@ -1,9 +1,15 @@
 .site {
+  --ciribilli-header-height: 136px;
   min-height: 100vh;
+  overflow: visible !important;
+  isolation: isolate;
   background: #ffffff !important;
 }
 
 .header {
+  position: sticky !important;
+  top: 0;
+  z-index: 100 !important;
   min-height: 136px !important;
   padding: 22px clamp(24px, 5vw, 76px) 19px !important;
   display: flex !important;
@@ -45,20 +51,37 @@
 }
 
 .hero {
+  position: sticky !important;
+  top: var(--ciribilli-header-height) !important;
+  z-index: 10 !important;
   width: 100%;
-  height: clamp(220px, 22vw, 300px) !important;
-  min-height: 220px !important;
-  max-height: 300px !important;
+  height: clamp(260px, 28vw, 360px) !important;
+  min-height: 260px !important;
+  max-height: 360px !important;
+  margin-bottom: 0 !important;
+  overflow: hidden !important;
+  transform: translate3d(0, var(--ciribilli-hero-offset, 0px), 0) !important;
+  transform-origin: center top;
+  transition: none !important;
+  box-shadow: none !important;
+  will-change: transform;
 }
 
 .hero > img {
   object-position: center 46% !important;
+  transform: translate3d(0, var(--ciribilli-image-offset, 0px), 0) scale(1.1) !important;
+  transform-origin: center center;
+  transition: none !important;
+  will-change: transform;
 }
 
 .heroCopy {
   left: clamp(28px, 6vw, 92px) !important;
   right: clamp(28px, 6vw, 92px) !important;
   bottom: clamp(28px, 4vw, 52px) !important;
+  transform: translate3d(0, var(--ciribilli-copy-offset, 0px), 0) !important;
+  transition: none !important;
+  will-change: transform;
 }
 
 .heroCopy p {
@@ -75,32 +98,94 @@
   line-height: 1 !important;
 }
 
-.footer {
-  background: #080808 !important;
+.contentPanel {
+  position: relative !important;
+  z-index: 11 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
 }
 
-@media (max-width: 760px) {
+.contentPanel::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 50% 0 auto;
+  width: 100vw;
+  transform: translateX(50%);
+  background: #ffffff;
+  pointer-events: none;
+}
+
+.footer {
+  position: relative !important;
+  z-index: 12 !important;
+  background: #080808 !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 980px) {
   .header {
     min-height: 124px !important;
-    padding: 18px 20px 15px !important;
+    padding-top: 18px !important;
+    padding-bottom: 15px !important;
     gap: 10px !important;
   }
 
   .wordmark {
-    font-size: clamp(18px, 5.8vw, 25px) !important;
+    font-size: clamp(19px, 3vw, 28px) !important;
   }
 
   .header nav {
-    gap: 16px !important;
+    gap: 17px !important;
   }
 
   .header nav a {
     font-size: 9px !important;
+    letter-spacing: .13em !important;
   }
 
   .hero {
-    height: 190px !important;
-    min-height: 190px !important;
+    height: clamp(235px, 38vw, 320px) !important;
+    min-height: 235px !important;
+    max-height: 320px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .header {
+    min-height: 112px !important;
+    padding: 16px 20px 13px !important;
+    gap: 9px !important;
+  }
+
+  .wordmark {
+    font-size: clamp(16px, 4.7vw, 22px) !important;
+    white-space: normal !important;
+  }
+
+  .header nav {
+    gap: 15px !important;
+  }
+
+  .header nav a {
+    font-size: 8.5px !important;
+  }
+
+  .hero {
+    position: relative !important;
+    top: auto !important;
+    width: 100% !important;
+    height: 230px !important;
+    min-height: 230px !important;
+    max-height: 230px !important;
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .hero > img,
+  .heroCopy {
+    transform: none !important;
+    will-change: auto;
   }
 
   .heroCopy {
@@ -111,5 +196,20 @@
 
   .heroCopy h1 {
     font-size: clamp(34px, 11vw, 48px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    position: relative !important;
+    top: auto !important;
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .hero > img,
+  .heroCopy {
+    transform: none !important;
+    will-change: auto;
   }
 }
