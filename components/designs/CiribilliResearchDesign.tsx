@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import {
   getBourdonPages,
   type LabSite,
@@ -53,6 +55,7 @@ export default function CiribilliResearchDesign({
   basePath,
   previewMode = false,
 }: CiribilliResearchDesignProps) {
+  const mainRef = useRef<HTMLElement>(null);
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
   const hero = site.heroImage || pages.home.homepageImage || pages.home.topPortrait;
@@ -64,6 +67,82 @@ export default function CiribilliResearchDesign({
     "--pl-accent": site.theme.accent || "#2c8175",
   } as CSSProperties;
 
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+
+    const header = main.querySelector(":scope > header");
+    const sections = Array.from(main.children).filter(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement && element.tagName === "SECTION",
+    );
+    const heroSection = sections[0];
+    const contentSection = sections[1];
+    if (!heroSection || !contentSection) return;
+
+    let frame = 0;
+
+    const measure = () => {
+      const headerHeight = header instanceof HTMLElement ? header.offsetHeight : 136;
+      main.style.setProperty("--ciribilli-header-height", `${headerHeight}px`);
+    };
+
+    const update = () => {
+      frame = 0;
+      const distance = Math.max(0, window.scrollY);
+      heroSection.style.setProperty(
+        "--ciribilli-hero-offset",
+        `${-(distance * 0.3).toFixed(2)}px`,
+      );
+      heroSection.style.setProperty(
+        "--ciribilli-image-offset",
+        `${-(distance * 0.09).toFixed(2)}px`,
+      );
+      heroSection.style.setProperty(
+        "--ciribilli-copy-offset",
+        `${-(distance * 0.13).toFixed(2)}px`,
+      );
+    };
+
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+
+    const remeasure = () => {
+      measure();
+      requestUpdate();
+    };
+
+    const images = Array.from(main.querySelectorAll("img"));
+    images.forEach((image) => image.addEventListener("load", remeasure));
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(remeasure)
+      : undefined;
+    resizeObserver?.observe(main);
+    resizeObserver?.observe(heroSection);
+    resizeObserver?.observe(contentSection);
+
+    measure();
+    update();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", remeasure);
+    window.addEventListener("load", remeasure);
+
+    return () => {
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", remeasure);
+      window.removeEventListener("load", remeasure);
+      images.forEach((image) => image.removeEventListener("load", remeasure));
+      resizeObserver?.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+      heroSection.style.removeProperty("--ciribilli-hero-offset");
+      heroSection.style.removeProperty("--ciribilli-image-offset");
+      heroSection.style.removeProperty("--ciribilli-copy-offset");
+      main.style.removeProperty("--ciribilli-header-height");
+    };
+  }, [route.projectSlug, route.section]);
+
   const navigation = [
     { section: "home", label: pages.navigation.home, href: basePath },
     { section: "research", label: pages.navigation.research, href: `${basePath}/research` },
@@ -74,7 +153,7 @@ export default function CiribilliResearchDesign({
   ];
 
   return (
-    <main className={`${photoStyles.site} ${styles.site}`} style={variables}>
+    <main ref={mainRef} className={`${photoStyles.site} ${styles.site}`} style={variables}>
       {previewMode && <div className={photoStyles.previewBadge}>Private administrator preview · Draft</div>}
 
       <header className={`${photoStyles.header} ${styles.header}`}>
@@ -103,7 +182,7 @@ export default function CiribilliResearchDesign({
         </div>
       </section>
 
-      <section className={photoStyles.researchEditorial}>
+      <section className={`${photoStyles.researchEditorial} ${styles.contentPanel}`}>
         <header className={photoStyles.researchEditorialIntro}>
           <p>{pages.research.pageLabel}</p>
           <h2>{pages.research.pageHeading}</h2>
