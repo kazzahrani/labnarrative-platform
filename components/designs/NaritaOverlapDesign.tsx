@@ -44,7 +44,6 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         element instanceof HTMLElement && element.tagName === "SECTION",
     );
 
-    // The homepage ends after the principal-investigator story.
     const hiddenHomeSections = props.route.section === "home"
       ? directSections.slice(3)
       : [];
@@ -70,20 +69,13 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       : undefined;
 
     const flowTailElements = panelCandidates.filter((element) => {
-      // The homepage PI story should continue in normal document flow with
-      // the footer rather than acting as another covering panel.
-      if (element === homePrincipalSection) {
-        return true;
-      }
-
+      if (element === homePrincipalSection) return true;
       if (props.route.section === "members" && element.tagName === "ASIDE") {
         return true;
       }
-
       if (props.route.section === "join" && element === finalDirectSection) {
         return true;
       }
-
       return false;
     });
 
@@ -143,7 +135,6 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
 
         return {
           element: panel,
-          // Compact inner heroes begin drifting immediately with the page.
           start: isInnerHero ? 0 : documentTop(panel) - headerHeight,
           panelSpeed: isHomeHero ? 0.28 : isInnerHero ? 0.3 : 0.22,
           imageSpeed: isHomeHero ? 0.07 : isInnerHero ? 0.09 : 0.055,
@@ -154,11 +145,9 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
 
     const update = () => {
       frame = 0;
-
       measurements.forEach(
         ({ element, start, panelSpeed, imageSpeed, copySpeed }) => {
           const distance = Math.max(0, window.scrollY - start);
-
           element.style.setProperty(
             "--narita-panel-offset",
             `${-(distance * panelSpeed).toFixed(2)}px`,
@@ -211,11 +200,9 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       hiddenHomeSections.forEach((section) => {
         section.hidden = false;
       });
-
       flowTailElements.forEach((element) => {
         element.classList.remove("narita-overlap-flow-tail");
       });
-
       panels.forEach((panel) => {
         panel.classList.remove(
           "narita-overlap-panel",
@@ -228,7 +215,6 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         panel.style.removeProperty("--narita-copy-offset");
         panel.style.removeProperty("--narita-panel-background");
       });
-
       root.style.removeProperty("--narita-header-height");
       root.style.removeProperty("--narita-footer-layer");
     };
@@ -268,7 +254,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
     const startTimer = () => {
       stopTimer();
       if (!reducedMotion && !document.hidden) {
-        timer = window.setInterval(advanceSlide, 3000);
+        timer = window.setInterval(advanceSlide, 5000);
       }
     };
 
@@ -363,6 +349,33 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         .narita-route-home .kinetic-scroll-cue,
         .narita-route-home .kinetic-gallery-arrow {
           display: none !important;
+        }
+
+        .narita-route-home .kinetic-gallery-controls {
+          bottom: 18px !important;
+          left: auto !important;
+          right: 22px !important;
+          gap: 0 !important;
+          opacity: 0.46;
+          transform: none !important;
+        }
+
+        .narita-route-home .kinetic-gallery-dots {
+          background: rgba(5, 5, 5, 0.2) !important;
+          border-color: rgba(255, 255, 255, 0.16) !important;
+          gap: 6px !important;
+          padding: 6px 8px !important;
+        }
+
+        .narita-route-home .kinetic-gallery-dot {
+          background: rgba(255, 255, 255, 0.42) !important;
+          height: 4px !important;
+          width: 4px !important;
+        }
+
+        .narita-route-home .kinetic-gallery-dot.is-active {
+          background: rgba(255, 255, 255, 0.82) !important;
+          width: 18px !important;
         }
 
         .narita-route-home main > section:nth-of-type(4),
@@ -548,6 +561,11 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
 
           .narita-overlap-design main > header > nav a {
             font-size: 8.5px !important;
+          }
+
+          .narita-route-home .kinetic-gallery-controls {
+            bottom: 12px !important;
+            right: 12px !important;
           }
 
           .narita-overlap-design .narita-overlap-panel,
