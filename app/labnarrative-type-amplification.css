@@ -10,27 +10,47 @@ body main:has(> section#top) strong {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
+/* Compact the overall page rhythm. */
+body main:has(> section#top) > section#top {
+  padding-top: clamp(64px, 7vw, 108px);
+  padding-bottom: clamp(56px, 6vw, 88px);
+}
+
+body main:has(> section#top) > section:nth-of-type(2),
+body main:has(> section#top) > section#work,
+body main:has(> section#top) > section#pricing,
+body main:has(> section#top) > section:nth-last-of-type(2) {
+  padding-top: clamp(68px, 7vw, 106px);
+  padding-bottom: clamp(70px, 7vw, 108px);
+}
+
+body main:has(> section#top) > section:last-of-type {
+  padding-top: clamp(74px, 8vw, 116px);
+  padding-bottom: clamp(78px, 8vw, 122px);
+}
+
 body main:has(> section#top) .sectionLabel,
 body main:has(> section#top) section#top > p:first-child {
-  font-size: 0.82rem;
-  font-weight: 900;
+  font-size: 0.76rem;
+  font-weight: 850;
   letter-spacing: 0.2em;
 }
 
 body main:has(> section#top) section#top > div:nth-of-type(1) > div p {
-  font-size: clamp(1.28rem, 1.65vw, 1.58rem);
-  font-weight: 540;
+  font-size: clamp(1.04rem, 1.2vw, 1.2rem);
+  font-weight: 400;
   line-height: 1.62;
 }
 
 body main:has(> section#top) section#top > div:nth-of-type(1) > div a {
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: 0.86rem;
+  font-weight: 750;
 }
 
 body main:has(> section#top) section#top > div:last-child {
-  font-size: 0.8rem;
-  font-weight: 720;
+  margin-top: clamp(48px, 6vw, 82px);
+  font-size: 0.7rem;
+  font-weight: 500;
 }
 
 /* Major editorial headings use the same compact bold voice as the hero. */
@@ -47,14 +67,20 @@ body main:has(> section#top) > section:last-of-type h2 {
 
 body main:has(> section#top) > section:nth-of-type(2) > h2 {
   max-width: 1380px;
+  margin-top: 34px;
   font-size: clamp(4.2rem, 7.2vw, 8rem);
 }
 
+body main:has(> section#top) > section:nth-of-type(2) > div {
+  margin-top: clamp(48px, 5vw, 76px);
+}
+
 body main:has(> section#top) > section:nth-of-type(2) article {
-  min-height: 500px;
+  min-height: 360px;
 }
 
 body main:has(> section#top) > section:nth-of-type(2) article h3 {
+  margin-top: clamp(44px, 5vw, 66px);
   font-size: clamp(2rem, 2.6vw, 2.8rem);
   font-weight: 760;
   letter-spacing: -0.055em;
@@ -63,14 +89,19 @@ body main:has(> section#top) > section:nth-of-type(2) article h3 {
 
 body main:has(> section#top) > section:nth-of-type(2) article p {
   max-width: 470px;
-  font-size: clamp(1.18rem, 1.42vw, 1.42rem);
-  font-weight: 540;
-  line-height: 1.56;
+  margin-top: 20px;
+  font-size: clamp(0.94rem, 1vw, 1.02rem);
+  font-weight: 400;
+  line-height: 1.62;
 }
 
 body main:has(> section#top) > section#work > div:first-child > p:last-child {
-  font-size: 0.94rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) {
+  margin-top: clamp(44px, 5vw, 72px);
 }
 
 body main:has(> section#top) > section#work > div:nth-child(2) > h2 {
@@ -80,9 +111,13 @@ body main:has(> section#top) > section#work > div:nth-child(2) > h2 {
 
 body main:has(> section#top) > section#work > div:nth-child(2) > p,
 body main:has(> section#top) > section#work a > p {
-  font-size: clamp(1.12rem, 1.32vw, 1.34rem);
-  font-weight: 540;
-  line-height: 1.58;
+  font-size: clamp(0.92rem, 1vw, 1rem);
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+body main:has(> section#top) > section#work > div:last-of-type {
+  margin-top: clamp(42px, 5vw, 68px);
 }
 
 body main:has(> section#top) > section#work a h3 {
@@ -93,68 +128,68 @@ body main:has(> section#top) > section#work a h3 {
 }
 
 body main:has(> section#top) > section#work small {
-  font-size: 0.74rem;
-  font-weight: 900;
+  font-size: 0.68rem;
+  font-weight: 750;
 }
 
-/* From papers to publication becomes a major visual chapter. */
+/* From papers to publication remains a major visual chapter, but without excessive empty space. */
 body main:has(> section#top) > section#process {
-  padding-top: clamp(120px, 13vw, 210px);
-  padding-bottom: clamp(130px, 14vw, 220px);
+  padding-top: clamp(74px, 8vw, 118px);
+  padding-bottom: clamp(78px, 8vw, 124px);
 }
 
 body main:has(> section#top) > section#process > div:first-child > p:last-child {
-  font-size: clamp(1.12rem, 1.4vw, 1.42rem);
-  font-weight: 650;
+  font-size: 0.86rem;
+  font-weight: 400;
 }
 
 body main:has(> section#top) > section#process > div:first-child .sectionLabel {
-  font-size: 0.9rem;
+  font-size: 0.78rem;
 }
 
 body main:has(> section#top) > section#process > div:nth-child(2) {
-  margin-top: clamp(100px, 11vw, 170px);
+  margin-top: clamp(48px, 5vw, 76px);
 }
 
 body main:has(> section#top) > section#process article {
-  min-height: 540px;
-  padding-top: 38px;
-  padding-bottom: 70px;
+  min-height: 350px;
+  padding-top: 30px;
+  padding-bottom: 42px;
 }
 
 body main:has(> section#top) > section#process article > span:first-child {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 54px;
-  min-height: 34px;
-  padding: 0 12px;
+  min-width: 48px;
+  min-height: 30px;
+  padding: 0 11px;
   background: var(--ln-lime);
   color: var(--ln-black);
-  font-size: 0.86rem;
-  font-weight: 950;
+  font-size: 0.76rem;
+  font-weight: 900;
 }
 
 body main:has(> section#top) > section#process article h3 {
   max-width: 360px;
-  margin-top: clamp(82px, 8vw, 120px);
-  font-size: clamp(2.55rem, 3.4vw, 3.8rem);
+  margin-top: clamp(48px, 5vw, 72px);
+  font-size: clamp(2.45rem, 3.3vw, 3.7rem);
   font-weight: 780;
   letter-spacing: -0.065em;
   line-height: 0.95;
 }
 
 body main:has(> section#top) > section#process article p {
-  max-width: 360px;
-  margin-top: 34px;
-  font-size: clamp(1.2rem, 1.42vw, 1.45rem);
-  font-weight: 540;
-  line-height: 1.5;
+  max-width: 340px;
+  margin-top: 24px;
+  font-size: clamp(0.96rem, 1.05vw, 1.08rem);
+  font-weight: 400;
+  line-height: 1.58;
 }
 
 body main:has(> section#top) > section#process > div:last-child {
-  margin-top: clamp(100px, 11vw, 170px);
-  padding-top: clamp(70px, 8vw, 120px);
+  margin-top: clamp(50px, 6vw, 82px);
+  padding-top: clamp(42px, 5vw, 68px);
 }
 
 body main:has(> section#top) > section#process > div:last-child h2 {
@@ -164,20 +199,28 @@ body main:has(> section#top) > section#process > div:last-child h2 {
 
 body main:has(> section#top) > section#process > div:last-child > p {
   max-width: 620px;
-  font-size: clamp(1.22rem, 1.5vw, 1.5rem);
-  font-weight: 540;
-  line-height: 1.56;
+  font-size: clamp(0.98rem, 1.1vw, 1.12rem);
+  font-weight: 400;
+  line-height: 1.62;
 }
 
-/* Pricing and founder copy also receive the stronger hierarchy. */
+/* Pricing and founder retain strong headings, with quieter supporting copy. */
 body main:has(> section#top) > section#pricing > div:first-child > p:last-child {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section#pricing > div:nth-child(2) {
+  margin-top: clamp(44px, 5vw, 72px);
+}
+
+body main:has(> section#top) > section#pricing article {
+  min-height: 480px;
 }
 
 body main:has(> section#top) > section#pricing article h3 {
-  font-size: 1.42rem;
-  font-weight: 760;
+  font-size: 1.32rem;
+  font-weight: 700;
   letter-spacing: -0.035em;
 }
 
@@ -189,19 +232,23 @@ body main:has(> section#top) > section#pricing article > strong {
 }
 
 body main:has(> section#top) > section#pricing article > p {
-  font-size: 0.96rem;
-  font-weight: 550;
+  font-size: 0.82rem;
+  font-weight: 400;
 }
 
 body main:has(> section#top) > section#pricing article li {
-  font-size: 0.96rem;
-  font-weight: 550;
-  line-height: 1.48;
+  font-size: 0.84rem;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 body main:has(> section#top) > section#pricing > div:last-child {
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div {
+  margin-top: 42px;
 }
 
 body main:has(> section#top) > section:nth-last-of-type(2) h2 {
@@ -210,39 +257,43 @@ body main:has(> section#top) > section:nth-last-of-type(2) h2 {
 }
 
 body main:has(> section#top) > section:nth-last-of-type(2) > div > div p {
-  font-size: clamp(1.16rem, 1.35vw, 1.36rem);
-  font-weight: 540;
-  line-height: 1.62;
+  font-size: clamp(0.96rem, 1.05vw, 1.06rem);
+  font-weight: 400;
+  line-height: 1.64;
 }
 
 body main:has(> section#top) > section:nth-last-of-type(2) > div > div span {
-  font-size: 0.96rem;
-  font-weight: 800;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 body main:has(> section#top) > section:last-of-type h2 {
   max-width: 1280px;
+  margin-top: 42px;
   font-size: clamp(4.3rem, 7.4vw, 8rem);
 }
 
 body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
   max-width: 760px;
-  font-size: clamp(1.14rem, 1.35vw, 1.36rem);
-  font-weight: 540;
-  line-height: 1.6;
+  margin-top: 30px;
+  font-size: clamp(0.96rem, 1.05vw, 1.06rem);
+  font-weight: 400;
+  line-height: 1.62;
 }
 
 body main:has(> section#top) > section:last-of-type > a:last-child {
-  min-height: 64px;
-  padding-right: 29px;
-  padding-left: 29px;
-  font-size: 0.96rem;
-  font-weight: 900;
+  min-height: 58px;
+  margin-top: 26px;
+  padding-right: 25px;
+  padding-left: 25px;
+  font-size: 0.86rem;
+  font-weight: 850;
 }
 
 body main:has(> section#top) > footer {
-  font-size: 0.84rem;
-  font-weight: 680;
+  min-height: 120px;
+  font-size: 0.72rem;
+  font-weight: 400;
 }
 
 @media (max-width: 1180px) {
@@ -251,7 +302,7 @@ body main:has(> section#top) > footer {
   }
 
   body main:has(> section#top) > section#process article {
-    min-height: 470px;
+    min-height: 330px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.22);
   }
 }
@@ -270,7 +321,7 @@ body main:has(> section#top) > footer {
   }
 
   body main:has(> section#top) > section#process article p {
-    font-size: 1.18rem;
+    font-size: 1rem;
   }
 }
 
@@ -281,6 +332,6 @@ body main:has(> section#top) > footer {
 
   body main:has(> section#top) > section#process article {
     min-height: auto;
-    padding-bottom: 60px;
+    padding-bottom: 44px;
   }
 }
