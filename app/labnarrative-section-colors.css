@@ -1,0 +1,164 @@
+/* Distinct section rhythm using only the LabNarrative palette. */
+
+body main:has(> section#top) > section#top {
+  background: var(--ln-paper);
+  color: var(--ln-black);
+}
+
+/* Phosphoric approach section. */
+body main:has(> section#top) > section:nth-of-type(2) {
+  background: var(--ln-lime);
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) .sectionLabel {
+  color: var(--ln-green);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) h2,
+body main:has(> section#top) > section:nth-of-type(2) h3 {
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) > div {
+  border-top-color: rgba(17, 24, 22, 0.72);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article {
+  border-right-color: rgba(17, 24, 22, 0.22);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article > span:first-child {
+  background: var(--ln-black);
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article p {
+  color: rgba(17, 24, 22, 0.72);
+}
+
+/* Black selected-work section. */
+body main:has(> section#top) > section#work {
+  background: var(--ln-black);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work .sectionLabel,
+body main:has(> section#top) > section#work small,
+body main:has(> section#top) > section#work a > span:first-child,
+body main:has(> section#top) > section#work a > span:last-child {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section#work h2,
+body main:has(> section#top) > section#work h3 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work p {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+body main:has(> section#top) > section#work > div,
+body main:has(> section#top) > section#work a {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark-green process section. */
+body main:has(> section#top) > section#process {
+  background: var(--ln-green);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#process .sectionLabel,
+body main:has(> section#top) > section#process article > span:first-child {
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section#process h2,
+body main:has(> section#top) > section#process h3 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#process p {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body main:has(> section#top) > section#process > div,
+body main:has(> section#top) > section#process article {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+body main:has(> section#top) > section#process article > span:first-child {
+  background: var(--ln-lime);
+}
+
+/* Cream pricing section. */
+body main:has(> section#top) > section#pricing {
+  background: var(--ln-paper);
+  color: var(--ln-black);
+}
+
+/* Black founder section. */
+body main:has(> section#top) > section:nth-last-of-type(2) {
+  background: var(--ln-black);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) .sectionLabel,
+body main:has(> section#top) > section:nth-last-of-type(2) span {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) h2 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div,
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark-green closing section. */
+body main:has(> section#top) > section:last-of-type {
+  background: var(--ln-green);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:last-of-type .sectionLabel {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section:last-of-type h2 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body main:has(> section#top) > section:last-of-type > p a {
+  color: #ffffff;
+  border-bottom-color: rgba(255, 255, 255, 0.72);
+}
+
+body main:has(> section#top) > section:last-of-type > a:last-child {
+  background: var(--ln-lime);
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > footer {
+  background: var(--ln-paper);
+  color: var(--ln-black);
+}
+
+@media (max-width: 760px) {
+  body main:has(> section#top) > section:nth-of-type(2) article {
+    border-right: 0;
+    border-bottom-color: rgba(17, 24, 22, 0.22);
+  }
+}
