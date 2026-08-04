@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
+import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhancer";
 import AutomationNavEnhancer from "@/components/admin/AutomationNavEnhancer";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body>
         <AdminLandingRedirect />
+        <AdminAuthRecoveryEnhancer />
         <AutomationNavEnhancer />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
