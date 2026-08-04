@@ -321,7 +321,10 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     const startTimer = () => {
       stopTimer();
       const interval = isPrives ? 10000 : 6500;
-      if (!reducedMotion && !paused && !document.hidden) timer = window.setInterval(() => showSlide(activeIndex + 1), interval);
+      const motionAllowsAutoplay = isPrives || !reducedMotion;
+      if (motionAllowsAutoplay && !paused && !document.hidden) {
+        timer = window.setInterval(() => showSlide(activeIndex + 1), interval);
+      }
     };
     const pause = () => { paused = true; stopTimer(); };
     const resume = () => { paused = false; startTimer(); };
@@ -339,10 +342,12 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     previous?.addEventListener("click", goPrevious);
     next?.addEventListener("click", goNext);
     dotNodes.forEach((dot, index) => dot.addEventListener("click", () => { showSlide(index); startTimer(); }));
-    homeHero.addEventListener("mouseenter", pause);
-    homeHero.addEventListener("mouseleave", resume);
-    homeHero.addEventListener("focusin", pause);
-    homeHero.addEventListener("focusout", resume);
+    if (!isPrives) {
+      homeHero.addEventListener("mouseenter", pause);
+      homeHero.addEventListener("mouseleave", resume);
+      homeHero.addEventListener("focusin", pause);
+      homeHero.addEventListener("focusout", resume);
+    }
     homeHero.addEventListener("pointerdown", onPointerDown);
     homeHero.addEventListener("pointerup", onPointerUp);
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -354,10 +359,12 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       document.removeEventListener("visibilitychange", onVisibilityChange);
       previous?.removeEventListener("click", goPrevious);
       next?.removeEventListener("click", goNext);
-      homeHero.removeEventListener("mouseenter", pause);
-      homeHero.removeEventListener("mouseleave", resume);
-      homeHero.removeEventListener("focusin", pause);
-      homeHero.removeEventListener("focusout", resume);
+      if (!isPrives) {
+        homeHero.removeEventListener("mouseenter", pause);
+        homeHero.removeEventListener("mouseleave", resume);
+        homeHero.removeEventListener("focusin", pause);
+        homeHero.removeEventListener("focusout", resume);
+      }
       homeHero.removeEventListener("pointerdown", onPointerDown);
       homeHero.removeEventListener("pointerup", onPointerUp);
       addedNodes.forEach((node) => node.remove());
