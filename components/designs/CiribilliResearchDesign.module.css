@@ -75,6 +75,11 @@
   will-change: transform;
 }
 
+.hero > div:first-of-type {
+  background: rgba(0, 0, 0, 0.2) !important;
+  box-shadow: none !important;
+}
+
 .heroCopy {
   inset: 0 !important;
   width: 100% !important;
