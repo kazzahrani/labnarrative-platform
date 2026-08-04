@@ -43,8 +43,8 @@ export default function PlatformThemeToggle() {
 
   useEffect(() => {
     const operationalHost = isOperationalHost(window.location.hostname);
-    const excludedPath = pathname.startsWith("/sites/") || pathname.startsWith("/admin/preview/");
-    const enabled = operationalHost && !excludedPath;
+    const excludedPath = pathname.startsWith("/admin/preview/");
+    const enabled = operationalHost && pathname.startsWith("/admin") && !excludedPath;
 
     document.body.classList.remove(...PAGE_CLASSES);
 
@@ -59,10 +59,8 @@ export default function PlatformThemeToggle() {
     document.body.classList.add("platform-theme-active");
     if (pathname.startsWith("/admin/sites")) {
       document.body.classList.add("platform-monitor-page");
-    } else if (pathname.startsWith("/admin")) {
-      document.body.classList.add("platform-admin-page");
     } else {
-      document.body.classList.add("platform-home-page");
+      document.body.classList.add("platform-admin-page");
     }
 
     const stored = window.localStorage.getItem(STORAGE_KEY);
