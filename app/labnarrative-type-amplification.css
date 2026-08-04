@@ -1,0 +1,286 @@
+/* Stronger public typography using the hero's bold sans-serif language. */
+
+body main:has(> section#top) {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+body main:has(> section#top) h2,
+body main:has(> section#top) h3,
+body main:has(> section#top) strong {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+body main:has(> section#top) .sectionLabel,
+body main:has(> section#top) section#top > p:first-child {
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div p {
+  font-size: clamp(1.28rem, 1.65vw, 1.58rem);
+  font-weight: 540;
+  line-height: 1.62;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div a {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+body main:has(> section#top) section#top > div:last-child {
+  font-size: 0.8rem;
+  font-weight: 720;
+}
+
+/* Major editorial headings use the same compact bold voice as the hero. */
+body main:has(> section#top) > section:nth-of-type(2) > h2,
+body main:has(> section#top) > section#work > div:nth-child(2) > h2,
+body main:has(> section#top) > section#process > div:last-child h2,
+body main:has(> section#top) > section:nth-last-of-type(2) h2,
+body main:has(> section#top) > section:last-of-type h2 {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 780;
+  letter-spacing: -0.075em;
+  line-height: 0.92;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) > h2 {
+  max-width: 1380px;
+  font-size: clamp(4.2rem, 7.2vw, 8rem);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article {
+  min-height: 500px;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article h3 {
+  font-size: clamp(2rem, 2.6vw, 2.8rem);
+  font-weight: 760;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article p {
+  max-width: 470px;
+  font-size: clamp(1.18rem, 1.42vw, 1.42rem);
+  font-weight: 540;
+  line-height: 1.56;
+}
+
+body main:has(> section#top) > section#work > div:first-child > p:last-child {
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > h2 {
+  max-width: 980px;
+  font-size: clamp(4rem, 6.5vw, 7rem);
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work a > p {
+  font-size: clamp(1.12rem, 1.32vw, 1.34rem);
+  font-weight: 540;
+  line-height: 1.58;
+}
+
+body main:has(> section#top) > section#work a h3 {
+  font-size: clamp(2.15rem, 3vw, 3.25rem);
+  font-weight: 760;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+body main:has(> section#top) > section#work small {
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+/* From papers to publication becomes a major visual chapter. */
+body main:has(> section#top) > section#process {
+  padding-top: clamp(120px, 13vw, 210px);
+  padding-bottom: clamp(130px, 14vw, 220px);
+}
+
+body main:has(> section#top) > section#process > div:first-child > p:last-child {
+  font-size: clamp(1.12rem, 1.4vw, 1.42rem);
+  font-weight: 650;
+}
+
+body main:has(> section#top) > section#process > div:first-child .sectionLabel {
+  font-size: 0.9rem;
+}
+
+body main:has(> section#top) > section#process > div:nth-child(2) {
+  margin-top: clamp(100px, 11vw, 170px);
+}
+
+body main:has(> section#top) > section#process article {
+  min-height: 540px;
+  padding-top: 38px;
+  padding-bottom: 70px;
+}
+
+body main:has(> section#top) > section#process article > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 34px;
+  padding: 0 12px;
+  background: var(--ln-lime);
+  color: var(--ln-black);
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+body main:has(> section#top) > section#process article h3 {
+  max-width: 360px;
+  margin-top: clamp(82px, 8vw, 120px);
+  font-size: clamp(2.55rem, 3.4vw, 3.8rem);
+  font-weight: 780;
+  letter-spacing: -0.065em;
+  line-height: 0.95;
+}
+
+body main:has(> section#top) > section#process article p {
+  max-width: 360px;
+  margin-top: 34px;
+  font-size: clamp(1.2rem, 1.42vw, 1.45rem);
+  font-weight: 540;
+  line-height: 1.5;
+}
+
+body main:has(> section#top) > section#process > div:last-child {
+  margin-top: clamp(100px, 11vw, 170px);
+  padding-top: clamp(70px, 8vw, 120px);
+}
+
+body main:has(> section#top) > section#process > div:last-child h2 {
+  max-width: 980px;
+  font-size: clamp(4.2rem, 7vw, 7.6rem);
+}
+
+body main:has(> section#top) > section#process > div:last-child > p {
+  max-width: 620px;
+  font-size: clamp(1.22rem, 1.5vw, 1.5rem);
+  font-weight: 540;
+  line-height: 1.56;
+}
+
+/* Pricing and founder copy also receive the stronger hierarchy. */
+body main:has(> section#top) > section#pricing > div:first-child > p:last-child {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+body main:has(> section#top) > section#pricing article h3 {
+  font-size: 1.42rem;
+  font-weight: 760;
+  letter-spacing: -0.035em;
+}
+
+body main:has(> section#top) > section#pricing article > strong {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: clamp(3.2rem, 4.5vw, 4.8rem);
+  font-weight: 720;
+  letter-spacing: -0.065em;
+}
+
+body main:has(> section#top) > section#pricing article > p {
+  font-size: 0.96rem;
+  font-weight: 550;
+}
+
+body main:has(> section#top) > section#pricing article li {
+  font-size: 0.96rem;
+  font-weight: 550;
+  line-height: 1.48;
+}
+
+body main:has(> section#top) > section#pricing > div:last-child {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) h2 {
+  max-width: 980px;
+  font-size: clamp(4rem, 6.5vw, 7rem);
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div p {
+  font-size: clamp(1.16rem, 1.35vw, 1.36rem);
+  font-weight: 540;
+  line-height: 1.62;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div span {
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+body main:has(> section#top) > section:last-of-type h2 {
+  max-width: 1280px;
+  font-size: clamp(4.3rem, 7.4vw, 8rem);
+}
+
+body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
+  max-width: 760px;
+  font-size: clamp(1.14rem, 1.35vw, 1.36rem);
+  font-weight: 540;
+  line-height: 1.6;
+}
+
+body main:has(> section#top) > section:last-of-type > a:last-child {
+  min-height: 64px;
+  padding-right: 29px;
+  padding-left: 29px;
+  font-size: 0.96rem;
+  font-weight: 900;
+}
+
+body main:has(> section#top) > footer {
+  font-size: 0.84rem;
+  font-weight: 680;
+}
+
+@media (max-width: 1180px) {
+  body main:has(> section#top) > section#process > div:nth-child(2) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body main:has(> section#top) > section#process article {
+    min-height: 470px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  }
+}
+
+@media (max-width: 760px) {
+  body main:has(> section#top) > section:nth-of-type(2) > h2,
+  body main:has(> section#top) > section#work > div:nth-child(2) > h2,
+  body main:has(> section#top) > section#process > div:last-child h2,
+  body main:has(> section#top) > section:nth-last-of-type(2) h2,
+  body main:has(> section#top) > section:last-of-type h2 {
+    font-size: clamp(3.2rem, 14vw, 5rem);
+  }
+
+  body main:has(> section#top) > section#process article h3 {
+    font-size: clamp(2.25rem, 9vw, 3.2rem);
+  }
+
+  body main:has(> section#top) > section#process article p {
+    font-size: 1.18rem;
+  }
+}
+
+@media (max-width: 580px) {
+  body main:has(> section#top) > section#process > div:nth-child(2) {
+    grid-template-columns: 1fr;
+  }
+
+  body main:has(> section#top) > section#process article {
+    min-height: auto;
+    padding-bottom: 60px;
+  }
+}
