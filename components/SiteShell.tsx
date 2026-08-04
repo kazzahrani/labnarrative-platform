@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
+import PhotoLabDesign from "@/components/designs/PhotoLabDesign";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import {
   resolveDesignKey,
@@ -79,6 +80,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
 
   if (designVariant === "engeland-modern-v1") {
     return <EngelandDesignWithFigures site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
+  if (designVariant === "prives-photo-lab-v1") {
+    return <PhotoLabDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === "zhang-transcription-v1") {
