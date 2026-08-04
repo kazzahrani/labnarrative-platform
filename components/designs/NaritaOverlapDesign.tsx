@@ -103,9 +103,9 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         return {
           element: panel,
           start: documentTop(panel) - headerHeight,
-          panelSpeed: isHero ? 0.18 : 0.12,
-          imageSpeed: isHero ? 0.05 : 0.035,
-          copySpeed: isHero ? 0.085 : 0.045,
+          panelSpeed: isHero ? 0.28 : 0.22,
+          imageSpeed: isHero ? 0.07 : 0.055,
+          copySpeed: isHero ? 0.11 : 0.085,
         };
       });
     };
