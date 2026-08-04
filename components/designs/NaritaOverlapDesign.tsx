@@ -44,7 +44,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         element instanceof HTMLElement && element.tagName === "SECTION",
     );
 
-    // The homepage now ends after the principal-investigator story.
+    // The homepage ends after the principal-investigator story.
     const hiddenHomeSections = props.route.section === "home"
       ? directSections.slice(3)
       : [];
@@ -65,7 +65,17 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
     );
 
     const finalDirectSection = directSections[directSections.length - 1];
+    const homePrincipalSection = props.route.section === "home"
+      ? directSections[2]
+      : undefined;
+
     const flowTailElements = panelCandidates.filter((element) => {
+      // The homepage PI story should continue in normal document flow with
+      // the footer rather than acting as another covering panel.
+      if (element === homePrincipalSection) {
+        return true;
+      }
+
       if (props.route.section === "members" && element.tagName === "ASIDE") {
         return true;
       }
