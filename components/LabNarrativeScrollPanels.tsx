@@ -5,7 +5,6 @@ import { useEffect } from "react";
 type PanelMeasurement = {
   element: HTMLElement;
   start: number;
-  maxOffset: number;
 };
 
 function documentTop(element: HTMLElement) {
@@ -51,16 +50,15 @@ export default function LabNarrativeScrollPanels() {
       measurements = movingPanels.map((panel) => ({
         element: panel,
         start: documentTop(panel),
-        maxOffset: Math.min(190, Math.max(110, panel.offsetHeight * 0.15)),
       }));
     };
 
     const update = () => {
       frame = 0;
 
-      measurements.forEach(({ element, start, maxOffset }) => {
+      measurements.forEach(({ element, start }) => {
         const distance = Math.max(0, window.scrollY - start);
-        const offset = -Math.min(maxOffset, distance * 0.2);
+        const offset = -(distance * 0.28);
         element.style.setProperty("--ln-panel-offset", `${offset.toFixed(2)}px`);
       });
     };
