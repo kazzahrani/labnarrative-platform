@@ -76,26 +76,36 @@
 }
 
 .heroCopy {
-  left: clamp(28px, 6vw, 92px) !important;
-  right: clamp(28px, 6vw, 92px) !important;
-  bottom: clamp(28px, 4vw, 52px) !important;
+  inset: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  padding: 22px clamp(42px, 9vw, 150px) !important;
   transform: translate3d(0, var(--ciribilli-copy-offset, 0px), 0) !important;
   transition: none !important;
   will-change: transform;
 }
 
 .heroCopy p {
-  margin-bottom: 10px !important;
+  margin: 0 !important;
   font-size: 10px !important;
-  letter-spacing: .18em !important;
+  font-weight: 600 !important;
+  letter-spacing: .28em !important;
+  line-height: 1 !important;
 }
 
 .heroCopy h1 {
-  font-family: Arial, Helvetica, sans-serif !important;
-  font-size: clamp(38px, 5vw, 64px) !important;
+  max-width: min(760px, 72vw) !important;
+  margin: 0 !important;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-size: clamp(34px, 3.5vw, 56px) !important;
   font-weight: 400 !important;
   letter-spacing: -.035em !important;
-  line-height: 1 !important;
+  line-height: .98 !important;
+  text-align: left !important;
 }
 
 .contentPanel {
@@ -189,13 +199,20 @@
   }
 
   .heroCopy {
-    left: 22px !important;
-    right: 22px !important;
-    bottom: 26px !important;
+    gap: 9px !important;
+    padding: 20px 24px !important;
+  }
+
+  .heroCopy p {
+    font-size: 9px !important;
+    letter-spacing: .24em !important;
   }
 
   .heroCopy h1 {
-    font-size: clamp(34px, 11vw, 48px) !important;
+    max-width: 88vw !important;
+    font-size: clamp(25px, 7vw, 34px) !important;
+    letter-spacing: -.025em !important;
+    line-height: 1.02 !important;
   }
 }
 
