@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run verify:templates",
     "build": "next build",
     "start": "next start",
-    "verify:figures": "node scripts/verify-research-figures.mjs"
+    "verify:figures": "node scripts/verify-research-figures.mjs",
+    "verify:templates": "node scripts/verify-ciribilli-narita-template.mjs"
   },
   "dependencies": {
     "next": "16.2.12",
