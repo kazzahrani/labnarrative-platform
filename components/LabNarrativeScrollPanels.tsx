@@ -33,10 +33,14 @@ export default function LabNarrativeScrollPanels() {
     if (sections.length < 2) return;
 
     const terminalPanel = sections[sections.length - 1];
+    const explicitlyRestoredPanels = sections.filter(
+      (section) => section.id === "pricing",
+    );
     const excludedPanels = sections.filter(
       (section) =>
-        section.id === "process" ||
-        section.getAttribute("data-ln-overlap-panel") === "founder",
+        !explicitlyRestoredPanels.includes(section) &&
+        (section.id === "process" ||
+          section.getAttribute("data-ln-overlap-panel") === "founder"),
     );
     const movingPanels = sections.filter(
       (section) => section !== terminalPanel && !excludedPanels.includes(section),
