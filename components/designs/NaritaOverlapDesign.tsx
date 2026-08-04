@@ -106,15 +106,15 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         const isHero = index === 0;
         const panelDrift = isHero
           ? 138
-          : Math.min(112, Math.max(72, panel.offsetHeight * 0.12));
+          : Math.min(138, Math.max(90, panel.offsetHeight * 0.145));
 
         return {
           element: panel,
           start: documentTop(panel) - headerHeight,
-          range: Math.max(panel.offsetHeight * 0.82, window.innerHeight * 0.52, 1),
+          range: Math.max(panel.offsetHeight * 0.76, window.innerHeight * 0.48, 1),
           drift: panelDrift,
-          imageDrift: isHero ? 38 : Math.min(36, Math.max(22, panel.offsetHeight * 0.035)),
-          copyDrift: isHero ? 66 : Math.min(48, Math.max(26, panel.offsetHeight * 0.045)),
+          imageDrift: isHero ? 38 : Math.min(42, Math.max(27, panel.offsetHeight * 0.042)),
+          copyDrift: isHero ? 66 : Math.min(56, Math.max(32, panel.offsetHeight * 0.055)),
         };
       });
     };
