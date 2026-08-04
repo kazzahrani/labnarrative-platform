@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Mutant p53 gain of function and tumour evolution</title>
+  <desc id="desc">A clonal evolution diagram showing mutant p53 accumulation, chromatin rewiring and invasive tumour states.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3f1ec"/><stop offset="1" stop-color="#e2d8da"/></linearGradient>
+    <linearGradient id="clone" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#cf6a7c"/><stop offset="1" stop-color="#7b1730"/></linearGradient>
+    <filter id="s"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#38101a" flood-opacity=".18"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <text x="90" y="110" fill="#17232c" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">MUTANT p53 GAIN OF FUNCTION</text>
+  <text x="90" y="154" fill="#6d7478" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="4">CLONAL SELECTION · CHROMATIN REWIRING · INVASION</text>
+  <path d="M140 800C400 745 505 640 650 530S975 285 1440 220" fill="none" stroke="#9b263d" stroke-width="10" stroke-linecap="round" opacity=".32"/>
+  <g font-family="Arial, Helvetica, sans-serif" filter="url(#s)">
+    <g transform="translate(230 720)">
+      <circle r="94" fill="#fff" stroke="#9aa2a7" stroke-width="8"/>
+      <circle cx="-26" cy="-12" r="18" fill="#aeb6ba"/><circle cx="31" cy="20" r="12" fill="#c8ced1"/>
+      <text y="145" text-anchor="middle" fill="#4f5a60" font-size="22" font-weight="700">heterogeneous tumour</text>
+    </g>
+    <g transform="translate(565 590)">
+      <circle r="112" fill="#fff" stroke="#9b263d" stroke-width="10"/>
+      <circle cx="-30" cy="-20" r="25" fill="#9b263d"/><circle cx="37" cy="28" r="16" fill="#d97f90"/>
+      <text y="8" text-anchor="middle" fill="#17232c" font-family="Georgia, serif" font-size="34" font-weight="700">TP53</text>
+      <text y="174" text-anchor="middle" fill="#6d2635" font-size="22" font-weight="700">mutant clone expands</text>
+    </g>
+    <g transform="translate(930 405)">
+      <circle r="138" fill="url(#clone)" stroke="#651125" stroke-width="10"/>
+      <path d="M-72 -15C-38-80 48-85 82-15S45 102-20 82-102 50-72-15Z" fill="none" stroke="#ffdce4" stroke-width="8"/>
+      <text y="10" text-anchor="middle" fill="#fff" font-family="Georgia, serif" font-size="46" font-weight="700">mut p53</text>
+      <text y="205" text-anchor="middle" fill="#6d2635" font-size="22" font-weight="700">new protein interactions</text>
+    </g>
+    <g transform="translate(1295 260)">
+      <path d="M-140 70C-70-85 60-100 145 25 90 155-60 175-140 70Z" fill="#26131a" stroke="#9b263d" stroke-width="12"/>
+      <path d="M-55 55C10-20 78-35 132-4" fill="none" stroke="#d77e8f" stroke-width="9" stroke-linecap="round"/>
+      <path d="M-55 55L-5 115M-55 55L-92 125" stroke="#d77e8f" stroke-width="9" stroke-linecap="round"/>
+      <text y="230" text-anchor="middle" fill="#6d2635" font-size="22" font-weight="700">invasive state</text>
+    </g>
+  </g>
+  <g transform="translate(160 190)" font-family="Arial, Helvetica, sans-serif">
+    <rect width="660" height="240" rx="28" fill="#fff" opacity=".94"/>
+    <text x="42" y="62" fill="#9b263d" font-size="18" letter-spacing="3" font-weight="700">GAIN-OF-FUNCTION NETWORK</text>
+    <g fill="none" stroke="#9b263d" stroke-width="4">
+      <path d="M80 150H185M265 150H370M450 150H555"/>
+    </g>
+    <g font-size="21" font-weight="700" text-anchor="middle">
+      <rect x="35" y="110" width="130" height="80" rx="18" fill="#f2dde2"/><text x="100" y="158" fill="#6d2635">SWI/SNF</text>
+      <rect x="185" y="110" width="130" height="80" rx="18" fill="#ead4d9"/><text x="250" y="158" fill="#6d2635">HSP70</text>
+      <rect x="335" y="110" width="130" height="80" rx="18" fill="#e3c8cf"/><text x="400" y="158" fill="#6d2635">NF-Y</text>
+      <rect x="485" y="110" width="140" height="80" rx="18" fill="#dcbcc5"/><text x="555" y="158" fill="#6d2635">chromatin</text>
+    </g>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#6d7478">
+    <text x="164" y="920">selection pressure</text><text x="520" y="840">stabilisation</text><text x="875" y="690">transcriptional rewiring</text><text x="1215" y="540">metastatic fitness</text>
+  </g>
+  <text x="1510" y="952" text-anchor="end" fill="#7e8589" font-family="Arial, Helvetica, sans-serif" font-size="18">Original LabNarrative scientific illustration</text>
+</svg>
