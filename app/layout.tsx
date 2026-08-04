@@ -8,6 +8,7 @@ import "./dark-theme-refinement.css";
 import "./gao-layout-fix.css";
 import "./labnarrative-public-refinement.css";
 import "./labnarrative-type-amplification.css";
+import "./labnarrative-section-colors.css";
 
 export const metadata: Metadata = {
   title: {
