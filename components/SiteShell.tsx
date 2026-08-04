@@ -4,6 +4,7 @@ import BourdonDesign from "@/components/designs/BourdonDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
+import NaritaOverlapDesign from "@/components/designs/NaritaOverlapDesign";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import SourcedBourdonResearchDesign from "@/components/designs/SourcedBourdonResearchDesign";
 import SourcedEditorialProjectDesign from "@/components/designs/SourcedEditorialProjectDesign";
@@ -86,6 +87,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
 
   if (designVariant === "engeland-modern-v1") {
     return <EngelandDesignWithFigures site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
+  if (designVariant === "ciribilli-narita-v1") {
+    return <NaritaOverlapDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === "prives-photo-lab-v1") {
