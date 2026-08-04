@@ -5,25 +5,35 @@ import { useEffect } from "react";
 export default function AutomationNavEnhancer() {
   useEffect(() => {
     const pathname = window.location.pathname;
-    if (!pathname.startsWith("/admin") || pathname === "/admin/automation") return;
+    if (!pathname.startsWith("/admin")) return;
 
     let cancelled = false;
     let observer: MutationObserver | null = null;
 
-    const addLink = () => {
-      if (cancelled || document.querySelector("a[data-automation-nav='true']")) return;
+    const addLinks = () => {
+      if (cancelled) return;
       const nav = document.querySelector<HTMLElement>("header nav");
       if (!nav) return;
 
-      const link = document.createElement("a");
-      link.href = "/admin/automation";
-      link.textContent = "Automation";
-      link.dataset.automationNav = "true";
-      nav.prepend(link);
+      if (!document.querySelector("a[data-discovery-nav='true']") && pathname !== "/admin/discovery") {
+        const discovery = document.createElement("a");
+        discovery.href = "/admin/discovery";
+        discovery.textContent = "Discovery";
+        discovery.dataset.discoveryNav = "true";
+        nav.prepend(discovery);
+      }
+
+      if (!document.querySelector("a[data-automation-nav='true']") && pathname !== "/admin/automation") {
+        const automation = document.createElement("a");
+        automation.href = "/admin/automation";
+        automation.textContent = "Automation";
+        automation.dataset.automationNav = "true";
+        nav.prepend(automation);
+      }
     };
 
-    addLink();
-    observer = new MutationObserver(addLink);
+    addLinks();
+    observer = new MutationObserver(addLinks);
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
