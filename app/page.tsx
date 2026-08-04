@@ -1,54 +1,51 @@
 import styles from "./page.module.css";
 
-const concepts = [
-  {
-    name: "Bremner Laboratory",
-    field: "Cancer states · Retinal biology",
-    description:
-      "An editorial, image-led concept connecting transformation competence, retinoblastoma and retinal regeneration.",
-    href: "https://bremner.labnarrative.com",
-  },
-  {
-    name: "Litovchick Laboratory",
-    field: "DREAM · Cell-cycle control",
-    description:
-      "A structured scientific identity for a laboratory studying transcriptional regulation, cancer and the mammalian DREAM complex.",
-    href: "https://litovchick.labnarrative.com",
-  },
-  {
-    name: "Bourdon Laboratory",
-    field: "p53 isoforms · Cell fate",
-    description:
-      "A complete multi-page research website presenting connected programmes in p53 biology, cancer, ageing and therapeutic development.",
-    href: "https://bourdon.labnarrative.com",
-  },
-  {
-    name: "Chen Laboratory",
-    field: "Tumour suppressors · Cancer biology",
-    description:
-      "A modern visual direction built around tumour-suppressor research, genomic stability and cancer mechanisms.",
-    href: "https://chen.labnarrative.com",
-  },
-];
-
 const approach = [
   {
     number: "01",
     title: "We understand the science",
-    description:
-      "We read the laboratory’s publications and organise its research into a clear, accurate story—without asking the principal investigator to write the website alone.",
+    copy: "We read your publications and translate the work into a clear, accurate research story—without asking you to write the website yourself.",
   },
   {
     number: "02",
     title: "We design the experience",
-    description:
-      "Research, people, publications, opportunities and collaborations are shaped into a calm, modern and distinctive online presence.",
+    copy: "A calm, modern website gives your group a credible home for its research, people, publications, opportunities and collaborations.",
   },
   {
     number: "03",
     title: "We make launch effortless",
-    description:
-      "LabNarrative handles the scientific writing, structure, design, development, domain connection and final launch as one complete service.",
+    copy: "Review a private concept, request focused changes, then launch on a domain owned by your laboratory or institution.",
+  },
+];
+
+const concepts = [
+  {
+    number: "01",
+    lab: "Bremner Laboratory",
+    focus: "Cancer states · Retinal biology",
+    copy: "An editorial concept connecting transformation competence, retinoblastoma and retinal regeneration.",
+    href: "https://bremner.labnarrative.com",
+  },
+  {
+    number: "02",
+    lab: "Litovchick Laboratory",
+    focus: "DREAM · Cell-cycle control",
+    copy: "A structured scientific identity for a laboratory studying transcriptional regulation and cancer biology.",
+    href: "https://litovchick.labnarrative.com",
+  },
+  {
+    number: "03",
+    lab: "Bourdon Laboratory",
+    focus: "p53 isoforms · Cell fate",
+    copy: "A complete multi-page website presenting connected programmes in p53 biology, cancer and ageing.",
+    href: "https://bourdon.labnarrative.com",
+  },
+  {
+    number: "04",
+    lab: "Chen Laboratory",
+    focus: "Tumour suppressors · Cancer biology",
+    copy: "A modern image-led direction built around tumour-suppressor research and genomic stability.",
+    href: "https://chen.labnarrative.com",
   },
 ];
 
@@ -56,26 +53,22 @@ const process = [
   {
     number: "01",
     title: "Discover",
-    description:
-      "We study your laboratory, recent papers, research programmes and current online presence.",
+    copy: "We study your laboratory, recent papers and current online presence.",
   },
   {
     number: "02",
     title: "Compose",
-    description:
-      "We shape the scientific narrative and build a private website concept around the work your group actually does.",
+    copy: "We shape the scientific narrative and build a private concept website.",
   },
   {
     number: "03",
     title: "Refine",
-    description:
-      "You verify the science and guide focused adjustments to the content, imagery and visual direction.",
+    copy: "You verify the science and choose what should be adjusted or added.",
   },
   {
     number: "04",
     title: "Launch",
-    description:
-      "We connect the domain, publish the website and provide private access for future updates.",
+    copy: "We connect your domain and hand over a finished, maintainable website.",
   },
 ];
 
@@ -83,8 +76,7 @@ const packages = [
   {
     name: "Essential",
     price: "$750",
-    suffix: "one-time",
-    audience: "For focused and emerging laboratories",
+    subtitle: "For focused and emerging laboratories",
     features: [
       "Custom scientific website direction",
       "Research copy and content organisation",
@@ -96,9 +88,8 @@ const packages = [
   {
     name: "Professional",
     price: "$1,050",
-    suffix: "one-time",
-    audience: "For active groups with people and projects",
-    featured: true,
+    subtitle: "For active groups with people and projects",
+    recommended: true,
     features: [
       "Everything included in Essential",
       "Complete multi-page laboratory website",
@@ -109,10 +100,9 @@ const packages = [
     ],
   },
   {
-    name: "Annual Care",
-    price: "$300",
-    suffix: "per year",
-    audience: "For a website that stays current",
+    name: "+ Annual care",
+    price: "$300 / year",
+    subtitle: "For a site that stays current",
     features: [
       "Managed hosting and maintenance",
       "Backups and technical updates",
@@ -135,159 +125,139 @@ export default function HomePage() {
           <a href="#work">Work</a>
           <a href="#process">Process</a>
           <a href="#pricing">Pricing</a>
-          <a
-            className={styles.headerCta}
-            href="mailto:hello@labnarrative.com?subject=Laboratory%20website%20enquiry"
-          >
-            Start a project <span aria-hidden="true">↗</span>
-          </a>
         </nav>
+
+        <a
+          className={styles.headerCta}
+          href="mailto:hello@labnarrative.com?subject=Laboratory%20website%20enquiry"
+        >
+          Start a project <span aria-hidden="true">↗</span>
+        </a>
       </header>
 
       <section className={styles.hero} id="top">
-        <p className={styles.kicker}>Websites for scientific laboratories</p>
-        <h1>
-          Good science deserves
-          <span>to be presented well.</span>
-        </h1>
-        <p className={styles.heroText}>
-          LabNarrative researches, writes and designs modern laboratory websites—so principal
-          investigators can present their science clearly without becoming web designers.
-        </p>
-        <a
-          className={styles.primaryCta}
-          href="mailto:hello@labnarrative.com?subject=Request%20a%20private%20laboratory%20concept"
-        >
-          Request a private concept <span aria-hidden="true">↗</span>
-        </a>
+        <p className={styles.eyebrow}>Websites for scientific laboratories</p>
 
-        <div className={styles.heroPrinciples} aria-label="LabNarrative strengths">
+        <div className={styles.heroGrid}>
+          <h1>
+            Your research
+            <br />
+            deserves
+            <br />
+            a clearer <em>story.</em>
+          </h1>
+
+          <div className={styles.heroAside}>
+            <p>
+              We research, write and design modern laboratory websites—so principal investigators
+              can present their science without becoming web designers.
+            </p>
+            <a href="mailto:hello@labnarrative.com?subject=Request%20a%20private%20concept">
+              Request a private concept <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
+
+        <div className={styles.heroFooter}>
           <span>Scientific understanding</span>
           <span>Editorial design</span>
           <span>Effortless launch</span>
         </div>
       </section>
 
-      <section className={styles.approachSection} id="approach">
-        <div className={styles.introBlock}>
-          <p className={styles.sectionLabel}>The LabNarrative approach</p>
-          <h2>
-            Not a generic template filled with scientific words. A considered digital home built
-            around the work your laboratory actually does.
-          </h2>
-        </div>
+      <section className={styles.approachSection}>
+        <p className={styles.sectionLabel}>The LabNarrative approach</p>
+        <h2>
+          Not a generic template filled with scientific words. A considered digital home built
+          around the work your laboratory actually does.
+        </h2>
 
         <div className={styles.approachGrid}>
           {approach.map((item) => (
-            <article className={styles.approachItem} key={item.number}>
+            <article key={item.number}>
               <span className={styles.number}>{item.number}</span>
               <h3>{item.title}</h3>
-              <p>{item.description}</p>
+              <p>{item.copy}</p>
             </article>
           ))}
         </div>
       </section>
 
       <section className={styles.workSection} id="work">
-        <div className={styles.sectionHeadingRow}>
-          <div>
-            <p className={styles.sectionLabel}>Selected concepts</p>
-            <h2>Different science deserves a different identity.</h2>
-          </div>
+        <div className={styles.sectionTopline}>
+          <p className={styles.sectionLabel}>Selected concepts</p>
+          <p>Different science. Different identity.</p>
+        </div>
+
+        <div className={styles.workIntro}>
+          <h2>A tailored direction for every laboratory.</h2>
           <p>
-            Each direction is shaped around the laboratory’s research rather than a generic visual
-            theme. These concepts show how different scientific programmes can become clear,
-            coherent online experiences.
+            Each concept begins with the research rather than a generic visual theme. These
+            independent examples were created from publicly available information to demonstrate the
+            LabNarrative approach.
           </p>
         </div>
 
-        <div className={styles.conceptList}>
-          {concepts.map((concept, index) => (
-            <a
-              className={styles.conceptItem}
-              href={concept.href}
-              key={concept.name}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <span className={styles.conceptIndex}>{String(index + 1).padStart(2, "0")}</span>
-              <div className={styles.conceptTitle}>
-                <span>{concept.field}</span>
-                <h3>{concept.name}</h3>
+        <div className={styles.workList}>
+          {concepts.map((item) => (
+            <a href={item.href} key={item.lab} target="_blank" rel="noreferrer">
+              <span className={styles.number}>{item.number}</span>
+              <div>
+                <small>{item.focus}</small>
+                <h3>{item.lab}</h3>
               </div>
-              <p>{concept.description}</p>
-              <span className={styles.conceptArrow} aria-hidden="true">↗</span>
+              <p>{item.copy}</p>
+              <span className={styles.arrow} aria-hidden="true">↗</span>
             </a>
           ))}
         </div>
-
-        <p className={styles.disclaimer}>
-          These include independent website concepts created from publicly available information to
-          demonstrate the LabNarrative scientific-communication and design approach.
-        </p>
       </section>
 
       <section className={styles.processSection} id="process">
-        <div className={styles.processIntro}>
+        <div className={styles.sectionTopline}>
           <p className={styles.sectionLabel}>From papers to publication</p>
-          <h2>A focused process that protects your time.</h2>
-          <p>
-            The principal investigator remains in control of the science and direction while
-            LabNarrative handles the writing, organisation, design and technical work.
-          </p>
+          <p>A focused process that protects your time.</p>
         </div>
 
         <div className={styles.processGrid}>
           {process.map((item) => (
-            <article className={styles.processItem} key={item.number}>
+            <article key={item.number}>
               <span className={styles.number}>{item.number}</span>
               <h3>{item.title}</h3>
-              <p>{item.description}</p>
+              <p>{item.copy}</p>
             </article>
           ))}
         </div>
 
-        <div className={styles.platformPanel}>
+        <div className={styles.platformNote}>
           <div>
             <p className={styles.sectionLabel}>After launch</p>
-            <h3>A website your laboratory can keep current.</h3>
+            <h2>A website your laboratory can keep current.</h2>
           </div>
           <p>
-            Research changes, papers appear and people join. Private editing access allows the
-            laboratory to update projects, members, publications and opportunities through a simple
-            draft, preview and publish workflow.
+            Private editing access lets your group update projects, members, publications and
+            opportunities through a simple draft, preview and publish workflow—with version history
+            available when needed.
           </p>
-          <ul>
-            <li>Private laboratory login</li>
-            <li>Draft, preview and publish</li>
-            <li>Version history and restore</li>
-          </ul>
         </div>
       </section>
 
       <section className={styles.pricingSection} id="pricing">
-        <div className={styles.pricingIntro}>
+        <div className={styles.sectionTopline}>
           <p className={styles.sectionLabel}>Simple packages</p>
-          <h2>Clear scope. No technical learning curve.</h2>
-          <p>
-            Professional is recommended for active laboratories that need a substantial multi-page
-            presence and simple ongoing control.
-          </p>
+          <p>Clear scope. No technical learning curve.</p>
         </div>
 
         <div className={styles.pricingGrid}>
           {packages.map((item) => (
             <article
-              className={`${styles.priceCard} ${item.featured ? styles.featuredCard : ""}`}
+              className={item.recommended ? styles.recommendedCard : undefined}
               key={item.name}
             >
-              {item.featured ? <span className={styles.featuredLabel}>Most complete</span> : null}
+              {item.recommended ? <span className={styles.badge}>Most complete</span> : null}
               <h3>{item.name}</h3>
-              <div className={styles.priceLine}>
-                <strong>{item.price}</strong>
-                <span>{item.suffix}</span>
-              </div>
-              <p className={styles.audience}>{item.audience}</p>
+              <strong>{item.price}</strong>
+              <p>{item.subtitle}</p>
               <ul>
                 {item.features.map((feature) => (
                   <li key={feature}>{feature}</li>
@@ -297,54 +267,52 @@ export default function HomePage() {
           ))}
         </div>
 
-        <div className={styles.deliveryDetails}>
+        <div className={styles.deliveryLine}>
           <span>25% deposit to begin</span>
           <span>First review in 3–5 days</span>
           <span>Typical launch in 7–10 days</span>
         </div>
       </section>
 
-      <section className={styles.founderSection} id="about">
+      <section className={styles.founderSection}>
+        <p className={styles.sectionLabel}>Built by a scientist, for scientists</p>
         <div>
-          <p className={styles.sectionLabel}>Built by a scientist, for scientists</p>
           <h2>Scientific credibility is part of the design.</h2>
-        </div>
-        <div className={styles.founderCopy}>
-          <p>
-            Khaled Azzahrani, Ph.D., is a molecular oncology researcher whose work has focused on
-            p53, p21–RB/E2F signalling, DREAM and transcriptional regulation. He founded
-            LabNarrative to help research groups communicate their scientific identity with the
-            clarity and quality their work deserves.
-          </p>
-          <p>
-            Publications can be read critically, connected research themes can be presented
-            accurately and scientific language can be shaped without losing its meaning.
-          </p>
-          <span>Khaled Azzahrani, Ph.D. · Founder, LabNarrative</span>
+          <div className={styles.founderCopy}>
+            <p>
+              Khaled Azzahrani, Ph.D., is a molecular oncology researcher whose work has focused on
+              p53, p21–RB/E2F signalling, DREAM and transcriptional regulation.
+            </p>
+            <p>
+              He founded LabNarrative so scientific groups can communicate their identity clearly,
+              accurately and with the visual quality their work deserves.
+            </p>
+            <span>Khaled Azzahrani, Ph.D. · Founder, LabNarrative</span>
+          </div>
         </div>
       </section>
 
       <section className={styles.finalCta}>
-        <div>
-          <p className={styles.sectionLabel}>Begin with the science</p>
-          <h2>Send us your laboratory profile. We’ll imagine the website.</h2>
-        </div>
-        <div>
-          <p>
-            Share your current website, laboratory profile or research interests. We will recommend
-            a focused direction and a practical route to launch.
-          </p>
-          <a
-            href="mailto:hello@labnarrative.com?subject=Laboratory%20website%20enquiry"
-            className={styles.lightCta}
-          >
-            Email LabNarrative <span aria-hidden="true">↗</span>
-          </a>
-        </div>
+        <p className={styles.sectionLabel}>Begin with the science</p>
+        <h2>
+          Send us your laboratory profile.
+          <br />
+          We’ll imagine the website.
+        </h2>
+        <p>
+          Introduce your group at <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
+          {" "}and receive a focused project recommendation.
+        </p>
+        <a
+          className={styles.emailButton}
+          href="mailto:hello@labnarrative.com?subject=Laboratory%20website%20enquiry"
+        >
+          Email LabNarrative <span aria-hidden="true">↗</span>
+        </a>
       </section>
 
       <footer className={styles.footer}>
-        <a className={styles.footerWordmark} href="#top">LabNarrative</a>
+        <a className={styles.wordmark} href="#top">LabNarrative</a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
         <span>© 2026 LabNarrative</span>
       </footer>
