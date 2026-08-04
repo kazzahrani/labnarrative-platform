@@ -1,0 +1,328 @@
+/* Softer, lower-contrast dark palette for LabNarrative operational pages. */
+
+html[data-platform-theme="dark"] {
+  --ln-dark-bg: #171b19;
+  --ln-dark-bg-soft: #1b201d;
+  --ln-dark-surface: #202622;
+  --ln-dark-surface-raised: #252c28;
+  --ln-dark-surface-active: #2a332e;
+  --ln-dark-border: #3a4540;
+  --ln-dark-border-soft: #303a35;
+  --ln-dark-text: #d3dad6;
+  --ln-dark-text-strong: #dce2df;
+  --ln-dark-muted: #9ca7a1;
+  --ln-dark-faint: #7f8b85;
+  --ln-dark-accent: #7f9e8e;
+  --ln-dark-accent-surface: #2b3b33;
+}
+
+html[data-platform-theme="dark"] .platform-theme-toggle {
+  border-color: #46524c;
+  background: rgba(35, 42, 38, 0.94);
+  color: var(--ln-dark-text);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+}
+
+html[data-platform-theme="dark"] .platform-theme-toggle:hover {
+  border-color: #59675f;
+  background: #29312c;
+  box-shadow: 0 9px 22px rgba(0, 0, 0, 0.24);
+}
+
+/* Platform landing page */
+html[data-platform-theme="dark"] body.platform-home-page,
+html[data-platform-theme="dark"] body.platform-home-page .platform-home {
+  background: var(--ln-dark-bg) !important;
+  color: var(--ln-dark-text) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-home-page .platform-home {
+  background:
+    radial-gradient(circle at 82% 4%, rgba(111, 143, 126, 0.1), transparent 34%),
+    var(--ln-dark-bg) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-home-page h1,
+html[data-platform-theme="dark"] body.platform-home-page .platform-wordmark {
+  color: var(--ln-dark-text-strong) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-home-page .platform-header,
+html[data-platform-theme="dark"] body.platform-home-page .architecture-note {
+  border-color: var(--ln-dark-border-soft) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-home-page .status-pill {
+  border-color: #56635d !important;
+  color: #bdc7c2 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-home-page .platform-hero > p,
+html[data-platform-theme="dark"] body.platform-home-page .architecture-note p {
+  color: var(--ln-dark-muted) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-home-page .platform-hero nav a {
+  border-color: #52645a !important;
+  background: #2d4036 !important;
+  color: #dce3df !important;
+}
+
+/* Administrator sign-in and editing workspace */
+html[data-platform-theme="dark"] body.platform-admin-page,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-shell,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-loading,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-auth-page {
+  background: var(--ln-dark-bg) !important;
+  color: var(--ln-dark-text) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-topbar {
+  border-color: var(--ln-dark-border-soft) !important;
+  background: rgba(27, 32, 29, 0.96) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-topbar,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-topbar a,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-topbar button,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-brand {
+  color: var(--ln-dark-text) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-topbar span:not(.admin-brand),
+html[data-platform-theme="dark"] body.platform-admin-page .admin-kicker,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-panel-heading p,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-site-list small {
+  color: var(--ln-dark-muted) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-sidebar,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-panel,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-auth-card,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-page,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-image-field {
+  border-color: var(--ln-dark-border) !important;
+  background: var(--ln-dark-surface) !important;
+  color: var(--ln-dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-sidebar {
+  border-right-color: var(--ln-dark-border-soft) !important;
+  background: var(--ln-dark-bg-soft) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-editor-heading h1,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-panel-heading h2,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-list-heading h3,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-page > h1,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-section > h2,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-list-heading,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-repeat-title {
+  color: var(--ln-dark-text-strong) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-top {
+  background: #263034 !important;
+  color: var(--ln-dark-text) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-tabs {
+  border-color: var(--ln-dark-border-soft) !important;
+  background: var(--ln-dark-bg-soft) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-tabs button {
+  color: var(--ln-dark-muted) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-tabs button.active {
+  border-bottom-color: var(--ln-dark-accent) !important;
+  color: var(--ln-dark-text-strong) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-editor-section,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-panel,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-repeat-list article {
+  border-color: var(--ln-dark-border-soft) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-site-list button,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-sidebar-heading button,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-list-heading button,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-list-heading button,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-repeat-title button,
+html[data-platform-theme="dark"] body.platform-admin-page .advanced-image-actions button,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-secondary-button {
+  border-color: #46524c !important;
+  background: var(--ln-dark-surface-raised) !important;
+  color: #ccd5d0 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-site-list button:hover,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-site-list button.active,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-secondary-button:hover {
+  border-color: #59675f !important;
+  background: var(--ln-dark-surface-active) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page input,
+html[data-platform-theme="dark"] body.platform-admin-page select,
+html[data-platform-theme="dark"] body.platform-admin-page textarea {
+  border-color: #404b46 !important;
+  background: #1a1f1d !important;
+  color: #d7deda !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page input::placeholder,
+html[data-platform-theme="dark"] body.platform-admin-page textarea::placeholder {
+  color: var(--ln-dark-faint) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-field > span,
+html[data-platform-theme="dark"] body.platform-admin-page label > span,
+html[data-platform-theme="dark"] body.platform-admin-page .admin-repeat-number {
+  color: #a8b1ac !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-notice {
+  border-color: #685d45 !important;
+  background: #2a271f !important;
+  color: #cfc1a0 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-template-label {
+  border-color: #4b5851 !important;
+  color: #bac5bf !important;
+}
+
+html[data-platform-theme="dark"] body.platform-admin-page .admin-save-bar {
+  border-color: #40564b !important;
+  background: #25372f !important;
+  color: #d8e0dc !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Website monitor */
+html[data-platform-theme="dark"] body.platform-monitor-page,
+html[data-platform-theme="dark"] body.platform-monitor-page > main {
+  background: var(--ln-dark-bg) !important;
+  color: var(--ln-dark-text) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page header {
+  border-color: var(--ln-dark-border-soft) !important;
+  background: rgba(27, 32, 29, 0.96) !important;
+  color: var(--ln-dark-text) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page header a,
+html[data-platform-theme="dark"] body.platform-monitor-page header span {
+  color: #cbd4cf !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page h1,
+html[data-platform-theme="dark"] body.platform-monitor-page h2,
+html[data-platform-theme="dark"] body.platform-monitor-page strong {
+  color: var(--ln-dark-text-strong) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page p,
+html[data-platform-theme="dark"] body.platform-monitor-page small,
+html[data-platform-theme="dark"] body.platform-monitor-page label,
+html[data-platform-theme="dark"] body.platform-monitor-page .kicker {
+  color: var(--ln-dark-muted) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page section[aria-label="Status definitions"],
+html[data-platform-theme="dark"] body.platform-monitor-page section[aria-label="Website totals and status filters"],
+html[data-platform-theme="dark"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button,
+html[data-platform-theme="dark"] body.platform-monitor-page main div:has(> table),
+html[data-platform-theme="dark"] body.platform-monitor-page .stateCard {
+  border-color: var(--ln-dark-border) !important;
+  background: var(--ln-dark-surface) !important;
+  color: var(--ln-dark-text) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page section[aria-label="Status definitions"] article,
+html[data-platform-theme="dark"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button {
+  border-color: var(--ln-dark-border-soft) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button:hover,
+html[data-platform-theme="dark"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button[aria-pressed="true"] {
+  background: var(--ln-dark-surface-active) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page input,
+html[data-platform-theme="dark"] body.platform-monitor-page select {
+  border-color: #404b46 !important;
+  background: #1a1f1d !important;
+  color: #d2dad5 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page input::placeholder {
+  color: var(--ln-dark-faint) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page table,
+html[data-platform-theme="dark"] body.platform-monitor-page tbody,
+html[data-platform-theme="dark"] body.platform-monitor-page tr,
+html[data-platform-theme="dark"] body.platform-monitor-page td {
+  background: var(--ln-dark-surface) !important;
+  color: #bdc7c1 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page th {
+  border-color: var(--ln-dark-border) !important;
+  background: var(--ln-dark-surface-raised) !important;
+  color: #939f99 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page td {
+  border-color: var(--ln-dark-border-soft) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page tbody tr:hover,
+html[data-platform-theme="dark"] body.platform-monitor-page tbody tr:hover td {
+  background: #262e29 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page td > strong {
+  color: #d5ddd8 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page td > span,
+html[data-platform-theme="dark"] body.platform-monitor-page td button {
+  color: #939f99 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page td a {
+  border-color: #46524c !important;
+  background: var(--ln-dark-surface-raised) !important;
+  color: #ccd5d0 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page td a:hover {
+  border-color: #5b6961 !important;
+  background: var(--ln-dark-surface-active) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page .notice {
+  border-color: #685d45 !important;
+  background: #2a271f !important;
+  color: #cfc1a0 !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page button:not([aria-pressed]),
+html[data-platform-theme="dark"] body.platform-monitor-page a[class*="primary"] {
+  border-color: #455c50 !important;
+  background: #2d4438 !important;
+  color: #d8e0dc !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page button:not([aria-pressed]):hover,
+html[data-platform-theme="dark"] body.platform-monitor-page a[class*="primary"]:hover {
+  background: #365043 !important;
+}
