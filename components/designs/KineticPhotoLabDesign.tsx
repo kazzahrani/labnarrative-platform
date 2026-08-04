@@ -18,26 +18,26 @@ type GallerySlide = {
   credit: string;
 };
 
-const SCIENCE_SLIDES: GallerySlide[] = [
+const MICROSCOPY_SLIDES: GallerySlide[] = [
   {
-    src: "https://visualsonline.cancer.gov/retrieve.cfm?dpi=300&fileformat=jpg&imageid=10573",
-    alt: "Multiphoton microscopy image of a breast tumour microenvironment",
-    credit: "Breast tumour microenvironment · Szulczewski, Inman, Eliceiri & Keely · NCI",
+    src: "https://upload.wikimedia.org/wikipedia/commons/b/b3/HeLa-I.jpg",
+    alt: "Multiphoton fluorescence microscopy of HeLa cells showing Golgi apparatus, microtubules and DNA",
+    credit: "HeLa cells · Golgi, microtubules & DNA · NIH · Public domain",
   },
   {
-    src: "https://visualsonline.cancer.gov/retrieve.cfm?dpi=300&fileformat=jpg&imageid=11866",
-    alt: "Fluorescence microscopy image of HeLa cells showing Golgi, microtubules and DNA",
-    credit: "HeLa cells · Golgi, microtubules & DNA · Tom Deerinck / NIGMS, NIH",
+    src: "https://upload.wikimedia.org/wikipedia/commons/2/21/HeLa-II.jpg",
+    alt: "Multiphoton fluorescence microscopy of HeLa cells showing actin, microtubules and nuclei",
+    credit: "HeLa cells · Actin, microtubules & nuclei · NIH · Public domain",
   },
   {
-    src: "https://visualsonline.cancer.gov/retrieve.cfm?dpi=300&fileformat=jpg&imageid=11867",
-    alt: "Fluorescence microscopy image of HeLa cells showing actin, microtubules and nuclei",
-    credit: "HeLa cells · Actin, microtubules & nuclei · Tom Deerinck / NIGMS, NIH",
+    src: "https://upload.wikimedia.org/wikipedia/commons/4/4d/Multicolor_fluorescence_image_of_a_living_HeLa_cell.jpg",
+    alt: "Confocal fluorescence image of living HeLa cells showing mitochondria, microtubules and nuclei",
+    credit: "Living HeLa cells · Mitochondria, microtubules & nuclei · 8x57is · CC BY-SA 4.0",
   },
   {
-    src: "https://visualsonline.cancer.gov/retrieve.cfm?dpi=300&fileformat=jpg&imageid=10502",
-    alt: "Fluorescence microscopy image showing heterogeneity in triple-negative breast cancer",
-    credit: "Triple-negative breast cancer heterogeneity · Kevin Janes / NCI",
+    src: "https://upload.wikimedia.org/wikipedia/commons/0/09/Fluorescence_microscopy_of_the_oral_cancer_cells.jpg",
+    alt: "Fluorescence microscopy of human oral cancer cells",
+    credit: "Human oral cancer cells · Korinna · CC BY 4.0",
   },
 ];
 
@@ -103,56 +103,48 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       if (!animationFrame) animationFrame = window.requestAnimationFrame(updateScrollEffects);
     };
 
+    const cleanSharedEffects = () => {
+      observer?.disconnect();
+      revealSections.forEach((section) => section.classList.remove("kinetic-reveal", "is-visible"));
+      window.removeEventListener("scroll", requestScrollUpdate);
+      window.removeEventListener("resize", requestScrollUpdate);
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      root.style.removeProperty("--kinetic-page-progress");
+    };
+
     updateScrollEffects();
     window.addEventListener("scroll", requestScrollUpdate, { passive: true });
     window.addEventListener("resize", requestScrollUpdate);
 
-    if (!homeHero) {
-      return () => {
-        observer?.disconnect();
-        revealSections.forEach((section) => section.classList.remove("kinetic-reveal", "is-visible"));
-        window.removeEventListener("scroll", requestScrollUpdate);
-        window.removeEventListener("resize", requestScrollUpdate);
-        if (animationFrame) window.cancelAnimationFrame(animationFrame);
-        root.style.removeProperty("--kinetic-page-progress");
-      };
-    }
+    if (!homeHero) return cleanSharedEffects;
 
     const originalImage = homeHero.querySelector(":scope > img");
-    if (!(originalImage instanceof HTMLImageElement)) {
-      return () => {
-        observer?.disconnect();
-        revealSections.forEach((section) => section.classList.remove("kinetic-reveal", "is-visible"));
-        window.removeEventListener("scroll", requestScrollUpdate);
-        window.removeEventListener("resize", requestScrollUpdate);
-        if (animationFrame) window.cancelAnimationFrame(animationFrame);
-        root.style.removeProperty("--kinetic-page-progress");
-      };
-    }
+    if (!(originalImage instanceof HTMLImageElement)) return cleanSharedEffects;
+
+    const originalSource = originalImage.getAttribute("src") || "";
+    const originalAlt = originalImage.alt;
 
     homeHero.classList.add("kinetic-photo-hero");
     homeHero.setAttribute("aria-roledescription", "carousel");
-    homeHero.setAttribute("aria-label", `${props.site.labName} visual gallery`);
+    homeHero.setAttribute("aria-label", `${props.site.labName} microscopy gallery`);
 
-    const originalSlide: GallerySlide = {
-      src: originalImage.currentSrc || originalImage.src,
-      alt: originalImage.alt || `${props.site.labName} portrait`,
-      credit: `${props.site.piName} · ${props.site.institution}`,
-    };
-    const slides = [originalSlide, ...SCIENCE_SLIDES];
+    const slides = MICROSCOPY_SLIDES;
     const slideNodes: HTMLImageElement[] = [originalImage];
     const addedNodes: HTMLElement[] = [];
 
+    originalImage.removeAttribute("srcset");
+    originalImage.src = slides[0].src;
+    originalImage.alt = slides[0].alt;
     originalImage.classList.add("kinetic-gallery-slide", "is-active");
     originalImage.dataset.galleryIndex = "0";
     originalImage.setAttribute("aria-hidden", "false");
 
-    SCIENCE_SLIDES.forEach((slide, offset) => {
+    slides.slice(1).forEach((slide, offset) => {
       const image = document.createElement("img");
       image.src = slide.src;
       image.alt = slide.alt;
       image.decoding = "async";
-      image.loading = offset < 1 ? "eager" : "lazy";
+      image.loading = offset === 0 ? "eager" : "lazy";
       image.className = "kinetic-gallery-slide";
       image.dataset.galleryIndex = String(offset + 1);
       image.setAttribute("aria-hidden", "true");
@@ -176,12 +168,12 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
 
     const controls = document.createElement("div");
     controls.className = "kinetic-gallery-controls";
-    const previous = makeButton("kinetic-gallery-arrow", "Previous gallery image", "←");
-    const next = makeButton("kinetic-gallery-arrow", "Next gallery image", "→");
+    const previous = makeButton("kinetic-gallery-arrow", "Previous microscopy image", "←");
+    const next = makeButton("kinetic-gallery-arrow", "Next microscopy image", "→");
     const dots = document.createElement("div");
     dots.className = "kinetic-gallery-dots";
     dots.setAttribute("role", "tablist");
-    dots.setAttribute("aria-label", "Choose gallery image");
+    dots.setAttribute("aria-label", "Choose microscopy image");
 
     const dotNodes = slides.map((slide, index) => {
       const dot = makeButton("kinetic-gallery-dot", `Show image ${index + 1}: ${slide.alt}`, "");
@@ -243,10 +235,12 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       showSlide(activeIndex - 1);
       startTimer();
     };
+
     const goNext = () => {
       showSlide(activeIndex + 1);
       startTimer();
     };
+
     const onVisibilityChange = () => startTimer();
     const onPointerDown = (event: PointerEvent) => {
       pointerStartX = event.clientX;
@@ -275,10 +269,7 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
 
     return () => {
       stopTimer();
-      observer?.disconnect();
-      revealSections.forEach((section) => section.classList.remove("kinetic-reveal", "is-visible"));
-      window.removeEventListener("scroll", requestScrollUpdate);
-      window.removeEventListener("resize", requestScrollUpdate);
+      cleanSharedEffects();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       previous.removeEventListener("click", goPrevious);
       next.removeEventListener("click", goNext);
@@ -288,21 +279,22 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       homeHero.removeEventListener("focusout", resume);
       homeHero.removeEventListener("pointerdown", onPointerDown);
       homeHero.removeEventListener("pointerup", onPointerUp);
-      if (animationFrame) window.cancelAnimationFrame(animationFrame);
       addedNodes.forEach((node) => node.remove());
       originalImage.classList.remove("kinetic-gallery-slide", "is-active");
       originalImage.removeAttribute("data-gallery-index");
       originalImage.removeAttribute("aria-hidden");
+      originalImage.src = originalSource;
+      originalImage.alt = originalAlt;
       homeHero.classList.remove("kinetic-photo-hero");
       homeHero.removeAttribute("aria-roledescription");
       homeHero.removeAttribute("aria-label");
+      homeHero.removeAttribute("data-gallery-index");
       homeHero.style.removeProperty("--kinetic-progress");
-      root.style.removeProperty("--kinetic-page-progress");
     };
-  }, [props.route.section, props.site.institution, props.site.labName, props.site.piName, props.site.slug]);
+  }, [props.route.section, props.site.labName, props.site.slug]);
 
   return (
-    <div className={styles.root} ref={rootRef}>
+    <div className={`${styles.root} ${props.route.section === "home" ? styles.home : ""}`} ref={rootRef}>
       <PhotoLabDesign {...props} />
     </div>
   );
