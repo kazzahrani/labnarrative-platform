@@ -98,7 +98,7 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
     return <EditorialImageDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
-  const hasSourcedResearchFigures = site.research?.some((project) => project.figureImage && project.figureSource) ?? false;
+  const hasSourcedResearchFigures = site.research?.some((project) => project.figureImage && Boolean((project as { figureSource?: string }).figureSource)) ?? false;
   if (designKey === "bourdon-full" && hasSourcedResearchFigures) {
     return <SourcedBourdonResearchDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
