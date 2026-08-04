@@ -138,8 +138,8 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
   const projects = researchProjects(site);
   const members = labMembers(site);
   const pi = members[0];
-  const heroImage = pages.home.homepageImage || site.heroImage || pages.home.topPortrait || pages.home.piImage || pi?.image;
-  const portrait = pages.home.piImage || pi?.image || pages.home.topPortrait || site.heroImage;
+  const heroImage = pages.home.homepageImage || site.heroImage || pages.home.topPortrait;
+  const portrait = pages.home.piImage || pi?.image;
 
   return (
     <>
@@ -164,7 +164,7 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
       </section>
 
       <section className={styles.piStory}>
-        <div className={styles.piPhoto}><Picture src={portrait} alt={pages.home.piName || site.piName} fallback={initials(site.piName)} /></div>
+        <div className={styles.piPhoto}><Picture src={portrait} alt={pages.home.piName || site.piName} fallback="" /></div>
         <div className={styles.piStoryCopy}>
           <p className={styles.eyebrow}>{pages.home.piSectionLabel}</p>
           <h2>{pages.home.piName || site.piName}</h2>
@@ -316,7 +316,7 @@ function Members({ site }: { site: LabSite }) {
       <section className={styles.members}>
         {members.map((member, index) => (
           <article className={index === 0 ? styles.principal : ""} key={`${member.name}-${index}`}>
-            <Picture src={member.image || (index === 0 ? site.heroImage : undefined)} alt={member.name} fallback={initials(member.name)} />
+            <Picture src={member.image} alt={member.name} fallback={index === 0 ? "" : initials(member.name)} />
             <div><span>{member.role}</span><h2>{member.name}</h2>{member.bio && <p>{member.bio}</p>}{member.href && <a href={member.href} target="_blank" rel="noreferrer">{pages.members.profileLinkLabel} →</a>}</div>
           </article>
         ))}
@@ -347,11 +347,12 @@ function Join({ site }: { site: LabSite }) {
 
 function Contact({ site }: { site: LabSite }) {
   const pages = getBourdonPages(site);
+  const pi = labMembers(site)[0];
   return (
     <>
       <PageHero image={site.heroImage || pages.home.homepageImage} label={pages.contact.pageLabel} title={pages.contact.pageHeading} text={pages.contact.introduction} />
       <section className={styles.contact}>
-        <div className={styles.contactPhoto}><Picture src={pages.contact.piImage || pages.home.piImage || site.heroImage} alt={pages.contact.piName || site.piName} fallback={initials(site.piName)} /></div>
+        <div className={styles.contactPhoto}><Picture src={pages.contact.piImage || pages.home.piImage || pi?.image} alt={pages.contact.piName || site.piName} fallback="" /></div>
         <div className={styles.contactDetails}>
           <p>{pages.contact.piRole}</p><h2>{pages.contact.piName}</h2>
           <div className={styles.contactGrid}>
