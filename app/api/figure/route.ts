@@ -7,7 +7,10 @@ const ALLOWED_IMAGE_HOSTS = new Set([
   "ars.els-cdn.com",
   "cdn.ncbi.nlm.nih.gov",
   "dm5migu4zj3pb.cloudfront.net",
+  "i1.rgstatic.net",
   "journals.plos.org",
+  "lh3.googleusercontent.com",
+  "loop.frontiersin.org",
   "mdpi-res.com",
   "media.springernature.com",
   "oup.silverchair-cdn.com",
@@ -27,6 +30,14 @@ function errorResponse(message: string, status: number) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+function sourceReferer(sourceUrl: URL): string {
+  const host = sourceUrl.hostname.toLowerCase();
+  if (host === "i1.rgstatic.net") return "https://www.researchgate.net/";
+  if (host === "loop.frontiersin.org") return "https://loop.frontiersin.org/";
+  if (host === "lh3.googleusercontent.com") return "https://www.societa-sirr.com/";
+  return `${sourceUrl.protocol}//${sourceUrl.host}/`;
 }
 
 export async function GET(request: NextRequest) {
@@ -53,9 +64,9 @@ export async function GET(request: NextRequest) {
       redirect: "follow",
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; LabNarrativeFigureCache/1.0; +https://labnarrative.com)",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
         Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-        Referer: `${sourceUrl.protocol}//${sourceUrl.host}/`,
+        Referer: sourceReferer(sourceUrl),
       },
       next: { revalidate: CACHE_SECONDS },
     });
