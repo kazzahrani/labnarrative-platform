@@ -30,40 +30,20 @@ export default function LabNarrativeScrollPanels() {
         element instanceof HTMLElement && element.tagName === "SECTION",
     );
 
-    if (sections.length < 2) return;
-
-    const terminalPanel = sections[sections.length - 1];
-    const explicitlyRestoredPanels = sections.filter(
-      (section) => section.id === "pricing",
-    );
-    const excludedPanels = sections.filter(
-      (section) =>
-        !explicitlyRestoredPanels.includes(section) &&
-        (section.id === "process" ||
-          section.getAttribute("data-ln-overlap-panel") === "founder"),
-    );
-    const movingPanels = sections.filter(
-      (section) => section !== terminalPanel && !excludedPanels.includes(section),
-    );
+    if (sections.length === 0) return;
 
     main.classList.add("ln-overlap-ready");
 
     sections.forEach((section, index) => {
+      section.classList.add("ln-narita-panel");
       section.style.setProperty("--ln-panel-layer", String(index));
-
-      if (movingPanels.includes(section)) {
-        section.classList.add("ln-narita-panel");
-      } else {
-        section.classList.add("ln-narita-static");
-      }
     });
-    terminalPanel.classList.add("ln-narita-terminal");
 
     let frame = 0;
     let measurements: PanelMeasurement[] = [];
 
     const measure = () => {
-      measurements = movingPanels.map((panel) => ({
+      measurements = sections.map((panel) => ({
         element: panel,
         start: documentTop(panel),
       }));
@@ -88,9 +68,10 @@ export default function LabNarrativeScrollPanels() {
       requestUpdate();
     };
 
-    const resizeObserver = typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(remeasure)
-      : undefined;
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(remeasure)
+        : undefined;
     resizeObserver?.observe(main);
     sections.forEach((section) => resizeObserver?.observe(section));
 
@@ -108,11 +89,7 @@ export default function LabNarrativeScrollPanels() {
       if (frame) window.cancelAnimationFrame(frame);
 
       sections.forEach((section) => {
-        section.classList.remove(
-          "ln-narita-panel",
-          "ln-narita-static",
-          "ln-narita-terminal",
-        );
+        section.classList.remove("ln-narita-panel");
         section.style.removeProperty("--ln-panel-layer");
         section.style.removeProperty("--ln-panel-offset");
       });
@@ -155,24 +132,15 @@ export default function LabNarrativeScrollPanels() {
           box-shadow: 0 -16px 38px rgba(8, 13, 11, 0.1);
         }
 
-        main.ln-overlap-ready > .ln-narita-static,
-        main.ln-overlap-ready > .ln-narita-terminal {
-          position: relative !important;
-          top: auto !important;
-          z-index: calc(10 + var(--ln-panel-layer, 0)) !important;
-          transform: none !important;
-          will-change: auto;
-        }
-
         main.ln-overlap-ready > footer {
           position: relative;
-          z-index: 40;
+          z-index: 100;
+          transform: none !important;
         }
       }
 
       @media (max-width: 900px), (prefers-reduced-motion: reduce) {
-        main.ln-overlap-ready > .ln-narita-panel,
-        main.ln-overlap-ready > .ln-narita-static {
+        main.ln-overlap-ready > .ln-narita-panel {
           position: relative !important;
           top: auto !important;
           transform: none !important;
