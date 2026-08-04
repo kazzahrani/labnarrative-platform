@@ -96,7 +96,10 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
 
     const slides = slidesForSite(props.site.slug);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const directSections = Array.from(main.children).filter(
+    const sectionRoot = props.route.projectSlug
+      ? main.querySelector(":scope > article") ?? main
+      : main;
+    const directSections = Array.from(sectionRoot.children).filter(
       (element): element is HTMLElement => element instanceof HTMLElement && element.tagName === "SECTION",
     );
 
