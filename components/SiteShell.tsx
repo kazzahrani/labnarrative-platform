@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
-import EngelandDesign from "@/components/designs/EngelandDesign";
+import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import {
   resolveDesignKey,
@@ -78,7 +78,7 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
   const designVariant = site.design?.settings?.variant;
 
   if (designVariant === "engeland-modern-v1") {
-    return <EngelandDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+    return <EngelandDesignWithFigures site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === "zhang-transcription-v1") {
