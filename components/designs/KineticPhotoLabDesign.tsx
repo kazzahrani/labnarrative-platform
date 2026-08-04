@@ -170,20 +170,44 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       const originalSource = image.getAttribute("src") || "";
       const originalSrcset = image.getAttribute("srcset");
       const originalAlt = image.alt;
-      const microscopy = microscopyForRoute(props.route, slides);
+      const originalImageDisplay = image.style.display;
+      const originalBackground = innerHero.style.background;
+      const shade = innerHero.querySelector(":scope > div:nth-of-type(1)");
+      const heading = innerHero.querySelector(":scope > div:nth-of-type(2) > h1");
+      const originalShadeBackground = shade instanceof HTMLElement ? shade.style.background : "";
+      const originalHeadingShadow = heading instanceof HTMLElement ? heading.style.textShadow : "";
+      const isSolidPrivesProject = isPrives && props.route.section === "research" && Boolean(props.route.projectSlug);
 
-      image.removeAttribute("srcset");
-      image.src = microscopy.src;
-      image.alt = microscopy.alt;
-      image.decoding = "async";
       innerHero.classList.add("kinetic-inner-hero");
-      innerHero.setAttribute("data-microscopy-credit", microscopy.credit);
+
+      if (isSolidPrivesProject) {
+        image.style.display = "none";
+        innerHero.style.background = "linear-gradient(120deg, #451d2b 0%, #351620 58%, #241016 100%)";
+        if (shade instanceof HTMLElement) {
+          shade.style.background = "linear-gradient(90deg, rgba(255, 255, 255, 0.025), rgba(0, 0, 0, 0.08))";
+        }
+        if (heading instanceof HTMLElement) {
+          heading.style.textShadow = "none";
+        }
+        innerHero.removeAttribute("data-microscopy-credit");
+      } else {
+        const microscopy = microscopyForRoute(props.route, slides);
+        image.removeAttribute("srcset");
+        image.src = microscopy.src;
+        image.alt = microscopy.alt;
+        image.decoding = "async";
+        innerHero.setAttribute("data-microscopy-credit", microscopy.credit);
+      }
 
       return () => {
         cleanSharedEffects();
+        image.style.display = originalImageDisplay;
         image.src = originalSource;
         image.alt = originalAlt;
         if (originalSrcset) image.setAttribute("srcset", originalSrcset);
+        innerHero.style.background = originalBackground;
+        if (shade instanceof HTMLElement) shade.style.background = originalShadeBackground;
+        if (heading instanceof HTMLElement) heading.style.textShadow = originalHeadingShadow;
         innerHero.classList.remove("kinetic-inner-hero");
         innerHero.removeAttribute("data-microscopy-credit");
       };
