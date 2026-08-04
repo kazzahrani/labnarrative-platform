@@ -159,12 +159,15 @@ export default function LabNarrativeScrollPanels() {
           box-shadow: none !important;
         }
 
+        /* The process chapter is excluded from drift, but remains pinned while
+           the pricing panel enters so the two sections do not move as one block. */
         main.ln-overlap-ready > .ln-narita-static {
-          position: relative !important;
-          top: auto !important;
+          position: sticky !important;
+          top: 0 !important;
           z-index: calc(10 + var(--ln-panel-layer, 0)) !important;
           transform: none !important;
           will-change: auto;
+          backface-visibility: hidden;
           box-shadow: none !important;
         }
 
