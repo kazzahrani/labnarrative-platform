@@ -240,6 +240,7 @@ function ProjectDetail({ site, slug, basePath }: { site: LabSite; slug: string; 
   const project = projects[index];
   if (!project) return <ResearchIndex site={site} basePath={basePath} />;
   const figure = project.figureImage || site.heroImage;
+  const showExtendedDetails = site.slug !== "prives";
   return (
     <article className={styles.projectPage}>
       <PageHero image={figure} label={`${pages.research.programmeLabel} ${String(index + 1).padStart(2, "0")}`} title={project.title} text={project.summary} />
@@ -248,8 +249,8 @@ function ProjectDetail({ site, slug, basePath }: { site: LabSite; slug: string; 
         <div className={styles.projectBody}>{(project.body || []).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}</div>
         <figure><Picture src={figure} alt={project.figureCaption || project.title} fallback={String(index + 1).padStart(2, "0")} />{project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}</figure>
       </section>
-      {!!project.methods?.length && <section className={styles.detailList}><p>Approaches</p><div>{project.methods.map((method) => <span key={method}>{method}</span>)}</div></section>}
-      {!!project.papers?.length && <section className={styles.detailList}><p>Selected work</p><div>{project.papers.map((paper) => <span key={paper}>{paper}</span>)}</div></section>}
+      {showExtendedDetails && !!project.methods?.length && <section className={styles.detailList}><p>Approaches</p><div>{project.methods.map((method) => <span key={method}>{method}</span>)}</div></section>}
+      {showExtendedDetails && !!project.papers?.length && <section className={styles.detailList}><p>Selected work</p><div>{project.papers.map((paper) => <span key={paper}>{paper}</span>)}</div></section>}
       <Link className={styles.returnLink} href={`${basePath}/research`}>← {pages.research.returnLink}</Link>
     </article>
   );
