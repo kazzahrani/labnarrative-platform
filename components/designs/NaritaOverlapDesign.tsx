@@ -11,6 +11,28 @@ type NaritaOverlapDesignProps = {
   previewMode?: boolean;
 };
 
+type PanelMeasurement = {
+  element: HTMLElement;
+  start: number;
+  range: number;
+};
+
+function documentTop(element: HTMLElement) {
+  let top = 0;
+  let current: HTMLElement | null = element;
+
+  while (current) {
+    top += current.offsetTop;
+    current = current.offsetParent as HTMLElement | null;
+  }
+
+  return top;
+}
+
+function clamp(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
 export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -23,43 +45,74 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       (element): element is HTMLElement =>
         element instanceof HTMLElement && element.tagName === "SECTION",
     );
+
+    // The homepage now ends after the principal-investigator story.
     const hiddenHomeSections = props.route.section === "home"
-      ? directSections.slice(3, 5)
+      ? directSections.slice(3)
       : [];
 
     hiddenHomeSections.forEach((section) => {
       section.hidden = true;
     });
 
-    const hero = props.route.section === "home"
-      ? main.querySelector(":scope > section:first-of-type")
-      : main.querySelector(":scope > section:first-of-type, :scope > article > section:first-child");
+    const panels = Array.from(
+      main.querySelectorAll(
+        ":scope > section, :scope > aside, :scope > article > header, :scope > article > section",
+      ),
+    ).filter(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement &&
+        !element.hidden &&
+        !hiddenHomeSections.includes(element),
+    );
 
-    if (!(hero instanceof HTMLElement)) {
+    if (!panels.length) {
       hiddenHomeSections.forEach((section) => {
         section.hidden = false;
       });
       return;
     }
 
+    const hero = panels[0];
     hero.classList.add("narita-overlap-hero");
+
+    panels.forEach((panel, index) => {
+      panel.classList.add("narita-overlap-panel");
+      panel.style.setProperty("--narita-panel-layer", String(index));
+
+      const backgroundColor = window.getComputedStyle(panel).backgroundColor;
+      const isTransparent =
+        backgroundColor === "transparent" ||
+        backgroundColor === "rgba(0, 0, 0, 0)";
+
+      panel.style.setProperty(
+        "--narita-panel-background",
+        isTransparent ? "#ffffff" : backgroundColor,
+      );
+    });
+
     let frame = 0;
-    let start = 0;
-    let range = 1;
+    let measurements: PanelMeasurement[] = [];
 
     const measure = () => {
       const header = main.querySelector(":scope > header");
       const headerHeight = header instanceof HTMLElement ? header.offsetHeight : 112;
-      const rect = hero.getBoundingClientRect();
-      start = rect.top + window.scrollY - headerHeight;
-      range = Math.max(1, hero.offsetHeight * 0.88);
+
       root.style.setProperty("--narita-header-height", `${headerHeight}px`);
+      measurements = panels.map((panel) => ({
+        element: panel,
+        start: documentTop(panel) - headerHeight,
+        range: Math.max(panel.offsetHeight * 0.78, window.innerHeight * 0.48, 1),
+      }));
     };
 
     const update = () => {
       frame = 0;
-      const progress = Math.min(1, Math.max(0, (window.scrollY - start) / range));
-      hero.style.setProperty("--narita-overlap-progress", String(progress));
+
+      measurements.forEach(({ element, start, range }) => {
+        const progress = clamp((window.scrollY - start) / range);
+        element.style.setProperty("--narita-panel-progress", String(progress));
+      });
     };
 
     const requestUpdate = () => {
@@ -80,17 +133,27 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", onResize);
       if (frame) window.cancelAnimationFrame(frame);
+
       hiddenHomeSections.forEach((section) => {
         section.hidden = false;
       });
-      hero.classList.remove("narita-overlap-hero");
-      hero.style.removeProperty("--narita-overlap-progress");
+
+      panels.forEach((panel) => {
+        panel.classList.remove("narita-overlap-panel", "narita-overlap-hero");
+        panel.style.removeProperty("--narita-panel-layer");
+        panel.style.removeProperty("--narita-panel-progress");
+        panel.style.removeProperty("--narita-panel-background");
+      });
+
       root.style.removeProperty("--narita-header-height");
     };
   }, [props.route.projectSlug, props.route.section]);
 
   return (
-    <div className="narita-overlap-design" ref={rootRef}>
+    <div
+      className={`narita-overlap-design narita-route-${props.route.section}`}
+      ref={rootRef}
+    >
       <KineticPhotoLabDesign {...props} />
       <style jsx global>{`
         .narita-overlap-design {
@@ -99,7 +162,8 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           background: #ffffff;
         }
 
-        .narita-overlap-design main {
+        .narita-overlap-design main,
+        .narita-overlap-design main > article {
           position: relative;
           isolation: isolate;
           overflow: visible !important;
@@ -112,18 +176,58 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           z-index: 100 !important;
         }
 
-        .narita-overlap-design .narita-overlap-hero {
+        .narita-route-home main > section:nth-of-type(4),
+        .narita-route-home main > section:nth-of-type(5),
+        .narita-route-home main > section:nth-of-type(6) {
+          display: none !important;
+        }
+
+        .narita-overlap-design .narita-overlap-panel {
           position: sticky !important;
           top: var(--narita-header-height) !important;
-          z-index: 1 !important;
-          margin-bottom: 0 !important;
+          z-index: calc(10 + var(--narita-panel-layer, 0)) !important;
+          isolation: isolate;
           transform: translate3d(
             0,
-            calc(var(--narita-overlap-progress, 0) * -138px),
+            calc(var(--narita-panel-progress, 0) * -52px),
             0
           );
           transform-origin: center top;
           will-change: transform;
+          scroll-margin-top: var(--narita-header-height);
+        }
+
+        .narita-overlap-design .narita-overlap-panel::before {
+          content: "";
+          position: absolute;
+          z-index: -1;
+          inset: 0 50% 0 auto;
+          width: 100vw;
+          transform: translateX(50%);
+          background: var(--narita-panel-background, #ffffff);
+          box-shadow: 0 -20px 46px rgba(0, 0, 0, 0.09);
+          pointer-events: none;
+        }
+
+        .narita-overlap-design .narita-overlap-panel > img {
+          transform: translate3d(
+              0,
+              calc(var(--narita-panel-progress, 0) * -28px),
+              0
+            )
+            scale(1.055) !important;
+          transform-origin: center center;
+          will-change: transform;
+        }
+
+        .narita-overlap-design .narita-overlap-hero {
+          margin-bottom: 0 !important;
+          transform: translate3d(
+            0,
+            calc(var(--narita-panel-progress, 0) * -138px),
+            0
+          );
+          z-index: 10 !important;
         }
 
         .narita-overlap-design .narita-overlap-hero.kinetic-inner-hero,
@@ -138,51 +242,19 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img {
           transform: translate3d(
               0,
-              calc(var(--narita-overlap-progress, 0) * -38px),
+              calc(var(--narita-panel-progress, 0) * -38px),
               0
             )
             scale(1.1) !important;
-          transform-origin: center center;
-          will-change: transform;
         }
 
         .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > div:nth-of-type(2) {
           transform: translate3d(
             0,
-            calc(var(--narita-overlap-progress, 0) * -66px),
+            calc(var(--narita-panel-progress, 0) * -66px),
             0
           );
           will-change: transform;
-        }
-
-        .narita-overlap-design .narita-overlap-hero ~ section,
-        .narita-overlap-design .narita-overlap-hero ~ aside,
-        .narita-overlap-design .narita-overlap-hero ~ a,
-        .narita-overlap-design main > footer {
-          position: relative;
-          z-index: 4;
-        }
-
-        .narita-overlap-design .narita-overlap-hero ~ section {
-          background: #ffffff;
-          isolation: isolate;
-        }
-
-        .narita-overlap-design .narita-overlap-hero ~ section::before {
-          content: "";
-          position: absolute;
-          z-index: -1;
-          top: 0;
-          bottom: 0;
-          left: 50%;
-          width: 100vw;
-          transform: translateX(-50%);
-          background: #ffffff;
-          pointer-events: none;
-        }
-
-        .narita-overlap-design .narita-overlap-hero + section::before {
-          box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.08);
         }
 
         .narita-overlap-design .kinetic-reveal {
@@ -192,14 +264,25 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         }
 
         .narita-overlap-design main > footer {
+          position: relative;
+          z-index: 90;
           background: #080808;
+          box-shadow: 0 -24px 58px rgba(0, 0, 0, 0.14);
         }
 
         @media (max-width: 980px) {
+          .narita-overlap-design .narita-overlap-panel {
+            transform: translate3d(
+              0,
+              calc(var(--narita-panel-progress, 0) * -36px),
+              0
+            );
+          }
+
           .narita-overlap-design .narita-overlap-hero {
             transform: translate3d(
               0,
-              calc(var(--narita-overlap-progress, 0) * -96px),
+              calc(var(--narita-panel-progress, 0) * -96px),
               0
             );
           }
@@ -212,10 +295,15 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         }
 
         @media (max-width: 700px) {
+          .narita-overlap-design .narita-overlap-panel,
           .narita-overlap-design .narita-overlap-hero {
             position: relative !important;
             top: auto !important;
             transform: none !important;
+          }
+
+          .narita-overlap-design .narita-overlap-panel::before {
+            box-shadow: none;
           }
 
           .narita-overlap-design .narita-overlap-hero.kinetic-inner-hero,
@@ -226,6 +314,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
             margin-left: 0 !important;
           }
 
+          .narita-overlap-design .narita-overlap-panel > img,
           .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img,
           .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > div:nth-of-type(2) {
             transform: none !important;
@@ -233,9 +322,13 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         }
 
         @media (prefers-reduced-motion: reduce) {
+          .narita-overlap-design .narita-overlap-panel,
           .narita-overlap-design .narita-overlap-hero,
+          .narita-overlap-design .narita-overlap-panel > img,
           .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img,
           .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > div:nth-of-type(2) {
+            position: relative !important;
+            top: auto !important;
             transform: none !important;
           }
         }
