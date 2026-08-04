@@ -32,14 +32,26 @@ export default function LabNarrativeScrollPanels() {
 
     if (sections.length < 2) return;
 
-    const movingPanels = sections.slice(0, -1);
     const terminalPanel = sections[sections.length - 1];
+    const excludedPanels = sections.filter(
+      (section) =>
+        section.id === "process" ||
+        section.getAttribute("data-ln-overlap-panel") === "founder",
+    );
+    const movingPanels = sections.filter(
+      (section) => section !== terminalPanel && !excludedPanels.includes(section),
+    );
 
     main.classList.add("ln-overlap-ready");
 
     sections.forEach((section, index) => {
-      section.classList.add("ln-narita-panel");
       section.style.setProperty("--ln-panel-layer", String(index));
+
+      if (movingPanels.includes(section)) {
+        section.classList.add("ln-narita-panel");
+      } else {
+        section.classList.add("ln-narita-static");
+      }
     });
     terminalPanel.classList.add("ln-narita-terminal");
 
@@ -92,7 +104,11 @@ export default function LabNarrativeScrollPanels() {
       if (frame) window.cancelAnimationFrame(frame);
 
       sections.forEach((section) => {
-        section.classList.remove("ln-narita-panel", "ln-narita-terminal");
+        section.classList.remove(
+          "ln-narita-panel",
+          "ln-narita-static",
+          "ln-narita-terminal",
+        );
         section.style.removeProperty("--ln-panel-layer");
         section.style.removeProperty("--ln-panel-offset");
       });
@@ -135,6 +151,7 @@ export default function LabNarrativeScrollPanels() {
           box-shadow: 0 -16px 38px rgba(8, 13, 11, 0.1);
         }
 
+        main.ln-overlap-ready > .ln-narita-static,
         main.ln-overlap-ready > .ln-narita-terminal {
           position: relative !important;
           top: auto !important;
@@ -150,7 +167,8 @@ export default function LabNarrativeScrollPanels() {
       }
 
       @media (max-width: 900px), (prefers-reduced-motion: reduce) {
-        main.ln-overlap-ready > .ln-narita-panel {
+        main.ln-overlap-ready > .ln-narita-panel,
+        main.ln-overlap-ready > .ln-narita-static {
           position: relative !important;
           top: auto !important;
           transform: none !important;
