@@ -113,12 +113,21 @@ const packages = [
   },
 ];
 
+function Wordmark() {
+  return (
+    <>
+      <span className={styles.logoLab}>Lab</span>
+      <span className={styles.logoNarrative}>Narrative</span>
+    </>
+  );
+}
+
 export default function HomePage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
         <a className={styles.wordmark} href="#top" aria-label="LabNarrative home">
-          LabNarrative
+          <Wordmark />
         </a>
 
         <nav className={styles.nav} aria-label="Primary navigation">
@@ -312,7 +321,7 @@ export default function HomePage() {
       </section>
 
       <footer className={styles.footer}>
-        <a className={styles.wordmark} href="#top">LabNarrative</a>
+        <a className={styles.wordmark} href="#top"><Wordmark /></a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
         <span>© 2026 LabNarrative</span>
       </footer>
