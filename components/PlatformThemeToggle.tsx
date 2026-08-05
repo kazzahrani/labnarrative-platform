@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type PlatformTheme = "grey" | "mid" | "dark";
+type PlatformTheme = "grey" | "mid" | "ocean" | "dark";
 
 const STORAGE_KEY = "labnarrative-platform-theme";
 const PAGE_CLASSES = [
@@ -17,6 +17,7 @@ const PAGE_CLASSES = [
 const THEME_OPTIONS: Array<{ value: PlatformTheme; label: string; icon: string }> = [
   { value: "grey", label: "Light", icon: "☀" },
   { value: "mid", label: "Mid", icon: "◐" },
+  { value: "ocean", label: "Blue", icon: "◆" },
   { value: "dark", label: "Dark", icon: "☾" },
 ];
 
@@ -45,9 +46,9 @@ function applyTheme(theme: PlatformTheme) {
 }
 
 function resolveStoredTheme(value: string | null): PlatformTheme {
-  if (value === "dark" || value === "mid") return value;
+  if (value === "dark" || value === "mid" || value === "ocean") return value;
 
-  // Both previous Light and Grey preferences now resolve to the new Light theme.
+  // Both previous Light and Grey preferences resolve to the current Light theme.
   return "grey";
 }
 
