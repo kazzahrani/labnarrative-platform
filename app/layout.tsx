@@ -18,6 +18,7 @@ import "./pipeline-status-colors.css";
 import "./grey-theme.css";
 import "./mid-theme.css";
 import "./mid-theme-gradient-refinement.css";
+import "./ocean-theme.css";
 
 export const metadata: Metadata = {
   title: {
