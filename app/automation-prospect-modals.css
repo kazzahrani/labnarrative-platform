@@ -1,0 +1,113 @@
+.automationProspectModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 13, 18, 0.7);
+  backdrop-filter: blur(9px);
+}
+
+.automationProspectModalShell {
+  position: relative;
+  width: min(820px, 100%);
+  max-height: min(90vh, 920px);
+  overflow: auto;
+  border: 1px solid #c7d0d6;
+  border-radius: 20px;
+  background: #e5eaee;
+  padding: 58px 24px 24px;
+  color: #202d37;
+  box-shadow: 0 28px 90px rgba(4, 10, 16, 0.35);
+}
+
+.automationProspectModalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-height: 34px;
+  border: 1px solid #aeb9c1;
+  border-radius: 10px;
+  background: #d6dde2;
+  padding: 0 13px;
+  color: #24313b;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.automationProspectModalClose:hover {
+  background: #cbd5dc;
+}
+
+.automationProspectModalCard {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="mid"] .automationProspectModalShell {
+  border-color: #4b5664;
+  background: linear-gradient(145deg, #343b46, #2b313a);
+  color: #edf0f5;
+}
+
+html[data-platform-theme="mid"] .automationProspectModalClose {
+  border-color: #596675;
+  background: #414a57;
+  color: #f0f3f7;
+}
+
+html[data-platform-theme="ocean"] .automationProspectModalBackdrop {
+  background: rgba(5, 12, 18, 0.78);
+}
+
+html[data-platform-theme="ocean"] .automationProspectModalShell {
+  border-color: #324b5d;
+  border-radius: 14px;
+  background: #1b2a37;
+  color: #e7edf3;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.48);
+}
+
+html[data-platform-theme="ocean"] .automationProspectModalClose {
+  border-color: #3f5b6e;
+  border-radius: 8px;
+  background: #263b4b;
+  color: #e8eef4;
+}
+
+html[data-platform-theme="ocean"] .automationProspectModalClose:hover {
+  border-color: #1db9b4;
+  background: #2e4658;
+}
+
+html[data-platform-theme="dark"] .automationProspectModalShell {
+  border-color: #303846;
+  background: #171a21;
+  color: #e6e9ef;
+}
+
+html[data-platform-theme="dark"] .automationProspectModalClose {
+  border-color: #3a4352;
+  background: #242936;
+  color: #e6e9ef;
+}
+
+@media (max-width: 700px) {
+  .automationProspectModalBackdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .automationProspectModalShell {
+    width: 100%;
+    max-height: 94vh;
+    border-radius: 18px 18px 10px 10px;
+    padding: 54px 18px 20px;
+  }
+}
