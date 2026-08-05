@@ -2,7 +2,7 @@
 
 import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "../automation/automation.module.css";
 
 type DiscoveryRun = {
@@ -65,6 +65,14 @@ function statusText(value: string): string {
   return value.replaceAll("_", " ");
 }
 
+function errorMessage(value: unknown, fallback: string): string {
+  if (value instanceof Error && value.message) return value.message;
+  if (value && typeof value === "object" && "message" in value && typeof value.message === "string") {
+    return value.message;
+  }
+  return fallback;
+}
+
 export default function ProspectDiscoveryPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -78,58 +86,98 @@ export default function ProspectDiscoveryPage() {
   const [countries, setCountries] = useState("");
   const [institutions, setInstitutions] = useState("");
   const [count, setCount] = useState(8);
+  const [loading, setLoading] = useState(false);
   const [working, setWorking] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeError, setNoticeError] = useState(false);
+  const loadLock = useRef(false);
 
-  const loadData = useCallback(async (activeSession?: Session | null) => {
-    const current = activeSession ?? session;
-    if (!current) return;
-    const { data: roleRow, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", current.user.id)
-      .maybeSingle();
-    if (roleError) {
-      setNotice(roleError.message);
-      setNoticeError(true);
-      return;
+  const loadData = useCallback(async (current: Session, clearNotice = false) => {
+    if (loadLock.current) return;
+    loadLock.current = true;
+    setLoading(true);
+    if (clearNotice) {
+      setNotice("");
+      setNoticeError(false);
     }
-    if (roleRow?.role !== "admin") {
-      setRole(roleRow?.role ?? null);
-      setNotice("Administrator permission is required.");
-      setNoticeError(true);
-      return;
-    }
-    setRole("admin");
 
-    const [runResult, prospectResult] = await Promise.all([
-      supabase.from("discovery_runs").select("*").order("created_at", { ascending: false }).limit(30),
-      supabase.from("prospects").select("id,pi_name,institution,country,research_area,qualification_score,status,official_profile_url,created_at").eq("discovery_source", "Automated academic web discovery").order("created_at", { ascending: false }).limit(100),
-    ]);
-    if (runResult.error) {
-      setNotice(runResult.error.message);
+    try {
+      const { data: roleRow, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", current.user.id)
+        .maybeSingle();
+
+      if (roleError) throw roleError;
+      if (roleRow?.role !== "admin") {
+        setRole(roleRow?.role ?? null);
+        throw new Error("Administrator permission is required.");
+      }
+      setRole("admin");
+
+      const [runResult, prospectResult] = await Promise.all([
+        supabase
+          .from("discovery_runs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(30),
+        supabase
+          .from("prospects")
+          .select("id,pi_name,institution,country,research_area,qualification_score,status,official_profile_url,created_at")
+          .eq("discovery_source", "Automated academic web discovery")
+          .order("created_at", { ascending: false })
+          .limit(100),
+      ]);
+
+      if (runResult.error) throw runResult.error;
+      if (prospectResult.error) throw prospectResult.error;
+
+      setRuns((runResult.data ?? []) as DiscoveryRun[]);
+      setProspects((prospectResult.data ?? []) as Prospect[]);
+    } catch (error) {
+      setNotice(errorMessage(error, "The discovery dashboard could not be loaded."));
       setNoticeError(true);
-    } else setRuns((runResult.data ?? []) as DiscoveryRun[]);
-    if (prospectResult.error) {
-      setNotice(prospectResult.error.message);
-      setNoticeError(true);
-    } else setProspects((prospectResult.data ?? []) as Prospect[]);
-  }, [session]);
+    } finally {
+      setLoading(false);
+      loadLock.current = false;
+    }
+  }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    let mounted = true;
+
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error) {
+        setNotice(error.message);
+        setNoticeError(true);
+      }
       setSession(data.session);
       setAuthReady(true);
-      if (data.session) void loadData(data.session);
+      if (data.session) void loadData(data.session, true);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted || event === "INITIAL_SESSION") return;
       setSession(nextSession);
       setAuthReady(true);
-      if (nextSession) void loadData(nextSession);
-      else setRole(null);
+
+      if (event === "SIGNED_OUT" || !nextSession) {
+        setRole(null);
+        setRuns([]);
+        setProspects([]);
+        return;
+      }
+
+      if (["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(event)) {
+        void loadData(nextSession, event === "SIGNED_IN");
+      }
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [loadData]);
 
   const totals = useMemo(() => ({
@@ -142,8 +190,12 @@ export default function ProspectDiscoveryPage() {
 
   async function requestOtp(event: FormEvent) {
     event.preventDefault();
+    setNotice("");
     setNoticeError(false);
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: false } });
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { shouldCreateUser: false },
+    });
     if (error) {
       setNotice(error.message);
       setNoticeError(true);
@@ -156,7 +208,11 @@ export default function ProspectDiscoveryPage() {
   async function verifyOtp(event: FormEvent) {
     event.preventDefault();
     const token = otp.replace(/\D/g, "").slice(0, 6);
-    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: "email" });
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token,
+      type: "email",
+    });
     if (error) {
       setNotice(error.message);
       setNoticeError(true);
@@ -165,13 +221,22 @@ export default function ProspectDiscoveryPage() {
 
   async function runDiscovery(event: FormEvent) {
     event.preventDefault();
+    if (!session || working) return;
+
     setWorking(true);
-    setNotice("");
+    setNotice("Searching current academic sources. This can take one to two minutes.");
     setNoticeError(false);
+
+    const timeout = window.setTimeout(() => {
+      setNotice("The search is taking longer than expected. It is still safe to leave this page open.");
+      setNoticeError(false);
+    }, 45_000);
+
     try {
       const { data, error } = await supabase.functions.invoke("discover-prospects", {
         body: { researchAreas, countries, institutions, count },
       });
+
       if (error) {
         let detail = error.message;
         const context = (error as { context?: Response }).context;
@@ -181,19 +246,26 @@ export default function ProspectDiscoveryPage() {
         }
         throw new Error(detail);
       }
+
       const result = (data ?? {}) as DiscoveryResponse;
       if (result.error) throw new Error(result.error);
+
+      await loadData(session);
       setNotice(`Discovery completed: ${result.inserted ?? 0} new prospects added, ${result.queued ?? 0} queued, ${result.duplicates ?? 0} duplicates skipped.`);
-      await loadData();
+      setNoticeError(false);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Prospect discovery failed.");
+      setNotice(errorMessage(error, "Prospect discovery failed."));
       setNoticeError(true);
     } finally {
+      window.clearTimeout(timeout);
       setWorking(false);
     }
   }
 
-  if (!authReady) return <main className={styles.page}><div className={styles.login}>Preparing prospect discovery…</div></main>;
+  if (!authReady) {
+    return <main className={styles.page}><div className={styles.login}>Preparing prospect discovery…</div></main>;
+  }
+
   if (!session) {
     return (
       <main className={styles.page}>
@@ -201,28 +273,51 @@ export default function ProspectDiscoveryPage() {
           <p className={styles.kicker}>LabNarrative administration</p>
           <h1>Prospect Discovery Engine</h1>
           {!otpSent ? (
-            <form onSubmit={requestOtp}><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Administrator email" required /><button className={styles.button} type="submit">Send verification code</button></form>
+            <form onSubmit={requestOtp}>
+              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Administrator email" required />
+              <button className={styles.button} type="submit">Send verification code</button>
+            </form>
           ) : (
-            <form onSubmit={verifyOtp}><input inputMode="numeric" value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="Six-digit code" required /><button className={styles.button} type="submit">Verify and continue</button></form>
+            <form onSubmit={verifyOtp}>
+              <input inputMode="numeric" value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="Six-digit code" required />
+              <button className={styles.button} type="submit">Verify and continue</button>
+            </form>
           )}
           {notice ? <p className={`${styles.notice} ${noticeError ? styles.error : ""}`}>{notice}</p> : null}
         </section>
       </main>
     );
   }
-  if (role !== "admin") return <main className={styles.page}><div className={styles.login}>{notice || "Checking administrator access…"}</div></main>;
+
+  if (role !== "admin") {
+    return <main className={styles.page}><div className={styles.login}>{notice || "Checking administrator access…"}</div></main>;
+  }
 
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
-        <div><Link className={styles.brand} href="/">LabNarrative</Link><span className={styles.muted}>Prospect discovery</span></div>
-        <nav><Link href="/admin/automation">Automation</Link><Link href="/admin/sites">Websites</Link><button className={styles.buttonSecondary} type="button" onClick={() => void supabase.auth.signOut()}>Sign out</button></nav>
+        <div>
+          <Link className={styles.brand} href="/">LabNarrative</Link>
+          <span className={styles.muted}>Prospect discovery</span>
+        </div>
+        <nav>
+          <Link href="/admin/automation">Automation</Link>
+          <Link href="/admin/sites">Websites</Link>
+          <button className={styles.buttonSecondary} type="button" onClick={() => void supabase.auth.signOut()}>Sign out</button>
+        </nav>
       </header>
 
       <div className={styles.main}>
         <section className={styles.hero}>
-          <div><p className={styles.kicker}>Engine 1 · automatic qualification</p><h1>Find the next laboratories.</h1><p className={styles.heroCopy}>The discovery engine searches current academic sources, verifies independent PI status, evaluates website opportunity, removes duplicates and automatically queues prospects scoring 75 or higher.</p></div>
-          <div className={styles.heroActions}><Link className={styles.buttonSecondary} href="/admin/automation">Open production queue</Link><button className={styles.buttonSecondary} type="button" onClick={() => void loadData()}>Refresh</button></div>
+          <div>
+            <p className={styles.kicker}>Engine 1 · automatic qualification</p>
+            <h1>Find the next laboratories.</h1>
+            <p className={styles.heroCopy}>The discovery engine searches current academic sources, verifies independent PI status, evaluates website opportunity, removes duplicates and automatically queues prospects scoring 75 or higher.</p>
+          </div>
+          <div className={styles.heroActions}>
+            <Link className={styles.buttonSecondary} href="/admin/automation">Open production queue</Link>
+            <button className={styles.buttonSecondary} type="button" disabled={loading} onClick={() => session && void loadData(session, true)}>{loading ? "Refreshing…" : "Refresh"}</button>
+          </div>
         </section>
 
         {notice ? <p className={`${styles.notice} ${noticeError ? styles.error : ""}`}>{notice}</p> : null}
@@ -237,28 +332,88 @@ export default function ProspectDiscoveryPage() {
 
         <div className={styles.grid}>
           <section className={styles.card}>
-            <div className={styles.cardHeader}><div><p className={styles.kicker}>Discovery brief</p><h2>Search academic sources</h2></div><span className={styles.status} data-status="queued">Auto-queue enabled</span></div>
+            <div className={styles.cardHeader}>
+              <div><p className={styles.kicker}>Discovery brief</p><h2>Search academic sources</h2></div>
+              <span className={styles.status} data-status="queued">Auto-queue enabled</span>
+            </div>
             <form onSubmit={runDiscovery}>
               <div className={styles.formGrid}>
-                <div className={styles.fieldFull}><label>Research areas</label><textarea rows={5} value={researchAreas} onChange={(event) => setResearchAreas(event.target.value)} required /></div>
-                <div className={styles.fieldFull}><label>Countries or regions</label><input value={countries} onChange={(event) => setCountries(event.target.value)} placeholder="Leave empty for worldwide discovery" /></div>
-                <div className={styles.fieldFull}><label>Preferred institutions</label><textarea rows={3} value={institutions} onChange={(event) => setInstitutions(event.target.value)} placeholder="Optional universities, institutes or networks" /></div>
-                <div className={styles.field}><label>Number of candidates</label><input type="number" min={1} max={20} value={count} onChange={(event) => setCount(Number(event.target.value))} /></div>
-                <div className={styles.field}><label>Production threshold</label><input value="75 / 100" readOnly /></div>
+                <div className={styles.fieldFull}>
+                  <label>Research areas</label>
+                  <textarea rows={5} value={researchAreas} onChange={(event) => setResearchAreas(event.target.value)} required />
+                </div>
+                <div className={styles.fieldFull}>
+                  <label>Countries or regions</label>
+                  <input value={countries} onChange={(event) => setCountries(event.target.value)} placeholder="Leave empty for worldwide discovery" />
+                </div>
+                <div className={styles.fieldFull}>
+                  <label>Preferred institutions</label>
+                  <textarea rows={3} value={institutions} onChange={(event) => setInstitutions(event.target.value)} placeholder="Optional universities, institutes or networks" />
+                </div>
+                <div className={styles.field}>
+                  <label>Number of candidates</label>
+                  <input type="number" min={1} max={20} value={count} onChange={(event) => setCount(Number(event.target.value))} />
+                </div>
+                <div className={styles.field}>
+                  <label>Production threshold</label>
+                  <input value="75 / 100" readOnly />
+                </div>
               </div>
-              <div className={styles.formActions}><button className={styles.button} type="submit" disabled={working}>{working ? "Searching and qualifying…" : "Discover and auto-queue"}</button></div>
+              <div className={styles.formActions}>
+                <button className={styles.button} type="submit" disabled={working || loading}>{working ? "Searching and qualifying…" : "Discover and auto-queue"}</button>
+              </div>
             </form>
           </section>
 
           <div className={styles.stack}>
             <section className={styles.card}>
               <div className={styles.cardHeader}><div><p className={styles.kicker}>Discovery history</p><h2>Recent runs</h2></div></div>
-              <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Started</th><th>Brief</th><th>Found</th><th>Added</th><th>Queued</th><th>Status</th></tr></thead><tbody>{runs.length === 0 ? <tr><td colSpan={6}>No discovery runs yet.</td></tr> : runs.map((run) => <tr key={run.id}><td>{formatDate(run.created_at)}</td><td>{run.research_areas}</td><td>{run.found_count}</td><td>{run.inserted_count}</td><td>{run.queued_count}</td><td><span className={styles.status} data-status={run.status}>{statusText(run.status)}</span>{run.error_message ? <><br /><small className={styles.muted}>{run.error_message}</small></> : null}</td></tr>)}</tbody></table></div>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead><tr><th>Started</th><th>Brief</th><th>Found</th><th>Added</th><th>Queued</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {runs.length === 0 ? <tr><td colSpan={6}>No discovery runs yet.</td></tr> : runs.map((run) => (
+                      <tr key={run.id}>
+                        <td>{formatDate(run.created_at)}</td>
+                        <td>{run.research_areas}</td>
+                        <td>{run.found_count}</td>
+                        <td>{run.inserted_count}</td>
+                        <td>{run.queued_count}</td>
+                        <td>
+                          <span className={styles.status} data-status={run.status}>{statusText(run.status)}</span>
+                          {run.error_message ? <><br /><small className={styles.muted}>{run.error_message}</small></> : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
 
             <section className={styles.card}>
-              <div className={styles.cardHeader}><div><p className={styles.kicker}>Prospect database</p><h2>Discovered PIs</h2></div><span className={styles.muted}>{prospects.length} shown</span></div>
-              <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>PI</th><th>Institution</th><th>Research</th><th>Score</th><th>Status</th></tr></thead><tbody>{prospects.length === 0 ? <tr><td colSpan={5}>No automatically discovered prospects yet.</td></tr> : prospects.map((prospect) => <tr key={prospect.id}><td><strong>{prospect.official_profile_url ? <a href={prospect.official_profile_url} target="_blank" rel="noreferrer">{prospect.pi_name} ↗</a> : prospect.pi_name}</strong><br /><small className={styles.muted}>{prospect.country}</small></td><td>{prospect.institution}</td><td>{prospect.research_area}</td><td>{prospect.qualification_score}</td><td><span className={styles.status} data-status={prospect.status}>{statusText(prospect.status)}</span></td></tr>)}</tbody></table></div>
+              <div className={styles.cardHeader}>
+                <div><p className={styles.kicker}>Prospect database</p><h2>Discovered PIs</h2></div>
+                <span className={styles.muted}>{prospects.length} shown</span>
+              </div>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead><tr><th>PI</th><th>Institution</th><th>Research</th><th>Score</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {prospects.length === 0 ? <tr><td colSpan={5}>No automatically discovered prospects yet.</td></tr> : prospects.map((prospect) => (
+                      <tr key={prospect.id}>
+                        <td>
+                          <strong>{prospect.official_profile_url ? <a href={prospect.official_profile_url} target="_blank" rel="noreferrer">{prospect.pi_name} ↗</a> : prospect.pi_name}</strong>
+                          <br /><small className={styles.muted}>{prospect.country}</small>
+                        </td>
+                        <td>{prospect.institution}</td>
+                        <td>{prospect.research_area}</td>
+                        <td>{prospect.qualification_score}</td>
+                        <td><span className={styles.status} data-status={prospect.status}>{statusText(prospect.status)}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           </div>
         </div>
