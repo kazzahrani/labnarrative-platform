@@ -1,0 +1,268 @@
+/* Distinctive colours for Automation pipeline status badges. */
+
+[data-status] {
+  --status-border: #aeb7c4;
+  --status-bg: #eef1f5;
+  --status-text: #4e5868;
+}
+
+[data-status="discovered"] {
+  --status-border: #aeb7c4;
+  --status-bg: #eef1f5;
+  --status-text: #4e5868;
+}
+
+[data-status="qualified"] {
+  --status-border: #64a99a;
+  --status-bg: #e2f3ef;
+  --status-text: #176353;
+}
+
+[data-status="queued"] {
+  --status-border: #7e8fd1;
+  --status-bg: #e9ecfb;
+  --status-text: #3b4c98;
+}
+
+[data-status="running"] {
+  --status-border: #63a1d6;
+  --status-bg: #e4f1fb;
+  --status-text: #245f8f;
+}
+
+[data-status="in_production"] {
+  --status-border: #4baec1;
+  --status-bg: #dff4f7;
+  --status-text: #176b78;
+}
+
+[data-status="awaiting_final_review"] {
+  --status-border: #d4a33c;
+  --status-bg: #fff1c8;
+  --status-text: #7a5510;
+}
+
+[data-status="revision_requested"] {
+  --status-border: #df8542;
+  --status-bg: #ffeadb;
+  --status-text: #8a4217;
+}
+
+[data-status="approved_to_send"] {
+  --status-border: #5fa66f;
+  --status-bg: #e0f1e4;
+  --status-text: #276637;
+}
+
+[data-status="email_sent"],
+[data-status="sent"] {
+  --status-border: #9a72cf;
+  --status-bg: #f0e7fa;
+  --status-text: #603894;
+}
+
+[data-status="sending"] {
+  --status-border: #567fdb;
+  --status-bg: #e5ecfc;
+  --status-text: #31529c;
+}
+
+[data-status="completed"] {
+  --status-border: #3caa7b;
+  --status-bg: #dcf4e9;
+  --status-text: #176847;
+}
+
+[data-status="needs_attention"] {
+  --status-border: #dc6e56;
+  --status-bg: #fde7e1;
+  --status-text: #8f321f;
+}
+
+[data-status="failed"] {
+  --status-border: #cf5562;
+  --status-bg: #fae2e5;
+  --status-text: #8f2632;
+}
+
+[data-status="rejected"] {
+  --status-border: #a44d5c;
+  --status-bg: #f4e0e4;
+  --status-text: #702735;
+}
+
+[data-status="paused"] {
+  --status-border: #8b94a3;
+  --status-bg: #e9ebef;
+  --status-text: #515b69;
+}
+
+[data-status="replied"] {
+  --status-border: #6e7ed0;
+  --status-bg: #e9ebfa;
+  --status-text: #414f9a;
+}
+
+[data-status="interested"] {
+  --status-border: #c565a9;
+  --status-bg: #f7e4f1;
+  --status-text: #853b70;
+}
+
+[data-status="draft"] {
+  --status-border: #9aa3b0;
+  --status-bg: #eceff3;
+  --status-text: #56606e;
+}
+
+[data-status="approved"] {
+  --status-border: #5fa66f;
+  --status-bg: #e0f1e4;
+  --status-text: #276637;
+}
+
+[data-status="cancelled"] {
+  --status-border: #9d7c83;
+  --status-bg: #eee7e9;
+  --status-text: #684b52;
+}
+
+span[data-status],
+[data-status].status {
+  border-color: var(--status-border) !important;
+  background: var(--status-bg) !important;
+  color: var(--status-text) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status-border) 10%, transparent);
+}
+
+span[data-status]::before,
+[data-status].status::before {
+  content: "";
+  width: 0.46rem;
+  height: 0.46rem;
+  margin-right: 0.38rem;
+  border-radius: 999px;
+  background: var(--status-border);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--status-border) 20%, transparent);
+}
+
+html[data-platform-theme="dark"] [data-status="discovered"] {
+  --status-border: #8590a0;
+  --status-bg: #262b34;
+  --status-text: #c6ccd5;
+}
+
+html[data-platform-theme="dark"] [data-status="qualified"] {
+  --status-border: #54b7a1;
+  --status-bg: #16352f;
+  --status-text: #9ee4d4;
+}
+
+html[data-platform-theme="dark"] [data-status="queued"] {
+  --status-border: #8497ef;
+  --status-bg: #232b4d;
+  --status-text: #bdc7ff;
+}
+
+html[data-platform-theme="dark"] [data-status="running"] {
+  --status-border: #5eaceb;
+  --status-bg: #18334b;
+  --status-text: #acd9fb;
+}
+
+html[data-platform-theme="dark"] [data-status="in_production"] {
+  --status-border: #48bfd3;
+  --status-bg: #143740;
+  --status-text: #a4e5ef;
+}
+
+html[data-platform-theme="dark"] [data-status="awaiting_final_review"] {
+  --status-border: #e0ad3d;
+  --status-bg: #3a2e12;
+  --status-text: #f7d878;
+}
+
+html[data-platform-theme="dark"] [data-status="revision_requested"] {
+  --status-border: #eb9049;
+  --status-bg: #3d2718;
+  --status-text: #f7bd8c;
+}
+
+html[data-platform-theme="dark"] [data-status="approved_to_send"] {
+  --status-border: #64bb78;
+  --status-bg: #19351f;
+  --status-text: #a8e3b3;
+}
+
+html[data-platform-theme="dark"] [data-status="email_sent"],
+html[data-platform-theme="dark"] [data-status="sent"] {
+  --status-border: #ad7fe4;
+  --status-bg: #302143;
+  --status-text: #d8bbf7;
+}
+
+html[data-platform-theme="dark"] [data-status="sending"] {
+  --status-border: #6f94ef;
+  --status-bg: #202c4b;
+  --status-text: #b9ccff;
+}
+
+html[data-platform-theme="dark"] [data-status="completed"] {
+  --status-border: #46c18a;
+  --status-bg: #17382a;
+  --status-text: #9ce2bf;
+}
+
+html[data-platform-theme="dark"] [data-status="needs_attention"] {
+  --status-border: #ef8067;
+  --status-bg: #3b211b;
+  --status-text: #f5b3a4;
+}
+
+html[data-platform-theme="dark"] [data-status="failed"] {
+  --status-border: #e26773;
+  --status-bg: #3d1d23;
+  --status-text: #f4adb5;
+}
+
+html[data-platform-theme="dark"] [data-status="rejected"] {
+  --status-border: #cc6575;
+  --status-bg: #351d24;
+  --status-text: #e9aab5;
+}
+
+html[data-platform-theme="dark"] [data-status="paused"] {
+  --status-border: #8e98a9;
+  --status-bg: #272c35;
+  --status-text: #c4cad4;
+}
+
+html[data-platform-theme="dark"] [data-status="replied"] {
+  --status-border: #8391e7;
+  --status-bg: #252a4a;
+  --status-text: #c1c9ff;
+}
+
+html[data-platform-theme="dark"] [data-status="interested"] {
+  --status-border: #dc72ba;
+  --status-bg: #3a2033;
+  --status-text: #f1b2dc;
+}
+
+html[data-platform-theme="dark"] [data-status="draft"] {
+  --status-border: #8e98a9;
+  --status-bg: #272c35;
+  --status-text: #c4cad4;
+}
+
+html[data-platform-theme="dark"] [data-status="approved"] {
+  --status-border: #64bb78;
+  --status-bg: #19351f;
+  --status-text: #a8e3b3;
+}
+
+html[data-platform-theme="dark"] [data-status="cancelled"] {
+  --status-border: #a17882;
+  --status-bg: #30252a;
+  --status-text: #d3b7be;
+}
