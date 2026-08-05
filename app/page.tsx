@@ -1,4 +1,3 @@
-import HomePricingPreview from "@/components/HomePricingPreview";
 import LabNarrativeScrollPanels from "@/components/LabNarrativeScrollPanels";
 import styles from "./page.module.css";
 
@@ -40,6 +39,47 @@ const process = [
     number: "04",
     title: "Launch",
     copy: "We connect your domain and hand over a finished, maintainable website.",
+  },
+];
+
+const packages = [
+  {
+    name: "Essential",
+    price: "$750",
+    subtitle: "For focused and emerging laboratories",
+    features: [
+      "Custom scientific website direction",
+      "Research copy and content organisation",
+      "Responsive design",
+      "Core research, team and contact sections",
+      "Domain connection and launch",
+    ],
+  },
+  {
+    name: "Professional",
+    price: "$1,050",
+    subtitle: "For active groups with people and projects",
+    recommended: true,
+    features: [
+      "Everything included in Essential",
+      "Complete multi-page laboratory website",
+      "Up to six research projects",
+      "Unlimited laboratory members",
+      "Publications and opportunities sections",
+      "Private editing and publishing access",
+    ],
+  },
+  {
+    name: "+ Annual care",
+    price: "$300 / year",
+    subtitle: "For a site that stays current",
+    features: [
+      "Managed hosting and maintenance",
+      "Backups and technical updates",
+      "Routine content support",
+      "Domain and delivery monitoring",
+      "Priority assistance",
+    ],
   },
 ];
 
@@ -106,7 +146,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.approachSection} data-ln-overlap-panel="approach">
+      <section
+        className={styles.approachSection}
+        data-ln-overlap-panel="approach"
+      >
         <p className={styles.sectionLabel}>The LabNarrative approach</p>
         <h2>
           Not a generic template filled with scientific words. A considered digital home built
@@ -171,7 +214,10 @@ export default function HomePage() {
           color: "var(--white)",
         }}
       >
-        <div className={styles.platformNote} style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
+        <div
+          className={styles.platformNote}
+          style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}
+        >
           <div>
             <p className={styles.sectionLabel} style={{ color: "var(--lime)" }}>
               After launch
@@ -188,9 +234,46 @@ export default function HomePage() {
         </div>
       </section>
 
-      <HomePricingPreview />
+      <section
+        className={styles.pricingSection}
+        id="pricing"
+        data-ln-overlap-panel="pricing"
+      >
+        <div className={styles.sectionTopline}>
+          <p className={styles.sectionLabel}>Simple packages</p>
+          <p>Clear scope. No technical learning curve.</p>
+        </div>
 
-      <section className={styles.founderSection} data-ln-overlap-panel="founder">
+        <div className={styles.pricingGrid}>
+          {packages.map((item) => (
+            <article
+              className={item.recommended ? styles.recommendedCard : undefined}
+              key={item.name}
+            >
+              {item.recommended ? <span className={styles.badge}>Most complete</span> : null}
+              <h3>{item.name}</h3>
+              <strong>{item.price}</strong>
+              <p>{item.subtitle}</p>
+              <ul>
+                {item.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+
+        <div className={styles.deliveryLine}>
+          <span>25% deposit to begin</span>
+          <span>First review in 3–5 days</span>
+          <span>Typical launch in 7–10 days</span>
+        </div>
+      </section>
+
+      <section
+        className={styles.founderSection}
+        data-ln-overlap-panel="founder"
+      >
         <p className={styles.sectionLabel}>Built by a scientist, for scientists</p>
         <div>
           <h2>Scientific credibility is part of the design.</h2>
@@ -216,8 +299,8 @@ export default function HomePage() {
           We’ll imagine the website.
         </h2>
         <p>
-          Introduce your group at <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>{" "}
-          and receive a focused project recommendation.
+          Introduce your group at <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
+          {" "}and receive a focused project recommendation.
         </p>
         <a
           className={styles.emailButton}
@@ -228,9 +311,7 @@ export default function HomePage() {
       </section>
 
       <footer className={styles.footer}>
-        <a className={styles.wordmark} href="#top">
-          <Wordmark />
-        </a>
+        <a className={styles.wordmark} href="#top"><Wordmark /></a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
         <span>© 2026 LabNarrative</span>
       </footer>
