@@ -20,6 +20,7 @@ import "./mid-theme.css";
 import "./mid-theme-gradient-refinement.css";
 import "./ocean-theme.css";
 import "./ocean-theme-reference-refinement.css";
+import "./ocean-theme-compact-stats.css";
 
 export const metadata: Metadata = {
   title: {
