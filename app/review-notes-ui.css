@@ -1,0 +1,58 @@
+/* Production Engine review notes: compact per-concept notes and one copy-ready summary. */
+
+body.platform-automation-page .reviewIssueNote {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+  align-items: end !important;
+  margin-top: 14px !important;
+}
+
+body.platform-automation-page .reviewIssueNote label {
+  display: grid !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+
+body.platform-automation-page .reviewIssueNote label > span {
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+}
+
+body.platform-automation-page .reviewIssueNote input {
+  width: 100% !important;
+  min-height: 44px !important;
+  font-weight: 400 !important;
+}
+
+body.platform-automation-page .reviewIssueNote button {
+  min-width: 112px !important;
+}
+
+body.platform-automation-page .reviewNotesCollector {
+  margin-top: 28px !important;
+}
+
+body.platform-automation-page .reviewNotesCollector textarea {
+  width: 100% !important;
+  min-height: 180px !important;
+  resize: vertical !important;
+  font-weight: 400 !important;
+  line-height: 1.55 !important;
+}
+
+body.platform-automation-page .reviewNotesCollector [class*="cardHeader"] {
+  align-items: flex-start !important;
+}
+
+@media (max-width: 680px) {
+  body.platform-automation-page .reviewIssueNote {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.platform-automation-page .reviewIssueNote button {
+    width: 100% !important;
+  }
+}
