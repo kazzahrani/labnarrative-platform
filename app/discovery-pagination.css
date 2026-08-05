@@ -101,17 +101,17 @@ body.platform-discovery-page .automaticQueueTable {
 
 body.platform-discovery-page .automaticQueueTable th:nth-child(1),
 body.platform-discovery-page .automaticQueueTable td:nth-child(1) {
-  width: 27%;
+  width: 26%;
 }
 
 body.platform-discovery-page .automaticQueueTable th:nth-child(2),
 body.platform-discovery-page .automaticQueueTable td:nth-child(2) {
-  width: 21%;
+  width: 24%;
 }
 
 body.platform-discovery-page .automaticQueueTable th:nth-child(3),
 body.platform-discovery-page .automaticQueueTable td:nth-child(3) {
-  width: 52%;
+  width: 50%;
 }
 
 body.platform-discovery-page .automaticQueueTable td:nth-child(3) {
