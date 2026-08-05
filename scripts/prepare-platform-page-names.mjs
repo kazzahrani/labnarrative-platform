@@ -35,6 +35,7 @@ const discovery = updatePage(pages.discovery, (source) => source
   .replace('<Link href="/admin/sites">Websites Monitor</Link>', '<Link href="/admin/sites">Websites</Link>')
   .replace(/\s*<p className=\{styles\.kicker\}>Engine 1 · automatic discovery<\/p>\s*/, "\n            ")
   .replace("<h1>Search, verify, and queue automatically.</h1>", "<h1>Prospects Discovery</h1>")
+  .replace("Open production queue", "Open Production")
   .replace("Open production system", "Open Production")
   .replace("Open Production Engine", "Open Production"));
 
