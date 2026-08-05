@@ -2,15 +2,23 @@
 
 import { useEffect } from "react";
 
+const ADMIN_PAGES = [
+  { pathname: "/admin/discovery", label: "Prospect discovery" },
+  { pathname: "/admin/automation", label: "Production system" },
+  { pathname: "/admin/sites", label: "Websites monitor" },
+] as const;
+
+function linkPath(link: HTMLAnchorElement): string {
+  try {
+    return new URL(link.href, window.location.origin).pathname;
+  } catch {
+    return link.getAttribute("href") ?? "";
+  }
+}
+
 function navHasLink(nav: HTMLElement, pathname: string): boolean {
   return Array.from(nav.querySelectorAll<HTMLAnchorElement>("a[href]"))
-    .some((link) => {
-      try {
-        return new URL(link.href, window.location.origin).pathname === pathname;
-      } catch {
-        return link.getAttribute("href") === pathname;
-      }
-    });
+    .some((link) => linkPath(link) === pathname);
 }
 
 export default function AutomationNavEnhancer() {
@@ -18,33 +26,42 @@ export default function AutomationNavEnhancer() {
     const pathname = window.location.pathname;
     if (!pathname.startsWith("/admin")) return;
 
+    const currentPage = ADMIN_PAGES.find((page) => pathname === page.pathname);
+    if (currentPage) document.title = `${currentPage.label} | LabNarrative`;
+
     let cancelled = false;
     let observer: MutationObserver | null = null;
 
-    const addLinks = () => {
+    const applyNames = () => {
       if (cancelled) return;
       const nav = document.querySelector<HTMLElement>("header nav");
       if (!nav) return;
 
-      if (pathname !== "/admin/discovery" && !navHasLink(nav, "/admin/discovery")) {
-        const discovery = document.createElement("a");
-        discovery.href = "/admin/discovery";
-        discovery.textContent = "Discovery";
-        discovery.dataset.discoveryNav = "true";
-        nav.prepend(discovery);
-      }
+      nav.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
+        const page = ADMIN_PAGES.find((item) => linkPath(link) === item.pathname);
+        if (page && link.textContent !== page.label) link.textContent = page.label;
+      });
 
-      if (pathname !== "/admin/automation" && !navHasLink(nav, "/admin/automation")) {
-        const automation = document.createElement("a");
-        automation.href = "/admin/automation";
-        automation.textContent = "Automation";
-        automation.dataset.automationNav = "true";
-        nav.prepend(automation);
+      [...ADMIN_PAGES].reverse().forEach((page) => {
+        if (pathname === page.pathname || navHasLink(nav, page.pathname)) return;
+
+        const link = document.createElement("a");
+        link.href = page.pathname;
+        link.textContent = page.label;
+        link.dataset.platformNav = page.pathname.slice(1).replaceAll("/", "-");
+        nav.prepend(link);
+      });
+
+      if (currentPage) {
+        const context = document.querySelector<HTMLElement>("header > div > span");
+        if (context && context.textContent !== currentPage.label) {
+          context.textContent = currentPage.label;
+        }
       }
     };
 
-    addLinks();
-    observer = new MutationObserver(addLinks);
+    applyNames();
+    observer = new MutationObserver(applyNames);
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
