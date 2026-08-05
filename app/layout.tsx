@@ -17,6 +17,7 @@ import "./pipeline-event-colors.css";
 import "./pipeline-status-colors.css";
 import "./grey-theme.css";
 import "./mid-theme.css";
+import "./mid-theme-gradient-refinement.css";
 
 export const metadata: Metadata = {
   title: {
