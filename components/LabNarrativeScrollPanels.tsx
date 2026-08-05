@@ -78,7 +78,7 @@ export default function LabNarrativeScrollPanels() {
                 : panel.id === "after-launch"
                   ? pricingStart
                   : undefined,
-          speed: isApproach ? 0.5 : panel.id === "pricing" ? 0.4 : 0.36,
+          speed: 0.4,
         };
       });
     };
