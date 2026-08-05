@@ -71,3 +71,36 @@ html[data-platform-theme="dark"] [data-pipeline-event] > strong {
 html[data-platform-theme="dark"] [data-pipeline-event] > time {
   color: #9ba4b2 !important;
 }
+
+html[data-platform-theme="ocean"] [data-pipeline-event] {
+  border-color: hsl(var(--pipeline-event-hue) 34% 34%) !important;
+  border-left-color: hsl(var(--pipeline-event-hue) 72% 58%) !important;
+  background:
+    linear-gradient(
+      105deg,
+      hsl(var(--pipeline-event-hue) 44% 25% / 0.78),
+      hsl(var(--pipeline-event-hue) 34% 20% / 0.3) 62%,
+      transparent
+    ),
+    #17252f !important;
+  color: #dbe3e8 !important;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.16);
+}
+
+html[data-platform-theme="ocean"] [data-pipeline-event]:hover {
+  border-color: hsl(var(--pipeline-event-hue) 44% 48%) !important;
+}
+
+html[data-platform-theme="ocean"] [data-pipeline-event] > strong {
+  border-color: hsl(var(--pipeline-event-hue) 48% 43%);
+  background: hsl(var(--pipeline-event-hue) 42% 27%);
+  color: hsl(var(--pipeline-event-hue) 82% 82%) !important;
+}
+
+html[data-platform-theme="ocean"] [data-pipeline-event] > span {
+  color: #d7e0e6 !important;
+}
+
+html[data-platform-theme="ocean"] [data-pipeline-event] > time {
+  color: #91a1ac !important;
+}
