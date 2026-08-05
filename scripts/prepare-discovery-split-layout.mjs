@@ -23,7 +23,8 @@ if (stackIndex === -1) {
   throw new Error("The Discovery card stack was not found.");
 }
 
-source = `${source.slice(0, stackIndex)}<div className={\`${styles.stack} discoverySplitGrid\`}>${source.slice(stackIndex + stackToken.length)}`;
+const stackReplacement = '<div className={`${styles.stack} discoverySplitGrid`}>';
+source = `${source.slice(0, stackIndex)}${stackReplacement}${source.slice(stackIndex + stackToken.length)}`;
 
 for (const [kicker, className] of cardClasses) {
   const kickerToken = `<p className={styles.kicker}>${kicker}</p>`;
@@ -35,7 +36,7 @@ for (const [kicker, className] of cardClasses) {
     throw new Error(`${kicker} card container was not found.`);
   }
 
-  const replacement = `<section className={\`${styles.card} ${className}\`}>`;
+  const replacement = '<section className={`${styles.card} ' + className + '`}>';
   source = `${source.slice(0, cardIndex)}${replacement}${source.slice(cardIndex + cardToken.length)}`;
 }
 
