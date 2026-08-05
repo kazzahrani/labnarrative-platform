@@ -3,6 +3,7 @@ import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhancer";
 import AutomationNavEnhancer from "@/components/admin/AutomationNavEnhancer";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
+import PipelineEventColorEnhancer from "@/components/admin/PipelineEventColorEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
 import "./platform-overrides.css";
@@ -12,6 +13,7 @@ import "./labnarrative-public-refinement.css";
 import "./labnarrative-type-amplification.css";
 import "./labnarrative-section-colors.css";
 import "./narita-home-hero-flow.css";
+import "./pipeline-event-colors.css";
 
 export const metadata: Metadata = {
   title: {
@@ -29,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AdminLandingRedirect />
         <AdminAuthRecoveryEnhancer />
         <AutomationNavEnhancer />
+        <PipelineEventColorEnhancer />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
         {children}
