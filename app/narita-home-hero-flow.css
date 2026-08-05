@@ -1,0 +1,13 @@
+/* Narita/Kinetic homepage hero flow
+ *
+ * Inner-page heroes intentionally keep the layered overlap treatment.
+ * The large homepage gallery should scroll with the document instead of
+ * remaining pinned beneath the sticky navigation.
+ */
+.narita-overlap-design.narita-route-home
+  .narita-overlap-hero.kinetic-photo-hero {
+  position: relative !important;
+  top: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
