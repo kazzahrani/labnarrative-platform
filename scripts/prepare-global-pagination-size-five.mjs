@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const adminRoot = new URL("../app/admin/", import.meta.url);
-const adminPath = path.fileURLToPath(adminRoot);
+const adminPath = fileURLToPath(adminRoot);
 
 function collectTsxFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
