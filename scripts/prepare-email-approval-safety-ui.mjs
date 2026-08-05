@@ -22,18 +22,21 @@ function isValidEmail(value: string): boolean {
 
 source = source.replace(
   '<button className={styles.button} type="button" disabled={working || !message} onClick={() => void invokeWorker("approve_send", { runId: run.id })}>Approve website & send email</button>',
-  '{message && !isValidEmail(message.recipient_email) ? <p className={`${styles.notice} ${styles.error}`}>A verified recipient email is required before sending.</p> : null}\n                    <button className={styles.button} type="button" disabled={working || !message || !isValidEmail(message.recipient_email)} onClick={() => message && window.confirm(`Send this email now to ${message.recipient_email}? This action cannot be undone.`) && void invokeWorker("approve_send", { runId: run.id })}>Send email now</button>',
+  '{message && !isValidEmail(message.recipient_email) ? <p className={`${styles.notice} ${styles.error}`}>A verified recipient email is required before sending.</p> : null}\n                    <button className={styles.button} type="button" disabled={working || !message || !isValidEmail(message.recipient_email)} onClick={() => void invokeWorker("approve_send", { runId: run.id })}>Send email now</button>',
 );
 
 if (!source.includes("function isValidEmail(value: string): boolean")) {
   throw new Error("The verified-email helper could not be installed.");
 }
-if (!source.includes("This action cannot be undone.")) {
-  throw new Error("The irreversible-send confirmation could not be installed.");
+if (!source.includes('onClick={() => void invokeWorker("approve_send", { runId: run.id })}>Send email now</button>')) {
+  throw new Error("The direct send-email action could not be installed.");
+}
+if (source.includes("Send this email now to")) {
+  throw new Error("The send-email confirmation dialog is still present.");
 }
 if (!source.includes("A verified recipient email is required before sending.")) {
   throw new Error("The verified-email warning could not be installed.");
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Email approval safety interface prepared.");
+console.log("Verified email protection retained without a send confirmation dialog.");
