@@ -94,6 +94,30 @@
   opacity: 0.62;
 }
 
+body.platform-discovery-page .automaticQueueTable {
+  width: 100%;
+  table-layout: fixed;
+}
+
+body.platform-discovery-page .automaticQueueTable th:nth-child(1),
+body.platform-discovery-page .automaticQueueTable td:nth-child(1) {
+  width: 27%;
+}
+
+body.platform-discovery-page .automaticQueueTable th:nth-child(2),
+body.platform-discovery-page .automaticQueueTable td:nth-child(2) {
+  width: 21%;
+}
+
+body.platform-discovery-page .automaticQueueTable th:nth-child(3),
+body.platform-discovery-page .automaticQueueTable td:nth-child(3) {
+  width: 52%;
+}
+
+body.platform-discovery-page .automaticQueueTable td:nth-child(3) {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 760px) {
   .discoveryPagination,
   .discoveryPaginationControls {
