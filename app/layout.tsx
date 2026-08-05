@@ -29,7 +29,9 @@ import "./production-system-typography-increase.css";
 import "./platform-rounded-edges.css";
 import "./review-notes-ui.css";
 import "./compact-admin-header-actions.css";
+import "./production-header-alignment.css";
 import "./discovery-split-layout.css";
+import "./discovery-pagination.css";
 
 export const metadata: Metadata = {
   title: {
