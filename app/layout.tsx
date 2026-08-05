@@ -32,6 +32,7 @@ import "./compact-admin-header-actions.css";
 import "./production-header-alignment.css";
 import "./discovery-split-layout.css";
 import "./discovery-pagination.css";
+import "./production-pagination.css";
 
 export const metadata: Metadata = {
   title: {
