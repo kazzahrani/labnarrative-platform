@@ -3,13 +3,21 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type PlatformTheme = "light" | "dark";
+type PlatformTheme = "light" | "grey" | "dark";
 
 const STORAGE_KEY = "labnarrative-platform-theme";
 const PAGE_CLASSES = [
   "platform-home-page",
   "platform-admin-page",
   "platform-monitor-page",
+  "platform-automation-page",
+  "platform-discovery-page",
+];
+
+const THEME_OPTIONS: Array<{ value: PlatformTheme; label: string; icon: string }> = [
+  { value: "light", label: "Light", icon: "☀" },
+  { value: "grey", label: "Grey", icon: "◐" },
+  { value: "dark", label: "Dark", icon: "☾" },
 ];
 
 function isOperationalHost(hostname: string): boolean {
@@ -33,7 +41,7 @@ function isOperationalHost(hostname: string): boolean {
 
 function applyTheme(theme: PlatformTheme) {
   document.documentElement.dataset.platformTheme = theme;
-  document.documentElement.style.colorScheme = theme;
+  document.documentElement.style.colorScheme = theme === "dark" ? "dark" : "light";
 }
 
 export default function PlatformThemeToggle() {
@@ -56,22 +64,24 @@ export default function PlatformThemeToggle() {
       return;
     }
 
-    document.body.classList.add("platform-theme-active");
+    document.body.classList.add("platform-theme-active", "platform-admin-page");
+
     if (pathname.startsWith("/admin/sites")) {
       document.body.classList.add("platform-monitor-page");
-    } else {
-      document.body.classList.add("platform-admin-page");
+    } else if (pathname.startsWith("/admin/automation")) {
+      document.body.classList.add("platform-automation-page");
+    } else if (pathname.startsWith("/admin/discovery")) {
+      document.body.classList.add("platform-discovery-page");
     }
 
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    const initialTheme: PlatformTheme = stored === "dark" ? "dark" : "light";
+    const initialTheme: PlatformTheme = stored === "dark" || stored === "grey" ? stored : "light";
     setTheme(initialTheme);
     applyTheme(initialTheme);
     setAvailable(true);
   }, [pathname]);
 
-  function toggleTheme() {
-    const nextTheme: PlatformTheme = theme === "dark" ? "light" : "dark";
+  function selectTheme(nextTheme: PlatformTheme) {
     setTheme(nextTheme);
     applyTheme(nextTheme);
     window.localStorage.setItem(STORAGE_KEY, nextTheme);
@@ -79,18 +89,22 @@ export default function PlatformThemeToggle() {
 
   if (!available) return null;
 
-  const nextLabel = theme === "dark" ? "Light" : "Dark";
-
   return (
-    <button
-      aria-label={`Switch to ${nextLabel.toLowerCase()} theme`}
-      className="platform-theme-toggle"
-      onClick={toggleTheme}
-      title={`Switch to ${nextLabel.toLowerCase()} theme`}
-      type="button"
-    >
-      <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
-      <strong>{nextLabel}</strong>
-    </button>
+    <div aria-label="Platform appearance" className="platform-theme-toggle" role="group">
+      {THEME_OPTIONS.map((option) => (
+        <button
+          aria-label={`Use ${option.label.toLowerCase()} theme`}
+          aria-pressed={theme === option.value}
+          className="platform-theme-option"
+          key={option.value}
+          onClick={() => selectTheme(option.value)}
+          title={`${option.label} theme`}
+          type="button"
+        >
+          <span aria-hidden="true">{option.icon}</span>
+          <strong>{option.label}</strong>
+        </button>
+      ))}
+    </div>
   );
 }
