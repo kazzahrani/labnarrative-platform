@@ -12,10 +12,10 @@ function replaceRequired(current, oldText, newText, label) {
 }
 
 const componentMarker = "export default function AutomationControlCentre() {";
-const statusOrderMarker = "const pipelineHistoryStatusOrder: ProspectStatus[] = [";
+const statusOrderMarker = "const pipelineHistoryFilterOrder: ProspectStatus[] = [";
 
 if (!source.includes(statusOrderMarker)) {
-  const statusOrder = `const pipelineHistoryStatusOrder: ProspectStatus[] = [
+  const statusOrder = `const pipelineHistoryFilterOrder: ProspectStatus[] = [
   "in_production",
   "awaiting_final_review",
   "revision_requested",
@@ -69,11 +69,11 @@ const newPipelineData = `  const pipelineHistoryAllProspects = useMemo(
   }, [pipelineHistoryAllProspects]);
 
   const pipelineHistoryStatuses = useMemo(() => {
-    const ordered = pipelineHistoryStatusOrder.filter(
+    const ordered = pipelineHistoryFilterOrder.filter(
       (status) => (pipelineHistoryStatusCounts.get(status) ?? 0) > 0,
     );
     const additional = Array.from(pipelineHistoryStatusCounts.keys()).filter(
-      (status) => !pipelineHistoryStatusOrder.includes(status),
+      (status) => !pipelineHistoryFilterOrder.includes(status),
     );
     return [...ordered, ...additional];
   }, [pipelineHistoryStatusCounts]);
