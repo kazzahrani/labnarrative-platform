@@ -43,12 +43,12 @@ source = source.replace(
 );
 
 source = source.replace(
-  '{renderProspectTable("Buildable prospects · score 50–100", "Production queue",',
-  '{renderProspectTable("Buildable prospects · score 50–100", "",',
+  /(\{renderProspectTable\("Buildable prospects · score 75–100",\s*)"Production queue"/,
+  '$1""',
 );
 source = source.replace(
-  '{renderProspectTable("Active and completed records", "Pipeline history",',
-  '{renderProspectTable("Active and completed records", "",',
+  /(\{renderProspectTable\("Active and completed records",\s*)"Pipeline history"/,
+  '$1""',
 );
 source = source.replace(/\s*<h3>Pipeline events<\/h3>/g, "");
 
@@ -61,7 +61,7 @@ if (source.includes('{renderProspectTable("Held prospects')) {
 if (source.includes('{renderProspectTable("Rejected prospects')) {
   throw new Error("The Rejected prospects table is still present.");
 }
-if (!source.includes('{renderProspectTable("Buildable prospects · score 50–100", "",')) {
+if (!source.includes('{renderProspectTable("Buildable prospects · score 75–100", "",')) {
   throw new Error("The title-free Production queue window was not restored.");
 }
 if (!source.includes('{renderProspectTable("Active and completed records", "",')) {
@@ -80,7 +80,7 @@ if (/\<span\>Rejected[^<]*\<\/span\>\<strong\>\{counts\.rejected\}\<\/strong\>/.
   throw new Error("The Rejected metric is still present.");
 }
 
-const finalQueueIndex = source.indexOf('"Buildable prospects · score 50–100"');
+const finalQueueIndex = source.indexOf('"Buildable prospects · score 75–100"');
 const finalHistoryIndex = source.indexOf('"Active and completed records"');
 if (finalHistoryIndex === -1 || finalQueueIndex === -1 || finalHistoryIndex > finalQueueIndex) {
   throw new Error("Pipeline history was not restored above Production queue.");
