@@ -1,0 +1,97 @@
+/* Larger, clearer typography for the Discovery engine only. */
+
+body.platform-discovery-page {
+  font-size: 1rem;
+}
+
+body.platform-discovery-page > main > header {
+  font-size: 0.94rem !important;
+}
+
+body.platform-discovery-page [class*="brand"] {
+  font-size: 1.06rem !important;
+}
+
+body.platform-discovery-page [class*="hero"] h1 {
+  font-size: clamp(2.55rem, 4.5vw, 4.6rem) !important;
+  line-height: 1 !important;
+}
+
+body.platform-discovery-page [class*="heroCopy"] {
+  font-size: 1rem !important;
+  line-height: 1.62 !important;
+}
+
+body.platform-discovery-page [class*="kicker"] {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.12em !important;
+}
+
+body.platform-discovery-page [class*="cardHeader"] h2,
+body.platform-discovery-page [class*="card"] > h2 {
+  font-size: 1.8rem !important;
+}
+
+body.platform-discovery-page [class*="cardHeader"] h3,
+body.platform-discovery-page [class*="card"] > h3 {
+  font-size: 1.35rem !important;
+}
+
+body.platform-discovery-page [class*="stat"] strong {
+  font-size: 1.95rem !important;
+}
+
+body.platform-discovery-page [class*="stat"] span {
+  font-size: 0.72rem !important;
+  letter-spacing: 0.07em !important;
+}
+
+body.platform-discovery-page [class*="card"] p,
+body.platform-discovery-page [class*="notice"],
+body.platform-discovery-page [class*="event"] span {
+  font-size: 0.92rem !important;
+}
+
+body.platform-discovery-page label,
+body.platform-discovery-page small,
+body.platform-discovery-page time {
+  font-size: 0.76rem !important;
+}
+
+body.platform-discovery-page input,
+body.platform-discovery-page select,
+body.platform-discovery-page textarea {
+  font-size: 0.9rem !important;
+}
+
+body.platform-discovery-page button,
+body.platform-discovery-page a[class*="button"] {
+  font-size: 0.8rem !important;
+}
+
+body.platform-discovery-page [class*="status"] {
+  font-size: 0.72rem !important;
+}
+
+body.platform-discovery-page table th {
+  font-size: 0.7rem !important;
+}
+
+body.platform-discovery-page table td {
+  font-size: 0.86rem !important;
+  line-height: 1.5 !important;
+}
+
+body.platform-discovery-page [data-pipeline-event] > strong {
+  font-size: 0.72rem !important;
+}
+
+body.platform-discovery-page [data-pipeline-event] > span {
+  font-size: 0.88rem !important;
+}
+
+@media (max-width: 760px) {
+  body.platform-discovery-page [class*="hero"] h1 {
+    font-size: clamp(2.2rem, 11vw, 3.3rem) !important;
+  }
+}
