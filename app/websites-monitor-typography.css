@@ -1,0 +1,86 @@
+/* Match Websites Monitor typography to Discovery and Production. */
+
+body.platform-monitor-page {
+  font-size: 1rem;
+}
+
+body.platform-monitor-page > main > header {
+  font-size: 0.94rem !important;
+}
+
+body.platform-monitor-page [class*="brand"] {
+  font-size: 1.06rem !important;
+}
+
+body.platform-monitor-page [class*="heading"] h1 {
+  font-size: clamp(2.55rem, 4.5vw, 4.6rem) !important;
+  line-height: 1 !important;
+}
+
+body.platform-monitor-page [class*="heading"] > div > p:not([class*="kicker"]) {
+  font-size: 1rem !important;
+  line-height: 1.62 !important;
+}
+
+body.platform-monitor-page [class*="kicker"] {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.12em !important;
+}
+
+body.platform-monitor-page [class*="stateCard"] h1 {
+  font-size: 1.8rem !important;
+}
+
+body.platform-monitor-page [class*="summary"] strong {
+  font-size: 1.95rem !important;
+}
+
+body.platform-monitor-page [class*="summary"] span {
+  font-size: 0.72rem !important;
+  letter-spacing: 0.07em !important;
+}
+
+body.platform-monitor-page [class*="explanation"] strong,
+body.platform-monitor-page [class*="explanation"] span,
+body.platform-monitor-page [class*="stateCard"] p,
+body.platform-monitor-page [class*="notice"],
+body.platform-monitor-page [class*="resultLine"] {
+  font-size: 0.92rem !important;
+}
+
+body.platform-monitor-page label,
+body.platform-monitor-page small,
+body.platform-monitor-page time {
+  font-size: 0.76rem !important;
+}
+
+body.platform-monitor-page input,
+body.platform-monitor-page select,
+body.platform-monitor-page textarea {
+  font-size: 0.9rem !important;
+}
+
+body.platform-monitor-page button,
+body.platform-monitor-page a[class*="Link"],
+body.platform-monitor-page a[class*="button"] {
+  font-size: 0.8rem !important;
+}
+
+body.platform-monitor-page [class*="status"] {
+  font-size: 0.72rem !important;
+}
+
+body.platform-monitor-page table th {
+  font-size: 0.7rem !important;
+}
+
+body.platform-monitor-page table td {
+  font-size: 0.86rem !important;
+  line-height: 1.5 !important;
+}
+
+@media (max-width: 760px) {
+  body.platform-monitor-page [class*="heading"] h1 {
+    font-size: clamp(2.2rem, 11vw, 3.3rem) !important;
+  }
+}
