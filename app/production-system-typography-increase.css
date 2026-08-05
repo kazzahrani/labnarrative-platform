@@ -1,97 +1,97 @@
-/* Larger, clearer typography for the Production system page only. */
+/* Compact typography for the Production Engine page only. */
 
 body.platform-automation-page {
-  font-size: 1rem;
+  font-size: 0.94rem;
 }
 
 body.platform-automation-page > main > header {
-  font-size: 0.94rem !important;
+  font-size: 0.86rem !important;
 }
 
 body.platform-automation-page [class*="brand"] {
-  font-size: 1.06rem !important;
+  font-size: 0.98rem !important;
 }
 
 body.platform-automation-page [class*="hero"] h1 {
-  font-size: clamp(2.65rem, 4.2vw, 4.4rem) !important;
-  line-height: 1 !important;
+  font-size: clamp(2.2rem, 3.5vw, 3.6rem) !important;
+  line-height: 1.04 !important;
 }
 
 body.platform-automation-page [class*="heroCopy"] {
-  font-size: 1rem !important;
-  line-height: 1.62 !important;
+  font-size: 0.9rem !important;
+  line-height: 1.55 !important;
 }
 
 body.platform-automation-page [class*="kicker"] {
-  font-size: 0.7rem !important;
-  letter-spacing: 0.12em !important;
+  font-size: 0.64rem !important;
+  letter-spacing: 0.1em !important;
 }
 
 body.platform-automation-page [class*="cardHeader"] h2,
 body.platform-automation-page [class*="card"] > h2 {
-  font-size: 1.8rem !important;
+  font-size: 1.48rem !important;
 }
 
 body.platform-automation-page [class*="cardHeader"] h3,
 body.platform-automation-page [class*="card"] > h3 {
-  font-size: 1.35rem !important;
+  font-size: 1.14rem !important;
 }
 
 body.platform-automation-page [class*="stat"] strong {
-  font-size: 1.95rem !important;
+  font-size: 1.62rem !important;
 }
 
 body.platform-automation-page [class*="stat"] span {
-  font-size: 0.72rem !important;
-  letter-spacing: 0.07em !important;
+  font-size: 0.66rem !important;
+  letter-spacing: 0.06em !important;
 }
 
 body.platform-automation-page [class*="card"] p,
 body.platform-automation-page [class*="notice"],
 body.platform-automation-page [class*="event"] span {
-  font-size: 0.92rem !important;
+  font-size: 0.84rem !important;
 }
 
 body.platform-automation-page label,
 body.platform-automation-page small,
 body.platform-automation-page time {
-  font-size: 0.76rem !important;
+  font-size: 0.7rem !important;
 }
 
 body.platform-automation-page input,
 body.platform-automation-page select,
 body.platform-automation-page textarea {
-  font-size: 0.9rem !important;
+  font-size: 0.82rem !important;
 }
 
 body.platform-automation-page button,
 body.platform-automation-page a[class*="button"] {
-  font-size: 0.8rem !important;
+  font-size: 0.74rem !important;
 }
 
 body.platform-automation-page [class*="status"] {
-  font-size: 0.72rem !important;
+  font-size: 0.66rem !important;
 }
 
 body.platform-automation-page table th {
-  font-size: 0.7rem !important;
+  font-size: 0.64rem !important;
 }
 
 body.platform-automation-page table td {
-  font-size: 0.86rem !important;
-  line-height: 1.5 !important;
+  font-size: 0.78rem !important;
+  line-height: 1.42 !important;
 }
 
 body.platform-automation-page [data-pipeline-event] > strong {
-  font-size: 0.72rem !important;
+  font-size: 0.66rem !important;
 }
 
 body.platform-automation-page [data-pipeline-event] > span {
-  font-size: 0.88rem !important;
+  font-size: 0.8rem !important;
 }
 
 @media (max-width: 760px) {
   body.platform-automation-page [class*="hero"] h1 {
-    font-size: clamp(2.2rem, 11vw, 3.3rem) !important;
+    font-size: clamp(1.95rem, 9vw, 2.8rem) !important;
   }
 }
