@@ -38,7 +38,7 @@ if (!source.includes("const collectedRevisionNotes = useMemo")) {
         note: (run.revision_request || "").trim(),
       }))
       .filter((item) => item.note)
-      .map((item) => \`${item.name}: ${item.note}\`)
+      .map((item) => \`\${item.name}: \${item.note}\`)
       .join("\\n"),
     [reviewRuns],
   );
@@ -97,7 +97,7 @@ if (!source.includes("async function saveReviewNote(runId: string)")) {
 }
 
 const oldRevisionField = '                  <div className={styles.revisionBox}><textarea rows={3} value={revisionText[run.id] || ""} onChange={(event) => setRevisionText((current) => ({ ...current, [run.id]: event.target.value }))} placeholder="Revision instruction, for example: replace project 2 image and shorten the biography." /></div>\n';
-const newRevisionField = `                  <div className={\`${styles.revisionBox} reviewIssueNote\`}>
+const newRevisionField = `                  <div className={\`\${styles.revisionBox} reviewIssueNote\`}>
                     <label>
                       <span>Issue note</span>
                       <input
@@ -121,7 +121,7 @@ if (!source.includes("reviewNotesCollector")) {
   if (!source.includes(modalToken)) throw new Error("Collected-note box insertion point was not found.");
 
   const collector = `
-      <section className={\`${styles.card} reviewNotesCollector\`}>
+      <section className={\`\${styles.card} reviewNotesCollector\`}>
         <div className={styles.cardHeader}>
           <div>
             <p className={styles.kicker}>Review summary</p>
