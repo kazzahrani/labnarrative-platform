@@ -1,0 +1,111 @@
+.discoveryPagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 12px;
+}
+
+.discoveryPaginationSummary {
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  opacity: 0.72;
+  white-space: nowrap;
+}
+
+.discoveryPaginationControls,
+.discoveryPageSize,
+.discoveryPageButtons {
+  display: flex;
+  align-items: center;
+}
+
+.discoveryPaginationControls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+
+.discoveryPageSize {
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.discoveryPageSize select {
+  height: 32px;
+  border: 1px solid rgba(125, 145, 158, 0.48);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  padding: 0 26px 0 10px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.discoveryPageButtons {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.discoveryPageButtons button {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid rgba(125, 145, 158, 0.48);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.discoveryPageButtons button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(36, 181, 178, 0.16);
+}
+
+.discoveryPageButtons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.discoveryPageButtons button.discoveryPageActive,
+.discoveryPageButtons button[aria-current="page"] {
+  border-color: rgba(36, 181, 178, 0.78);
+  background: #24b5b2;
+  color: #071b22;
+}
+
+.discoveryPageEllipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 32px;
+  opacity: 0.62;
+}
+
+@media (max-width: 760px) {
+  .discoveryPagination,
+  .discoveryPaginationControls {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .discoveryPaginationControls {
+    width: 100%;
+  }
+
+  .discoveryPageButtons {
+    justify-content: flex-start;
+  }
+}
