@@ -1,38 +1,35 @@
 body.platform-discovery-page .discoverySplitGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-areas:
-    "history queue"
-    "diagnostic queue";
   gap: 22px;
   align-items: start;
 }
 
-body.platform-discovery-page .discoverySplitHistory {
-  grid-area: history;
+body.platform-discovery-page .discoverySplitLeft {
+  display: grid;
+  gap: 22px;
   min-width: 0;
 }
 
-body.platform-discovery-page .discoverySplitDiagnostic {
-  grid-area: diagnostic;
+body.platform-discovery-page .discoverySplitHistory,
+body.platform-discovery-page .discoverySplitDiagnostic,
+body.platform-discovery-page .discoverySplitQueue {
   min-width: 0;
+  width: 100%;
 }
 
 body.platform-discovery-page .discoverySplitQueue {
-  grid-area: queue;
-  min-width: 0;
-}
-
-body.platform-discovery-page .discoverySplitGrid > section {
-  width: 100%;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 @media (max-width: 1100px) {
   body.platform-discovery-page .discoverySplitGrid {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "queue"
-      "history"
-      "diagnostic";
+  }
+
+  body.platform-discovery-page .discoverySplitQueue {
+    grid-column: 1;
+    grid-row: auto;
   }
 }
