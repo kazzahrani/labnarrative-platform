@@ -1,0 +1,25 @@
+/* Editable values must not inherit the bold weight used by their labels. */
+
+body.platform-automation-page input,
+body.platform-automation-page textarea,
+body.platform-automation-page select,
+body.platform-discovery-page input,
+body.platform-discovery-page textarea,
+body.platform-discovery-page select,
+body.platform-admin-page input,
+body.platform-admin-page textarea,
+body.platform-admin-page select {
+  font-weight: 400 !important;
+  font-variation-settings: "wght" 400 !important;
+  font-synthesis: none;
+}
+
+body.platform-automation-page input::placeholder,
+body.platform-automation-page textarea::placeholder,
+body.platform-discovery-page input::placeholder,
+body.platform-discovery-page textarea::placeholder,
+body.platform-admin-page input::placeholder,
+body.platform-admin-page textarea::placeholder {
+  font-weight: 400 !important;
+  font-variation-settings: "wght" 400 !important;
+}
