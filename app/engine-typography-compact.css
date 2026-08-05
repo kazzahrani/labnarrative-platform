@@ -1,0 +1,131 @@
+/* Compact typography for the Discovery and Automation operational engines. */
+
+body.platform-automation-page,
+body.platform-discovery-page {
+  font-size: 0.94rem;
+}
+
+body.platform-automation-page > main > header,
+body.platform-discovery-page > main > header {
+  font-size: 0.88rem !important;
+}
+
+body.platform-automation-page [class*="brand"],
+body.platform-discovery-page [class*="brand"] {
+  font-size: 1rem !important;
+}
+
+body.platform-automation-page [class*="hero"] h1,
+body.platform-discovery-page [class*="hero"] h1 {
+  font-size: clamp(2.25rem, 4vw, 4rem) !important;
+  line-height: 1 !important;
+}
+
+body.platform-automation-page [class*="heroCopy"],
+body.platform-discovery-page [class*="heroCopy"] {
+  font-size: 0.9rem !important;
+  line-height: 1.58 !important;
+}
+
+body.platform-automation-page [class*="kicker"],
+body.platform-discovery-page [class*="kicker"] {
+  font-size: 0.64rem !important;
+  letter-spacing: 0.12em !important;
+}
+
+body.platform-automation-page [class*="cardHeader"] h2,
+body.platform-discovery-page [class*="cardHeader"] h2 {
+  font-size: 1.6rem !important;
+}
+
+body.platform-automation-page [class*="cardHeader"] h3,
+body.platform-discovery-page [class*="cardHeader"] h3 {
+  font-size: 1.2rem !important;
+}
+
+body.platform-automation-page [class*="card"] > h2,
+body.platform-discovery-page [class*="card"] > h2 {
+  font-size: 1.6rem !important;
+}
+
+body.platform-automation-page [class*="card"] > h3,
+body.platform-discovery-page [class*="card"] > h3 {
+  font-size: 1.2rem !important;
+}
+
+body.platform-automation-page [class*="stat"] strong,
+body.platform-discovery-page [class*="stat"] strong {
+  font-size: 1.72rem !important;
+}
+
+body.platform-automation-page [class*="stat"] span,
+body.platform-discovery-page [class*="stat"] span {
+  font-size: 0.66rem !important;
+  letter-spacing: 0.07em !important;
+}
+
+body.platform-automation-page [class*="card"] p,
+body.platform-discovery-page [class*="card"] p,
+body.platform-automation-page [class*="notice"],
+body.platform-discovery-page [class*="notice"],
+body.platform-automation-page [class*="event"] span,
+body.platform-discovery-page [class*="event"] span {
+  font-size: 0.84rem !important;
+}
+
+body.platform-automation-page label,
+body.platform-discovery-page label,
+body.platform-automation-page small,
+body.platform-discovery-page small,
+body.platform-automation-page time,
+body.platform-discovery-page time {
+  font-size: 0.7rem !important;
+}
+
+body.platform-automation-page input,
+body.platform-discovery-page input,
+body.platform-automation-page select,
+body.platform-discovery-page select,
+body.platform-automation-page textarea,
+body.platform-discovery-page textarea {
+  font-size: 0.82rem !important;
+}
+
+body.platform-automation-page button,
+body.platform-discovery-page button,
+body.platform-automation-page a[class*="button"],
+body.platform-discovery-page a[class*="button"] {
+  font-size: 0.74rem !important;
+}
+
+body.platform-automation-page [class*="status"],
+body.platform-discovery-page [class*="status"] {
+  font-size: 0.66rem !important;
+}
+
+body.platform-automation-page table th,
+body.platform-discovery-page table th {
+  font-size: 0.64rem !important;
+}
+
+body.platform-automation-page table td,
+body.platform-discovery-page table td {
+  font-size: 0.78rem !important;
+}
+
+body.platform-automation-page [data-pipeline-event] > strong,
+body.platform-discovery-page [data-pipeline-event] > strong {
+  font-size: 0.66rem !important;
+}
+
+body.platform-automation-page [data-pipeline-event] > span,
+body.platform-discovery-page [data-pipeline-event] > span {
+  font-size: 0.8rem !important;
+}
+
+@media (max-width: 760px) {
+  body.platform-automation-page [class*="hero"] h1,
+  body.platform-discovery-page [class*="hero"] h1 {
+    font-size: clamp(2rem, 11vw, 3rem) !important;
+  }
+}
