@@ -1,0 +1,38 @@
+body.platform-discovery-page .discoverySplitGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "history queue"
+    "diagnostic queue";
+  gap: 22px;
+  align-items: start;
+}
+
+body.platform-discovery-page .discoverySplitHistory {
+  grid-area: history;
+  min-width: 0;
+}
+
+body.platform-discovery-page .discoverySplitDiagnostic {
+  grid-area: diagnostic;
+  min-width: 0;
+}
+
+body.platform-discovery-page .discoverySplitQueue {
+  grid-area: queue;
+  min-width: 0;
+}
+
+body.platform-discovery-page .discoverySplitGrid > section {
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  body.platform-discovery-page .discoverySplitGrid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "queue"
+      "history"
+      "diagnostic";
+  }
+}
