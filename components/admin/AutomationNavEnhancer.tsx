@@ -2,6 +2,17 @@
 
 import { useEffect } from "react";
 
+function navHasLink(nav: HTMLElement, pathname: string): boolean {
+  return Array.from(nav.querySelectorAll<HTMLAnchorElement>("a[href]"))
+    .some((link) => {
+      try {
+        return new URL(link.href, window.location.origin).pathname === pathname;
+      } catch {
+        return link.getAttribute("href") === pathname;
+      }
+    });
+}
+
 export default function AutomationNavEnhancer() {
   useEffect(() => {
     const pathname = window.location.pathname;
@@ -15,7 +26,7 @@ export default function AutomationNavEnhancer() {
       const nav = document.querySelector<HTMLElement>("header nav");
       if (!nav) return;
 
-      if (!document.querySelector("a[data-discovery-nav='true']") && pathname !== "/admin/discovery") {
+      if (pathname !== "/admin/discovery" && !navHasLink(nav, "/admin/discovery")) {
         const discovery = document.createElement("a");
         discovery.href = "/admin/discovery";
         discovery.textContent = "Discovery";
@@ -23,7 +34,7 @@ export default function AutomationNavEnhancer() {
         nav.prepend(discovery);
       }
 
-      if (!document.querySelector("a[data-automation-nav='true']") && pathname !== "/admin/automation") {
+      if (pathname !== "/admin/automation" && !navHasLink(nav, "/admin/automation")) {
         const automation = document.createElement("a");
         automation.href = "/admin/automation";
         automation.textContent = "Automation";
