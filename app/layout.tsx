@@ -27,6 +27,7 @@ import "./automation-prospect-modals.css";
 import "./discovery-typography-increase.css";
 import "./production-system-typography-increase.css";
 import "./platform-rounded-edges.css";
+import "./review-notes-ui.css";
 
 export const metadata: Metadata = {
   title: {
