@@ -24,6 +24,7 @@ import "./ocean-theme-compact-stats.css";
 import "./engine-typography-compact.css";
 import "./editable-field-weight-fix.css";
 import "./automation-prospect-modals.css";
+import "./discovery-typography-increase.css";
 
 export const metadata: Metadata = {
   title: {
