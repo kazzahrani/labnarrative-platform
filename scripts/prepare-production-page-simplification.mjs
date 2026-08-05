@@ -12,6 +12,31 @@ source = source
   .filter((line) => !line.includes('{renderProspectTable("Rejected prospects'))
   .join("\n");
 
+const lines = source.split("\n");
+const productionQueueIndex = lines.findIndex((line) => (
+  line.includes("renderProspectTable") && line.includes('"Production queue"')
+));
+const pipelineHistoryIndex = lines.findIndex((line) => (
+  line.includes("renderProspectTable") && line.includes('"Pipeline history"')
+));
+
+if (productionQueueIndex === -1) {
+  throw new Error("The Production queue table was not found.");
+}
+if (pipelineHistoryIndex === -1) {
+  throw new Error("The Pipeline history table was not found.");
+}
+
+if (pipelineHistoryIndex > productionQueueIndex) {
+  const [pipelineHistoryLine] = lines.splice(pipelineHistoryIndex, 1);
+  const currentQueueIndex = lines.findIndex((line) => (
+    line.includes("renderProspectTable") && line.includes('"Production queue"')
+  ));
+  lines.splice(currentQueueIndex, 0, pipelineHistoryLine);
+}
+
+source = lines.join("\n");
+
 if (source.includes(">Check domain & continue</button>")) {
   throw new Error("The manual domain-check button is still present.");
 }
@@ -28,5 +53,11 @@ if (/\<span\>Rejected[^<]*\<\/span\>\<strong\>\{counts\.rejected\}\<\/strong\>/.
   throw new Error("The Rejected metric is still present.");
 }
 
+const finalQueueIndex = source.indexOf('"Production queue"');
+const finalHistoryIndex = source.indexOf('"Pipeline history"');
+if (finalHistoryIndex === -1 || finalQueueIndex === -1 || finalHistoryIndex > finalQueueIndex) {
+  throw new Error("Pipeline history was not placed above Production queue.");
+}
+
 fs.writeFileSync(pageUrl, source);
-console.log("Held and Rejected surfaces and the manual domain-check button were removed from Production Engine.");
+console.log("Production Engine simplified with Pipeline history above Production queue.");
