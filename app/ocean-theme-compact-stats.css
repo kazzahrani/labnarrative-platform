@@ -1,0 +1,116 @@
+/* Final Blue-theme cleanup: compact, independent stats and integrated event cards. */
+
+/* Automation and Discovery totals return to the older, simpler card layout. */
+html[data-platform-theme="ocean"] body.platform-automation-page section[aria-label="Automation totals"],
+html[data-platform-theme="ocean"] body.platform-discovery-page section[aria-label="Discovery totals"],
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stats"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stats"] {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 18px 0 26px !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page section[aria-label="Automation totals"] > div,
+html[data-platform-theme="ocean"] body.platform-discovery-page section[aria-label="Discovery totals"] > div,
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stats"] > [class*="stat"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stats"] > [class*="stat"] {
+  display: flex !important;
+  min-width: 0 !important;
+  min-height: 106px !important;
+  padding: 17px 19px !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  border: 1px solid #2b3d49 !important;
+  border-radius: 12px !important;
+  background: #1b2b36 !important;
+  color: #d9e1e7 !important;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.12) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page section[aria-label="Automation totals"] > div:hover,
+html[data-platform-theme="ocean"] body.platform-discovery-page section[aria-label="Discovery totals"] > div:hover,
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stats"] > [class*="stat"]:hover,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stats"] > [class*="stat"]:hover {
+  border-color: #3a5362 !important;
+  background: #20323e !important;
+  transform: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page section[aria-label="Automation totals"] span,
+html[data-platform-theme="ocean"] body.platform-discovery-page section[aria-label="Discovery totals"] span,
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stats"] > [class*="stat"] span,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stats"] > [class*="stat"] span {
+  color: #91a0aa !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.075em !important;
+  line-height: 1.35 !important;
+  text-transform: uppercase !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page section[aria-label="Automation totals"] strong,
+html[data-platform-theme="ocean"] body.platform-discovery-page section[aria-label="Discovery totals"] strong,
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stats"] > [class*="stat"] strong,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stats"] > [class*="stat"] strong {
+  margin: 0 !important;
+  color: #eef3f6 !important;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(2rem, 2.4vw, 2.7rem) !important;
+  font-weight: 520 !important;
+  letter-spacing: -0.035em !important;
+  line-height: 1 !important;
+}
+
+/* Pipeline history uses the same blue-grey surface; status hue remains on badge and edge. */
+html[data-platform-theme="ocean"] body.platform-automation-page [data-pipeline-event] {
+  border-top-color: #314552 !important;
+  border-right-color: #314552 !important;
+  border-bottom-color: #314552 !important;
+  background: #21323d !important;
+  color: #cbd5dc !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [data-pipeline-event]:hover {
+  border-top-color: #405966 !important;
+  border-right-color: #405966 !important;
+  border-bottom-color: #405966 !important;
+  background: #263945 !important;
+  transform: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [data-pipeline-event] > span {
+  color: #c5d0d7 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [data-pipeline-event] > time {
+  color: #8797a1 !important;
+}
+
+@media (max-width: 760px) {
+  html[data-platform-theme="ocean"] body.platform-automation-page section[aria-label="Automation totals"],
+  html[data-platform-theme="ocean"] body.platform-discovery-page section[aria-label="Discovery totals"],
+  html[data-platform-theme="ocean"] body.platform-automation-page [class*="stats"],
+  html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stats"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  html[data-platform-theme="ocean"] body.platform-automation-page section[aria-label="Automation totals"],
+  html[data-platform-theme="ocean"] body.platform-discovery-page section[aria-label="Discovery totals"],
+  html[data-platform-theme="ocean"] body.platform-automation-page [class*="stats"],
+  html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stats"] {
+    grid-template-columns: 1fr !important;
+  }
+}
