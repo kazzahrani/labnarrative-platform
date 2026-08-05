@@ -26,6 +26,7 @@ import "./editable-field-weight-fix.css";
 import "./automation-prospect-modals.css";
 import "./discovery-typography-increase.css";
 import "./production-system-typography-increase.css";
+import "./websites-monitor-typography.css";
 import "./platform-rounded-edges.css";
 import "./review-notes-ui.css";
 import "./compact-admin-header-actions.css";
