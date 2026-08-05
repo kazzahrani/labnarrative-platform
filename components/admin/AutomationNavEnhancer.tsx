@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 
 const ADMIN_PAGES = [
-  { pathname: "/admin/discovery", label: "Prospect discovery" },
-  { pathname: "/admin/automation", label: "Production system" },
-  { pathname: "/admin/sites", label: "Websites monitor" },
+  { pathname: "/admin/discovery", title: "Prospects Discovery", navLabel: "Discovery" },
+  { pathname: "/admin/automation", title: "Production Engine", navLabel: "Production" },
+  { pathname: "/admin/sites", title: "Websites Monitor", navLabel: "Websites" },
 ] as const;
 
 function linkPath(link: HTMLAnchorElement): string {
@@ -27,7 +27,7 @@ export default function AutomationNavEnhancer() {
     if (!pathname.startsWith("/admin")) return;
 
     const currentPage = ADMIN_PAGES.find((page) => pathname === page.pathname);
-    if (currentPage) document.title = `${currentPage.label} | LabNarrative`;
+    if (currentPage) document.title = `${currentPage.title} | LabNarrative`;
 
     let cancelled = false;
     let observer: MutationObserver | null = null;
@@ -39,7 +39,7 @@ export default function AutomationNavEnhancer() {
 
       nav.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
         const page = ADMIN_PAGES.find((item) => linkPath(link) === item.pathname);
-        if (page && link.textContent !== page.label) link.textContent = page.label;
+        if (page && link.textContent !== page.navLabel) link.textContent = page.navLabel;
       });
 
       [...ADMIN_PAGES].reverse().forEach((page) => {
@@ -47,15 +47,15 @@ export default function AutomationNavEnhancer() {
 
         const link = document.createElement("a");
         link.href = page.pathname;
-        link.textContent = page.label;
+        link.textContent = page.navLabel;
         link.dataset.platformNav = page.pathname.slice(1).replaceAll("/", "-");
         nav.prepend(link);
       });
 
       if (currentPage) {
         const context = document.querySelector<HTMLElement>("header > div > span");
-        if (context && context.textContent !== currentPage.label) {
-          context.textContent = currentPage.label;
+        if (context && context.textContent !== currentPage.title) {
+          context.textContent = currentPage.title;
         }
       }
     };
