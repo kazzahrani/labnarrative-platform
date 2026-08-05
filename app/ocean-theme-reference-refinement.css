@@ -1,0 +1,325 @@
+/* Final Blue-theme refinement based on the supplied navy/teal dashboard reference. */
+
+html[data-platform-theme="ocean"] {
+  --ln-ocean-bg: #101a22;
+  --ln-ocean-bg-top: #101a22;
+  --ln-ocean-bg-soft: #111d25;
+  --ln-ocean-header: #17242e;
+  --ln-ocean-surface: #182630;
+  --ln-ocean-surface-raised: #22313f;
+  --ln-ocean-surface-active: #273b4a;
+  --ln-ocean-input: #111d25;
+  --ln-ocean-border: #2d4252;
+  --ln-ocean-border-soft: #263947;
+  --ln-ocean-text: #d9e0e6;
+  --ln-ocean-text-strong: #f0f3f6;
+  --ln-ocean-muted: #a5b0ba;
+  --ln-ocean-faint: #778996;
+  --ln-ocean-teal: #1eb8b0;
+  --ln-ocean-teal-strong: #159f9a;
+  --ln-ocean-blue: #4ca7ee;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page,
+html[data-platform-theme="ocean"] body.platform-admin-page > main,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-shell,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-loading,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-auth-page,
+html[data-platform-theme="ocean"] body.platform-monitor-page,
+html[data-platform-theme="ocean"] body.platform-monitor-page > main,
+html[data-platform-theme="ocean"] body.platform-automation-page > main,
+html[data-platform-theme="ocean"] body.platform-discovery-page > main {
+  background: #101a22 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-topbar,
+html[data-platform-theme="ocean"] body.platform-monitor-page header,
+html[data-platform-theme="ocean"] body.platform-automation-page > main > header,
+html[data-platform-theme="ocean"] body.platform-discovery-page > main > header {
+  min-height: 72px !important;
+  border-color: #263947 !important;
+  background: #17242e !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] .platform-theme-toggle {
+  border-color: #2d4252 !important;
+  background: #111d25 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] .platform-theme-option {
+  border-radius: 7px !important;
+  color: #92a1ac !important;
+}
+
+html[data-platform-theme="ocean"] .platform-theme-option:hover {
+  background: #22313f !important;
+  color: #eef2f5 !important;
+}
+
+html[data-platform-theme="ocean"] .platform-theme-option[aria-pressed="true"] {
+  background: #1eb8b0 !important;
+  color: #092126 !important;
+  box-shadow: none !important;
+}
+
+/* Reference uses compact sans-serif dashboard typography. */
+html[data-platform-theme="ocean"] body.platform-theme-active,
+html[data-platform-theme="ocean"] body.platform-theme-active button,
+html[data-platform-theme="ocean"] body.platform-theme-active input,
+html[data-platform-theme="ocean"] body.platform-theme-active select,
+html[data-platform-theme="ocean"] body.platform-theme-active textarea {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active h1,
+html[data-platform-theme="ocean"] body.platform-theme-active h2,
+html[data-platform-theme="ocean"] body.platform-theme-active h3,
+html[data-platform-theme="ocean"] body.platform-theme-active h4 {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  color: #f0f3f6 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page h1,
+html[data-platform-theme="ocean"] body.platform-discovery-page h1,
+html[data-platform-theme="ocean"] body.platform-monitor-page h1 {
+  font-size: clamp(2.2rem, 3.5vw, 3.65rem) !important;
+  line-height: 1.04 !important;
+}
+
+/* Flat, moderately rounded dashboard surfaces rather than glossy cards. */
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="card"],
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stat"],
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="login"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="card"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stat"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="login"],
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-panel,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-auth-card,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-page,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-image-field {
+  border-color: #263947 !important;
+  border-radius: 9px !important;
+  background: #182630 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stat"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stat"] {
+  background: #22313f !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stat"]:hover,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stat"]:hover {
+  border-color: #345064 !important;
+  background: #273b4a !important;
+}
+
+/* Fix the remaining stark white review summary blocks. */
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="reviewMeta"] > div,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="reviewMeta"] > div {
+  border: 1px solid #314858 !important;
+  border-radius: 7px !important;
+  background: #22313f !important;
+  color: #dce4ea !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="reviewMeta"] > div small,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="reviewMeta"] > div small {
+  color: #8ea1af !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="reviewMeta"] > div strong,
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="reviewMeta"] > div a,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="reviewMeta"] > div strong,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="reviewMeta"] > div a {
+  color: #dce4ea !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="reviewMeta"] > div:first-child,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="reviewMeta"] > div:first-child {
+  background: #26394a !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="reviewMeta"] > div:first-child a,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="reviewMeta"] > div:first-child a {
+  color: #71bff7 !important;
+}
+
+/* Form fields match the dark inset controls in the reference. */
+html[data-platform-theme="ocean"] body.platform-theme-active input,
+html[data-platform-theme="ocean"] body.platform-theme-active select,
+html[data-platform-theme="ocean"] body.platform-theme-active textarea {
+  min-height: 44px !important;
+  border-color: #2d4252 !important;
+  border-radius: 7px !important;
+  background: #111d25 !important;
+  color: #edf2f5 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active input:focus,
+html[data-platform-theme="ocean"] body.platform-theme-active select:focus,
+html[data-platform-theme="ocean"] body.platform-theme-active textarea:focus {
+  border-color: #1eb8b0 !important;
+  outline: 1px solid #1eb8b0 !important;
+  outline-offset: 0 !important;
+}
+
+/* Reference-style rectangular buttons and segmented controls. */
+html[data-platform-theme="ocean"] body.platform-theme-active button,
+html[data-platform-theme="ocean"] body.platform-theme-active a[class*="button"],
+html[data-platform-theme="ocean"] body.platform-theme-active a[class*="primary"],
+html[data-platform-theme="ocean"] body.platform-monitor-page td a {
+  border-radius: 6px !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="button"]:not([class*="buttonSecondary"]):not([class*="buttonDanger"]),
+html[data-platform-theme="ocean"] body.platform-theme-active a[class*="primary"],
+html[data-platform-theme="ocean"] body.platform-monitor-page button:not([aria-pressed]) {
+  border-color: #1eb8b0 !important;
+  background: #1aa9a3 !important;
+  color: #eefafa !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="buttonSecondary"],
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-secondary-button,
+html[data-platform-theme="ocean"] body.platform-monitor-page td a {
+  border-color: #2d4252 !important;
+  background: #17242e !important;
+  color: #d9e0e6 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="buttonSecondary"]:hover,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-secondary-button:hover,
+html[data-platform-theme="ocean"] body.platform-monitor-page td a:hover {
+  border-color: #3b586a !important;
+  background: #22313f !important;
+}
+
+/* Notice bars use the screenshot's dark blue information strip. */
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="notice"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="notice"] {
+  border: 1px solid #2f5268 !important;
+  border-left: 4px solid #4ca7ee !important;
+  border-radius: 7px !important;
+  background: #1c3040 !important;
+  color: #cbd9e3 !important;
+  box-shadow: none !important;
+}
+
+/* Tables and dashboard data panels. */
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="tableWrap"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="tableWrap"],
+html[data-platform-theme="ocean"] body.platform-monitor-page main div:has(> table) {
+  border-color: #263947 !important;
+  border-radius: 8px !important;
+  background: #182630 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page table,
+html[data-platform-theme="ocean"] body.platform-discovery-page table,
+html[data-platform-theme="ocean"] body.platform-monitor-page table,
+html[data-platform-theme="ocean"] body.platform-monitor-page tbody,
+html[data-platform-theme="ocean"] body.platform-monitor-page tr,
+html[data-platform-theme="ocean"] body.platform-monitor-page td {
+  background: #182630 !important;
+  color: #d9e0e6 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page th,
+html[data-platform-theme="ocean"] body.platform-discovery-page th,
+html[data-platform-theme="ocean"] body.platform-monitor-page th {
+  border-color: #2d4252 !important;
+  background: #22313f !important;
+  color: #9dacb7 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page td,
+html[data-platform-theme="ocean"] body.platform-discovery-page td,
+html[data-platform-theme="ocean"] body.platform-monitor-page td {
+  border-color: #263947 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page tbody tr:hover td,
+html[data-platform-theme="ocean"] body.platform-discovery-page tbody tr:hover td,
+html[data-platform-theme="ocean"] body.platform-monitor-page tbody tr:hover td {
+  background: #22313f !important;
+}
+
+/* Website Monitor panels adopt the same reference card treatment. */
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Status definitions"],
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"],
+html[data-platform-theme="ocean"] body.platform-monitor-page .stateCard {
+  border-color: #263947 !important;
+  border-radius: 8px !important;
+  background: #182630 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Status definitions"] article,
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button {
+  border-color: #2d4252 !important;
+  background: #182630 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button:hover,
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button[aria-pressed="true"] {
+  background: #26394a !important;
+}
+
+/* Editor side navigation and selected states mirror the screenshot's navy sidebar. */
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-sidebar {
+  border-right-color: #263947 !important;
+  background: #111d25 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-site-list button,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-sidebar-heading button,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-list-heading button,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-list-heading button,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-repeat-title button,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-image-actions button {
+  border-color: #2d4252 !important;
+  border-radius: 7px !important;
+  background: #17242e !important;
+  color: #d9e0e6 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-site-list button:hover,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-site-list button.active {
+  border-color: #365366 !important;
+  background: #26394a !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-tabs {
+  border-color: #263947 !important;
+  background: #17242e !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-tabs button.active {
+  border-bottom-color: #1eb8b0 !important;
+  color: #f0f3f6 !important;
+}
+
+/* Keep status colours, but integrate them with the navy system. */
+html[data-platform-theme="ocean"] [data-pipeline-event] {
+  box-shadow: none !important;
+  filter: saturate(0.82) brightness(0.9);
+}
+
+@media (max-width: 760px) {
+  html[data-platform-theme="ocean"] body.platform-automation-page h1,
+  html[data-platform-theme="ocean"] body.platform-discovery-page h1,
+  html[data-platform-theme="ocean"] body.platform-monitor-page h1 {
+    font-size: 2.2rem !important;
+  }
+}
