@@ -81,6 +81,11 @@ if (!source.includes("setDiscoveryModalOpen(true)")) {
   );
 }
 
+source = source.replace(
+  /\s*<Link className=\{styles\.buttonSecondary\} href="\/admin\/automation">\s*(?:Open production queue|Open Production|Open Production Engine)\s*<\/Link>\s*/,
+  "\n",
+);
+
 if (!source.includes("setDiscoveryModalOpen(false);\n\n      const autoQueued")) {
   source = source.replace(
     "      await loadData(session);\n\n      const autoQueued",
@@ -150,6 +155,9 @@ ${indentedCard}
 if (!source.includes(">Search settings</button>")) {
   throw new Error("The Search settings modal button was not added.");
 }
+if (source.includes('className={styles.buttonSecondary} href="/admin/automation"')) {
+  throw new Error("The Open Production hero action is still present.");
+}
 if (!source.includes("discoverySearchModalBackdrop")) {
   throw new Error("The Discovery search modal markup was not added.");
 }
@@ -158,4 +166,4 @@ if (source.indexOf(kickerToken) < source.indexOf("discoverySearchModalBackdrop")
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Discovery brief converted to a Search settings modal window.");
+console.log("Discovery brief converted to a Search settings modal without the Open Production action.");
