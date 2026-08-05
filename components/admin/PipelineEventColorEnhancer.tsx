@@ -20,12 +20,31 @@ function normalizeStatus(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
-function findPipelineEvents(): HTMLElement[] {
-  const heading = Array.from(document.querySelectorAll("h3")).find(
+function findPipelineSection(): HTMLElement | null {
+  const title = Array.from(document.querySelectorAll("h3")).find(
     (element) => element.textContent?.trim().toLowerCase() === "pipeline events",
   );
+  const titleSection = title?.closest<HTMLElement>("section");
+  if (titleSection) return titleSection;
 
-  const section = heading?.closest("section");
+  const recentActivityLabel = Array.from(document.querySelectorAll("p")).find(
+    (element) => element.textContent?.trim().toLowerCase() === "recent activity",
+  );
+  const activitySection = recentActivityLabel?.closest<HTMLElement>("section");
+  if (activitySection) return activitySection;
+
+  return Array.from(document.querySelectorAll<HTMLElement>("section")).find((section) => {
+    const hasEvent = Array.from(section.querySelectorAll<HTMLElement>("div")).some((element) => {
+      const children = Array.from(element.children);
+      return children.some((child) => child.tagName === "STRONG")
+        && children.some((child) => child.tagName === "TIME");
+    });
+    return hasEvent;
+  }) ?? null;
+}
+
+function findPipelineEvents(): HTMLElement[] {
+  const section = findPipelineSection();
   if (!section) return [];
 
   return Array.from(section.querySelectorAll<HTMLElement>("div")).filter((element) => {
