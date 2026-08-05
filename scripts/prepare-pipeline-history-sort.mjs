@@ -3,13 +3,7 @@ import fs from "node:fs";
 const pageUrl = new URL("../app/admin/automation/page.tsx", import.meta.url);
 let source = fs.readFileSync(pageUrl, "utf8");
 
-const statusTextFunction = `function statusText(value: string): string {
-  return value.replaceAll("_", " ");
-}`;
-
-const patchedStatusTextFunction = `function statusText(value: string): string {
-  return value.replaceAll("_", " ");
-}
+const helperBlock = `
 
 const pipelineHistoryStatusOrder: Partial<Record<ProspectStatus, number>> = {
   awaiting_final_review: 0,
@@ -41,10 +35,12 @@ function sortPipelineHistoryProspects(items: Prospect[]): Prospect[] {
 }`;
 
 if (!source.includes("function sortPipelineHistoryProspects")) {
-  if (!source.includes(statusTextFunction)) {
-    throw new Error("The pipeline history status helper insertion point was not found.");
+  const statusTextPattern = /function statusText\(value: string\): string \{[\s\S]*?\n\}/;
+  const match = source.match(statusTextPattern);
+  if (!match) {
+    throw new Error("The generated statusText function was not found.");
   }
-  source = source.replace(statusTextFunction, patchedStatusTextFunction);
+  source = source.replace(statusTextPattern, `${match[0]}${helperBlock}`);
 }
 
 source = source.replace(
