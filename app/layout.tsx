@@ -15,6 +15,7 @@ import "./labnarrative-section-colors.css";
 import "./narita-home-hero-flow.css";
 import "./pipeline-event-colors.css";
 import "./pipeline-status-colors.css";
+import "./grey-theme.css";
 
 export const metadata: Metadata = {
   title: {
