@@ -77,7 +77,7 @@ if (!source.includes("setDiscoveryModalOpen(true)")) {
 
   source = source.replace(
     actionsToken,
-    `${actionsToken}            <button className={styles.button} type="button" onClick={() => setDiscoveryModalOpen(true)}>Search academic sources</button>\n`,
+    `${actionsToken}            <button className={styles.button} type="button" onClick={() => setDiscoveryModalOpen(true)}>Search settings</button>\n`,
   );
 }
 
@@ -124,7 +124,7 @@ if (!source.includes("discoverySearchModalBackdrop")) {
           }}
         >
           <div
-            aria-label="Search academic sources"
+            aria-label="Search settings"
             aria-modal="true"
             className="automationProspectModalShell discoverySearchModalShell"
             role="dialog"
@@ -147,8 +147,8 @@ ${indentedCard}
   source = source.replace(modalInsertionToken, modalMarkup);
 }
 
-if (!source.includes("setDiscoveryModalOpen(true)")) {
-  throw new Error("The Search academic sources modal button was not added.");
+if (!source.includes(">Search settings</button>")) {
+  throw new Error("The Search settings modal button was not added.");
 }
 if (!source.includes("discoverySearchModalBackdrop")) {
   throw new Error("The Discovery search modal markup was not added.");
@@ -158,4 +158,4 @@ if (source.indexOf(kickerToken) < source.indexOf("discoverySearchModalBackdrop")
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Discovery brief converted to a modal window.");
+console.log("Discovery brief converted to a Search settings modal window.");
