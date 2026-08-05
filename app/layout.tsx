@@ -11,6 +11,7 @@ import "./gao-layout-fix.css";
 import "./labnarrative-public-refinement.css";
 import "./labnarrative-type-amplification.css";
 import "./labnarrative-section-colors.css";
+import "./narita-home-hero-flow.css";
 
 export const metadata: Metadata = {
   title: {
