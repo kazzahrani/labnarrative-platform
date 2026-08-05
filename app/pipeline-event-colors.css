@@ -1,0 +1,73 @@
+/* Distinctive, deterministic colours for Automation pipeline history events. */
+
+[data-pipeline-event] {
+  --pipeline-event-hue: 216;
+  border-color: hsl(var(--pipeline-event-hue) 34% 78%) !important;
+  border-left-color: hsl(var(--pipeline-event-hue) 68% 43%) !important;
+  background:
+    linear-gradient(
+      90deg,
+      hsl(var(--pipeline-event-hue) 74% 94% / 0.76),
+      hsl(var(--pipeline-event-hue) 72% 98% / 0.2) 58%,
+      transparent
+    ),
+    #ffffff !important;
+  box-shadow: 0 5px 16px hsl(var(--pipeline-event-hue) 45% 32% / 0.07);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+[data-pipeline-event]:hover {
+  transform: translateY(-1px);
+  border-color: hsl(var(--pipeline-event-hue) 42% 67%) !important;
+}
+
+[data-pipeline-event] > strong {
+  display: inline-flex !important;
+  width: fit-content;
+  align-items: center;
+  margin-bottom: 6px !important;
+  padding: 4px 8px;
+  border: 1px solid hsl(var(--pipeline-event-hue) 45% 72%);
+  border-radius: 999px;
+  background: hsl(var(--pipeline-event-hue) 72% 92%);
+  color: hsl(var(--pipeline-event-hue) 62% 31%) !important;
+  font-size: 0.7rem !important;
+  font-weight: 850 !important;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  text-transform: capitalize;
+}
+
+[data-pipeline-event] > span {
+  display: block;
+  line-height: 1.45;
+}
+
+html[data-platform-theme="dark"] [data-pipeline-event] {
+  border-color: hsl(var(--pipeline-event-hue) 30% 31%) !important;
+  border-left-color: hsl(var(--pipeline-event-hue) 72% 64%) !important;
+  background:
+    linear-gradient(
+      90deg,
+      hsl(var(--pipeline-event-hue) 42% 22% / 0.72),
+      hsl(var(--pipeline-event-hue) 34% 17% / 0.25) 60%,
+      transparent
+    ),
+    #171a21 !important;
+  color: #d7dce5 !important;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.18);
+}
+
+html[data-platform-theme="dark"] [data-pipeline-event]:hover {
+  border-color: hsl(var(--pipeline-event-hue) 42% 45%) !important;
+}
+
+html[data-platform-theme="dark"] [data-pipeline-event] > strong {
+  border-color: hsl(var(--pipeline-event-hue) 45% 43%);
+  background: hsl(var(--pipeline-event-hue) 40% 24%);
+  color: hsl(var(--pipeline-event-hue) 78% 79%) !important;
+}
+
+html[data-platform-theme="dark"] [data-pipeline-event] > time {
+  color: #9ba4b2 !important;
+}
