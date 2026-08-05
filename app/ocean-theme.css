@@ -1,0 +1,425 @@
+/* Blue-grey operational dashboard theme inspired by the supplied reference. */
+
+html[data-platform-theme="ocean"] {
+  --ln-ocean-bg: #0d171e;
+  --ln-ocean-bg-top: #101c24;
+  --ln-ocean-bg-soft: #121f28;
+  --ln-ocean-header: #16242e;
+  --ln-ocean-surface: #17252f;
+  --ln-ocean-surface-raised: #1b2b36;
+  --ln-ocean-surface-active: #253a48;
+  --ln-ocean-input: #111d25;
+  --ln-ocean-border: #2d3f4c;
+  --ln-ocean-border-soft: #243641;
+  --ln-ocean-text: #dbe3e8;
+  --ln-ocean-text-strong: #f2f6f8;
+  --ln-ocean-muted: #9aa8b3;
+  --ln-ocean-faint: #758691;
+  --ln-ocean-teal: #22c1b5;
+  --ln-ocean-teal-strong: #17aaa5;
+  --ln-ocean-blue: #4a9fe5;
+  --ln-ocean-danger: #ef6b7b;
+  color-scheme: dark;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active,
+html[data-platform-theme="ocean"] body.platform-theme-active button,
+html[data-platform-theme="ocean"] body.platform-theme-active input,
+html[data-platform-theme="ocean"] body.platform-theme-active select,
+html[data-platform-theme="ocean"] body.platform-theme-active textarea {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+/* Four-option appearance selector spacing. */
+body.platform-theme-active .platform-header,
+body.platform-theme-active .admin-topbar,
+body.platform-monitor-page header,
+body.platform-automation-page > main > header,
+body.platform-discovery-page > main > header {
+  padding-right: 278px !important;
+}
+
+html[data-platform-theme="ocean"] .platform-theme-toggle {
+  border-color: #314651;
+  background: rgba(20, 34, 43, 0.96);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+html[data-platform-theme="ocean"] .platform-theme-option {
+  color: #8fa0ab;
+}
+
+html[data-platform-theme="ocean"] .platform-theme-option:hover {
+  background: #203440;
+  color: #e8eef1;
+}
+
+html[data-platform-theme="ocean"] .platform-theme-option[aria-pressed="true"] {
+  background: linear-gradient(135deg, #22c1b5, #199fa0);
+  color: #061a1d;
+  box-shadow: 0 4px 14px rgba(34, 193, 181, 0.25);
+}
+
+/* Shared page foundations. */
+html[data-platform-theme="ocean"] body.platform-admin-page,
+html[data-platform-theme="ocean"] body.platform-admin-page > main,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-shell,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-loading,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-auth-page,
+html[data-platform-theme="ocean"] body.platform-monitor-page,
+html[data-platform-theme="ocean"] body.platform-monitor-page > main,
+html[data-platform-theme="ocean"] body.platform-automation-page > main,
+html[data-platform-theme="ocean"] body.platform-discovery-page > main {
+  background:
+    radial-gradient(circle at 78% -8%, rgba(55, 116, 148, 0.12), transparent 34%),
+    linear-gradient(180deg, var(--ln-ocean-bg-top), var(--ln-ocean-bg) 46%, #0b151b) !important;
+  color: var(--ln-ocean-text) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-topbar,
+html[data-platform-theme="ocean"] body.platform-monitor-page header,
+html[data-platform-theme="ocean"] body.platform-automation-page > main > header,
+html[data-platform-theme="ocean"] body.platform-discovery-page > main > header {
+  min-height: 72px !important;
+  border-color: var(--ln-ocean-border-soft) !important;
+  background: linear-gradient(180deg, rgba(24, 39, 49, 0.98), rgba(19, 32, 41, 0.98)) !important;
+  color: var(--ln-ocean-text) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(16px);
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-topbar,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-topbar a,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-topbar button,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-brand,
+html[data-platform-theme="ocean"] body.platform-monitor-page header a,
+html[data-platform-theme="ocean"] body.platform-monitor-page header span,
+html[data-platform-theme="ocean"] body.platform-automation-page > main > header a,
+html[data-platform-theme="ocean"] body.platform-automation-page > main > header button,
+html[data-platform-theme="ocean"] body.platform-discovery-page > main > header a,
+html[data-platform-theme="ocean"] body.platform-discovery-page > main > header button {
+  color: var(--ln-ocean-text) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active h1,
+html[data-platform-theme="ocean"] body.platform-theme-active h2,
+html[data-platform-theme="ocean"] body.platform-theme-active h3,
+html[data-platform-theme="ocean"] body.platform-theme-active h4 {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  color: var(--ln-ocean-text-strong) !important;
+  font-weight: 720 !important;
+  letter-spacing: -0.025em !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page h1,
+html[data-platform-theme="ocean"] body.platform-discovery-page h1,
+html[data-platform-theme="ocean"] body.platform-monitor-page h1 {
+  font-size: clamp(2.35rem, 4.2vw, 4.4rem) !important;
+  line-height: 1.04 !important;
+  max-width: 860px !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active p,
+html[data-platform-theme="ocean"] body.platform-theme-active small,
+html[data-platform-theme="ocean"] body.platform-theme-active label,
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="muted"],
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="kicker"] {
+  color: var(--ln-ocean-muted) !important;
+}
+
+/* Buttons follow the reference: compact rounded rectangles rather than large pills. */
+html[data-platform-theme="ocean"] body.platform-theme-active button,
+html[data-platform-theme="ocean"] body.platform-theme-active a[class*="button"],
+html[data-platform-theme="ocean"] body.platform-theme-active a[class*="primary"] {
+  border-radius: 11px !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="button"]:not([class*="buttonSecondary"]):not([class*="buttonDanger"]),
+html[data-platform-theme="ocean"] body.platform-theme-active a[class*="primary"],
+html[data-platform-theme="ocean"] body.platform-monitor-page button:not([aria-pressed]) {
+  border-color: #26c6bb !important;
+  background: linear-gradient(135deg, var(--ln-ocean-teal), var(--ln-ocean-teal-strong)) !important;
+  color: #071a1d !important;
+  box-shadow: 0 8px 20px rgba(25, 170, 165, 0.16) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="button"]:not([class*="buttonSecondary"]):not([class*="buttonDanger"]):hover,
+html[data-platform-theme="ocean"] body.platform-theme-active a[class*="primary"]:hover,
+html[data-platform-theme="ocean"] body.platform-monitor-page button:not([aria-pressed]):hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="buttonSecondary"],
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-secondary-button,
+html[data-platform-theme="ocean"] body.platform-monitor-page td a {
+  border-color: var(--ln-ocean-border) !important;
+  background: linear-gradient(180deg, #1b2b35, #16242d) !important;
+  color: var(--ln-ocean-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active [class*="buttonSecondary"]:hover,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-secondary-button:hover,
+html[data-platform-theme="ocean"] body.platform-monitor-page td a:hover {
+  border-color: #3b5664 !important;
+  background: linear-gradient(180deg, #223744, #1a2b35) !important;
+}
+
+/* Inputs and controls. */
+html[data-platform-theme="ocean"] body.platform-theme-active input,
+html[data-platform-theme="ocean"] body.platform-theme-active select,
+html[data-platform-theme="ocean"] body.platform-theme-active textarea {
+  min-height: 46px;
+  border-color: var(--ln-ocean-border) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #121f27, #101b22) !important;
+  color: var(--ln-ocean-text-strong) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active input:focus,
+html[data-platform-theme="ocean"] body.platform-theme-active select:focus,
+html[data-platform-theme="ocean"] body.platform-theme-active textarea:focus {
+  border-color: var(--ln-ocean-teal) !important;
+  outline: 2px solid rgba(34, 193, 181, 0.16) !important;
+  outline-offset: 1px;
+}
+
+html[data-platform-theme="ocean"] body.platform-theme-active input::placeholder,
+html[data-platform-theme="ocean"] body.platform-theme-active textarea::placeholder {
+  color: var(--ln-ocean-faint) !important;
+}
+
+/* Automation and Discovery dashboard organization. */
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="hero"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="hero"] {
+  gap: 28px !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="card"],
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stat"],
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="login"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="card"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stat"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="login"] {
+  border-color: var(--ln-ocean-border-soft) !important;
+  border-radius: 15px !important;
+  background: linear-gradient(145deg, #1a2a34 0%, #16232c 100%) !important;
+  color: var(--ln-ocean-text) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stat"]:hover,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stat"]:hover {
+  border-color: #38515e !important;
+  background: linear-gradient(145deg, #203340, #192832) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="stat"] strong,
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="stat"] strong {
+  color: var(--ln-ocean-text-strong) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="notice"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="notice"] {
+  border: 1px solid #294d61 !important;
+  border-left: 4px solid var(--ln-ocean-blue) !important;
+  border-radius: 12px !important;
+  background: linear-gradient(90deg, rgba(41, 87, 113, 0.38), rgba(24, 40, 50, 0.88)) !important;
+  color: #c8d9e5 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page [class*="tableWrap"],
+html[data-platform-theme="ocean"] body.platform-discovery-page [class*="tableWrap"] {
+  overflow: hidden;
+  border-color: var(--ln-ocean-border-soft) !important;
+  border-radius: 15px !important;
+  background: var(--ln-ocean-surface) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page table,
+html[data-platform-theme="ocean"] body.platform-discovery-page table {
+  background: var(--ln-ocean-surface) !important;
+  color: var(--ln-ocean-text) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page th,
+html[data-platform-theme="ocean"] body.platform-discovery-page th {
+  border-color: var(--ln-ocean-border-soft) !important;
+  background: #1c2c37 !important;
+  color: #91a3ae !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.075em !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page td,
+html[data-platform-theme="ocean"] body.platform-discovery-page td {
+  border-color: var(--ln-ocean-border-soft) !important;
+  background: #17252f !important;
+  color: var(--ln-ocean-text) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page tbody tr:hover td,
+html[data-platform-theme="ocean"] body.platform-discovery-page tbody tr:hover td {
+  background: #1d303b !important;
+}
+
+/* Website Monitor. */
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Status definitions"],
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"],
+html[data-platform-theme="ocean"] body.platform-monitor-page main div:has(> table),
+html[data-platform-theme="ocean"] body.platform-monitor-page .stateCard {
+  overflow: hidden;
+  border-color: var(--ln-ocean-border-soft) !important;
+  border-radius: 15px !important;
+  background: linear-gradient(145deg, #192934, #15232c) !important;
+  color: var(--ln-ocean-text) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Status definitions"] article,
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button {
+  border-color: var(--ln-ocean-border-soft) !important;
+  background: transparent !important;
+  color: var(--ln-ocean-text) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button:hover,
+html[data-platform-theme="ocean"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button[aria-pressed="true"] {
+  border-top: 2px solid var(--ln-ocean-teal) !important;
+  background: linear-gradient(145deg, #243a47, #1c2d38) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page table,
+html[data-platform-theme="ocean"] body.platform-monitor-page tbody,
+html[data-platform-theme="ocean"] body.platform-monitor-page tr,
+html[data-platform-theme="ocean"] body.platform-monitor-page td {
+  background: #16242d !important;
+  color: var(--ln-ocean-text) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page th {
+  border-color: var(--ln-ocean-border-soft) !important;
+  background: #1d2d37 !important;
+  color: #8fa1ac !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page td {
+  border-color: var(--ln-ocean-border-soft) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page tbody tr:hover,
+html[data-platform-theme="ocean"] body.platform-monitor-page tbody tr:hover td {
+  background: #1d303b !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page td > strong {
+  color: var(--ln-ocean-text-strong) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span,
+html[data-platform-theme="ocean"] body.platform-monitor-page td button {
+  color: var(--ln-ocean-muted) !important;
+}
+
+/* Administrator editor and sign-in. */
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-sidebar,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-panel,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-auth-card,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-page,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-image-field {
+  border-color: var(--ln-ocean-border-soft) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(145deg, #192934, #15232c) !important;
+  color: var(--ln-ocean-text) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-sidebar {
+  border-right-color: var(--ln-ocean-border-soft) !important;
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, #13222b, #101b22) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-top {
+  background: linear-gradient(135deg, #1d3540, #172934) !important;
+  color: var(--ln-ocean-text-strong) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-tabs {
+  border-color: var(--ln-ocean-border-soft) !important;
+  background: #121f27 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-tabs button {
+  color: var(--ln-ocean-muted) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-editor-tabs button.active {
+  border-bottom-color: var(--ln-ocean-teal) !important;
+  color: var(--ln-ocean-text-strong) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-site-list button,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-sidebar-heading button,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-list-heading button,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-list-heading button,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-repeat-title button,
+html[data-platform-theme="ocean"] body.platform-admin-page .advanced-image-actions button {
+  border-color: var(--ln-ocean-border) !important;
+  border-radius: 9px !important;
+  background: #182832 !important;
+  color: var(--ln-ocean-text) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-site-list button:hover,
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-site-list button.active {
+  border-left: 3px solid var(--ln-ocean-teal) !important;
+  background: #233744 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-save-bar {
+  border-color: #2b6e6b !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #173c3c, #17313a) !important;
+  color: #d9f3ef !important;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-admin-page .admin-notice,
+html[data-platform-theme="ocean"] body.platform-monitor-page .notice {
+  border-color: #3b5562 !important;
+  border-left: 4px solid var(--ln-ocean-blue) !important;
+  border-radius: 11px !important;
+  background: linear-gradient(90deg, rgba(42, 82, 106, 0.42), rgba(20, 34, 43, 0.88)) !important;
+  color: #cbdde8 !important;
+}
+
+/* Pipeline colours remain distinctive while fitting the navy environment. */
+html[data-platform-theme="ocean"] [data-pipeline-event] {
+  filter: saturate(0.9) brightness(0.94);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.17) !important;
+}
+
+html[data-platform-theme="ocean"] [data-pipeline-status] {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 760px) {
+  body.platform-theme-active .platform-header,
+  body.platform-theme-active .admin-topbar,
+  body.platform-monitor-page header,
+  body.platform-automation-page > main > header,
+  body.platform-discovery-page > main > header {
+    padding-right: 194px !important;
+  }
+
+  html[data-platform-theme="ocean"] body.platform-automation-page h1,
+  html[data-platform-theme="ocean"] body.platform-discovery-page h1,
+  html[data-platform-theme="ocean"] body.platform-monitor-page h1 {
+    font-size: clamp(2.1rem, 11vw, 3.2rem) !important;
+  }
+}
