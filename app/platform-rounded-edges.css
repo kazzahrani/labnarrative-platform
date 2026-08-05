@@ -1,10 +1,10 @@
-/* Consistent softer corners across the LabNarrative admin platform only. */
+/* Consistent, visibly rounded corners across the LabNarrative admin platform only. */
 
 body.platform-theme-active {
-  --platform-card-radius: 22px;
-  --platform-panel-radius: 18px;
-  --platform-control-radius: 14px;
-  --platform-small-radius: 12px;
+  --platform-card-radius: 28px;
+  --platform-panel-radius: 23px;
+  --platform-control-radius: 18px;
+  --platform-small-radius: 16px;
 }
 
 body.platform-theme-active section[class*="card"],
@@ -13,7 +13,9 @@ body.platform-theme-active div[class*="card"],
 body.platform-theme-active [class*="stat"],
 body.platform-theme-active [class*="login"],
 body.platform-theme-active [class*="revisionBox"],
-body.platform-theme-active [class*="emptyState"] {
+body.platform-theme-active [class*="emptyState"],
+body.platform-theme-active [class*="modalShell"],
+body.platform-theme-active dialog {
   border-radius: var(--platform-card-radius) !important;
 }
 
@@ -23,30 +25,52 @@ body.platform-theme-active [class*="toolbar"],
 body.platform-theme-active [class*="filter"],
 body.platform-theme-active [class*="summary"],
 body.platform-theme-active [class*="panel"],
-body.platform-theme-active [class*="event"] {
+body.platform-theme-active [class*="event"],
+body.platform-theme-active [class*="Pagination"],
+body.platform-theme-active [class*="pagination"],
+body.platform-theme-active [class*="editor"],
+body.platform-theme-active [class*="preview"],
+body.platform-theme-active [class*="history"],
+body.platform-theme-active [class*="actions"] {
   border-radius: var(--platform-panel-radius) !important;
 }
 
 body.platform-theme-active input,
 body.platform-theme-active select,
-body.platform-theme-active textarea {
+body.platform-theme-active textarea,
+body.platform-theme-active pre,
+body.platform-theme-active code,
+body.platform-theme-active details,
+body.platform-theme-active summary {
   border-radius: var(--platform-control-radius) !important;
 }
 
 body.platform-theme-active button,
-body.platform-theme-active a[class*="button"] {
+body.platform-theme-active a[class*="button"],
+body.platform-theme-active a[class*="tab"],
+body.platform-theme-active [role="button"] {
   border-radius: 999px !important;
 }
 
 body.platform-theme-active [class*="status"],
 body.platform-theme-active [class*="badge"],
 body.platform-theme-active [class*="tag"],
+body.platform-theme-active [class*="pill"],
 body.platform-theme-active [data-pipeline-event] > strong {
   border-radius: 999px !important;
 }
 
-body.platform-theme-active [data-pipeline-event] {
+body.platform-theme-active [data-pipeline-event],
+body.platform-theme-active table,
+body.platform-theme-active [class*="table"] {
   border-radius: var(--platform-panel-radius) !important;
+}
+
+body.platform-theme-active img,
+body.platform-theme-active iframe,
+body.platform-theme-active [class*="thumbnail"],
+body.platform-theme-active [class*="avatar"] {
+  border-radius: var(--platform-small-radius) !important;
 }
 
 body.platform-monitor-page section[aria-label="Status definitions"] article,
@@ -56,7 +80,7 @@ body.platform-monitor-page section[aria-label="Website totals and status filters
 
 body.platform-theme-active .automationProspectModalShell,
 body.platform-theme-active .discoverySearchModalShell {
-  border-radius: 26px !important;
+  border-radius: 34px !important;
 }
 
 body.platform-theme-active .automationProspectModalClose {
@@ -64,22 +88,30 @@ body.platform-theme-active .automationProspectModalClose {
 }
 
 body.platform-theme-active .platform-theme-toggle {
-  border-radius: 18px !important;
+  border-radius: 24px !important;
 }
 
 body.platform-theme-active .platform-theme-option {
-  border-radius: 12px !important;
+  border-radius: 17px !important;
+}
+
+body.platform-theme-active .productionPagination,
+body.platform-theme-active .discoveryPagination,
+body.platform-theme-active .productionPageSize,
+body.platform-theme-active .discoveryPageSize {
+  border-radius: var(--platform-control-radius) !important;
 }
 
 @media (max-width: 700px) {
   body.platform-theme-active {
-    --platform-card-radius: 19px;
-    --platform-panel-radius: 16px;
-    --platform-control-radius: 13px;
+    --platform-card-radius: 24px;
+    --platform-panel-radius: 20px;
+    --platform-control-radius: 16px;
+    --platform-small-radius: 14px;
   }
 
   body.platform-theme-active .automationProspectModalShell,
   body.platform-theme-active .discoverySearchModalShell {
-    border-radius: 24px 24px 14px 14px !important;
+    border-radius: 28px 28px 18px 18px !important;
   }
 }
