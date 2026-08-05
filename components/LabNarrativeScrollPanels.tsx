@@ -47,22 +47,40 @@ export default function LabNarrativeScrollPanels() {
     let measurements: PanelMeasurement[] = [];
 
     const measure = () => {
+      const approachPanel = sections.find(
+        (section) => section.dataset.lnOverlapPanel === "approach",
+      );
+      const directionPanel = sections.find(
+        (section) => section.dataset.lnOverlapPanel === "direction",
+      );
       const afterLaunchPanel = sections.find((section) => section.id === "after-launch");
       const pricingPanel = sections.find((section) => section.id === "pricing");
+
+      const approachStart = approachPanel ? documentTop(approachPanel) : undefined;
+      const directionStart = directionPanel ? documentTop(directionPanel) : undefined;
       const afterLaunchStart = afterLaunchPanel ? documentTop(afterLaunchPanel) : undefined;
       const pricingStart = pricingPanel ? documentTop(pricingPanel) : undefined;
 
-      measurements = movingPanels.map((panel) => ({
-        element: panel,
-        start: documentTop(panel),
-        end:
-          panel.id === "process"
-            ? afterLaunchStart
-            : panel.id === "after-launch"
-              ? pricingStart
-              : undefined,
-        speed: panel.id === "pricing" ? 0.4 : 0.36,
-      }));
+      measurements = movingPanels.map((panel) => {
+        const isApproach = panel.dataset.lnOverlapPanel === "approach";
+
+        return {
+          element: panel,
+          start:
+            isApproach && typeof approachStart === "number"
+              ? approachStart
+              : documentTop(panel),
+          end:
+            isApproach
+              ? directionStart
+              : panel.id === "process"
+                ? afterLaunchStart
+                : panel.id === "after-launch"
+                  ? pricingStart
+                  : undefined,
+          speed: isApproach ? 0.5 : panel.id === "pricing" ? 0.4 : 0.36,
+        };
+      });
     };
 
     const update = () => {
