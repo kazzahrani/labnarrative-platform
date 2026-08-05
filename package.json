@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/prepare-admin-auth-v2.mjs && node scripts/prepare-automatic-production-ui.mjs && node scripts/prepare-persistent-discovery-ui.mjs && node scripts/prepare-review-buffer-ui.mjs && node scripts/prepare-figure-resolver.mjs && node scripts/prepare-site-slug-aliases.mjs && npm run verify:templates",
+    "prebuild": "node scripts/prepare-admin-auth-v2.mjs && node scripts/prepare-automatic-production-ui.mjs && node scripts/prepare-persistent-discovery-ui.mjs && node scripts/prepare-review-buffer-ui.mjs && node scripts/prepare-pipeline-history-sort.mjs && node scripts/prepare-figure-resolver.mjs && node scripts/prepare-site-slug-aliases.mjs && npm run verify:templates",
     "build": "next build",
     "start": "next start",
     "verify:figures": "node scripts/verify-research-figures.mjs",
