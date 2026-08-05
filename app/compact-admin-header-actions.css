@@ -1,0 +1,52 @@
+.compactAdminHeaderActions {
+  display: flex !important;
+  align-items: center !important;
+  align-self: start !important;
+  justify-content: flex-end !important;
+  justify-self: end !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  width: auto !important;
+  max-width: none !important;
+}
+
+.compactAdminHeaderActions > button,
+.compactAdminHeaderActions > a {
+  flex: 0 0 auto !important;
+  flex-basis: auto !important;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 14px !important;
+  font-size: 0.76rem !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.compactAdminMonitorHeading {
+  align-items: flex-start !important;
+}
+
+.compactAdminHeaderButton {
+  flex: 0 0 auto !important;
+  align-self: flex-start !important;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 14px !important;
+  font-size: 0.76rem !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 900px) {
+  .compactAdminHeaderActions {
+    justify-content: flex-start !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+  }
+
+  .compactAdminMonitorHeading {
+    align-items: flex-start !important;
+  }
+}
