@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type PlatformTheme = "light" | "grey" | "dark";
+type PlatformTheme = "grey" | "mid" | "dark";
 
 const STORAGE_KEY = "labnarrative-platform-theme";
 const PAGE_CLASSES = [
@@ -15,8 +15,8 @@ const PAGE_CLASSES = [
 ];
 
 const THEME_OPTIONS: Array<{ value: PlatformTheme; label: string; icon: string }> = [
-  { value: "light", label: "Light", icon: "☀" },
-  { value: "grey", label: "Grey", icon: "◐" },
+  { value: "grey", label: "Light", icon: "☀" },
+  { value: "mid", label: "Mid", icon: "◐" },
   { value: "dark", label: "Dark", icon: "☾" },
 ];
 
@@ -41,12 +41,19 @@ function isOperationalHost(hostname: string): boolean {
 
 function applyTheme(theme: PlatformTheme) {
   document.documentElement.dataset.platformTheme = theme;
-  document.documentElement.style.colorScheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.style.colorScheme = theme === "grey" ? "light" : "dark";
+}
+
+function resolveStoredTheme(value: string | null): PlatformTheme {
+  if (value === "dark" || value === "mid") return value;
+
+  // Both previous Light and Grey preferences now resolve to the new Light theme.
+  return "grey";
 }
 
 export default function PlatformThemeToggle() {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<PlatformTheme>("light");
+  const [theme, setTheme] = useState<PlatformTheme>("grey");
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
@@ -74,10 +81,10 @@ export default function PlatformThemeToggle() {
       document.body.classList.add("platform-discovery-page");
     }
 
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    const initialTheme: PlatformTheme = stored === "dark" || stored === "grey" ? stored : "light";
+    const initialTheme = resolveStoredTheme(window.localStorage.getItem(STORAGE_KEY));
     setTheme(initialTheme);
     applyTheme(initialTheme);
+    window.localStorage.setItem(STORAGE_KEY, initialTheme);
     setAvailable(true);
   }, [pathname]);
 
