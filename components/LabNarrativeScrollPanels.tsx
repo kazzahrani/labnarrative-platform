@@ -47,13 +47,20 @@ export default function LabNarrativeScrollPanels() {
     let measurements: PanelMeasurement[] = [];
 
     const measure = () => {
+      const afterLaunchPanel = sections.find((section) => section.id === "after-launch");
       const pricingPanel = sections.find((section) => section.id === "pricing");
+      const afterLaunchStart = afterLaunchPanel ? documentTop(afterLaunchPanel) : undefined;
       const pricingStart = pricingPanel ? documentTop(pricingPanel) : undefined;
 
       measurements = movingPanels.map((panel) => ({
         element: panel,
         start: documentTop(panel),
-        end: panel.id === "process" ? pricingStart : undefined,
+        end:
+          panel.id === "process"
+            ? afterLaunchStart
+            : panel.id === "after-launch"
+              ? pricingStart
+              : undefined,
         speed: panel.id === "pricing" ? 0.4 : 0.36,
       }));
     };
