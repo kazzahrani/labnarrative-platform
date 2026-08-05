@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const HOSTS = new Set([
   "ars.els-cdn.com",
@@ -28,11 +29,7 @@ const HOSTS = new Set([
 ]);
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-const MIN_IMAGE_BYTES = 80_000;
-const MIN_WIDTH = 700;
-const MIN_HEIGHT = 700;
-const ALT_LONG_SIDE = 800;
-const ALT_SHORT_SIDE = 600;
+const MIN_IMAGE_BYTES = 4_000;
 const CACHE_SECONDS = 31_536_000;
 
 type Dimensions = { width: number; height: number };
@@ -78,7 +75,7 @@ async function fetchSource(url: URL, html = false) {
   if (!allowed(url)) throw new Error("Figure host is not approved.");
   const response = await timed(url, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; LabNarrative-Figure-Resolver/5.1; +https://labnarrative.com)",
+      "User-Agent": "Mozilla/5.0 (compatible; LabNarrative-Figure-Resolver/6.0; +https://labnarrative.com)",
       Accept: html
         ? "image/png,image/jpeg,image/webp,image/*;q=0.9,text/html;q=0.7,*/*;q=0.2"
         : "image/png,image/jpeg,image/webp,image/*;q=0.9,*/*;q=0.2",
@@ -192,18 +189,17 @@ function validateQuality(bytes: Uint8Array, contentType: string): Dimensions {
     throw new Error("GIF preview rejected; a full-resolution PNG, JPEG or WebP figure is required.");
   }
   if (bytes.byteLength < MIN_IMAGE_BYTES) {
-    throw new Error(`Figure file is too small (${bytes.byteLength} bytes; minimum ${MIN_IMAGE_BYTES}).`);
+    throw new Error(`Figure file is too small (${bytes.byteLength} bytes).`);
   }
   const size = dimensions(bytes, contentType);
   if (!size) throw new Error("Figure dimensions could not be verified.");
   const longSide = Math.max(size.width, size.height);
   const shortSide = Math.min(size.width, size.height);
-  const standardPass = size.width >= MIN_WIDTH && size.height >= MIN_HEIGHT;
-  const alternatePass = longSide >= ALT_LONG_SIDE && shortSide >= ALT_SHORT_SIDE;
-  if (!standardPass && !alternatePass) {
-    throw new Error(
-      `Figure resolution is too low (${size.width}×${size.height}; publication-quality minimum ${MIN_WIDTH}×${MIN_HEIGHT}).`,
-    );
+  const area = size.width * size.height;
+  const wideScientificFigure = longSide >= 700 && shortSide >= 220 && area >= 220_000;
+  const squareScientificFigure = size.width >= 550 && size.height >= 550;
+  if (!wideScientificFigure && !squareScientificFigure) {
+    throw new Error(`Figure resolution is too low (${size.width}×${size.height}).`);
   }
   return size;
 }
@@ -221,7 +217,7 @@ function bytesResponse(bytes: Uint8Array, contentType: string) {
       "Access-Control-Allow-Origin": "*",
       "X-LabNarrative-Image-Width": String(size.width),
       "X-LabNarrative-Image-Height": String(size.height),
-      "X-LabNarrative-Image-Quality": "publication-original",
+      "X-LabNarrative-Image-Quality": "verified-scientific-figure",
     },
   });
 }
@@ -325,7 +321,7 @@ export async function GET(request: NextRequest) {
       }
     }
     const reason = failures.find(Boolean) || "No direct image could be resolved from this publisher page.";
-    return fail(`No publication-quality image was found. ${reason}`);
+    return fail(`No usable scientific image was found. ${reason}`);
   } catch (error) {
     const message = error instanceof Error && error.name === "AbortError"
       ? "Upstream figure request timed out."
