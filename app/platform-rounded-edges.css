@@ -1,0 +1,85 @@
+/* Consistent softer corners across the LabNarrative admin platform only. */
+
+body.platform-theme-active {
+  --platform-card-radius: 22px;
+  --platform-panel-radius: 18px;
+  --platform-control-radius: 14px;
+  --platform-small-radius: 12px;
+}
+
+body.platform-theme-active section[class*="card"],
+body.platform-theme-active article[class*="card"],
+body.platform-theme-active div[class*="card"],
+body.platform-theme-active [class*="stat"],
+body.platform-theme-active [class*="login"],
+body.platform-theme-active [class*="revisionBox"],
+body.platform-theme-active [class*="emptyState"] {
+  border-radius: var(--platform-card-radius) !important;
+}
+
+body.platform-theme-active [class*="notice"],
+body.platform-theme-active [class*="tableWrap"],
+body.platform-theme-active [class*="toolbar"],
+body.platform-theme-active [class*="filter"],
+body.platform-theme-active [class*="summary"],
+body.platform-theme-active [class*="panel"],
+body.platform-theme-active [class*="event"] {
+  border-radius: var(--platform-panel-radius) !important;
+}
+
+body.platform-theme-active input,
+body.platform-theme-active select,
+body.platform-theme-active textarea {
+  border-radius: var(--platform-control-radius) !important;
+}
+
+body.platform-theme-active button,
+body.platform-theme-active a[class*="button"] {
+  border-radius: 999px !important;
+}
+
+body.platform-theme-active [class*="status"],
+body.platform-theme-active [class*="badge"],
+body.platform-theme-active [class*="tag"],
+body.platform-theme-active [data-pipeline-event] > strong {
+  border-radius: 999px !important;
+}
+
+body.platform-theme-active [data-pipeline-event] {
+  border-radius: var(--platform-panel-radius) !important;
+}
+
+body.platform-monitor-page section[aria-label="Status definitions"] article,
+body.platform-monitor-page section[aria-label="Website totals and status filters"] button {
+  border-radius: var(--platform-card-radius) !important;
+}
+
+body.platform-theme-active .automationProspectModalShell,
+body.platform-theme-active .discoverySearchModalShell {
+  border-radius: 26px !important;
+}
+
+body.platform-theme-active .automationProspectModalClose {
+  border-radius: 999px !important;
+}
+
+body.platform-theme-active .platform-theme-toggle {
+  border-radius: 18px !important;
+}
+
+body.platform-theme-active .platform-theme-option {
+  border-radius: 12px !important;
+}
+
+@media (max-width: 700px) {
+  body.platform-theme-active {
+    --platform-card-radius: 19px;
+    --platform-panel-radius: 16px;
+    --platform-control-radius: 13px;
+  }
+
+  body.platform-theme-active .automationProspectModalShell,
+  body.platform-theme-active .discoverySearchModalShell {
+    border-radius: 24px 24px 14px 14px !important;
+  }
+}
