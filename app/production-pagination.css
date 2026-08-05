@@ -1,0 +1,135 @@
+.productionPagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 12px;
+}
+
+.productionPaginationSummary {
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  opacity: 0.72;
+  white-space: nowrap;
+}
+
+.productionPaginationControls,
+.productionPageSize,
+.productionPageButtons {
+  display: flex;
+  align-items: center;
+}
+
+.productionPaginationControls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+
+.productionPageSize {
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.productionPageSize select {
+  width: auto !important;
+  min-width: 68px !important;
+  min-height: 32px !important;
+  height: 32px;
+  border: 1px solid rgba(125, 145, 158, 0.48);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  padding: 0 26px 0 10px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.productionPageButtons {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.productionPageButtons button {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  height: 32px;
+  border: 1px solid rgba(125, 145, 158, 0.48) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: inherit !important;
+  padding: 0 10px !important;
+  box-shadow: none !important;
+  font: inherit;
+  font-size: 0.72rem !important;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.productionPageButtons button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(36, 181, 178, 0.16) !important;
+}
+
+.productionPageButtons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.productionPageButtons button.productionPageActive,
+.productionPageButtons button[aria-current="page"] {
+  border-color: rgba(36, 181, 178, 0.78) !important;
+  background: #24b5b2 !important;
+  color: #071b22 !important;
+}
+
+.productionPageEllipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 32px;
+  opacity: 0.62;
+}
+
+html[data-platform-theme="ocean"] .productionPageSize select {
+  border-color: #38515e !important;
+  background: #13212a !important;
+  color: #dbe3e8 !important;
+}
+
+html[data-platform-theme="ocean"] .productionPageButtons button {
+  border-color: #38515e !important;
+  background: #182832 !important;
+  color: #dbe3e8 !important;
+}
+
+html[data-platform-theme="dark"] .productionPageSize select,
+html[data-platform-theme="dark"] .productionPageButtons button {
+  border-color: #444c5a !important;
+  background: #1e222d !important;
+  color: #e7eaf0 !important;
+}
+
+@media (max-width: 760px) {
+  .productionPagination,
+  .productionPaginationControls {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .productionPaginationControls {
+    width: 100%;
+  }
+
+  .productionPageButtons {
+    justify-content: flex-start;
+  }
+}
