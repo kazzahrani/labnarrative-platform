@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { inflateRawSync } from "node:zlib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
   "pubmed.ncbi.nlm.nih.gov",
   "storage.googleapis.com",
   "www.aging-us.com",
+  "www.ebi.ac.uk",
   "www.frontiersin.org",
   "www.irb.hr",
   "www.nature.com",
@@ -29,6 +31,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
 ]);
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_ARCHIVE_BYTES = 80 * 1024 * 1024;
 const CACHE_SECONDS = 60 * 60 * 24 * 365;
 
 function errorResponse(message: string, status: number) {
@@ -113,7 +116,7 @@ function extractImageCandidates(html: string, baseUrl: URL): URL[] {
     .slice(0, 16);
 }
 
-async function fetchTimed(url: URL, init: RequestInit, timeoutMs = 15000): Promise<Response> {
+async function fetchTimed(url: URL, init: RequestInit, timeoutMs = 20000): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -136,8 +139,7 @@ async function fetchApproved(sourceUrl: URL, acceptHtml: boolean): Promise<Respo
         : "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.5",
       Referer: sourceReferer(sourceUrl),
     },
-    next: { revalidate: CACHE_SECONDS },
-  } as RequestInit & { next: { revalidate: number } });
+  });
 
   if (!upstream.ok) throw new Error(`Upstream figure request failed (${upstream.status}).`);
   const finalUrl = new URL(upstream.url);
@@ -150,11 +152,33 @@ async function fetchApproved(sourceUrl: URL, acceptHtml: boolean): Promise<Respo
   return upstream;
 }
 
+function imageMime(filename: string): string {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".tif") || lower.endsWith(".tiff")) return "image/tiff";
+  return "image/jpeg";
+}
+
+function bufferResponse(image: Uint8Array, filename: string): Response {
+  if (!image.byteLength || image.byteLength > MAX_IMAGE_BYTES) throw new Error("Figure is empty or exceeds the size limit.");
+  return new Response(image, {
+    status: 200,
+    headers: {
+      "Content-Type": imageMime(filename),
+      "Content-Length": String(image.byteLength),
+      "Cache-Control": `public, max-age=${CACHE_SECONDS}, s-maxage=${CACHE_SECONDS}, immutable`,
+      "X-Content-Type-Options": "nosniff",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+}
+
 async function imageResponse(upstream: Response): Promise<Response> {
   const contentType = upstream.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() || "";
   if (!contentType.startsWith("image/")) throw new Error("Upstream response was not an image.");
-
-  const image = await upstream.arrayBuffer();
+  const image = new Uint8Array(await upstream.arrayBuffer());
   if (!image.byteLength || image.byteLength > MAX_IMAGE_BYTES) throw new Error("Figure is empty or exceeds the size limit.");
 
   const headers = new Headers({
@@ -164,11 +188,6 @@ async function imageResponse(upstream: Response): Promise<Response> {
     "X-Content-Type-Options": "nosniff",
     "Access-Control-Allow-Origin": "*",
   });
-
-  const etag = upstream.headers.get("etag");
-  const lastModified = upstream.headers.get("last-modified");
-  if (etag) headers.set("ETag", etag);
-  if (lastModified) headers.set("Last-Modified", lastModified);
   return new Response(image, { status: 200, headers });
 }
 
@@ -195,10 +214,7 @@ async function pmcidForPubmedId(pmid: string): Promise<string | null> {
   endpoint.searchParams.set("email", "khaled@labnarrative.com");
 
   const response = await fetchTimed(endpoint, {
-    headers: {
-      "User-Agent": "LabNarrative-Figure-Resolver/3.0 (+https://labnarrative.com)",
-      Accept: "application/json",
-    },
+    headers: { "User-Agent": "LabNarrative-Figure-Resolver/4.0", Accept: "application/json" },
   });
   if (!response.ok) return null;
   const data = await response.json().catch(() => ({})) as { records?: Array<{ pmcid?: string }> };
@@ -206,27 +222,18 @@ async function pmcidForPubmedId(pmid: string): Promise<string | null> {
   return /^PMC\d+$/.test(pmcid) ? pmcid : null;
 }
 
-async function fetchPmcXml(pmcid: string): Promise<string> {
-  const endpoint = new URL("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi");
-  endpoint.searchParams.set("db", "pmc");
-  endpoint.searchParams.set("id", pmcid);
-  endpoint.searchParams.set("retmode", "xml");
-  endpoint.searchParams.set("tool", "LabNarrative");
-  endpoint.searchParams.set("email", "khaled@labnarrative.com");
-
+async function fetchEuropePmcXml(pmcid: string): Promise<string> {
+  const endpoint = new URL(`https://www.ebi.ac.uk/europepmc/webservices/rest/${pmcid}/fullTextXML`);
   const response = await fetchTimed(endpoint, {
-    headers: {
-      "User-Agent": "LabNarrative-Figure-Resolver/3.0 (+https://labnarrative.com)",
-      Accept: "application/xml,text/xml;q=0.9,*/*;q=0.2",
-    },
-  }, 20000);
-  if (!response.ok) throw new Error(`PMC XML request failed (${response.status}).`);
+    headers: { "User-Agent": "LabNarrative-Figure-Resolver/4.0", Accept: "application/xml,text/xml;q=0.9,*/*;q=0.2" },
+  }, 30000);
+  if (!response.ok) throw new Error(`Europe PMC XML request failed (${response.status}).`);
   const xml = await response.text();
-  if (!xml.includes("<article") && !xml.includes("<pmc-articleset")) throw new Error("PMC did not return article XML.");
+  if (!xml.includes("<article") && !xml.includes("<pmc-articleset")) throw new Error("Europe PMC did not return article XML.");
   return xml;
 }
 
-function graphicNamesFromPmcXml(xml: string, figureNumber: number): string[] {
+function graphicNamesFromXml(xml: string, figureNumber: number): string[] {
   const figureBlocks = [...xml.matchAll(/<fig\b[^>]*>[\s\S]*?<\/fig>/gi)].map((match) => match[0]);
   const requested = String(figureNumber);
   const selected: string[] = [];
@@ -252,35 +259,93 @@ function graphicNamesFromPmcXml(xml: string, figureNumber: number): string[] {
   return [...new Set(selected)].filter(Boolean);
 }
 
-function pmcBinaryCandidates(pmcid: string, graphicName: string): URL[] {
-  const clean = graphicName.replace(/^\.\//, "").replace(/^bin\//i, "");
-  const names = new Set<string>([clean]);
-  if (!/\.(png|jpe?g|gif|webp|tiff?)$/i.test(clean)) {
-    for (const extension of ["jpg", "jpeg", "png", "gif", "webp"]) names.add(`${clean}.${extension}`);
-  }
+type ZipEntry = { name: string; method: number; compressedSize: number; uncompressedSize: number; localOffset: number };
 
-  return [...names].map((name) => new URL(`https://pmc.ncbi.nlm.nih.gov/articles/${pmcid}/bin/${encodeURIComponent(name).replaceAll("%2F", "/")}`));
+function findEndOfCentralDirectory(zip: Buffer): number {
+  const minimum = Math.max(0, zip.length - 65557);
+  for (let index = zip.length - 22; index >= minimum; index -= 1) {
+    if (zip.readUInt32LE(index) === 0x06054b50) return index;
+  }
+  throw new Error("Europe PMC returned an invalid ZIP archive.");
 }
 
-async function resolvePmcFigure(pmcid: string, figureNumber: number): Promise<Response> {
-  const xml = await fetchPmcXml(pmcid);
-  const graphics = graphicNamesFromPmcXml(xml, figureNumber);
-  if (graphics.length === 0) throw new Error(`PMC figure ${figureNumber} was not found in the article XML.`);
+function listZipEntries(zip: Buffer): ZipEntry[] {
+  const eocd = findEndOfCentralDirectory(zip);
+  const entryCount = zip.readUInt16LE(eocd + 10);
+  let offset = zip.readUInt32LE(eocd + 16);
+  const entries: ZipEntry[] = [];
 
-  for (const graphic of graphics) {
-    for (const candidate of pmcBinaryCandidates(pmcid, graphic)) {
-      try {
-        const image = await fetchApproved(candidate, false);
-        if ((image.headers.get("content-type") || "").toLowerCase().startsWith("image/")) {
-          return await imageResponse(image);
-        }
-      } catch {
-        // Try the next PMC binary candidate.
-      }
-    }
+  for (let index = 0; index < entryCount; index += 1) {
+    if (zip.readUInt32LE(offset) !== 0x02014b50) throw new Error("Europe PMC ZIP directory is invalid.");
+    const method = zip.readUInt16LE(offset + 10);
+    const compressedSize = zip.readUInt32LE(offset + 20);
+    const uncompressedSize = zip.readUInt32LE(offset + 24);
+    const nameLength = zip.readUInt16LE(offset + 28);
+    const extraLength = zip.readUInt16LE(offset + 30);
+    const commentLength = zip.readUInt16LE(offset + 32);
+    const localOffset = zip.readUInt32LE(offset + 42);
+    const name = zip.subarray(offset + 46, offset + 46 + nameLength).toString("utf8");
+    entries.push({ name, method, compressedSize, uncompressedSize, localOffset });
+    offset += 46 + nameLength + extraLength + commentLength;
   }
 
-  throw new Error(`PMC figure ${figureNumber} could not be downloaded as an image.`);
+  return entries;
+}
+
+function extractZipEntry(zip: Buffer, entry: ZipEntry): Uint8Array {
+  if (entry.uncompressedSize > MAX_IMAGE_BYTES) throw new Error("Archived figure exceeds the size limit.");
+  const offset = entry.localOffset;
+  if (zip.readUInt32LE(offset) !== 0x04034b50) throw new Error("Europe PMC ZIP entry is invalid.");
+  const nameLength = zip.readUInt16LE(offset + 26);
+  const extraLength = zip.readUInt16LE(offset + 28);
+  const start = offset + 30 + nameLength + extraLength;
+  const compressed = zip.subarray(start, start + entry.compressedSize);
+
+  if (entry.method === 0) return new Uint8Array(compressed);
+  if (entry.method === 8) return new Uint8Array(inflateRawSync(compressed));
+  throw new Error(`Unsupported Europe PMC ZIP compression method ${entry.method}.`);
+}
+
+function imageEntry(entries: ZipEntry[], graphicNames: string[]): ZipEntry | null {
+  const candidates = graphicNames.flatMap((raw) => {
+    const clean = raw.replace(/^\.\//, "").replace(/^bin\//i, "");
+    const base = clean.split("/").at(-1) || clean;
+    const stem = base.replace(/\.(png|jpe?g|gif|webp|tiff?)$/i, "").toLowerCase();
+    return [clean.toLowerCase(), base.toLowerCase(), stem];
+  });
+
+  const images = entries.filter((entry) => /\.(png|jpe?g|gif|webp|tiff?)$/i.test(entry.name));
+  for (const wanted of candidates) {
+    const exact = images.find((entry) => {
+      const name = entry.name.toLowerCase();
+      const base = name.split("/").at(-1) || name;
+      const stem = base.replace(/\.(png|jpe?g|gif|webp|tiff?)$/i, "");
+      return name === wanted || base === wanted || stem === wanted;
+    });
+    if (exact) return exact;
+  }
+  return null;
+}
+
+async function resolveEuropePmcFigure(pmcid: string, figureNumber: number): Promise<Response> {
+  const xml = await fetchEuropePmcXml(pmcid);
+  const graphics = graphicNamesFromXml(xml, figureNumber);
+  if (graphics.length === 0) throw new Error(`Europe PMC figure ${figureNumber} was not found in the article XML.`);
+
+  const endpoint = new URL(`https://www.ebi.ac.uk/europepmc/webservices/rest/${pmcid}/supplementaryFiles`);
+  endpoint.searchParams.set("includeInlineImage", "true");
+  const archiveResponse = await fetchTimed(endpoint, {
+    headers: { "User-Agent": "LabNarrative-Figure-Resolver/4.0", Accept: "application/zip,application/octet-stream" },
+  }, 45000);
+  if (!archiveResponse.ok) throw new Error(`Europe PMC figure archive request failed (${archiveResponse.status}).`);
+  const declared = Number(archiveResponse.headers.get("content-length") || 0);
+  if (declared > MAX_ARCHIVE_BYTES) throw new Error("Europe PMC figure archive exceeds the size limit.");
+  const zip = Buffer.from(await archiveResponse.arrayBuffer());
+  if (!zip.byteLength || zip.byteLength > MAX_ARCHIVE_BYTES) throw new Error("Europe PMC figure archive is empty or too large.");
+
+  const entry = imageEntry(listZipEntries(zip), graphics);
+  if (!entry) throw new Error(`Europe PMC figure ${figureNumber} was not present in the figure archive.`);
+  return bufferResponse(extractZipEntry(zip, entry), entry.name);
 }
 
 export async function GET(request: NextRequest) {
@@ -296,19 +361,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const directPmcid = pmcidFromUrl(sourceUrl);
-    if (directPmcid) {
-      try {
-        return await resolvePmcFigure(directPmcid, requestedFigureNumber(sourceUrl));
-      } catch {
-        // Fall back to publisher-page parsing for unusual PMC records.
-      }
-    }
+    if (directPmcid) return await resolveEuropePmcFigure(directPmcid, requestedFigureNumber(sourceUrl));
 
     const pmid = pubmedIdFromUrl(sourceUrl);
     if (pmid) {
       const pmcid = await pmcidForPubmedId(pmid);
-      if (!pmcid) return errorResponse("The PubMed record has no downloadable PMC full-text figure.", 502);
-      return await resolvePmcFigure(pmcid, requestedFigureNumber(sourceUrl));
+      if (!pmcid) return errorResponse("The PubMed record has no downloadable open-access full-text figure.", 502);
+      return await resolveEuropePmcFigure(pmcid, requestedFigureNumber(sourceUrl));
     }
 
     const upstream = await fetchApproved(sourceUrl, true);
@@ -320,9 +379,7 @@ export async function GET(request: NextRequest) {
     for (const candidate of candidates) {
       try {
         const image = await fetchApproved(candidate, false);
-        const candidateType = image.headers.get("content-type")?.toLowerCase() || "";
-        if (!candidateType.startsWith("image/")) continue;
-        return await imageResponse(image);
+        if ((image.headers.get("content-type") || "").toLowerCase().startsWith("image/")) return await imageResponse(image);
       } catch {
         // Try the next verified figure candidate.
       }
