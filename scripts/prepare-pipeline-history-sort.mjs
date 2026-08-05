@@ -43,13 +43,18 @@ if (!source.includes("function sortPipelineHistoryProspects")) {
   source = source.replace(statusTextPattern, `${match[0]}${helperBlock}`);
 }
 
-source = source.replace(
-  "prospects.map((prospect) => (",
-  "sortPipelineHistoryProspects(prospects).map((prospect) => (",
-);
+const historyItems = 'prospects.filter((prospect) => !["queued", "held", "rejected"].includes(prospect.status))';
+const sortedHistoryItems = `sortPipelineHistoryProspects(${historyItems})`;
 
-if (!source.includes("sortPipelineHistoryProspects(prospects).map")) {
-  throw new Error("The pipeline history table could not be connected to status sorting.");
+if (!source.includes(sortedHistoryItems)) {
+  if (!source.includes(historyItems)) {
+    throw new Error("The generated Pipeline history data source was not found.");
+  }
+  source = source.replace(historyItems, sortedHistoryItems);
+}
+
+if (!source.includes(sortedHistoryItems)) {
+  throw new Error("The Pipeline history data source could not be status-sorted.");
 }
 
 fs.writeFileSync(pageUrl, source);
