@@ -29,10 +29,10 @@ const HOSTS = new Set([
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MIN_IMAGE_BYTES = 80_000;
-const MIN_WIDTH = 1_200;
-const MIN_HEIGHT = 800;
-const ALT_LONG_SIDE = 1_600;
-const ALT_SHORT_SIDE = 650;
+const MIN_WIDTH = 700;
+const MIN_HEIGHT = 700;
+const ALT_LONG_SIDE = 800;
+const ALT_SHORT_SIDE = 600;
 const CACHE_SECONDS = 31_536_000;
 
 type Dimensions = { width: number; height: number };
@@ -78,7 +78,7 @@ async function fetchSource(url: URL, html = false) {
   if (!allowed(url)) throw new Error("Figure host is not approved.");
   const response = await timed(url, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; LabNarrative-Figure-Resolver/5.0; +https://labnarrative.com)",
+      "User-Agent": "Mozilla/5.0 (compatible; LabNarrative-Figure-Resolver/5.1; +https://labnarrative.com)",
       Accept: html
         ? "image/png,image/jpeg,image/webp,image/*;q=0.9,text/html;q=0.7,*/*;q=0.2"
         : "image/png,image/jpeg,image/webp,image/*;q=0.9,*/*;q=0.2",
@@ -202,7 +202,7 @@ function validateQuality(bytes: Uint8Array, contentType: string): Dimensions {
   const alternatePass = longSide >= ALT_LONG_SIDE && shortSide >= ALT_SHORT_SIDE;
   if (!standardPass && !alternatePass) {
     throw new Error(
-      `Figure resolution is too low (${size.width}×${size.height}; minimum ${MIN_WIDTH}×${MIN_HEIGHT}).`,
+      `Figure resolution is too low (${size.width}×${size.height}; publication-quality minimum ${MIN_WIDTH}×${MIN_HEIGHT}).`,
     );
   }
   return size;
@@ -221,7 +221,7 @@ function bytesResponse(bytes: Uint8Array, contentType: string) {
       "Access-Control-Allow-Origin": "*",
       "X-LabNarrative-Image-Width": String(size.width),
       "X-LabNarrative-Image-Height": String(size.height),
-      "X-LabNarrative-Image-Quality": "full-resolution",
+      "X-LabNarrative-Image-Quality": "publication-original",
     },
   });
 }
