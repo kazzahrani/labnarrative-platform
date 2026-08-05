@@ -4,7 +4,6 @@ import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhan
 import AutomationNavEnhancer from "@/components/admin/AutomationNavEnhancer";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import PipelineEventColorEnhancer from "@/components/admin/PipelineEventColorEnhancer";
-import PipelineHistorySortEnhancer from "@/components/admin/PipelineHistorySortEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
 import "./platform-overrides.css";
@@ -42,7 +41,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AdminAuthRecoveryEnhancer />
         <AutomationNavEnhancer />
         <PipelineEventColorEnhancer />
-        <PipelineHistorySortEnhancer />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
         {children}
