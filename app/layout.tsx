@@ -25,6 +25,7 @@ import "./engine-typography-compact.css";
 import "./editable-field-weight-fix.css";
 import "./automation-prospect-modals.css";
 import "./discovery-typography-increase.css";
+import "./production-system-typography-increase.css";
 import "./platform-rounded-edges.css";
 
 export const metadata: Metadata = {
