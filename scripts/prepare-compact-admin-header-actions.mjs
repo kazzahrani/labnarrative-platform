@@ -9,7 +9,7 @@ function addActionGroupClass(pageUrl, label, extraClass) {
 
   const fullClass = `${extraClass} compactAdminHeaderActions`;
   const compactToken = '<div className={`${styles.heroActions} compactAdminHeaderActions`}>';
-  const fullToken = `<div className={\`${styles.heroActions} ${fullClass}\`}>`;
+  const fullToken = '<div className={`${styles.heroActions} ' + fullClass + '`}>';
 
   if (!source.includes(fullClass)) {
     if (source.includes(compactToken)) {
