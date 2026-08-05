@@ -122,19 +122,31 @@ function DiscoveryPagination({
   source = source.replace(exportMarker, helpers + exportMarker);
 }
 
+const stateMarker = "  const [noticeError, setNoticeError] = useState(false);\n";
 if (!source.includes("const [queuePageSize, setQueuePageSize]")) {
-  const stateMarker = "  const [noticeError, setNoticeError] = useState(false);\n";
   if (!source.includes(stateMarker)) {
     throw new Error("Discovery notice state marker was not found.");
   }
-
   source = source.replace(
     stateMarker,
     stateMarker +
       "  const [queuePageSize, setQueuePageSize] = useState<DiscoveryPageSize>(10);\n" +
       "  const [queuePage, setQueuePage] = useState(1);\n" +
+      "  const [historyPageSize, setHistoryPageSize] = useState<DiscoveryPageSize>(10);\n" +
+      "  const [historyPage, setHistoryPage] = useState(1);\n" +
       "  const [diagnosticPageSize, setDiagnosticPageSize] = useState<DiscoveryPageSize>(10);\n" +
       "  const [diagnosticPage, setDiagnosticPage] = useState(1);\n",
+  );
+} else if (!source.includes("const [historyPageSize, setHistoryPageSize]")) {
+  const diagnosticState = "  const [diagnosticPageSize, setDiagnosticPageSize] = useState<DiscoveryPageSize>(10);\n";
+  if (!source.includes(diagnosticState)) {
+    throw new Error("Diagnostic pagination state marker was not found.");
+  }
+  source = source.replace(
+    diagnosticState,
+    "  const [historyPageSize, setHistoryPageSize] = useState<DiscoveryPageSize>(10);\n" +
+      "  const [historyPage, setHistoryPage] = useState(1);\n" +
+      diagnosticState,
   );
 }
 
@@ -154,6 +166,10 @@ if (!source.includes("const pagedQueuedCandidates")) {
     1,
     Math.ceil(queuedCandidates.length / queuePageSize),
   );
+  const historyPageCount = Math.max(
+    1,
+    Math.ceil(runs.length / historyPageSize),
+  );
   const diagnosticPageCount = Math.max(
     1,
     Math.ceil(diagnosticCandidates.length / diagnosticPageSize),
@@ -164,6 +180,11 @@ if (!source.includes("const pagedQueuedCandidates")) {
     return queuedCandidates.slice(start, start + queuePageSize);
   }, [queuePage, queuePageSize, queuedCandidates]);
 
+  const pagedRuns = useMemo(() => {
+    const start = (historyPage - 1) * historyPageSize;
+    return runs.slice(start, start + historyPageSize);
+  }, [historyPage, historyPageSize, runs]);
+
   const pagedDiagnosticCandidates = useMemo(() => {
     const start = (diagnosticPage - 1) * diagnosticPageSize;
     return diagnosticCandidates.slice(start, start + diagnosticPageSize);
@@ -172,6 +193,10 @@ if (!source.includes("const pagedQueuedCandidates")) {
   useEffect(() => {
     setQueuePage((current) => Math.min(current, queuePageCount));
   }, [queuePageCount]);
+
+  useEffect(() => {
+    setHistoryPage((current) => Math.min(current, historyPageCount));
+  }, [historyPageCount]);
 
   useEffect(() => {
     setDiagnosticPage((current) => Math.min(current, diagnosticPageCount));
@@ -184,6 +209,10 @@ if (!source.includes("const pagedQueuedCandidates")) {
 source = source.replace(
   "queuedCandidates.map((candidate) => (",
   "pagedQueuedCandidates.map((candidate) => (",
+);
+source = source.replace(
+  "runs.map((run) => (",
+  "pagedRuns.map((run) => (",
 );
 source = source.replace(
   "diagnosticCandidates.map((candidate) => (",
@@ -224,6 +253,22 @@ insertPagination(
 );
 
 insertPagination(
+  "Discovery history",
+  'label="Discovery history"',
+  `              <DiscoveryPagination
+                label="Discovery history"
+                total={runs.length}
+                page={historyPage}
+                pageSize={historyPageSize}
+                onPageChange={setHistoryPage}
+                onPageSizeChange={(size) => {
+                  setHistoryPageSize(size);
+                  setHistoryPage(1);
+                }}
+              />`,
+);
+
+insertPagination(
   "Diagnostic record",
   'label="Diagnostic records"',
   `              <DiscoveryPagination
@@ -239,12 +284,59 @@ insertPagination(
               />`,
 );
 
+function updateAutomaticQueueTable() {
+  const kickerToken = '<p className={styles.kicker}>Automatic queue</p>';
+  const kickerIndex = source.indexOf(kickerToken);
+  if (kickerIndex === -1) throw new Error("Automatic queue card was not found.");
+
+  const cardStartCandidates = [
+    '<section className={`${styles.card} discoverySplitQueue`}>',
+    "<section className={styles.card}>",
+  ];
+  let cardStart = -1;
+  for (const token of cardStartCandidates) {
+    const candidate = source.lastIndexOf(token, kickerIndex);
+    if (candidate > cardStart) cardStart = candidate;
+  }
+  const cardEndStart = source.indexOf("</section>", kickerIndex);
+  if (cardStart === -1 || cardEndStart === -1) {
+    throw new Error("Automatic queue card boundaries were not found.");
+  }
+  const cardEnd = cardEndStart + "</section>".length;
+  let card = source.slice(cardStart, cardEnd);
+
+  card = card.replace(
+    '<table className={styles.table}>',
+    '<table className={`${styles.table} automaticQueueTable`}>',
+  );
+  card = card.replace(/\s*<th>Outcome<\/th>/, "");
+  card = card.replace("<td colSpan={4}>", "<td colSpan={3}>");
+  card = card.replace(
+    /\n\s*<td>\n\s*<span\n\s*className=\{styles\.status\}\n\s*data-status="approved"\n\s*>\n\s*queued\n\s*<\/span>\n\s*<br \/>\n\s*<small className=\{styles\.muted\}>\n\s*\{candidate\.decision_reason \|\|\n\s*"Automatically admitted to production\."\}\n\s*<\/small>\n\s*<\/td>/,
+    "",
+  );
+
+  if (card.includes("<th>Outcome</th>")) {
+    throw new Error("The Automatic queue Outcome heading is still present.");
+  }
+  if (!card.includes("automaticQueueTable")) {
+    throw new Error("The Automatic queue table class was not added.");
+  }
+
+  source = `${source.slice(0, cardStart)}${card}${source.slice(cardEnd)}`;
+}
+
+updateAutomaticQueueTable();
+
 for (const required of [
   helperMarker,
   "pagedQueuedCandidates.map",
+  "pagedRuns.map",
   "pagedDiagnosticCandidates.map",
   'label="Automatic queue"',
+  'label="Discovery history"',
   'label="Diagnostic records"',
+  "automaticQueueTable",
 ]) {
   if (!source.includes(required)) {
     throw new Error(`Discovery pagination marker missing: ${required}`);
@@ -252,4 +344,4 @@ for (const required of [
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Automatic queue and diagnostic records pagination prepared.");
+console.log("Discovery history, automatic queue and diagnostic records pagination prepared; queue table simplified.");
