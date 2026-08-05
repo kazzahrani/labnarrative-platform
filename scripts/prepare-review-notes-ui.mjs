@@ -27,6 +27,20 @@ source = replaceRequired(
   "review-note loading",
 );
 
+if (!source.includes("const [reviewCopyNotice, setReviewCopyNotice]")) {
+  const noticeState = "  const [noticeError, setNoticeError] = useState(false);\n";
+  if (!source.includes(noticeState)) {
+    throw new Error("The Production notice state was not found.");
+  }
+
+  source = source.replace(
+    noticeState,
+    noticeState +
+      '  const [reviewCopyNotice, setReviewCopyNotice] = useState("");\n' +
+      "  const [reviewCopyNoticeError, setReviewCopyNoticeError] = useState(false);\n",
+  );
+}
+
 if (!source.includes("const collectedRevisionNotes = useMemo")) {
   const countsToken = "  const counts = useMemo";
   if (!source.includes(countsToken)) throw new Error("Review-note summary insertion point was not found.");
@@ -81,13 +95,15 @@ if (!source.includes("async function saveReviewNote(runId: string)")) {
   async function copyRevisionNotes() {
     if (!collectedRevisionNotes) return;
 
+    setReviewCopyNotice("");
+    setReviewCopyNoticeError(false);
+
     try {
       await navigator.clipboard.writeText(collectedRevisionNotes);
-      setNotice("All saved issue notes were copied.");
-      setNoticeError(false);
+      setReviewCopyNotice("All saved issue notes were copied.");
     } catch {
-      setNotice("The notes could not be copied automatically.");
-      setNoticeError(true);
+      setReviewCopyNotice("The notes could not be copied automatically.");
+      setReviewCopyNoticeError(true);
     }
   }
 
@@ -138,6 +154,14 @@ if (!source.includes("reviewNotesCollector")) {
             value={collectedRevisionNotes}
             placeholder="Saved issue notes will appear here."
           />
+          {reviewCopyNotice ? (
+            <p
+              className={\`\${styles.notice} \${reviewCopyNoticeError ? styles.error : ""}\`}
+              role="status"
+            >
+              {reviewCopyNotice}
+            </p>
+          ) : null}
         </section>`;
 
   source = source.replace(
@@ -161,6 +185,15 @@ if (!source.includes("Collected issue notes")) {
 if (!source.includes("navigator.clipboard.writeText(collectedRevisionNotes)")) {
   throw new Error("The Copy all action was not added.");
 }
+if (!source.includes("setReviewCopyNotice(\"All saved issue notes were copied.\")")) {
+  throw new Error("The Review summary copy confirmation was not added.");
+}
+if (source.includes("setNotice(\"All saved issue notes were copied.\")")) {
+  throw new Error("The copy confirmation still uses the page-wide notice.");
+}
+if (!source.includes("{reviewCopyNotice}")) {
+  throw new Error("The Review summary does not render its copy confirmation.");
+}
 
 fs.writeFileSync(pageUrl, source);
-console.log("Review instructions converted to saved issue notes with a copy-all summary.");
+console.log("Review instructions converted to saved issue notes with an in-card copy confirmation.");
