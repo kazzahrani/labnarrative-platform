@@ -34,10 +34,7 @@ const discovery = updatePage(pages.discovery, (source) => source
   .replace('<Link href="/admin/sites">Websites monitor</Link>', '<Link href="/admin/sites">Websites</Link>')
   .replace('<Link href="/admin/sites">Websites Monitor</Link>', '<Link href="/admin/sites">Websites</Link>')
   .replace(/\s*<p className=\{styles\.kicker\}>Engine 1 · automatic discovery<\/p>\s*/, "\n            ")
-  .replace("<h1>Search, verify, and queue automatically.</h1>", "<h1>Prospects Discovery</h1>")
-  .replace("Open production queue", "Open Production")
-  .replace("Open production system", "Open Production")
-  .replace("Open Production Engine", "Open Production"));
+  .replace("<h1>Search, verify, and queue automatically.</h1>", "<h1>Prospects Discovery</h1>"));
 
 const monitor = updatePage(pages.monitor, (source) => source
   .replace("Preparing the secure website monitor…", "Preparing Websites Monitor…")
@@ -55,7 +52,6 @@ const checks = [
   [automation, "Production Engine</span>", "Production Engine topbar label"],
   [discovery, "<h1>Prospects Discovery</h1>", "Prospects Discovery heading"],
   [discovery, "Prospects Discovery</span>", "Prospects Discovery topbar label"],
-  [discovery, "Open Production", "Production action label"],
   [monitor, "<h1>Websites Monitor</h1>", "Websites Monitor heading"],
   [monitor, "<span>Websites Monitor</span>", "Websites Monitor topbar label"],
 ];
