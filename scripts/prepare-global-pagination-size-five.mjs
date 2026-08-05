@@ -26,8 +26,11 @@ for (const filePath of collectTsxFiles(adminPath)) {
   );
 
   source = source.replace(
-    /(<select[\s\S]*?aria-label=\{label \+ " rows per page"\}[\s\S]*?>\s*)(?!<option value=\{5\}>5<\/option>)/g,
-    '$1<option value={5}>5</option>\n            ',
+    /(<select[\s\S]*?aria-label=\{label \+ " rows per page"\}[\s\S]*?)(<option value=\{10\}>10<\/option>)/g,
+    (match, prefix, tenOption) => {
+      if (prefix.includes("<option value={5}>5</option>")) return match;
+      return `${prefix}<option value={5}>5</option>\n            ${tenOption}`;
+    },
   );
 
   const pageSizeSelects = source.match(/aria-label=\{label \+ " rows per page"\}/g) ?? [];
@@ -54,7 +57,10 @@ for (const filePath of collectTsxFiles(adminPath)) {
     if (!block.includes("<option value={5}>5</option>")) {
       throw new Error(`A pagination selector still excludes 5: ${filePath}`);
     }
+    if (!block.includes("<option value={10}>10</option>")) {
+      throw new Error(`A pagination selector lost its 10-row option: ${filePath}`);
+    }
   }
 }
 
-console.log(`Page size 5 added across ${paginationControls} admin pagination controls in ${updatedFiles} generated files.`);
+console.log(`Page size 5 added across ${paginationControls} reusable admin pagination controls in ${updatedFiles} generated files.`);
