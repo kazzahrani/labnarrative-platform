@@ -15,11 +15,33 @@ if (!discovery.includes(oldDiscoveryKicker) && !discovery.includes(newDiscoveryK
 
 discovery = discovery
   .replace(oldDiscoveryKicker, newDiscoveryKicker)
-  .replaceAll('label="Automatic queue"', 'label="Approved candidates"');
+  .replaceAll('label="Automatic queue"', 'label="Approved candidates"')
+  .replaceAll("Automatically queued", "Approved candidates")
+  .replaceAll("automatically queued", "approved")
+  .replaceAll("Auto-queued", "Approved")
+  .replaceAll("auto-queued", "approved")
+  .replaceAll("queued automatically", "approved")
+  .replaceAll("Automatic queueing enabled", "Candidate approval enabled")
+  .replaceAll("automatic queueing enabled", "candidate approval enabled")
+  .replaceAll("Automatic queue threshold", "Approval threshold")
+  .replaceAll("automatic queue threshold", "approval threshold")
+  .replaceAll("Discover and auto-queue prospects", "Discover and approve candidates")
+  .replaceAll("Searching, verifying and queueing…", "Searching, verifying and approving…")
+  .replaceAll("Automatically admitted to production.", "Approved for production.")
+  .replaceAll(
+    "automatically sends every verified production-quality prospect into the automation queue.",
+    "approves every verified production-quality candidate and sends it to the build queue.",
+  );
 
 production = production
   .replaceAll('"Buildable prospects · score 75–100"', '"Build queue"')
-  .replaceAll('label="Buildable prospects"', 'label="Build queue"');
+  .replaceAll('label="Buildable prospects"', 'label="Build queue"')
+  .replaceAll("Automatically queued", "Approved candidates")
+  .replaceAll("automatically queued", "approved")
+  .replaceAll("Auto-queued", "Approved")
+  .replaceAll("auto-queued", "approved")
+  .replaceAll("queued automatically", "approved")
+  .replaceAll("Automatically admitted to production.", "Approved for production.");
 
 if (!discovery.includes(newDiscoveryKicker)) {
   throw new Error("Approved candidates was not applied to the Discovery window.");
@@ -40,6 +62,27 @@ if (production.includes('"Buildable prospects · score 75–100"')) {
   throw new Error("The old Buildable prospects window label is still present.");
 }
 
+const outdatedVisiblePhrases = [
+  "Automatically queued",
+  "automatically queued",
+  "Auto-queued",
+  "auto-queued",
+  "queued automatically",
+  "Automatic queueing enabled",
+  "automatic queueing enabled",
+  "Automatic queue threshold",
+  "automatic queue threshold",
+  "Discover and auto-queue prospects",
+  "Searching, verifying and queueing…",
+  "Automatically admitted to production.",
+];
+
+for (const phrase of outdatedVisiblePhrases) {
+  if (discovery.includes(phrase) || production.includes(phrase)) {
+    throw new Error(`Outdated visible queue wording is still present: ${phrase}`);
+  }
+}
+
 fs.writeFileSync(discoveryUrl, discovery);
 fs.writeFileSync(productionUrl, production);
-console.log("Approved candidates and Build queue labels applied consistently.");
+console.log("Approved candidate and Build queue terminology standardized across visible platform labels.");
