@@ -202,11 +202,29 @@ export default function HomePage() {
             </article>
           ))}
         </div>
+      </section>
 
-        <div className={styles.platformNote}>
+      <section
+        id="after-launch"
+        data-ln-overlap-panel="after-launch"
+        style={{
+          padding:
+            "clamp(88px, 10vw, 148px) clamp(20px, 4.4vw, 70px) clamp(92px, 10vw, 150px)",
+          background: "var(--green-dark)",
+          color: "var(--white)",
+        }}
+      >
+        <div
+          className={styles.platformNote}
+          style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}
+        >
           <div>
-            <p className={styles.sectionLabel}>After launch</p>
-            <h2>A website your laboratory can keep current.</h2>
+            <p className={styles.sectionLabel} style={{ color: "var(--lime)" }}>
+              After launch
+            </p>
+            <h2 style={{ marginTop: "clamp(38px, 5vw, 64px)" }}>
+              A website your laboratory can keep current.
+            </h2>
           </div>
           <p>
             Private editing access lets your group update projects, members, publications and
