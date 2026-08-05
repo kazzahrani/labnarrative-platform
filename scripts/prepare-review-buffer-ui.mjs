@@ -42,14 +42,19 @@ if (!source.includes("<span>Review buffer</span>")) {
   );
 }
 
-source = source.replaceAll("<span>Needs attention</span>", "<span>Automatic recovery</span>");
+source = source.replace(
+  /\s*<div className=\{styles\.stat\}><span>(?:Needs attention|Automatic recovery)<\/span><strong>\{counts\.attention\}<\/strong><\/div>\n?/g,
+  "\n",
+);
 source = source.replaceAll("Your single approval gate", "Awaiting final review");
 
 if (!source.includes(desiredHero)) throw new Error("The review-buffer explanation could not be added.");
 if (!source.includes('if (value === "paused") return "waiting for manual fix"')) throw new Error("The manual-fix status label could not be added.");
 if (!source.includes("counts.review}/10")) throw new Error("The review-buffer counter could not be added.");
-if (!source.includes("<span>Automatic recovery</span>")) throw new Error("The automatic-recovery dashboard label could not be added.");
+if (source.includes("<span>Automatic recovery</span>") || source.includes("<span>Needs attention</span>")) {
+  throw new Error("The removed recovery metric is still present.");
+}
 if (source.includes("Build next queued PI")) throw new Error("The obsolete manual start control is still present after UI preparation.");
 
 fs.writeFileSync(pageUrl, source);
-console.log("Review buffer, automatic recovery and manual-fix interface prepared.");
+console.log("Review buffer and manual-fix interface prepared without the recovery metric.");
