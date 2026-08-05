@@ -26,12 +26,7 @@ source = source.replace(
 if (!source.includes("review: runs.filter")) {
   source = source.replace(
     /    attention: prospects\.filter\(\(item\) => item\.status === "needs_attention"\)\.length,\n  \}\), \[prospects\]\);/,
-    `    attention: prospects.filter((item) => item.status === "needs_attention").length,\n    review: runs.filter((run) => ["awaiting_final_review", "revision_requested", "approved_to_send"].includes(run.status)).length,\n    manualFix: prospects.filter((item) => item.status === "paused").length,\n  }), [prospects, runs]);`,
-  );
-} else if (!source.includes("manualFix: prospects.filter")) {
-  source = source.replace(
-    /    review: runs\.filter\(\(run\) => \["awaiting_final_review", "revision_requested", "approved_to_send"\]\.includes\(run\.status\)\)\.length,\n/,
-    `    review: runs.filter((run) => ["awaiting_final_review", "revision_requested", "approved_to_send"].includes(run.status)).length,\n    manualFix: prospects.filter((item) => item.status === "paused").length,\n`,
+    `    attention: prospects.filter((item) => item.status === "needs_attention").length,\n    review: runs.filter((run) => ["awaiting_final_review", "revision_requested", "approved_to_send"].includes(run.status)).length,\n  }), [prospects, runs]);`,
   );
 }
 
@@ -47,20 +42,12 @@ if (!source.includes("<span>Review buffer</span>")) {
   );
 }
 
-if (!source.includes("<span>Waiting for manual fix</span>")) {
-  source = source.replace(
-    /(<div className=\{styles\.stat\}><span>Automatic recovery<\/span><strong>\{counts\.attention\}<\/strong><\/div>\n?)/,
-    `$1          <div className={styles.stat}><span>Waiting for manual fix</span><strong>{counts.manualFix}</strong></div>\n`,
-  );
-}
-
 source = source.replaceAll("<span>Needs attention</span>", "<span>Automatic recovery</span>");
 source = source.replaceAll("Your single approval gate", "Awaiting final review");
 
 if (!source.includes(desiredHero)) throw new Error("The review-buffer explanation could not be added.");
 if (!source.includes('if (value === "paused") return "waiting for manual fix"')) throw new Error("The manual-fix status label could not be added.");
 if (!source.includes("counts.review}/10")) throw new Error("The review-buffer counter could not be added.");
-if (!source.includes("counts.manualFix")) throw new Error("The manual-fix counter could not be added.");
 if (!source.includes("<span>Automatic recovery</span>")) throw new Error("The automatic-recovery dashboard label could not be added.");
 if (source.includes("Build next queued PI")) throw new Error("The obsolete manual start control is still present after UI preparation.");
 
