@@ -117,30 +117,33 @@ source = source.replace(
 );
 
 if (!source.includes("reviewNotesCollector")) {
-  const modalToken = "\n      {prospectModal ? (";
-  if (!source.includes(modalToken)) throw new Error("Collected-note box insertion point was not found.");
+  const mainCloseToken = "\n      </div>\n\n      {prospectModal ? (";
+  if (!source.includes(mainCloseToken)) throw new Error("Collected-note box insertion point was not found.");
 
   const collector = `
-      <section className={\`\${styles.card} reviewNotesCollector\`}>
-        <div className={styles.cardHeader}>
-          <div>
-            <p className={styles.kicker}>Review summary</p>
-            <h2>Collected issue notes</h2>
-            <p className={styles.muted}>Each saved note begins with the PI name and is ready to paste into ChatGPT.</p>
-          </div>
-          <button className={styles.buttonSecondary} type="button" disabled={!collectedRevisionNotes} onClick={() => void copyRevisionNotes()}>Copy all</button>
-        </div>
-        <textarea
-          aria-label="Collected issue notes"
-          readOnly
-          rows={8}
-          value={collectedRevisionNotes}
-          placeholder="Saved issue notes will appear here."
-        />
-      </section>
-`;
 
-  source = source.replace(modalToken, `${collector}${modalToken}`);
+        <section className={\`\${styles.card} reviewNotesCollector\`}>
+          <div className={styles.cardHeader}>
+            <div>
+              <p className={styles.kicker}>Review summary</p>
+              <h2>Collected issue notes</h2>
+              <p className={styles.muted}>Each saved note begins with the PI name and is ready to paste into ChatGPT.</p>
+            </div>
+            <button className={styles.buttonSecondary} type="button" disabled={!collectedRevisionNotes} onClick={() => void copyRevisionNotes()}>Copy all</button>
+          </div>
+          <textarea
+            aria-label="Collected issue notes"
+            readOnly
+            rows={8}
+            value={collectedRevisionNotes}
+            placeholder="Saved issue notes will appear here."
+          />
+        </section>`;
+
+  source = source.replace(
+    mainCloseToken,
+    `${collector}\n      </div>\n\n      {prospectModal ? (`,
+  );
 }
 
 if (source.includes("Request changes")) {
