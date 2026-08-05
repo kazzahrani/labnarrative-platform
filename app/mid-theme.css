@@ -1,0 +1,403 @@
+/* Medium-grey operational theme: visually halfway between Light and Dark. */
+
+html[data-platform-theme="mid"] {
+  --ln-mid-bg: #505660;
+  --ln-mid-bg-soft: #585f6a;
+  --ln-mid-surface: #626a76;
+  --ln-mid-surface-raised: #707986;
+  --ln-mid-surface-active: #7a8491;
+  --ln-mid-input: #474d57;
+  --ln-mid-border: #818a97;
+  --ln-mid-border-soft: #737c88;
+  --ln-mid-text: #edf0f4;
+  --ln-mid-text-strong: #ffffff;
+  --ln-mid-muted: #d0d5dc;
+  --ln-mid-faint: #afb6c0;
+  --ln-mid-accent: #bac7ff;
+  color-scheme: dark;
+}
+
+html[data-platform-theme="mid"] .platform-theme-toggle {
+  border-color: #858e9b;
+  background: rgba(82, 88, 99, 0.96);
+  box-shadow: 0 8px 24px rgba(18, 21, 27, 0.28);
+}
+
+html[data-platform-theme="mid"] .platform-theme-option {
+  color: #d4d9e0;
+}
+
+html[data-platform-theme="mid"] .platform-theme-option:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+html[data-platform-theme="mid"] .platform-theme-option[aria-pressed="true"] {
+  background: #89929f;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(22, 26, 33, 0.3);
+}
+
+/* Shared page foundations */
+html[data-platform-theme="mid"] body.platform-admin-page,
+html[data-platform-theme="mid"] body.platform-admin-page > main,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-shell,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-loading,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-auth-page,
+html[data-platform-theme="mid"] body.platform-monitor-page,
+html[data-platform-theme="mid"] body.platform-monitor-page > main,
+html[data-platform-theme="mid"] body.platform-automation-page > main,
+html[data-platform-theme="mid"] body.platform-discovery-page > main {
+  background: var(--ln-mid-bg) !important;
+  color: var(--ln-mid-text) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-topbar,
+html[data-platform-theme="mid"] body.platform-monitor-page header,
+html[data-platform-theme="mid"] body.platform-automation-page > main > header,
+html[data-platform-theme="mid"] body.platform-discovery-page > main > header {
+  border-color: var(--ln-mid-border-soft) !important;
+  background: rgba(82, 89, 100, 0.96) !important;
+  color: var(--ln-mid-text) !important;
+  box-shadow: 0 8px 24px rgba(24, 28, 35, 0.17);
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-topbar,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-topbar a,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-topbar button,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-brand,
+html[data-platform-theme="mid"] body.platform-monitor-page header a,
+html[data-platform-theme="mid"] body.platform-monitor-page header span,
+html[data-platform-theme="mid"] body.platform-automation-page > main > header a,
+html[data-platform-theme="mid"] body.platform-automation-page > main > header button,
+html[data-platform-theme="mid"] body.platform-discovery-page > main > header a,
+html[data-platform-theme="mid"] body.platform-discovery-page > main > header button {
+  color: var(--ln-mid-text) !important;
+}
+
+/* Administrator editor and sign-in */
+html[data-platform-theme="mid"] body.platform-admin-page .admin-sidebar,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-panel,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-auth-card,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-page,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-image-field {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface) !important;
+  color: var(--ln-mid-text) !important;
+  box-shadow: 0 10px 28px rgba(24, 28, 35, 0.15) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-sidebar {
+  border-right-color: var(--ln-mid-border-soft) !important;
+  background: var(--ln-mid-bg-soft) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-top {
+  background: #414854 !important;
+  color: #ffffff !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-tabs {
+  border-color: var(--ln-mid-border-soft) !important;
+  background: var(--ln-mid-surface-raised) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-tabs button {
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-tabs button.active {
+  border-bottom-color: var(--ln-mid-accent) !important;
+  color: var(--ln-mid-text-strong) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-editor-heading h1,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-panel-heading h2,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-list-heading h3,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-page > h1,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-section > h2,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-list-heading,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-repeat-title {
+  color: var(--ln-mid-text-strong) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-topbar span:not(.admin-brand),
+html[data-platform-theme="mid"] body.platform-admin-page .admin-kicker,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-panel-heading p,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-site-list small,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-field > span,
+html[data-platform-theme="mid"] body.platform-admin-page label > span,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-repeat-number {
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-editor-section,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-panel,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-repeat-list article {
+  border-color: var(--ln-mid-border-soft) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page input,
+html[data-platform-theme="mid"] body.platform-admin-page select,
+html[data-platform-theme="mid"] body.platform-admin-page textarea {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-input) !important;
+  color: var(--ln-mid-text-strong) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page input::placeholder,
+html[data-platform-theme="mid"] body.platform-admin-page textarea::placeholder {
+  color: var(--ln-mid-faint) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-site-list button,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-sidebar-heading button,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-list-heading button,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-list-heading button,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-repeat-title button,
+html[data-platform-theme="mid"] body.platform-admin-page .advanced-image-actions button,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-secondary-button {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface-raised) !important;
+  color: var(--ln-mid-text) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-site-list button:hover,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-site-list button.active,
+html[data-platform-theme="mid"] body.platform-admin-page .admin-secondary-button:hover {
+  background: var(--ln-mid-surface-active) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-save-bar {
+  border-color: #939daa !important;
+  background: #444c58 !important;
+  color: #ffffff !important;
+  box-shadow: 0 9px 26px rgba(21, 25, 31, 0.25) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-admin-page .admin-notice {
+  border-color: #b6a477 !important;
+  background: #6a614c !important;
+  color: #fff0c8 !important;
+}
+
+/* Website Monitor */
+html[data-platform-theme="mid"] body.platform-monitor-page h1,
+html[data-platform-theme="mid"] body.platform-monitor-page h2,
+html[data-platform-theme="mid"] body.platform-monitor-page strong {
+  color: var(--ln-mid-text-strong) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page p,
+html[data-platform-theme="mid"] body.platform-monitor-page small,
+html[data-platform-theme="mid"] body.platform-monitor-page label,
+html[data-platform-theme="mid"] body.platform-monitor-page .kicker {
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page section[aria-label="Status definitions"],
+html[data-platform-theme="mid"] body.platform-monitor-page section[aria-label="Website totals and status filters"],
+html[data-platform-theme="mid"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button,
+html[data-platform-theme="mid"] body.platform-monitor-page main div:has(> table),
+html[data-platform-theme="mid"] body.platform-monitor-page .stateCard {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface) !important;
+  color: var(--ln-mid-text) !important;
+  box-shadow: 0 10px 28px rgba(24, 28, 35, 0.14) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page section[aria-label="Status definitions"] article,
+html[data-platform-theme="mid"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button {
+  border-color: var(--ln-mid-border-soft) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button:hover,
+html[data-platform-theme="mid"] body.platform-monitor-page section[aria-label="Website totals and status filters"] button[aria-pressed="true"] {
+  background: var(--ln-mid-surface-active) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page input,
+html[data-platform-theme="mid"] body.platform-monitor-page select {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-input) !important;
+  color: var(--ln-mid-text-strong) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page input::placeholder {
+  color: var(--ln-mid-faint) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page table,
+html[data-platform-theme="mid"] body.platform-monitor-page tbody,
+html[data-platform-theme="mid"] body.platform-monitor-page tr,
+html[data-platform-theme="mid"] body.platform-monitor-page td {
+  background: var(--ln-mid-surface) !important;
+  color: var(--ln-mid-text) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page th {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface-raised) !important;
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page td {
+  border-color: var(--ln-mid-border-soft) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page tbody tr:hover,
+html[data-platform-theme="mid"] body.platform-monitor-page tbody tr:hover td {
+  background: #6e7783 !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page td > span,
+html[data-platform-theme="mid"] body.platform-monitor-page td button {
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page td a {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface-raised) !important;
+  color: var(--ln-mid-text) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page td a:hover {
+  background: var(--ln-mid-surface-active) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page .notice {
+  border-color: #b6a477 !important;
+  background: #6a614c !important;
+  color: #fff0c8 !important;
+}
+
+/* Automation and Discovery engines */
+html[data-platform-theme="mid"] body.platform-automation-page [class*="card"],
+html[data-platform-theme="mid"] body.platform-automation-page [class*="stat"],
+html[data-platform-theme="mid"] body.platform-automation-page [class*="login"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="card"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="stat"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="login"] {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface) !important;
+  color: var(--ln-mid-text) !important;
+  box-shadow: 0 11px 30px rgba(23, 27, 34, 0.16) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page [class*="heroCopy"],
+html[data-platform-theme="mid"] body.platform-automation-page [class*="muted"],
+html[data-platform-theme="mid"] body.platform-automation-page [class*="kicker"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="heroCopy"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="muted"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="kicker"] {
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page h1,
+html[data-platform-theme="mid"] body.platform-automation-page h2,
+html[data-platform-theme="mid"] body.platform-automation-page h3,
+html[data-platform-theme="mid"] body.platform-discovery-page h1,
+html[data-platform-theme="mid"] body.platform-discovery-page h2,
+html[data-platform-theme="mid"] body.platform-discovery-page h3 {
+  color: var(--ln-mid-text-strong) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page input,
+html[data-platform-theme="mid"] body.platform-automation-page select,
+html[data-platform-theme="mid"] body.platform-automation-page textarea,
+html[data-platform-theme="mid"] body.platform-discovery-page input,
+html[data-platform-theme="mid"] body.platform-discovery-page select,
+html[data-platform-theme="mid"] body.platform-discovery-page textarea {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-input) !important;
+  color: var(--ln-mid-text-strong) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page input::placeholder,
+html[data-platform-theme="mid"] body.platform-automation-page textarea::placeholder,
+html[data-platform-theme="mid"] body.platform-discovery-page input::placeholder,
+html[data-platform-theme="mid"] body.platform-discovery-page textarea::placeholder {
+  color: var(--ln-mid-faint) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page [class*="tableWrap"],
+html[data-platform-theme="mid"] body.platform-automation-page table,
+html[data-platform-theme="mid"] body.platform-automation-page [class*="reviewMeta"] > div,
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="tableWrap"],
+html[data-platform-theme="mid"] body.platform-discovery-page table,
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="reviewMeta"] > div {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface-raised) !important;
+  color: var(--ln-mid-text) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page th,
+html[data-platform-theme="mid"] body.platform-discovery-page th {
+  border-color: var(--ln-mid-border) !important;
+  background: #58606b !important;
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page td,
+html[data-platform-theme="mid"] body.platform-discovery-page td {
+  border-color: var(--ln-mid-border-soft) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page tbody tr:hover,
+html[data-platform-theme="mid"] body.platform-discovery-page tbody tr:hover {
+  background: #747d89 !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page [class*="notice"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="notice"] {
+  border-color: #8d96a3 !important;
+  background: #59616c !important;
+  color: var(--ln-mid-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page [class*="buttonSecondary"],
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="buttonSecondary"] {
+  border-color: var(--ln-mid-border) !important;
+  background: var(--ln-mid-surface-raised) !important;
+  color: var(--ln-mid-text) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page [class*="buttonSecondary"]:hover,
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="buttonSecondary"]:hover {
+  background: var(--ln-mid-surface-active) !important;
+}
+
+html[data-platform-theme="mid"] body.platform-automation-page [class*="button"]:not([class*="buttonSecondary"]):not([class*="buttonDanger"]),
+html[data-platform-theme="mid"] body.platform-discovery-page [class*="button"]:not([class*="buttonSecondary"]):not([class*="buttonDanger"]) {
+  border-color: #e0e5ec !important;
+  background: #e0e5ec !important;
+  color: #303640 !important;
+}
+
+/* Keep pipeline history distinctive while adapting it to the medium surface. */
+html[data-platform-theme="mid"] [data-pipeline-event] {
+  border-color: hsl(var(--pipeline-event-hue) 35% 66%) !important;
+  border-left-color: hsl(var(--pipeline-event-hue) 72% 72%) !important;
+  background:
+    linear-gradient(
+      90deg,
+      hsl(var(--pipeline-event-hue) 38% 54% / 0.68),
+      hsl(var(--pipeline-event-hue) 28% 48% / 0.2) 62%,
+      transparent
+    ),
+    var(--ln-mid-surface-raised) !important;
+  color: #ffffff !important;
+  box-shadow: 0 7px 20px rgba(22, 26, 32, 0.16);
+}
+
+html[data-platform-theme="mid"] [data-pipeline-event] > strong {
+  border-color: hsl(var(--pipeline-event-hue) 46% 72%);
+  background: hsl(var(--pipeline-event-hue) 42% 43%);
+  color: #ffffff !important;
+}
+
+html[data-platform-theme="mid"] [data-pipeline-event] > time {
+  color: #d7dce3 !important;
+}
