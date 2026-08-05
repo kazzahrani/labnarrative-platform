@@ -3,7 +3,7 @@ import fs from "node:fs";
 const pageUrl = new URL("../app/admin/automation/page.tsx", import.meta.url);
 let source = fs.readFileSync(pageUrl, "utf8");
 
-const desiredHero = "The automation builds one website at a time for reliability, while completed live concepts accumulate in a ten-concept review buffer. When the buffer reaches ten, production pauses until you approve, revise or reject a concept.";
+const desiredHero = "The automation builds one website at a time, automatically diagnoses and repairs QA failures in a separate recovery lane, and accumulates completed live concepts in a ten-concept review buffer. When the buffer reaches ten, production pauses until you approve, revise or reject a concept.";
 source = source.replace(
   /<p className=\{styles\.heroCopy\}>[^<]*<\/p>/,
   `<p className={styles.heroCopy}>${desiredHero}</p>`,
@@ -11,7 +11,11 @@ source = source.replace(
 
 source = source.replace(
   /const activeRun = useMemo\(\s*\(\) => runs\.find\(\(run\) => \[[^\]]+\]\.includes\(run\.status\)\),\s*\[runs\],\s*\);/m,
-  `const activeRun = useMemo(\n    () => runs.find((run) => run.status === "running") ?? runs.find((run) => ["needs_attention", "paused"].includes(run.status)),\n    [runs],\n  );`,
+  `const activeRun = useMemo(\n    () => runs.find((run) => run.status === "running") ?? runs.find((run) => run.status === "paused"),\n    [runs],\n  );`,
+);
+source = source.replace(
+  /const activeRun = useMemo\(\s*\(\) => runs\.find\(\(run\) => run\.status === "running"\) \?\? runs\.find\(\(run\) => \["needs_attention", "paused"\]\.includes\(run\.status\)\),\s*\[runs\],\s*\);/m,
+  `const activeRun = useMemo(\n    () => runs.find((run) => run.status === "running") ?? runs.find((run) => run.status === "paused"),\n    [runs],\n  );`,
 );
 
 if (!source.includes("review: runs.filter")) {
@@ -22,7 +26,7 @@ if (!source.includes("review: runs.filter")) {
 }
 
 source = source.replace(
-  /<span className=\{styles\.status\} data-status="running">Automatic runner active<\/span>/,
+  /<span className=\{styles\.status\} data-status="running">Automatic runner active(?: · \{counts\.review\}\/10 awaiting review)?<\/span>/,
   `<span className={styles.status} data-status="running">Automatic runner active · {counts.review}/10 awaiting review</span>`,
 );
 
@@ -33,11 +37,13 @@ if (!source.includes("<span>Review buffer</span>")) {
   );
 }
 
+source = source.replaceAll("<span>Needs attention</span>", "<span>Automatic recovery</span>");
 source = source.replaceAll("Your single approval gate", "Awaiting final review");
 
 if (!source.includes(desiredHero)) throw new Error("The review-buffer explanation could not be added.");
 if (!source.includes("counts.review}/10")) throw new Error("The review-buffer counter could not be added.");
+if (!source.includes("<span>Automatic recovery</span>")) throw new Error("The automatic-recovery dashboard label could not be added.");
 if (source.includes("Build next queued PI")) throw new Error("The obsolete manual start control is still present after UI preparation.");
 
 fs.writeFileSync(pageUrl, source);
-console.log("Ten-concept review buffer interface prepared.");
+console.log("Ten-concept review buffer and automatic recovery interface prepared.");
