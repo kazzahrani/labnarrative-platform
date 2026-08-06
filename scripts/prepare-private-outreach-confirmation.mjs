@@ -14,54 +14,42 @@ if (!source.includes("async function markPrivateOutreachSent(")) {
     message?: OutreachMessage,
   ) {
     const piName = run.prospects?.pi_name || run.sites?.content?.piName || "This PI";
-    const sentAt = new Date().toISOString();
 
     setWorking(true);
     setNotice("");
     setNoticeError(false);
 
     try {
-      if (message) {
-        const { error: messageError } = await supabase
-          .from("outreach_messages")
-          .update({
-            status: "sent",
-            sent_at: sentAt,
-            error_message: "",
-          })
-          .eq("id", message.id);
-        if (messageError) throw messageError;
+      const { data, error } = await supabase.rpc("mark_private_outreach_sent", {
+        p_run_id: run.id,
+      });
+      if (error) throw error;
+
+      const result = data as {
+        ok?: boolean;
+        sentAt?: string;
+        alreadyCompleted?: boolean;
+      } | null;
+      if (result?.ok !== true) {
+        throw new Error("The private outreach completion was not accepted.");
       }
 
-      const { error: runError } = await supabase
-        .from("production_runs")
-        .update({
-          status: "completed",
-          current_step: "completed",
-          completed_at: sentAt,
-          error_message: "",
-        })
-        .eq("id", run.id);
-      if (runError) throw runError;
+      const sentAt = result.sentAt || new Date().toISOString();
+      setRuns((current) => current.map((item) => item.id === run.id
+        ? { ...item, status: "completed", current_step: "completed", completed_at: sentAt }
+        : item));
+      setProspects((current) => current.map((item) => item.id === run.prospect_id
+        ? { ...item, status: "email_sent", updated_at: sentAt }
+        : item));
+      if (message) {
+        setMessages((current) => current.map((item) => item.id === message.id
+          ? { ...item, status: "sent", sent_at: sentAt, provider: "private" }
+          : item));
+      }
 
-      const { error: prospectError } = await supabase
-        .from("prospects")
-        .update({ status: "email_sent" })
-        .eq("id", run.prospect_id);
-      if (prospectError) throw prospectError;
-
-      const { error: eventError } = await supabase
-        .from("pipeline_events")
-        .insert({
-          prospect_id: run.prospect_id,
-          production_run_id: run.id,
-          event_type: "private_outreach_confirmed",
-          step: "send",
-          message: piName + " was marked as sent privately by the administrator.",
-        });
-      if (eventError) throw eventError;
-
-      setNotice(piName + " was marked as sent privately.");
+      setNotice(result.alreadyCompleted
+        ? piName + " was already recorded as sent privately."
+        : piName + " was marked as sent privately.");
       await loadData();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "The private outreach could not be recorded.");
@@ -88,8 +76,8 @@ if (!source.includes(">Mark as sent privately</button>")) {
 
 for (const required of [
   "async function markPrivateOutreachSent(",
+  'supabase.rpc("mark_private_outreach_sent"',
   'status: "email_sent"',
-  'event_type: "private_outreach_confirmed"',
   ">Mark as sent privately</button>",
   "complete the production record",
 ]) {
@@ -98,5 +86,9 @@ for (const required of [
   }
 }
 
+if (source.includes('.from("outreach_messages")\n          .update({\n            status: "sent"')) {
+  throw new Error("The obsolete browser-side private outreach update sequence remains.");
+}
+
 fs.writeFileSync(pageUrl, source);
-console.log("Private outreach confirmation action added to Production review cards.");
+console.log("Private outreach completion now uses one atomic database action.");
