@@ -35,6 +35,7 @@ import "./production-header-alignment.css";
 import "./discovery-split-layout.css";
 import "./discovery-pagination.css";
 import "./production-pagination.css";
+import "./resend-delivery-tracking.css";
 
 export const metadata: Metadata = {
   title: {
