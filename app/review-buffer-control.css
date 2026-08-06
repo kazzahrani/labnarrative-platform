@@ -2,8 +2,10 @@
 
 body.platform-automation-page .reviewBufferControl {
   display: grid;
-  gap: 10px;
-  min-width: min(100%, 340px);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 16px;
+  width: 100%;
+  min-width: 0;
   border: 1px solid rgba(104, 126, 116, 0.22);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.46);
@@ -18,8 +20,9 @@ body.platform-automation-page .reviewBufferTarget {
 }
 
 body.platform-automation-page .reviewBufferStatusLine {
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
+  min-width: 0;
 }
 
 body.platform-automation-page .reviewBufferLabel,
@@ -41,6 +44,8 @@ body.platform-automation-page .reviewBufferState {
   padding: 4px 11px;
   font-size: 0.72rem;
   font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 body.platform-automation-page .reviewBufferState[data-state="active"] {
@@ -58,7 +63,9 @@ body.platform-automation-page .reviewBufferState[data-state="paused"] {
 body.platform-automation-page .reviewBufferCount {
   display: flex;
   align-items: baseline;
+  justify-content: flex-end;
   gap: 8px;
+  white-space: nowrap;
 }
 
 body.platform-automation-page .reviewBufferCount strong {
@@ -72,6 +79,8 @@ body.platform-automation-page .reviewBufferCount span {
 }
 
 body.platform-automation-page .reviewBufferActions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -120,6 +129,7 @@ body.platform-automation-page .reviewBufferPause[data-action="pause"] {
 
 body.platform-automation-page .reviewBufferReason,
 body.platform-automation-page .reviewBufferError {
+  grid-column: 1 / -1;
   margin: 0;
   border-radius: 14px;
   padding: 9px 11px;
@@ -154,11 +164,23 @@ html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferTarg
 
 @media (max-width: 760px) {
   body.platform-automation-page .reviewBufferControl {
-    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  body.platform-automation-page .reviewBufferCount,
+  body.platform-automation-page .reviewBufferActions,
+  body.platform-automation-page .reviewBufferReason,
+  body.platform-automation-page .reviewBufferError {
+    grid-column: 1;
+  }
+
+  body.platform-automation-page .reviewBufferCount {
+    justify-content: flex-start;
   }
 
   body.platform-automation-page .reviewBufferActions {
     align-items: stretch;
+    justify-content: flex-start;
   }
 
   body.platform-automation-page .reviewBufferSave,
