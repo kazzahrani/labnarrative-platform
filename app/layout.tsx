@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhancer";
 import AutomationNavEnhancer from "@/components/admin/AutomationNavEnhancer";
+import OperatorSendSafetyEnhancer from "@/components/admin/OperatorSendSafetyEnhancer";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import PipelineEventColorEnhancer from "@/components/admin/PipelineEventColorEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PipelineEventColorEnhancer />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
+        <OperatorSendSafetyEnhancer />
         {children}
       </body>
     </html>
