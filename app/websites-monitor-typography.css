@@ -17,13 +17,13 @@ body.platform-monitor-page > main > header nav {
 body.platform-monitor-page > main > header > div > span,
 body.platform-monitor-page > main > header nav a {
   font-size: 0.94rem !important;
-  font-weight: 500 !important;
+  font-weight: 400 !important;
   line-height: 1.2 !important;
 }
 
 body.platform-monitor-page > main > header > div > span {
   color: inherit !important;
-  opacity: 0.78;
+  opacity: 1;
 }
 
 body.platform-monitor-page [class*="brand"] {
