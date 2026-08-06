@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 import styles from "./LiveProductionQueue.module.css";
@@ -77,11 +78,50 @@ function relativeTime(value: string | null | undefined, now: number) {
 }
 
 export default function LiveProductionQueue() {
+  const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [events, setEvents] = useState<PipelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.pathname !== "/admin/automation") return;
+
+    let disposed = false;
+    let original: HTMLElement | null = null;
+    let mount: HTMLDivElement | null = null;
+
+    const install = () => {
+      if (disposed || mount) return;
+      const sections = Array.from(document.querySelectorAll("section")) as HTMLElement[];
+      original = sections.find((section) => {
+        const text = section.textContent || "";
+        return text.includes("Current production") || (text.includes("Production queue") && text.includes("Ready for the next PI"));
+      }) || null;
+
+      if (!original?.parentElement) return;
+      mount = document.createElement("div");
+      mount.dataset.liveProductionQueue = "true";
+      original.parentElement.insertBefore(mount, original);
+      original.style.display = "none";
+      setMountNode(mount);
+    };
+
+    install();
+    const observer = new MutationObserver(install);
+    observer.observe(document.body, { childList: true, subtree: true });
+    const timer = window.setInterval(install, 500);
+
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      window.clearInterval(timer);
+      if (original) original.style.display = "";
+      if (mount) mount.remove();
+      setMountNode(null);
+    };
+  }, []);
 
   const load = useCallback(async () => {
     const { data: runData, error: runError } = await supabase
@@ -117,6 +157,7 @@ export default function LiveProductionQueue() {
   }, []);
 
   useEffect(() => {
+    if (!mountNode) return;
     void load();
     const poll = window.setInterval(() => void load(), 10_000);
     const clock = window.setInterval(() => setNow(Date.now()), 1_000);
@@ -133,7 +174,7 @@ export default function LiveProductionQueue() {
       window.clearInterval(clock);
       void supabase.removeChannel(channel);
     };
-  }, [load]);
+  }, [load, mountNode]);
 
   const latestEventByRun = useMemo(() => {
     const map = new Map<string, PipelineEvent>();
@@ -143,7 +184,9 @@ export default function LiveProductionQueue() {
     return map;
   }, [events]);
 
-  return (
+  if (!mountNode) return null;
+
+  return createPortal(
     <section className={styles.card} aria-label="Live production queue">
       <div className={styles.header}>
         <div>
@@ -208,6 +251,7 @@ export default function LiveProductionQueue() {
           );
         })}
       </div>
-    </section>
+    </section>,
+    mountNode,
   );
 }
