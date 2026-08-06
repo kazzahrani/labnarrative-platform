@@ -1,0 +1,168 @@
+/* Persistent Review Buffer controls on the Production Engine. */
+
+body.platform-automation-page .reviewBufferControl {
+  display: grid;
+  gap: 10px;
+  min-width: min(100%, 340px);
+  border: 1px solid rgba(104, 126, 116, 0.22);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.46);
+  padding: 14px 16px;
+}
+
+body.platform-automation-page .reviewBufferStatusLine,
+body.platform-automation-page .reviewBufferActions,
+body.platform-automation-page .reviewBufferTarget {
+  display: flex;
+  align-items: center;
+}
+
+body.platform-automation-page .reviewBufferStatusLine {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body.platform-automation-page .reviewBufferLabel,
+body.platform-automation-page .reviewBufferTarget > span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+body.platform-automation-page .reviewBufferState {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  border: 1px solid rgba(93, 112, 104, 0.25);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+body.platform-automation-page .reviewBufferState[data-state="active"] {
+  border-color: #9ccbb7;
+  background: #e4f5ec;
+  color: #164d38;
+}
+
+body.platform-automation-page .reviewBufferState[data-state="paused"] {
+  border-color: #dfbf78;
+  background: #fff3d6;
+  color: #6c4b08;
+}
+
+body.platform-automation-page .reviewBufferCount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+body.platform-automation-page .reviewBufferCount strong {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+body.platform-automation-page .reviewBufferCount span {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+body.platform-automation-page .reviewBufferActions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.platform-automation-page .reviewBufferTarget {
+  gap: 7px;
+}
+
+body.platform-automation-page .reviewBufferTarget input {
+  width: 64px;
+  min-height: 38px;
+  border-radius: 14px;
+  padding: 6px 9px;
+  text-align: center;
+}
+
+body.platform-automation-page .reviewBufferSave,
+body.platform-automation-page .reviewBufferPause {
+  min-height: 38px;
+  border: 1px solid currentColor;
+  border-radius: 14px;
+  padding: 0 13px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+body.platform-automation-page .reviewBufferSave:disabled,
+body.platform-automation-page .reviewBufferPause:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+body.platform-automation-page .reviewBufferPause[data-action="resume"] {
+  border-color: #9ccbb7;
+  background: #e4f5ec;
+  color: #164d38;
+}
+
+body.platform-automation-page .reviewBufferPause[data-action="pause"] {
+  border-color: #dfbf78;
+  background: #fff3d6;
+  color: #6c4b08;
+}
+
+body.platform-automation-page .reviewBufferReason,
+body.platform-automation-page .reviewBufferError {
+  margin: 0;
+  border-radius: 14px;
+  padding: 9px 11px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+body.platform-automation-page .reviewBufferReason {
+  border: 1px solid rgba(223, 191, 120, 0.58);
+  background: rgba(255, 243, 214, 0.72);
+  color: #6c4b08;
+}
+
+body.platform-automation-page .reviewBufferError {
+  border: 1px solid #dda6aa;
+  background: #fde8e9;
+  color: #752d35;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewBufferControl,
+html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferControl {
+  border-color: #2d3f4c;
+  background: #17252f;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewBufferTarget input,
+html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferTarget input {
+  border-color: #39505e;
+  background: #132029;
+  color: #edf2f5;
+}
+
+@media (max-width: 760px) {
+  body.platform-automation-page .reviewBufferControl {
+    width: 100%;
+  }
+
+  body.platform-automation-page .reviewBufferActions {
+    align-items: stretch;
+  }
+
+  body.platform-automation-page .reviewBufferSave,
+  body.platform-automation-page .reviewBufferPause {
+    flex: 1 1 110px;
+  }
+}
