@@ -5,12 +5,12 @@
 
 .productionHeaderActions {
   display: grid !important;
-  grid-template-columns: minmax(300px, 1fr) auto auto auto !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
   align-items: center !important;
   justify-content: stretch !important;
   justify-self: end !important;
   flex-wrap: nowrap !important;
-  gap: 8px !important;
+  gap: 10px !important;
   width: 100% !important;
   max-width: 720px !important;
 }
@@ -20,17 +20,14 @@
   margin: 0 !important;
 }
 
-.productionHeaderActions > :first-child {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
+.productionHeaderActions > .reviewBufferControl {
+  grid-column: 1 / -1 !important;
   width: 100% !important;
-  min-height: 36px !important;
-  height: 36px !important;
-  padding: 0 14px !important;
-  font-size: 0.76rem !important;
-  line-height: 1 !important;
-  white-space: nowrap !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 14px 16px !important;
+  white-space: normal !important;
 }
 
 .productionHeaderActions > button,
@@ -39,6 +36,11 @@
   height: 36px !important;
   padding: 0 14px !important;
   white-space: nowrap !important;
+}
+
+.productionHeaderActions > button:nth-of-type(1),
+.productionHeaderActions > a:nth-of-type(1) {
+  width: 100% !important;
 }
 
 @media (max-width: 1280px) {
@@ -59,7 +61,14 @@
     flex-wrap: wrap !important;
   }
 
-  .productionHeaderActions > :first-child {
+  .productionHeaderActions > .reviewBufferControl {
     flex: 1 1 100% !important;
+  }
+
+  .productionHeaderActions > button,
+  .productionHeaderActions > a {
+    flex: 1 1 140px !important;
+    height: auto !important;
+    min-height: 40px !important;
   }
 }
