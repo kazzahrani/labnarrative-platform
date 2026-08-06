@@ -79,16 +79,27 @@ body.platform-monitor-page table td {
   line-height: 1.5 !important;
 }
 
-/* Keep website slugs as plain copyable text rather than filled buttons. */
-body.platform-monitor-page button[class*="slugButton"],
-body.platform-monitor-page button[class*="slugButton"]:hover {
+/* Force website slugs to remain plain copyable text in every theme. */
+html[data-platform-theme] body.platform-theme-active.platform-monitor-page > main table tbody td button[class*="slugButton"][type="button"],
+html[data-platform-theme] body.platform-theme-active.platform-monitor-page > main table tbody td button[class*="slugButton"][type="button"]:hover,
+html[data-platform-theme] body.platform-theme-active.platform-monitor-page > main table tbody td button[class*="slugButton"][type="button"]:focus,
+html[data-platform-theme] body.platform-theme-active.platform-monitor-page > main table tbody td button[class*="slugButton"][type="button"]:active {
+  display: inline !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
-  background: transparent !important;
-  color: inherit !important;
+  appearance: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: #9aa8b3 !important;
   box-shadow: none !important;
   filter: none !important;
+  outline: none !important;
   transform: none !important;
 }
 
