@@ -34,16 +34,6 @@ if (!source.includes("async function authorizeAndSend(runId: string, message: Ou
       return;
     }
 
-    const confirmation = window.prompt(
-      \`This action immediately sends the outreach email and cannot be recalled.\\n\\nType the exact recipient email to continue:\\n\${recipient}\`,
-      "",
-    );
-    if (confirmation?.trim().toLowerCase() !== recipient) {
-      setNotice("The email was not sent because the recipient confirmation did not match.");
-      setNoticeError(true);
-      return;
-    }
-
     setWorking(true);
     setNotice("");
     setNoticeError(false);
@@ -106,14 +96,17 @@ if (!source.includes("async function authorizeAndSend(runId: string, message: Ou
   throw new Error("The atomic recipient authorization handler could not be installed.");
 }
 if (!source.includes("onClick={() => message && void authorizeAndSend(run.id, message)}>Send email now</button>")) {
-  throw new Error("The guarded send-email action could not be installed.");
+  throw new Error("The direct send-email action could not be installed.");
 }
 if (!source.includes('supabase.rpc(\n        "authorize_operator_send"')) {
   throw new Error("The database recipient authorization call is missing.");
+}
+if (source.includes("window.prompt(")) {
+  throw new Error("The send-email confirmation dialog is still present.");
 }
 if (!source.includes("A verified recipient email is required before sending.")) {
   throw new Error("The verified-email warning could not be installed.");
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Recipient confirmation and send authorization moved into the React outreach action.");
+console.log("Direct outreach sending retained with database authorization and no confirmation dialog.");
