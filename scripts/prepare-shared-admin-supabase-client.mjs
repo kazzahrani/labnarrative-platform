@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const roots = [
-  path.join(process.cwd(), "app", "admin"),
-  path.join(process.cwd(), "components", "admin"),
-];
+const explicitFiles = [
+  "app/admin/page.tsx",
+  "app/admin/automation/page.tsx",
+  "app/admin/discovery/page.tsx",
+  "app/admin/sites/page.tsx",
+].map((relativePath) => path.join(process.cwd(), ...relativePath.split("/")));
 
 function collectTsxFiles(directory) {
   if (!fs.existsSync(directory)) return [];
@@ -15,13 +17,16 @@ function collectTsxFiles(directory) {
   });
 }
 
+const files = [
+  ...explicitFiles,
+  ...collectTsxFiles(path.join(process.cwd(), "components", "admin")),
+];
+
 let patched = 0;
 const touched = [];
 
-for (const filePath of roots.flatMap(collectTsxFiles)) {
+for (const filePath of files) {
   const relativePath = path.relative(process.cwd(), filePath);
-  if (relativePath.includes(`app${path.sep}admin${path.sep}preview${path.sep}`)) continue;
-
   let source = fs.readFileSync(filePath, "utf8");
   if (!source.includes("createClient(") || !source.includes("NEXT_PUBLIC_SUPABASE_URL")) continue;
 
@@ -64,8 +69,8 @@ for (const filePath of roots.flatMap(collectTsxFiles)) {
   touched.push(relativePath);
 }
 
-if (patched === 0) {
-  throw new Error("No admin Supabase clients were converted to the shared singleton.");
+if (patched < 5) {
+  throw new Error(`Only ${patched} admin clients were converted; expected the dashboards and shared components.`);
 }
 
 console.log(`Shared browser Supabase client installed across ${patched} admin files: ${touched.join(", ")}.`);
