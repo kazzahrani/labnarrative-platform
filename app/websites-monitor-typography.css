@@ -22,8 +22,20 @@ body.platform-monitor-page > main > header nav a {
 }
 
 body.platform-monitor-page > main > header > div > span {
-  color: inherit !important;
+  color: #64726c !important;
   opacity: 1;
+}
+
+html[data-platform-theme="mid"] body.platform-monitor-page > main > header > div > span {
+  color: var(--ln-mid-muted) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page > main > header > div > span {
+  color: var(--ln-ocean-muted) !important;
+}
+
+html[data-platform-theme="dark"] body.platform-monitor-page > main > header > div > span {
+  color: #aeb6c3 !important;
 }
 
 body.platform-monitor-page [class*="brand"] {
