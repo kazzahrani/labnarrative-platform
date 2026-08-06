@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient, type Session } from "@supabase/supabase-js";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
 type ResendIntegrationState = {
   id: string;
@@ -30,11 +30,16 @@ type DeliveryMessage = {
   clicked_at: string | null;
   error_message: string;
   delivery_details: Record<string, unknown> | null;
+  prospects: { pi_name?: string } | null;
 };
 
-type ProspectName = {
-  id: string;
-  pi_name: string;
+type DeliverySummary = {
+  tracked: number;
+  delivered: number;
+  delayed: number;
+  bounced_or_failed: number;
+  opened: number;
+  clicked: number;
 };
 
 type ConnectResponse = {
@@ -44,6 +49,15 @@ type ConnectResponse = {
   status?: string;
   backfilled?: number;
   backfillErrors?: number;
+};
+
+const emptySummary: DeliverySummary = {
+  tracked: 0,
+  delivered: 0,
+  delayed: 0,
+  bounced_or_failed: 0,
+  opened: 0,
+  clicked: 0,
 };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -109,52 +123,73 @@ function integrationLabel(status: string): string {
   return "Needs connection";
 }
 
+function normalizeSummary(value: Record<string, unknown> | null): DeliverySummary {
+  if (!value) return emptySummary;
+  return {
+    tracked: Number(value.tracked || 0),
+    delivered: Number(value.delivered || 0),
+    delayed: Number(value.delayed || 0),
+    bounced_or_failed: Number(value.bounced_or_failed || 0),
+    opened: Number(value.opened || 0),
+    clicked: Number(value.clicked || 0),
+  };
+}
+
 export default function ResendDeliveryTracker() {
   const [session, setSession] = useState<Session | null>(null);
   const [integration, setIntegration] = useState<ResendIntegrationState | null>(null);
+  const [summary, setSummary] = useState<DeliverySummary>(emptySummary);
   const [messages, setMessages] = useState<DeliveryMessage[]>([]);
-  const [prospectNames, setProspectNames] = useState<Record<string, string>>({});
   const [apiKey, setApiKey] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeError, setNoticeError] = useState(false);
 
-  const loadTracking = useCallback(async (activeSession?: Session | null) => {
+  const loadTracking = useCallback(async (
+    activeSession?: Session | null,
+    forceDeliveryLoad = false,
+  ) => {
     const currentSession = activeSession ?? session;
     if (!currentSession) return;
 
     setLoading(true);
     try {
-      const [integrationResult, messageResult, prospectResult] = await Promise.all([
-        supabase
-          .from("resend_integration_state")
-          .select("*")
-          .eq("id", "primary")
-          .maybeSingle(),
+      const integrationResult = await supabase
+        .from("resend_integration_state")
+        .select("*")
+        .eq("id", "primary")
+        .maybeSingle();
+
+      if (integrationResult.error) throw integrationResult.error;
+
+      const nextIntegration = (integrationResult.data ?? null) as ResendIntegrationState | null;
+      setIntegration(nextIntegration);
+
+      if (nextIntegration?.status !== "connected" && !forceDeliveryLoad) {
+        setSummary(emptySummary);
+        setMessages([]);
+        return;
+      }
+
+      const [summaryResult, messageResult] = await Promise.all([
+        supabase.from("resend_delivery_summary").select("*").maybeSingle(),
         supabase
           .from("outreach_messages")
           .select(
-            "id,prospect_id,recipient_email,provider,provider_message_id,delivery_status,sent_at,delivered_at,delivery_delayed_at,bounced_at,complained_at,opened_at,clicked_at,error_message,delivery_details",
+            "id,prospect_id,recipient_email,provider,provider_message_id,delivery_status,sent_at,delivered_at,delivery_delayed_at,bounced_at,complained_at,opened_at,clicked_at,error_message,delivery_details,prospects(pi_name)",
           )
           .eq("provider", "resend")
           .neq("provider_message_id", "")
           .order("sent_at", { ascending: false })
-          .limit(100),
-        supabase.from("prospects").select("id,pi_name"),
+          .limit(10),
       ]);
 
-      if (integrationResult.error) throw integrationResult.error;
+      if (summaryResult.error) throw summaryResult.error;
       if (messageResult.error) throw messageResult.error;
-      if (prospectResult.error) throw prospectResult.error;
 
-      setIntegration((integrationResult.data ?? null) as ResendIntegrationState | null);
-      setMessages((messageResult.data ?? []) as DeliveryMessage[]);
-      setProspectNames(
-        Object.fromEntries(
-          ((prospectResult.data ?? []) as ProspectName[]).map((prospect) => [prospect.id, prospect.pi_name]),
-        ),
-      );
+      setSummary(normalizeSummary((summaryResult.data ?? null) as Record<string, unknown> | null));
+      setMessages((messageResult.data ?? []) as unknown as DeliveryMessage[]);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Delivery tracking could not be loaded.");
       setNoticeError(true);
@@ -165,61 +200,19 @@ export default function ResendDeliveryTracker() {
 
   useEffect(() => {
     let cancelled = false;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      setSession(data.session);
-      if (data.session) void loadTracking(data.session);
-      else setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (cancelled) return;
-      setSession(nextSession);
-      if (nextSession) void loadTracking(nextSession);
-      else {
-        setIntegration(null);
-        setMessages([]);
-        setLoading(false);
-      }
-    });
+    const timer = window.setTimeout(() => {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (cancelled) return;
+        setSession(data.session);
+        if (data.session) void loadTracking(data.session);
+      });
+    }, 900);
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
+      window.clearTimeout(timer);
     };
   }, [loadTracking]);
-
-  useEffect(() => {
-    if (!session) return;
-    const timer = window.setInterval(() => void loadTracking(), 30_000);
-    return () => window.clearInterval(timer);
-  }, [loadTracking, session]);
-
-  const deliveryCounts = useMemo(() => {
-    const counts = {
-      total: messages.length,
-      delivered: 0,
-      delayed: 0,
-      bounced: 0,
-      opened: 0,
-      clicked: 0,
-    };
-
-    for (const message of messages) {
-      const delivery = deliveryKey(message);
-      const engagement = engagementKey(message);
-      if (delivery === "delivered") counts.delivered += 1;
-      if (delivery === "delivery_delayed") counts.delayed += 1;
-      if (["bounced", "complained", "failed", "suppressed"].includes(delivery)) counts.bounced += 1;
-      if (engagement === "opened" || engagement === "clicked") counts.opened += 1;
-      if (engagement === "clicked") counts.clicked += 1;
-    }
-
-    return counts;
-  }, [messages]);
 
   async function connectResend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -250,11 +243,11 @@ export default function ResendDeliveryTracker() {
 
       setApiKey("");
       setNotice(result.message || "Resend delivery tracking is connected.");
-      await loadTracking();
+      await loadTracking(session, true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Resend could not be connected.");
       setNoticeError(true);
-      await loadTracking();
+      await loadTracking(session);
     } finally {
       setConnecting(false);
     }
@@ -263,7 +256,6 @@ export default function ResendDeliveryTracker() {
   if (!session) return null;
 
   const connected = integration?.status === "connected";
-  const recentMessages = messages.slice(0, 10);
 
   return (
     <section className="resendDeliveryCard" aria-label="Resend email delivery tracking">
@@ -307,12 +299,12 @@ export default function ResendDeliveryTracker() {
       ) : (
         <>
           <div className="resendDeliveryStats" aria-label="Email delivery totals">
-            <div><span>Tracked</span><strong>{deliveryCounts.total}</strong></div>
-            <div><span>Delivered</span><strong>{deliveryCounts.delivered}</strong></div>
-            <div><span>Delayed</span><strong>{deliveryCounts.delayed}</strong></div>
-            <div><span>Bounced / failed</span><strong>{deliveryCounts.bounced}</strong></div>
-            <div><span>Opened</span><strong>{deliveryCounts.opened}</strong></div>
-            <div><span>Clicked</span><strong>{deliveryCounts.clicked}</strong></div>
+            <div><span>Tracked</span><strong>{summary.tracked}</strong></div>
+            <div><span>Delivered</span><strong>{summary.delivered}</strong></div>
+            <div><span>Delayed</span><strong>{summary.delayed}</strong></div>
+            <div><span>Bounced / failed</span><strong>{summary.bounced_or_failed}</strong></div>
+            <div><span>Opened</span><strong>{summary.opened}</strong></div>
+            <div><span>Clicked</span><strong>{summary.clicked}</strong></div>
           </div>
 
           <div className="resendDeliveryMeta">
@@ -322,7 +314,7 @@ export default function ResendDeliveryTracker() {
                 : "Connected and waiting for the next Resend event."}
             </span>
             <button disabled={loading} onClick={() => void loadTracking()} type="button">
-              Refresh
+              {loading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
 
@@ -338,14 +330,14 @@ export default function ResendDeliveryTracker() {
                 </tr>
               </thead>
               <tbody>
-                {recentMessages.length === 0 ? (
+                {messages.length === 0 ? (
                   <tr><td colSpan={5}>No Resend messages have been recorded yet.</td></tr>
-                ) : recentMessages.map((message) => {
+                ) : messages.map((message) => {
                   const delivery = deliveryKey(message);
                   const engagement = engagementKey(message);
                   return (
                     <tr key={message.id}>
-                      <td><strong>{prospectNames[message.prospect_id] || "Unknown PI"}</strong></td>
+                      <td><strong>{message.prospects?.pi_name || "Unknown PI"}</strong></td>
                       <td>{message.recipient_email || "—"}</td>
                       <td>
                         <span className="resendDeliveryBadge" data-delivery={delivery}>
