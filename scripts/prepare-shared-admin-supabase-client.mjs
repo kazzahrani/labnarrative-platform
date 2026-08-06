@@ -15,11 +15,6 @@ function collectTsxFiles(directory) {
   });
 }
 
-const clientBlock = `const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-`;
-
 let patched = 0;
 const touched = [];
 
@@ -42,7 +37,14 @@ for (const filePath of roots.flatMap(collectTsxFiles)) {
       'import { createClient } from "@supabase/supabase-js";\n',
       'import { browserSupabase as supabase } from "@/lib/supabase-browser";\n',
     )
-    .replace(clientBlock, "");
+    .replace(
+      /const supabaseUrl = process\.env\.NEXT_PUBLIC_SUPABASE_URL!;\nconst supabaseKey = process\.env\.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;\nconst supabase = createClient\(supabaseUrl, supabaseKey\);\n/,
+      "",
+    )
+    .replace(
+      /const supabase = createClient\(\s*process\.env\.NEXT_PUBLIC_SUPABASE_URL!,\s*process\.env\.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,?\s*\);\n/,
+      "",
+    );
 
   if (source.includes("createClient(") || source.includes("NEXT_PUBLIC_SUPABASE_URL")) {
     throw new Error(`A local Supabase client remains in ${path.relative(process.cwd(), filePath)}.`);
