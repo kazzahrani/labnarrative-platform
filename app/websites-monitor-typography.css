@@ -5,11 +5,71 @@ body.platform-monitor-page {
 }
 
 body.platform-monitor-page > main > header {
+  min-height: 72px !important;
   font-size: 0.94rem !important;
+}
+
+body.platform-monitor-page > main > header > div,
+body.platform-monitor-page > main > header nav {
+  gap: 20px !important;
+}
+
+body.platform-monitor-page > main > header > div > span,
+body.platform-monitor-page > main > header nav a {
+  font-size: 0.94rem !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+}
+
+body.platform-monitor-page > main > header > div > span {
+  color: inherit !important;
+  opacity: 0.78;
 }
 
 body.platform-monitor-page [class*="brand"] {
   font-size: 1.06rem !important;
+  font-weight: 800 !important;
+}
+
+body.platform-monitor-page > main > header [data-monitor-sign-out] {
+  display: inline-flex !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 19px !important;
+  border: 1px solid currentColor !important;
+  border-radius: 11px !important;
+  appearance: none !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  filter: none !important;
+  font: inherit !important;
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transform: none !important;
+}
+
+body.platform-monitor-page > main > header [data-monitor-sign-out]:hover {
+  background: rgba(127, 127, 127, 0.1) !important;
+  filter: none !important;
+  transform: translateY(-1px) !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page > main > header [data-monitor-sign-out] {
+  border-color: #2d3f4c !important;
+  background: #17252f !important;
+  color: #f2f6f8 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page > main > header [data-monitor-sign-out]:hover {
+  border-color: #3b5664 !important;
+  background: #203440 !important;
 }
 
 body.platform-monitor-page [class*="heading"] h1 {
