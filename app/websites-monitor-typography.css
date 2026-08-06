@@ -79,6 +79,32 @@ body.platform-monitor-page table td {
   line-height: 1.5 !important;
 }
 
+/* Keep light status pills readable against the Blue theme's dark table. */
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="status_draft"],
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="domain_not_connected"] {
+  color: #39443f !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="status_concept"],
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="domain_connecting"],
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="domain_https_pending"] {
+  color: #5d3d08 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="status_live"],
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="domain_live"] {
+  color: #104934 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="status_archived"],
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="domain_legacy"] {
+  color: #493b57 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="domain_error"] {
+  color: #6d2929 !important;
+}
+
 @media (max-width: 760px) {
   body.platform-monitor-page [class*="heading"] h1 {
     font-size: clamp(2.2rem, 11vw, 3.3rem) !important;
