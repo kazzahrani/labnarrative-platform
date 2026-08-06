@@ -8,7 +8,6 @@ const files = [
   "app/admin/sites/page.tsx",
   "components/admin/AdminLandingRedirect.tsx",
   "components/admin/OutreachMonitorEnhancer.tsx",
-  "components/admin/OperatorSendSafetyEnhancer.tsx",
   "components/admin/ResendDeliveryTracker.tsx",
 ].map((relativePath) => path.join(process.cwd(), ...relativePath.split("/")));
 
@@ -60,7 +59,7 @@ for (const filePath of files) {
 }
 
 if (patched < 7) {
-  throw new Error(`Only ${patched} dashboard clients were converted; expected at least seven.`);
+  throw new Error(`Only ${patched} dashboard clients were converted; expected seven.`);
 }
 
 console.log(`Shared browser Supabase client installed across ${patched} dashboard files: ${touched.join(", ")}.`);
