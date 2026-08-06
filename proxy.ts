@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api"]);
+const PLATFORM_ALIAS_HOSTS = new Set([
+  "labnarrative-platform.vercel.app",
+  "labnarrative-platform-lab-narrative.vercel.app",
+  "labnarrative-platform-git-main-lab-narrative.vercel.app",
+]);
+const CANONICAL_PLATFORM_HOST = "platform.labnarrative.com";
 
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
+
+  // Keep the administrator session on one browser origin. Supabase stores its
+  // browser session per origin, so opening an admin page through a Vercel alias
+  // creates a separate session from platform.labnarrative.com.
+  if (request.nextUrl.pathname.startsWith("/admin") && PLATFORM_ALIAS_HOSTS.has(host)) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.protocol = "https:";
+    canonicalUrl.hostname = CANONICAL_PLATFORM_HOST;
+    canonicalUrl.port = "";
+    return NextResponse.redirect(canonicalUrl, 307);
+  }
 
   // API routes are platform infrastructure and must remain addressable from
   // every custom laboratory subdomain without being rewritten as site pages.
