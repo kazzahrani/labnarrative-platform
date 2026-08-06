@@ -79,6 +79,19 @@ body.platform-monitor-page table td {
   line-height: 1.5 !important;
 }
 
+/* Keep website slugs as plain copyable text rather than filled buttons. */
+body.platform-monitor-page button[class*="slugButton"],
+body.platform-monitor-page button[class*="slugButton"]:hover {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
 /* Keep light status pills readable against the Blue theme's dark table. */
 html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="status_draft"],
 html[data-platform-theme="ocean"] body.platform-monitor-page td > span[class*="domain_not_connected"] {
