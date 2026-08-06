@@ -107,7 +107,7 @@ export default function DailyLimitControl() {
 
       <div className="reviewBufferCount">
         <strong>{todayCount}/{savedLimit}</strong>
-        <span>review-ready today · Riyadh</span>
+        <span>unique PIs started today · Riyadh</span>
       </div>
 
       <div className="reviewBufferActions">
@@ -143,7 +143,7 @@ export default function DailyLimitControl() {
         </button>
       </div>
 
-      {limitReached ? <p className="reviewBufferReason">Today’s limit is complete. Automatic production becomes eligible again at midnight in Riyadh.</p> : null}
+      {limitReached ? <p className="reviewBufferReason">Today’s unique-PI limit is complete. New PIs become eligible again at midnight in Riyadh; retries of a PI already started today may still continue.</p> : null}
       {paused && runtime?.pause_reason ? <p className="reviewBufferReason">{runtime.pause_reason}</p> : null}
       {error ? <p className="reviewBufferError" role="alert">{error}</p> : null}
     </div>
