@@ -7,12 +7,10 @@ type RuntimeState = {
   production_paused: boolean;
   pause_reason: string;
   paused_at: string | null;
-  review_buffer_target: number;
+  daily_limit: number;
+  today_count: number;
+  day_key: string;
   updated_at: string;
-};
-
-type Props = {
-  reviewCount: number;
 };
 
 function normalizeRuntime(value: unknown): RuntimeState | null {
@@ -23,14 +21,16 @@ function normalizeRuntime(value: unknown): RuntimeState | null {
     production_paused: record.production_paused === true,
     pause_reason: typeof record.pause_reason === "string" ? record.pause_reason : "",
     paused_at: typeof record.paused_at === "string" ? record.paused_at : null,
-    review_buffer_target: Math.max(1, Math.min(50, Number(record.review_buffer_target || 10))),
+    daily_limit: Math.max(1, Math.min(200, Number(record.daily_limit || 10))),
+    today_count: Math.max(0, Number(record.today_count || 0)),
+    day_key: typeof record.day_key === "string" ? record.day_key : "",
     updated_at: typeof record.updated_at === "string" ? record.updated_at : "",
   };
 }
 
-export default function ReviewBufferControl({ reviewCount }: Props) {
+export default function DailyLimitControl() {
   const [runtime, setRuntime] = useState<RuntimeState | null>(null);
-  const [target, setTarget] = useState(10);
+  const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -43,7 +43,7 @@ export default function ReviewBufferControl({ reviewCount }: Props) {
       const next = normalizeRuntime(data);
       if (!next) throw new Error("Production runtime state is unavailable.");
       setRuntime(next);
-      setTarget(next.review_buffer_target);
+      setLimit(next.daily_limit);
       setError("");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Production runtime state could not be loaded.");
@@ -67,66 +67,70 @@ export default function ReviewBufferControl({ reviewCount }: Props) {
     };
   }, [loadRuntime]);
 
-  async function updateRuntime(patch: { paused?: boolean; target?: number }) {
+  async function updateRuntime(patch: { paused?: boolean; limit?: number }) {
     setWorking(true);
     setError("");
     try {
-      const nextTarget = patch.target === undefined ? null : Math.max(1, Math.min(50, Math.round(patch.target)));
+      const nextLimit = patch.limit === undefined ? null : Math.max(1, Math.min(200, Math.round(patch.limit)));
       const { data, error: updateError } = await supabase.rpc("set_automation_runtime_config", {
         p_production_paused: patch.paused === undefined ? null : patch.paused,
-        p_review_buffer_target: nextTarget,
+        p_daily_limit: nextLimit,
       });
       if (updateError) throw updateError;
       const next = normalizeRuntime(data);
       if (!next) throw new Error("The saved runtime state could not be read.");
       setRuntime(next);
-      setTarget(next.review_buffer_target);
+      setLimit(next.daily_limit);
     } catch (updateFailure) {
-      setError(updateFailure instanceof Error ? updateFailure.message : "The Review Buffer setting could not be saved.");
+      setError(updateFailure instanceof Error ? updateFailure.message : "The Daily Limit setting could not be saved.");
     } finally {
       setWorking(false);
     }
   }
 
   const paused = runtime?.production_paused === true;
-  const savedTarget = runtime?.review_buffer_target ?? 10;
-  const targetChanged = target !== savedTarget;
+  const savedLimit = runtime?.daily_limit ?? 10;
+  const todayCount = runtime?.today_count ?? 0;
+  const limitReached = !paused && todayCount >= savedLimit;
+  const limitChanged = limit !== savedLimit;
+  const state = paused ? "paused" : limitReached ? "limit-reached" : "active";
+  const stateLabel = loading && !runtime ? "Loading…" : paused ? "Paused" : limitReached ? "Limit reached" : "Active";
 
   return (
-    <div className="reviewBufferControl" aria-label="Review Buffer controls">
+    <div className="reviewBufferControl" aria-label="Daily production limit controls">
       <div className="reviewBufferStatusLine">
-        <span className="reviewBufferLabel">Review Buffer</span>
-        <span className="reviewBufferState" data-state={paused ? "paused" : "active"}>
-          {loading && !runtime ? "Loading…" : paused ? "Paused" : "Active"}
+        <span className="reviewBufferLabel">Daily Limit</span>
+        <span className="reviewBufferState" data-state={state}>
+          {stateLabel}
         </span>
       </div>
 
       <div className="reviewBufferCount">
-        <strong>{reviewCount}/{savedTarget}</strong>
-        <span>awaiting review</span>
+        <strong>{todayCount}/{savedLimit}</strong>
+        <span>review-ready today · Riyadh</span>
       </div>
 
       <div className="reviewBufferActions">
         <label className="reviewBufferTarget">
-          <span>Target</span>
+          <span>Limit</span>
           <input
-            aria-label="Review Buffer target"
+            aria-label="Daily production limit"
             disabled={working || loading}
             inputMode="numeric"
-            max={50}
+            max={200}
             min={1}
-            onChange={(event) => setTarget(Math.max(1, Math.min(50, Number(event.target.value) || 1)))}
+            onChange={(event) => setLimit(Math.max(1, Math.min(200, Number(event.target.value) || 1)))}
             type="number"
-            value={target}
+            value={limit}
           />
         </label>
         <button
           className="reviewBufferSave"
-          disabled={working || loading || !targetChanged}
-          onClick={() => void updateRuntime({ target })}
+          disabled={working || loading || !limitChanged}
+          onClick={() => void updateRuntime({ limit })}
           type="button"
         >
-          Save target
+          Save limit
         </button>
         <button
           className="reviewBufferPause"
@@ -139,6 +143,7 @@ export default function ReviewBufferControl({ reviewCount }: Props) {
         </button>
       </div>
 
+      {limitReached ? <p className="reviewBufferReason">Today’s limit is complete. Automatic production becomes eligible again at midnight in Riyadh.</p> : null}
       {paused && runtime?.pause_reason ? <p className="reviewBufferReason">{runtime.pause_reason}</p> : null}
       {error ? <p className="reviewBufferError" role="alert">{error}</p> : null}
     </div>
