@@ -1,0 +1,292 @@
+/* Resend connection and delivery status panel for the Production Engine. */
+
+body.platform-automation-page .resendDeliveryCard {
+  display: grid;
+  gap: 18px;
+  border: 1px solid rgba(104, 126, 116, 0.24);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 24px;
+  color: inherit;
+  box-shadow: 0 12px 32px rgba(21, 50, 41, 0.06);
+}
+
+body.platform-automation-page .resendDeliveryHeader,
+body.platform-automation-page .resendDeliveryMeta,
+body.platform-automation-page .resendConnectRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+body.platform-automation-page .resendDeliveryHeader h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.12;
+}
+
+body.platform-automation-page .resendDeliveryKicker {
+  margin: 0 0 8px;
+  color: #4f665e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.platform-automation-page .resendIntegrationBadge,
+body.platform-automation-page .resendDeliveryBadge,
+body.platform-automation-page .resendEngagement {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 30px;
+  border: 1px solid rgba(93, 112, 104, 0.26);
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: rgba(230, 235, 231, 0.92);
+  color: #33483f;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+body.platform-automation-page .resendIntegrationBadge[data-integration="connected"],
+body.platform-automation-page .resendDeliveryBadge[data-delivery="delivered"] {
+  border-color: #9ccbb7;
+  background: #e4f5ec;
+  color: #164d38;
+}
+
+body.platform-automation-page .resendIntegrationBadge[data-integration="configuring"],
+body.platform-automation-page .resendDeliveryBadge[data-delivery="sent"],
+body.platform-automation-page .resendDeliveryBadge[data-delivery="pending"] {
+  border-color: #a9c5d7;
+  background: #e8f2f8;
+  color: #234b65;
+}
+
+body.platform-automation-page .resendDeliveryBadge[data-delivery="delivery_delayed"] {
+  border-color: #dfbf78;
+  background: #fff3d6;
+  color: #6c4b08;
+}
+
+body.platform-automation-page .resendIntegrationBadge[data-integration="error"],
+body.platform-automation-page .resendDeliveryBadge[data-delivery="bounced"],
+body.platform-automation-page .resendDeliveryBadge[data-delivery="complained"],
+body.platform-automation-page .resendDeliveryBadge[data-delivery="failed"],
+body.platform-automation-page .resendDeliveryBadge[data-delivery="suppressed"] {
+  border-color: #dda6aa;
+  background: #fde8e9;
+  color: #752d35;
+}
+
+body.platform-automation-page .resendEngagement[data-engagement="opened"] {
+  border-color: #b5b6dd;
+  background: #efeffb;
+  color: #3f4176;
+}
+
+body.platform-automation-page .resendEngagement[data-engagement="clicked"] {
+  border-color: #8dc8c1;
+  background: #e1f4f1;
+  color: #16524c;
+}
+
+body.platform-automation-page .resendEngagement[data-engagement="none"] {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+  opacity: 0.56;
+}
+
+body.platform-automation-page .resendConnectPanel {
+  display: grid;
+  gap: 13px;
+}
+
+body.platform-automation-page .resendConnectPanel > p,
+body.platform-automation-page .resendDeliveryMeta,
+body.platform-automation-page .resendIntegrationNotice,
+body.platform-automation-page .resendIntegrationError {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+body.platform-automation-page .resendConnectRow input {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+body.platform-automation-page .resendConnectRow button,
+body.platform-automation-page .resendDeliveryMeta button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  border: 1px solid currentColor;
+  border-radius: 18px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+body.platform-automation-page .resendConnectRow button:disabled,
+body.platform-automation-page .resendDeliveryMeta button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+body.platform-automation-page .resendDeliveryStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.platform-automation-page .resendDeliveryStats > div {
+  min-width: 0;
+  border: 1px solid rgba(104, 126, 116, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.44);
+  padding: 13px 14px;
+}
+
+body.platform-automation-page .resendDeliveryStats span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+body.platform-automation-page .resendDeliveryStats strong {
+  display: block;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+body.platform-automation-page .resendDeliveryMeta {
+  font-size: 0.8rem;
+  opacity: 0.86;
+}
+
+body.platform-automation-page .resendDeliveryTableWrap {
+  overflow-x: auto;
+  border: 1px solid rgba(104, 126, 116, 0.2);
+  border-radius: 20px;
+}
+
+body.platform-automation-page .resendDeliveryTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+}
+
+body.platform-automation-page .resendDeliveryTable th,
+body.platform-automation-page .resendDeliveryTable td {
+  padding: 12px 13px;
+  border-bottom: 1px solid rgba(104, 126, 116, 0.16);
+  text-align: left;
+  vertical-align: middle;
+}
+
+body.platform-automation-page .resendDeliveryTable th {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+body.platform-automation-page .resendDeliveryTable td {
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+body.platform-automation-page .resendDeliveryTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+body.platform-automation-page .resendIntegrationNotice,
+body.platform-automation-page .resendIntegrationError {
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+body.platform-automation-page .resendIntegrationNotice {
+  border: 1px solid #a9c5d7;
+  background: #e8f2f8;
+  color: #234b65;
+}
+
+body.platform-automation-page .resendIntegrationError {
+  border: 1px solid #dda6aa;
+  background: #fde8e9;
+  color: #752d35;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .resendDeliveryCard,
+html[data-platform-theme="dark"] body.platform-automation-page .resendDeliveryCard {
+  border-color: #243641;
+  background: linear-gradient(145deg, #1a2a34 0%, #16232c 100%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .resendDeliveryKicker,
+html[data-platform-theme="ocean"] body.platform-automation-page .resendDeliveryMeta,
+html[data-platform-theme="dark"] body.platform-automation-page .resendDeliveryKicker,
+html[data-platform-theme="dark"] body.platform-automation-page .resendDeliveryMeta {
+  color: #9aa8b3;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .resendDeliveryStats > div,
+html[data-platform-theme="dark"] body.platform-automation-page .resendDeliveryStats > div {
+  border-color: #2d3f4c;
+  background: #17252f;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .resendDeliveryTableWrap,
+html[data-platform-theme="dark"] body.platform-automation-page .resendDeliveryTableWrap {
+  border-color: #2d3f4c;
+  background: #17252f;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .resendDeliveryTable th,
+html[data-platform-theme="ocean"] body.platform-automation-page .resendDeliveryTable td,
+html[data-platform-theme="dark"] body.platform-automation-page .resendDeliveryTable th,
+html[data-platform-theme="dark"] body.platform-automation-page .resendDeliveryTable td {
+  border-color: #243641;
+}
+
+@media (max-width: 760px) {
+  body.platform-automation-page .resendDeliveryCard {
+    padding: 19px;
+  }
+
+  body.platform-automation-page .resendDeliveryHeader,
+  body.platform-automation-page .resendDeliveryMeta,
+  body.platform-automation-page .resendConnectRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.platform-automation-page .resendIntegrationBadge {
+    align-self: flex-start;
+  }
+
+  body.platform-automation-page .resendConnectRow button,
+  body.platform-automation-page .resendDeliveryMeta button {
+    width: 100%;
+  }
+
+  body.platform-automation-page .resendDeliveryStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
