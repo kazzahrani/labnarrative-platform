@@ -1,26 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const explicitFiles = [
+const files = [
   "app/admin/page.tsx",
   "app/admin/automation/page.tsx",
   "app/admin/discovery/page.tsx",
   "app/admin/sites/page.tsx",
+  "components/admin/AdminLandingRedirect.tsx",
+  "components/admin/OutreachMonitorEnhancer.tsx",
+  "components/admin/OperatorSendSafetyEnhancer.tsx",
+  "components/admin/ResendDeliveryTracker.tsx",
 ].map((relativePath) => path.join(process.cwd(), ...relativePath.split("/")));
-
-function collectTsxFiles(directory) {
-  if (!fs.existsSync(directory)) return [];
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) return collectTsxFiles(fullPath);
-    return entry.isFile() && entry.name.endsWith(".tsx") ? [fullPath] : [];
-  });
-}
-
-const files = [
-  ...explicitFiles,
-  ...collectTsxFiles(path.join(process.cwd(), "components", "admin")),
-];
 
 let patched = 0;
 const touched = [];
@@ -69,8 +59,8 @@ for (const filePath of files) {
   touched.push(relativePath);
 }
 
-if (patched < 5) {
-  throw new Error(`Only ${patched} admin clients were converted; expected the dashboards and shared components.`);
+if (patched < 7) {
+  throw new Error(`Only ${patched} dashboard clients were converted; expected at least seven.`);
 }
 
-console.log(`Shared browser Supabase client installed across ${patched} admin files: ${touched.join(", ")}.`);
+console.log(`Shared browser Supabase client installed across ${patched} dashboard files: ${touched.join(", ")}.`);
