@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 const ADMIN_PAGES = [
@@ -17,13 +18,23 @@ function linkPath(link: HTMLAnchorElement): string {
 }
 
 function navHasLink(nav: HTMLElement, pathname: string): boolean {
-  return Array.from(nav.querySelectorAll<HTMLAnchorElement>("a[href]"))
-    .some((link) => linkPath(link) === pathname);
+  return Array.from(nav.querySelectorAll<HTMLAnchorElement>("a[href]")).some(
+    (link) => linkPath(link) === pathname,
+  );
+}
+
+function removeInjectedAdminLinks() {
+  document
+    .querySelectorAll<HTMLAnchorElement>("a[data-platform-nav]")
+    .forEach((link) => link.remove());
 }
 
 export default function AutomationNavEnhancer() {
+  const pathname = usePathname();
+
   useEffect(() => {
-    const pathname = window.location.pathname;
+    removeInjectedAdminLinks();
+
     if (!pathname.startsWith("/admin")) return;
 
     const currentPage = ADMIN_PAGES.find((page) => pathname === page.pathname);
@@ -67,8 +78,9 @@ export default function AutomationNavEnhancer() {
     return () => {
       cancelled = true;
       observer?.disconnect();
+      removeInjectedAdminLinks();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
