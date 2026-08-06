@@ -19,6 +19,9 @@ let patched = 0;
 const touched = [];
 
 for (const filePath of roots.flatMap(collectTsxFiles)) {
+  const relativePath = path.relative(process.cwd(), filePath);
+  if (relativePath.includes(`app${path.sep}admin${path.sep}preview${path.sep}`)) continue;
+
   let source = fs.readFileSync(filePath, "utf8");
   if (!source.includes("createClient(") || !source.includes("NEXT_PUBLIC_SUPABASE_URL")) continue;
 
@@ -47,18 +50,18 @@ for (const filePath of roots.flatMap(collectTsxFiles)) {
     );
 
   if (source.includes("createClient(") || source.includes("NEXT_PUBLIC_SUPABASE_URL")) {
-    throw new Error(`A local Supabase client remains in ${path.relative(process.cwd(), filePath)}.`);
+    throw new Error(`A local Supabase client remains in ${relativePath}.`);
   }
   if (!source.includes('browserSupabase as supabase')) {
-    throw new Error(`The shared Supabase import was not installed in ${path.relative(process.cwd(), filePath)}.`);
+    throw new Error(`The shared Supabase import was not installed in ${relativePath}.`);
   }
   if (hadSessionType && !source.includes('import type { Session } from "@supabase/supabase-js";')) {
-    throw new Error(`The Session type import was lost in ${path.relative(process.cwd(), filePath)}.`);
+    throw new Error(`The Session type import was lost in ${relativePath}.`);
   }
 
   fs.writeFileSync(filePath, source);
   patched += 1;
-  touched.push(path.relative(process.cwd(), filePath));
+  touched.push(relativePath);
 }
 
 if (patched === 0) {
