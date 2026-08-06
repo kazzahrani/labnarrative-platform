@@ -147,10 +147,9 @@ export default function ResendDeliveryTracker() {
   const [noticeError, setNoticeError] = useState(false);
 
   const loadTracking = useCallback(async (
-    activeSession?: Session | null,
+    currentSession: Session | null,
     forceDeliveryLoad = false,
   ) => {
-    const currentSession = activeSession ?? session;
     if (!currentSession) return;
 
     setLoading(true);
@@ -196,7 +195,7 @@ export default function ResendDeliveryTracker() {
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -313,7 +312,7 @@ export default function ResendDeliveryTracker() {
                 ? `Last event ${formatDate(integration.last_event_at)}`
                 : "Connected and waiting for the next Resend event."}
             </span>
-            <button disabled={loading} onClick={() => void loadTracking()} type="button">
+            <button disabled={loading} onClick={() => void loadTracking(session)} type="button">
               {loading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
