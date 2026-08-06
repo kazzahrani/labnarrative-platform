@@ -13,19 +13,41 @@ const SAFE_LABEL = "Send email now";
 function prepareButtons() {
   for (const button of document.querySelectorAll<HTMLButtonElement>("button")) {
     const label = button.textContent?.trim();
-    if (label === LEGACY_LABEL || label === SAFE_LABEL) {
-      button.textContent = SAFE_LABEL;
-      button.title = "Irreversible: you must type the exact recipient email before sending.";
-      button.dataset.labnarrativeSendButton = "true";
-    }
+    if (label !== LEGACY_LABEL && label !== SAFE_LABEL) continue;
+
+    if (label === LEGACY_LABEL) button.textContent = SAFE_LABEL;
+    if (button.dataset.labnarrativeSendButton === "true") continue;
+
+    button.title = "Irreversible: you must type the exact recipient email before sending.";
+    button.dataset.labnarrativeSendButton = "true";
   }
 }
 
 export default function OperatorSendSafetyEnhancer() {
   useEffect(() => {
+    if (window.location.pathname !== "/admin/automation") return;
+
+    let animationFrame = 0;
+    const schedulePreparation = () => {
+      if (animationFrame) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = 0;
+        prepareButtons();
+      });
+    };
+
     prepareButtons();
-    const observer = new MutationObserver(prepareButtons);
-    observer.observe(document.body, { childList: true, subtree: true });
+
+    const root = document.querySelector("main") ?? document.body;
+    const observer = new MutationObserver((mutations) => {
+      const buttonAdded = mutations.some((mutation) =>
+        Array.from(mutation.addedNodes).some((node) =>
+          node instanceof Element && (node.matches("button") || Boolean(node.querySelector("button"))),
+        ),
+      );
+      if (buttonAdded) schedulePreparation();
+    });
+    observer.observe(root, { childList: true, subtree: true });
 
     const interceptSend = async (event: MouseEvent) => {
       const target = event.target;
@@ -119,6 +141,7 @@ export default function OperatorSendSafetyEnhancer() {
     document.addEventListener("click", interceptSend, true);
     return () => {
       observer.disconnect();
+      window.cancelAnimationFrame(animationFrame);
       document.removeEventListener("click", interceptSend, true);
     };
   }, []);
