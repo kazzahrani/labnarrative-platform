@@ -1,4 +1,4 @@
-/* Persistent Review Buffer controls on the Production Engine. */
+/* Persistent Daily Limit controls on the Production Engine. */
 
 body.platform-automation-page .reviewBufferControl {
   display: grid;
@@ -54,7 +54,8 @@ body.platform-automation-page .reviewBufferState[data-state="active"] {
   color: #164d38;
 }
 
-body.platform-automation-page .reviewBufferState[data-state="paused"] {
+body.platform-automation-page .reviewBufferState[data-state="paused"],
+body.platform-automation-page .reviewBufferState[data-state="limit-reached"] {
   border-color: #dfbf78;
   background: #fff3d6;
   color: #6c4b08;
