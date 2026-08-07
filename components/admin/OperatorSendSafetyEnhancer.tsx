@@ -6,14 +6,27 @@ import { browserSupabase as supabase } from "@/lib/supabase-browser";
 const LEGACY_LABEL = "Approve website & send email";
 const SAFE_LABEL = "Send email now";
 
+function sendScope(button: HTMLButtonElement): HTMLElement | null {
+  return (
+    button.closest<HTMLElement>("section") ??
+    button.closest<HTMLElement>("[role='dialog']") ??
+    button.closest<HTMLElement>("main") ??
+    button.parentElement
+  );
+}
+
+function recipientInputFor(scope: HTMLElement): HTMLInputElement | null {
+  return scope.querySelector<HTMLInputElement>(
+    "input[type='email']:not([data-labnarrative-bcc-input='true'])",
+  );
+}
+
 async function hydrateBcc(
-  card: HTMLElement,
+  scope: HTMLElement,
   toggle: HTMLInputElement,
   input: HTMLInputElement,
 ) {
-  const recipientInput = card.querySelector<HTMLInputElement>(
-    "input[type='email']:not([data-labnarrative-bcc-input='true'])",
-  );
+  const recipientInput = recipientInputFor(scope);
   const recipient = recipientInput?.value.trim().toLowerCase() || "";
   if (!recipient) return;
 
@@ -35,12 +48,11 @@ async function hydrateBcc(
 }
 
 function ensureBccField(button: HTMLButtonElement) {
-  const card = button.closest<HTMLElement>("section");
-  if (!card || card.querySelector("[data-labnarrative-bcc-field='true']")) return;
+  const scope = sendScope(button);
+  if (!scope || scope.querySelector("[data-labnarrative-bcc-field='true']")) return;
 
-  const labels = Array.from(card.querySelectorAll<HTMLLabelElement>("label"));
-  const recipientLabel = labels.find((label) => label.textContent?.trim().startsWith("Recipient"));
-  if (!recipientLabel) return;
+  const recipientInput = recipientInputFor(scope);
+  if (!recipientInput) return;
 
   const wrapper = document.createElement("div");
   wrapper.className = "bccTestCopyControl";
@@ -76,8 +88,17 @@ function ensureBccField(button: HTMLButtonElement) {
   });
 
   wrapper.append(toggleLabel, bccInput);
-  recipientLabel.insertAdjacentElement("afterend", wrapper);
-  void hydrateBcc(card, toggle, bccInput);
+
+  const recipientContainer = recipientInput.closest<HTMLElement>("label") ?? recipientInput.parentElement;
+  if (recipientContainer?.parentElement) {
+    recipientContainer.insertAdjacentElement("afterend", wrapper);
+  } else {
+    const actions = button.parentElement;
+    if (actions?.parentElement) actions.insertAdjacentElement("beforebegin", wrapper);
+    else scope.append(wrapper);
+  }
+
+  void hydrateBcc(scope, toggle, bccInput);
 }
 
 function prepareButtons() {
@@ -109,7 +130,7 @@ export default function OperatorSendSafetyEnhancer() {
 
     const root = document.querySelector("main") ?? document.body;
     const observer = new MutationObserver(() => schedulePreparation());
-    observer.observe(root, { childList: true, subtree: true });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
 
     const interceptSend = async (event: MouseEvent) => {
       const target = event.target;
@@ -125,18 +146,16 @@ export default function OperatorSendSafetyEnhancer() {
       button.dataset.labnarrativeSendProcessing = "true";
 
       try {
-        const card = button.closest<HTMLElement>("section");
-        const recipientInput = card?.querySelector<HTMLInputElement>(
-          "input[type='email']:not([data-labnarrative-bcc-input='true'])",
-        );
-        const bccToggle = card?.querySelector<HTMLInputElement>(
+        const scope = sendScope(button);
+        const recipientInput = scope ? recipientInputFor(scope) : null;
+        const bccToggle = scope?.querySelector<HTMLInputElement>(
           "input[data-labnarrative-bcc-toggle='true']",
         );
-        const bccInput = card?.querySelector<HTMLInputElement>(
+        const bccInput = scope?.querySelector<HTMLInputElement>(
           "input[data-labnarrative-bcc-input='true']",
         );
-        const subjectInput = card?.querySelector<HTMLInputElement>("input:not([type='email']):not([type='checkbox'])");
-        const bodyTextarea = card?.querySelector<HTMLTextAreaElement>("textarea");
+        const subjectInput = scope?.querySelector<HTMLInputElement>("input:not([type='email']):not([type='checkbox'])");
+        const bodyTextarea = scope?.querySelector<HTMLTextAreaElement>("textarea");
         const recipient = recipientInput?.value.trim().toLowerCase() || "";
         const bcc = bccToggle?.checked ? bccInput?.value.trim().toLowerCase() || "" : "";
 
