@@ -57,11 +57,22 @@ function SiteNav({ site, basePath }: { site: LabSite; basePath: string }) {
 
 function Home({ site }: { site: LabSite }) {
   const heroImage = safeImageUrl(site.heroImage);
+  const portraitImage = safeImageUrl(site.members?.[0]?.image);
   return (
     <>
       <section className="hero">
         <div className="hero-copy"><p className="eyebrow">{site.eyebrow}</p><h1>{site.headline}</h1><p className="introduction">{site.introduction}</p><div className="focus-list">{site.focusAreas.map((area) => <span key={area}>{area}</span>)}</div></div>
-        <aside className="pi-card"><div className={`portrait-mark${heroImage ? " has-image" : ""}`}>{heroImage ? <img src={heroImage} alt={`${site.piName} or ${site.labName}`} /> : initials(site.piName)}</div><div className="pi-card-copy"><p className="card-label">Principal Investigator</p><h2>{site.piName}</h2><p>{site.title}</p><p>{site.institution}</p></div></aside>
+        <aside className="pi-card">
+          {heroImage ? (
+            <div style={{ width: "100%", aspectRatio: "16 / 10", overflow: "hidden", borderRadius: 18, marginBottom: 20 }}>
+              <img src={heroImage} alt={`${site.labName} research hero`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+          ) : null}
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <div className={`portrait-mark${portraitImage ? " has-image" : ""}`}>{portraitImage ? <img src={portraitImage} alt={site.piName} /> : initials(site.piName)}</div>
+            <div className="pi-card-copy"><p className="card-label">Principal Investigator</p><h2>{site.piName}</h2><p>{site.title}</p><p>{site.institution}</p></div>
+          </div>
+        </aside>
       </section>
       <section className="section-block"><div><p className="eyebrow">Research programme</p><h2>{site.projects.length} connected lines of investigation.</h2></div><div className="grid-three">{site.projects.map((project, index) => <article className="content-card" key={`${project.title}-${index}`}><span className="card-number">{String(index + 1).padStart(2, "0")}</span><h3>{project.title}</h3><p>{project.description}</p></article>)}</div></section>
     </>
