@@ -139,18 +139,21 @@ const rightStackStart = source.indexOf(stackToken, leftStackClose);
 if (rightStackStart === -1) {
   throw new Error("The right Production column was not found.");
 }
-
-const leftStackOpenEnd = source.indexOf("\n", leftStackStart);
-const rightStackOpenEnd = source.indexOf("\n", rightStackStart);
-if (leftStackOpenEnd === -1 || rightStackOpenEnd === -1) {
-  throw new Error("A Production column opening line could not be identified.");
+const rightStackClose = findMatchingDivClose(source, rightStackStart);
+if (rightStackClose === -1) {
+  throw new Error("The right Production column closing tag was not found.");
 }
 
-source = `${source.slice(0, rightStackOpenEnd + 1)}            ${collectorSection.block}\n\n            ${activitySection.block}\n\n${source.slice(rightStackOpenEnd + 1)}`;
+// Keep the existing right-column content first, then place Summary review and Recent activity at the bottom.
+source = `${source.slice(0, rightStackClose)}\n\n            ${collectorSection.block}\n\n            ${activitySection.block}\n          ${source.slice(rightStackClose)}`;
 
+// Keep Active and completed records at the top of the left column.
 const refreshedGridStart = source.indexOf(gridToken);
 const refreshedLeftStackStart = source.indexOf(stackToken, refreshedGridStart + gridToken.length);
 const refreshedLeftOpenEnd = source.indexOf("\n", refreshedLeftStackStart);
+if (refreshedLeftOpenEnd === -1) {
+  throw new Error("The left Production column opening line could not be identified.");
+}
 source = `${source.slice(0, refreshedLeftOpenEnd + 1)}            ${historyCall.block}\n\n${source.slice(refreshedLeftOpenEnd + 1)}`;
 
 const finalHistory = prospectTableCallForLabel(source, historyLabel, "Final Active and completed records");
@@ -182,9 +185,14 @@ if (betweenCollectorAndActivity) {
   throw new Error("Summary review is not immediately followed by Recent activity in the right column.");
 }
 
+const afterActivity = source.slice(finalActivity.end, finalRightStackClose).trim();
+if (afterActivity) {
+  throw new Error("Summary review and Recent activity are not at the bottom of the right Production column.");
+}
+
 if (source.includes("Each saved note begins with the PI name and is ready to paste into ChatGPT.")) {
   throw new Error("The Summary review explanatory sentence is still present.");
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Production layout prepared: Active and completed records left; Summary review then Recent activity right.");
+console.log("Production layout prepared: Active and completed records left; Summary review then Recent activity at the bottom of the right column.");
