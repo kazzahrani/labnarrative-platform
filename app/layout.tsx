@@ -37,6 +37,7 @@ import "./discovery-pagination.css";
 import "./production-pagination.css";
 import "./resend-delivery-tracking.css";
 import "./review-buffer-control.css";
+import "./review-modal.css";
 
 export const metadata: Metadata = {
   title: {
