@@ -77,7 +77,7 @@ function prospectTableCallForLabel(text, tableLabel, label) {
   throw new Error(`${label} marker was not found.`);
 }
 
-// Move the Active and completed records table from the left stack to the top of the right stack.
+// Keep Active and completed records at the top of the left Production column.
 let pageSource = fs.readFileSync(pageUrl, "utf8");
 const historyLabel = "Active and completed records";
 const historyCall = prospectTableCallForLabel(pageSource, historyLabel, historyLabel);
@@ -90,47 +90,45 @@ if (gridStart === -1) throw new Error("The Production two-column grid was not fo
 
 const leftStackStart = pageSource.indexOf(stackToken, gridStart + gridToken.length);
 if (leftStackStart === -1) throw new Error("The Production left column was not found.");
-const leftStackClose = findMatchingDivClose(pageSource, leftStackStart);
-if (leftStackClose === -1) throw new Error("The Production left column closing tag was not found.");
+const leftStackOpenEnd = pageSource.indexOf("\n", leftStackStart);
+if (leftStackOpenEnd === -1) throw new Error("The Production left column opening line was not found.");
 
-const rightStackStart = pageSource.indexOf(stackToken, leftStackClose);
-if (rightStackStart === -1) throw new Error("The Production right column was not found.");
-const rightStackOpenEnd = pageSource.indexOf("\n", rightStackStart);
-if (rightStackOpenEnd === -1) throw new Error("The Production right column opening line was not found.");
-
-pageSource = `${pageSource.slice(0, rightStackOpenEnd + 1)}            ${historyCall.block}\n\n${pageSource.slice(rightStackOpenEnd + 1)}`;
+pageSource = `${pageSource.slice(0, leftStackOpenEnd + 1)}            ${historyCall.block}\n\n${pageSource.slice(leftStackOpenEnd + 1)}`;
 
 const finalHistory = prospectTableCallForLabel(pageSource, historyLabel, `Final ${historyLabel}`);
 const finalGridStart = pageSource.indexOf(gridToken);
 const finalLeftStackStart = pageSource.indexOf(stackToken, finalGridStart + gridToken.length);
 const finalLeftStackClose = findMatchingDivClose(pageSource, finalLeftStackStart);
 const finalRightStackStart = pageSource.indexOf(stackToken, finalLeftStackClose);
-const finalRightStackClose = findMatchingDivClose(pageSource, finalRightStackStart);
 
 if (
-  finalHistory.start <= finalLeftStackClose ||
-  finalHistory.start <= finalRightStackStart ||
-  finalHistory.end >= finalRightStackClose
+  finalHistory.start <= finalLeftStackStart ||
+  finalHistory.end >= finalLeftStackClose ||
+  finalHistory.start >= finalRightStackStart
 ) {
-  throw new Error("Active and completed records was not placed inside the right Production column.");
+  throw new Error("Active and completed records was not placed inside the left Production column.");
 }
 
 fs.writeFileSync(pageUrl, pageSource);
 
-// Place the live Production queue portal at the top of the left stack while hiding the legacy current-production card.
+// Place the live Production queue immediately after Active and completed records in the left stack,
+// while hiding the legacy current-production card in the right stack.
 let liveQueueSource = fs.readFileSync(liveQueueUrl, "utf8");
-const oldPlacement = `      if (!original?.parentElement) return;\n      mount = document.createElement("div");\n      mount.dataset.liveProductionQueue = "true";\n      original.parentElement.insertBefore(mount, original);\n      original.style.display = "none";\n      setMountNode(mount);`;
-const newPlacement = `      const rightStack = original?.parentElement;\n      const grid = rightStack?.parentElement;\n      const leftStack = grid?.firstElementChild as HTMLElement | null;\n      if (!original || !rightStack || !grid || !leftStack || leftStack === rightStack) return;\n      mount = document.createElement("div");\n      mount.dataset.liveProductionQueue = "true";\n      leftStack.insertBefore(mount, leftStack.firstChild);\n      original.style.display = "none";\n      setMountNode(mount);`;
+const oldPlacementTop = `      const rightStack = original?.parentElement;\n      const grid = rightStack?.parentElement;\n      const leftStack = grid?.firstElementChild as HTMLElement | null;\n      if (!original || !rightStack || !grid || !leftStack || leftStack === rightStack) return;\n      mount = document.createElement("div");\n      mount.dataset.liveProductionQueue = "true";\n      leftStack.insertBefore(mount, leftStack.firstChild);\n      original.style.display = "none";\n      setMountNode(mount);`;
+const oldPlacementLegacy = `      if (!original?.parentElement) return;\n      mount = document.createElement("div");\n      mount.dataset.liveProductionQueue = "true";\n      original.parentElement.insertBefore(mount, original);\n      original.style.display = "none";\n      setMountNode(mount);`;
+const newPlacement = `      const rightStack = original?.parentElement;\n      const grid = rightStack?.parentElement;\n      const leftStack = grid?.firstElementChild as HTMLElement | null;\n      if (!original || !rightStack || !grid || !leftStack || leftStack === rightStack) return;\n      mount = document.createElement("div");\n      mount.dataset.liveProductionQueue = "true";\n      const historyPanel = leftStack.firstElementChild;\n      leftStack.insertBefore(mount, historyPanel?.nextSibling ?? null);\n      original.style.display = "none";\n      setMountNode(mount);`;
 
-if (liveQueueSource.includes(oldPlacement)) {
-  liveQueueSource = liveQueueSource.replace(oldPlacement, newPlacement);
+if (liveQueueSource.includes(oldPlacementTop)) {
+  liveQueueSource = liveQueueSource.replace(oldPlacementTop, newPlacement);
+} else if (liveQueueSource.includes(oldPlacementLegacy)) {
+  liveQueueSource = liveQueueSource.replace(oldPlacementLegacy, newPlacement);
 } else if (!liveQueueSource.includes(newPlacement)) {
   throw new Error("The Live Production queue placement block was not found.");
 }
 
-if (!liveQueueSource.includes("leftStack.insertBefore(mount, leftStack.firstChild);")) {
-  throw new Error("The Live Production queue was not configured for the left Production column.");
+if (!liveQueueSource.includes("leftStack.insertBefore(mount, historyPanel?.nextSibling ?? null);")) {
+  throw new Error("The Live Production queue was not configured below Active and completed records.");
 }
 
 fs.writeFileSync(liveQueueUrl, liveQueueSource);
-console.log("Production columns prepared: Live production & recovery left; Active and completed records right.");
+console.log("Production columns prepared: Active/completed records first on the left; live production below it; review panels remain on the right.");
