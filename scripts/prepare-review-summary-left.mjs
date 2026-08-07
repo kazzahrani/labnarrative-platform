@@ -120,27 +120,38 @@ for (const block of [collectorSection, activitySection, historyCall].sort((left,
 }
 
 const gridToken = "<div className={styles.grid}>";
+const stackToken = "<div className={styles.stack}>";
 const gridStart = source.indexOf(gridToken);
 if (gridStart === -1) {
   throw new Error("The Production two-column grid was not found.");
 }
 
-const stackToken = "<div className={styles.stack}>";
 const leftStackStart = source.indexOf(stackToken, gridStart + gridToken.length);
 if (leftStackStart === -1) {
   throw new Error("The left Production column was not found.");
 }
-
-const leftStackOpenEnd = source.indexOf("\n", leftStackStart);
-if (leftStackOpenEnd === -1) {
-  throw new Error("The opening line of the left Production column could not be identified.");
+const leftStackClose = findMatchingDivClose(source, leftStackStart);
+if (leftStackClose === -1) {
+  throw new Error("The left Production column closing tag was not found.");
 }
 
-const orderedLeftBlocks = [historyCall.block, collectorSection.block, activitySection.block]
-  .map((block) => `            ${block}`)
-  .join("\n\n");
+const rightStackStart = source.indexOf(stackToken, leftStackClose);
+if (rightStackStart === -1) {
+  throw new Error("The right Production column was not found.");
+}
 
-source = `${source.slice(0, leftStackOpenEnd + 1)}${orderedLeftBlocks}\n\n${source.slice(leftStackOpenEnd + 1)}`;
+const leftStackOpenEnd = source.indexOf("\n", leftStackStart);
+const rightStackOpenEnd = source.indexOf("\n", rightStackStart);
+if (leftStackOpenEnd === -1 || rightStackOpenEnd === -1) {
+  throw new Error("A Production column opening line could not be identified.");
+}
+
+source = `${source.slice(0, rightStackOpenEnd + 1)}            ${collectorSection.block}\n\n            ${activitySection.block}\n\n${source.slice(rightStackOpenEnd + 1)}`;
+
+const refreshedGridStart = source.indexOf(gridToken);
+const refreshedLeftStackStart = source.indexOf(stackToken, refreshedGridStart + gridToken.length);
+const refreshedLeftOpenEnd = source.indexOf("\n", refreshedLeftStackStart);
+source = `${source.slice(0, refreshedLeftOpenEnd + 1)}            ${historyCall.block}\n\n${source.slice(refreshedLeftOpenEnd + 1)}`;
 
 const finalHistory = prospectTableCallForLabel(source, historyLabel, "Final Active and completed records");
 const finalCollector = sectionForMarker(source, collectorMarker, "Final Summary review");
@@ -148,21 +159,27 @@ const finalActivity = sectionForMarker(source, activityMarker, "Final Recent act
 const finalGridStart = source.indexOf(gridToken);
 const finalLeftStackStart = source.indexOf(stackToken, finalGridStart + gridToken.length);
 const finalLeftStackClose = findMatchingDivClose(source, finalLeftStackStart);
+const finalRightStackStart = source.indexOf(stackToken, finalLeftStackClose);
+const finalRightStackClose = findMatchingDivClose(source, finalRightStackStart);
 
 if (
-  finalLeftStackStart === -1 ||
-  finalLeftStackClose === -1 ||
-  finalHistory.start < finalLeftStackStart ||
-  finalActivity.end > finalLeftStackClose ||
-  !(finalHistory.start < finalCollector.start && finalCollector.start < finalActivity.start)
+  finalHistory.start <= finalLeftStackStart ||
+  finalHistory.end >= finalLeftStackClose
 ) {
-  throw new Error("Production left-column order must be Active and completed records, Summary review, then Recent activity.");
+  throw new Error("Active and completed records was not placed in the left Production column.");
 }
 
-const betweenHistoryAndCollector = source.slice(finalHistory.end, finalCollector.start).trim();
+if (
+  finalCollector.start <= finalRightStackStart ||
+  finalActivity.end >= finalRightStackClose ||
+  finalCollector.start >= finalActivity.start
+) {
+  throw new Error("Summary review and Recent activity were not placed in that order in the right Production column.");
+}
+
 const betweenCollectorAndActivity = source.slice(finalCollector.end, finalActivity.start).trim();
-if (betweenHistoryAndCollector || betweenCollectorAndActivity) {
-  throw new Error("The three priority Production windows are not consecutive in the left column.");
+if (betweenCollectorAndActivity) {
+  throw new Error("Summary review is not immediately followed by Recent activity in the right column.");
 }
 
 if (source.includes("Each saved note begins with the PI name and is ready to paste into ChatGPT.")) {
@@ -170,4 +187,4 @@ if (source.includes("Each saved note begins with the PI name and is ready to pas
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Production left column ordered as Active and completed records, Summary review, then Recent activity.");
+console.log("Production layout prepared: Active and completed records left; Summary review then Recent activity right.");
