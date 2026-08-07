@@ -6,19 +6,17 @@ const liveQueueUrl = new URL("../components/admin/LiveProductionQueue.tsx", impo
 let production = fs.readFileSync(productionUrl, "utf8");
 let liveQueue = fs.readFileSync(liveQueueUrl, "utf8");
 
-const oldStatusText = `function statusText(value: string): string {
-  return value.replaceAll("_", " ");
-}`;
-const newStatusText = `function statusText(value: string): string {
-  if (value === "needs_attention" || value === "paused") return "Auto-recovering";
-  if (value === "awaiting_final_review" || value === "approved_to_send") return "Awaiting confirmation";
-  return value.replaceAll("_", " ");
-}`;
-
-if (production.includes(oldStatusText)) {
-  production = production.replace(oldStatusText, newStatusText);
-} else if (!production.includes(newStatusText)) {
-  throw new Error("Production statusText helper was not found for autonomous recovery labels.");
+if (!production.includes('return "Auto-recovering";')) {
+  const marker = "function statusText(value: string): string {\n";
+  if (!production.includes(marker)) {
+    throw new Error("Production statusText helper was not found for autonomous recovery labels.");
+  }
+  production = production.replace(
+    marker,
+    marker
+      + '  if (value === "needs_attention" || value === "paused") return "Auto-recovering";\n'
+      + '  if (value === "awaiting_final_review" || value === "approved_to_send") return "Awaiting confirmation";\n',
+  );
 }
 
 const oldManualState = `  if (run.recovery_status === "waiting_manual_fix" || run.status === "paused") return { key: "manual", label: "Waiting Manual Fix" };`;
