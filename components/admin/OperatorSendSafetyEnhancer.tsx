@@ -5,6 +5,68 @@ import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 const LEGACY_LABEL = "Approve website & send email";
 const SAFE_LABEL = "Send email now";
+const SEND_FEEDBACK_STYLE_ID = "labnarrative-send-feedback-styles";
+
+function ensureSendFeedbackStyles() {
+  if (document.getElementById(SEND_FEEDBACK_STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = SEND_FEEDBACK_STYLE_ID;
+  style.textContent = `
+    button[data-labnarrative-send-button='true'][data-labnarrative-send-state='sending'] {
+      filter: brightness(0.72);
+      cursor: wait !important;
+      transform: translateY(1px);
+      opacity: 0.94;
+    }
+
+    button[data-labnarrative-send-button='true'][data-labnarrative-send-state='sending'] .labnarrativeSendSpinner {
+      display: inline-block;
+      width: 0.9em;
+      height: 0.9em;
+      margin-right: 0.5em;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 999px;
+      vertical-align: -0.12em;
+      animation: labnarrativeSendSpin 0.7s linear infinite;
+    }
+
+    button[data-labnarrative-send-button='true'][data-labnarrative-send-state='sent'] {
+      filter: brightness(0.82);
+      cursor: default !important;
+    }
+
+    @keyframes labnarrativeSendSpin {
+      to { transform: rotate(360deg); }
+    }
+  `;
+  document.head.append(style);
+}
+
+function setSendingState(button: HTMLButtonElement) {
+  button.dataset.labnarrativeSendProcessing = "true";
+  button.dataset.labnarrativeSendState = "sending";
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.innerHTML = '<span class="labnarrativeSendSpinner" aria-hidden="true"></span><span>Sending…</span>';
+}
+
+function resetSendState(button: HTMLButtonElement) {
+  delete button.dataset.labnarrativeSendProcessing;
+  delete button.dataset.labnarrativeSendState;
+  button.disabled = false;
+  button.removeAttribute("aria-busy");
+  button.textContent = SAFE_LABEL;
+}
+
+function setSentState(button: HTMLButtonElement) {
+  delete button.dataset.labnarrativeSendProcessing;
+  button.dataset.labnarrativeSendState = "sent";
+  button.disabled = true;
+  button.removeAttribute("aria-busy");
+  button.textContent = "✓ Sent";
+}
 
 function sendScope(button: HTMLButtonElement): HTMLElement | null {
   return (
@@ -117,6 +179,8 @@ export default function OperatorSendSafetyEnhancer() {
   useEffect(() => {
     if (window.location.pathname !== "/admin/automation") return;
 
+    ensureSendFeedbackStyles();
+
     let animationFrame = 0;
     const schedulePreparation = () => {
       if (animationFrame) return;
@@ -143,7 +207,9 @@ export default function OperatorSendSafetyEnhancer() {
       event.stopImmediatePropagation();
 
       if (button.dataset.labnarrativeSendProcessing === "true") return;
-      button.dataset.labnarrativeSendProcessing = "true";
+
+      let sentSuccessfully = false;
+      setSendingState(button);
 
       try {
         const scope = sendScope(button);
@@ -234,14 +300,13 @@ export default function OperatorSendSafetyEnhancer() {
         }
         if (sendResult?.error) throw new Error(sendResult.error);
 
-        button.disabled = true;
-        button.textContent = "Sent";
-        window.alert(bcc ? `Email sent. A hidden test copy was BCC'd to ${bcc}.` : "Email sent successfully.");
-        window.setTimeout(() => window.location.reload(), 500);
+        sentSuccessfully = true;
+        setSentState(button);
+        window.setTimeout(() => window.location.reload(), 850);
       } catch (error) {
         window.alert(error instanceof Error ? error.message : "The email could not be authorized for sending.");
       } finally {
-        delete button.dataset.labnarrativeSendProcessing;
+        if (!sentSuccessfully) resetSendState(button);
       }
     };
 
