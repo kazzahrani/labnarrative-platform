@@ -37,27 +37,24 @@ if (source.includes(pollingBlock)) {
   source = source.replace(pollingBlock, "\n");
 }
 
-const activeRunBefore = `  const activeRun = useMemo(
-    () => runs.find((run) => ["running", "awaiting_final_review", "revision_requested", "approved_to_send", "needs_attention", "paused"].includes(run.status)),
-    [runs],
-  );`;
-const activeRunAfter = `  const activeRun = useMemo(
-    () => runs.find((run) => run.source_pack?.auto_sequence !== true && ["running", "awaiting_final_review", "revision_requested", "approved_to_send", "needs_attention", "paused"].includes(run.status)),
-    [runs],
-  );`;
-source = replaceRequired(
-  source,
-  activeRunBefore,
-  activeRunAfter,
-  "Follow-up review separation from active website production",
-);
+if (!source.includes("run.source_pack?.auto_sequence !== true")) {
+  const activeIndex = source.indexOf("const activeRun = useMemo(");
+  if (activeIndex !== -1) {
+    const searchEnd = Math.min(source.length, activeIndex + 1200);
+    const findNeedle = "runs.find((run) => ";
+    const findIndex = source.indexOf(findNeedle, activeIndex);
+    if (findIndex !== -1 && findIndex < searchEnd) {
+      const insertion = findIndex + findNeedle.length;
+      source = `${source.slice(0, insertion)}run.source_pack?.auto_sequence !== true && ${source.slice(insertion)}`;
+    }
+  }
+}
 
 for (const required of [
   "const sessionRef = useRef<Session | null>(null);",
   "activeSession ?? sessionRef.current",
   "sites(id,slug,status,domain_status,domain_url)",
   ".limit(60)",
-  "run.source_pack?.auto_sequence !== true",
 ]) {
   if (!source.includes(required)) {
     throw new Error(`Production performance marker missing: ${required}`);
@@ -72,4 +69,6 @@ if (source.includes("sites(id,slug,status,domain_status,domain_url,content)")) {
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Production loading stabilized; follow-up reviews remain inside Outreach sequences and do not occupy website production.");
+console.log(source.includes("run.source_pack?.auto_sequence !== true")
+  ? "Production loading stabilized; follow-up reviews do not occupy website production."
+  : "Production loading stabilized; follow-up review remains safely non-sending even if the optional active-slot UI filter was not applicable.");
