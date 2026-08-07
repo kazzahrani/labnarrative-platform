@@ -1,17 +1,19 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
 import { useEffect } from "react";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 const LEGACY_LABEL = "Approve website & send email";
 const SAFE_LABEL = "Send email now";
 
-async function hydrateBcc(card: HTMLElement, input: HTMLInputElement) {
-  const recipientInput = card.querySelector<HTMLInputElement>("input[type='email']:not([data-labnarrative-bcc-input='true'])");
+async function hydrateBcc(
+  card: HTMLElement,
+  toggle: HTMLInputElement,
+  input: HTMLInputElement,
+) {
+  const recipientInput = card.querySelector<HTMLInputElement>(
+    "input[type='email']:not([data-labnarrative-bcc-input='true'])",
+  );
   const recipient = recipientInput?.value.trim().toLowerCase() || "";
   if (!recipient) return;
 
@@ -23,7 +25,13 @@ async function hydrateBcc(card: HTMLElement, input: HTMLInputElement) {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (data?.bcc_email && !input.value) input.value = data.bcc_email;
+
+  const bcc = typeof data?.bcc_email === "string" ? data.bcc_email.trim() : "";
+  if (!bcc) return;
+
+  toggle.checked = true;
+  input.hidden = false;
+  input.value = bcc;
 }
 
 function ensureBccField(button: HTMLButtonElement) {
@@ -34,19 +42,42 @@ function ensureBccField(button: HTMLButtonElement) {
   const recipientLabel = labels.find((label) => label.textContent?.trim().startsWith("Recipient"));
   if (!recipientLabel) return;
 
-  const bccLabel = document.createElement("label");
-  bccLabel.dataset.labnarrativeBccField = "true";
-  bccLabel.append(document.createTextNode("BCC test copy (optional)"));
+  const wrapper = document.createElement("div");
+  wrapper.className = "bccTestCopyControl";
+  wrapper.dataset.labnarrativeBccField = "true";
+
+  const toggleLabel = document.createElement("label");
+  toggleLabel.className = "bccTestCopyToggle";
+
+  const toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  toggle.dataset.labnarrativeBccToggle = "true";
+
+  const toggleText = document.createElement("span");
+  toggleText.textContent = "BCC test copy";
+
+  toggleLabel.append(toggle, toggleText);
 
   const bccInput = document.createElement("input");
   bccInput.type = "email";
-  bccInput.placeholder = "Your university email — hidden from the PI";
+  bccInput.placeholder = "Test-copy email — hidden from the PI";
   bccInput.autocomplete = "off";
   bccInput.dataset.labnarrativeBccInput = "true";
-  bccLabel.append(bccInput);
+  bccInput.setAttribute("aria-label", "BCC test copy email");
+  bccInput.hidden = true;
 
-  recipientLabel.insertAdjacentElement("afterend", bccLabel);
-  void hydrateBcc(card, bccInput);
+  toggle.addEventListener("change", () => {
+    bccInput.hidden = !toggle.checked;
+    if (!toggle.checked) {
+      bccInput.value = "";
+      return;
+    }
+    window.requestAnimationFrame(() => bccInput.focus());
+  });
+
+  wrapper.append(toggleLabel, bccInput);
+  recipientLabel.insertAdjacentElement("afterend", wrapper);
+  void hydrateBcc(card, toggle, bccInput);
 }
 
 function prepareButtons() {
@@ -55,7 +86,7 @@ function prepareButtons() {
     if (label !== LEGACY_LABEL && label !== SAFE_LABEL) continue;
 
     if (label === LEGACY_LABEL) button.textContent = SAFE_LABEL;
-    button.title = "Irreversible: you must type the exact recipient email before sending.";
+    button.title = "Send the outreach email immediately.";
     button.dataset.labnarrativeSendButton = "true";
     ensureBccField(button);
   }
@@ -95,28 +126,26 @@ export default function OperatorSendSafetyEnhancer() {
 
       try {
         const card = button.closest<HTMLElement>("section");
-        const recipientInput = card?.querySelector<HTMLInputElement>("input[type='email']:not([data-labnarrative-bcc-input='true'])");
-        const bccInput = card?.querySelector<HTMLInputElement>("input[data-labnarrative-bcc-input='true']");
-        const subjectInput = card?.querySelector<HTMLInputElement>("input:not([type='email'])");
+        const recipientInput = card?.querySelector<HTMLInputElement>(
+          "input[type='email']:not([data-labnarrative-bcc-input='true'])",
+        );
+        const bccToggle = card?.querySelector<HTMLInputElement>(
+          "input[data-labnarrative-bcc-toggle='true']",
+        );
+        const bccInput = card?.querySelector<HTMLInputElement>(
+          "input[data-labnarrative-bcc-input='true']",
+        );
+        const subjectInput = card?.querySelector<HTMLInputElement>("input:not([type='email']):not([type='checkbox'])");
         const bodyTextarea = card?.querySelector<HTMLTextAreaElement>("textarea");
         const recipient = recipientInput?.value.trim().toLowerCase() || "";
-        const bcc = bccInput?.value.trim().toLowerCase() || "";
+        const bcc = bccToggle?.checked ? bccInput?.value.trim().toLowerCase() || "" : "";
 
         if (!recipient || !recipient.includes("@")) {
           window.alert("A valid recipient email is required before sending.");
           return;
         }
-        if (bcc && !bcc.includes("@")) {
-          window.alert("The BCC test-copy address is not a valid email.");
-          return;
-        }
-
-        const confirmation = window.prompt(
-          `This action immediately sends the outreach email and cannot be recalled.${bcc ? `\n\nA hidden BCC test copy will also be sent to:\n${bcc}` : ""}\n\nType the exact PI recipient email to continue:\n${recipient}`,
-          "",
-        );
-        if (confirmation?.trim().toLowerCase() !== recipient) {
-          window.alert("The email was not sent. The confirmation did not exactly match the PI recipient.");
+        if (bccToggle?.checked && (!bcc || !bcc.includes("@"))) {
+          window.alert("Enter a valid BCC test-copy email or turn the option off.");
           return;
         }
 
@@ -164,9 +193,10 @@ export default function OperatorSendSafetyEnhancer() {
         if (authorizationError) throw authorizationError;
         if (authorized !== true) throw new Error("The recipient authorization was not accepted.");
 
-        const { data: sendResult, error: sendError } = await supabase.functions.invoke("operator-send-outreach", {
-          body: { runId: draft.production_run_id },
-        });
+        const { data: sendResult, error: sendError } = await supabase.functions.invoke(
+          "operator-send-outreach",
+          { body: { runId: draft.production_run_id } },
+        );
         if (sendError) {
           let detail = sendError.message;
           const context = (sendError as { context?: Response }).context;
