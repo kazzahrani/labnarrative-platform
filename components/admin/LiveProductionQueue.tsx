@@ -25,6 +25,9 @@ type Run = {
   retry_count: number;
   recovery_status: string | null;
   recovery_next_attempt_at: string | null;
+  portrait_recovery_attempts: number;
+  portrait_recovery_status: string | null;
+  portrait_recovery_next_attempt_at: string | null;
   last_heartbeat_at: string | null;
   updated_at: string;
   error_message: string | null;
@@ -58,11 +61,20 @@ function pretty(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function retryAt(run: Run) {
+  return run.current_step === "portrait" ? run.portrait_recovery_next_attempt_at : run.recovery_next_attempt_at;
+}
+
+function recoveryAttempts(run: Run) {
+  return run.current_step === "portrait" ? run.portrait_recovery_attempts || 0 : run.retry_count || 0;
+}
+
 function operationalState(run: Run) {
   if (run.status === "running") return { key: "running", label: "Running" };
   if (run.status === "awaiting_final_review" || run.status === "approved_to_send") return { key: "ready", label: "Awaiting Final Review" };
   if (run.recovery_status === "waiting_manual_fix" || run.status === "paused") return { key: "manual", label: "Waiting Manual Fix" };
-  if (run.recovery_next_attempt_at && new Date(run.recovery_next_attempt_at).getTime() > Date.now()) return { key: "waiting", label: "Waiting Retry" };
+  const next = retryAt(run);
+  if (next && new Date(next).getTime() > Date.now()) return { key: "waiting", label: "Waiting Retry" };
   if (run.status === "needs_attention") return { key: "recovering", label: "Recovering" };
   return { key: "waiting", label: pretty(run.status) };
 }
@@ -126,7 +138,7 @@ export default function LiveProductionQueue() {
   const load = useCallback(async () => {
     const { data: runData, error: runError } = await supabase
       .from("production_runs")
-      .select("id,prospect_id,status,current_step,retry_count,recovery_status,recovery_next_attempt_at,last_heartbeat_at,updated_at,error_message,site_id,prospects(pi_name,institution,status),sites(slug,domain_url)")
+      .select("id,prospect_id,status,current_step,retry_count,recovery_status,recovery_next_attempt_at,portrait_recovery_attempts,portrait_recovery_status,portrait_recovery_next_attempt_at,last_heartbeat_at,updated_at,error_message,site_id,prospects(pi_name,institution,status),sites(slug,domain_url)")
       .in("status", ["running", "needs_attention", "paused"])
       .order("updated_at", { ascending: false });
 
@@ -209,6 +221,7 @@ export default function LiveProductionQueue() {
           const latestActivity = latestEvent?.created_at || run.last_heartbeat_at || run.updated_at;
           const siteUrl = run.sites?.domain_url || (run.sites?.slug ? `https://${run.sites.slug}.labnarrative.com` : "");
           const currentAction = latestEvent?.message || run.error_message || `${pretty(run.current_step)} in progress.`;
+          const nextRetry = retryAt(run);
 
           return (
             <article className={styles.run} key={run.id}>
@@ -235,12 +248,12 @@ export default function LiveProductionQueue() {
 
               <div className={styles.details}>
                 <div><span>Current</span><strong>{currentAction}</strong></div>
-                <div><span>Recovery attempt</span><strong>{run.retry_count || 0}</strong></div>
+                <div><span>Recovery attempt</span><strong>{recoveryAttempts(run)}</strong></div>
                 <div><span>Last activity</span><strong>{relativeTime(latestActivity, now)}</strong></div>
               </div>
 
-              {state.key === "waiting" && run.recovery_next_attempt_at ? (
-                <p className={styles.retry}>Next automatic retry: {new Date(run.recovery_next_attempt_at).toLocaleTimeString("en-GB", { timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit" })}</p>
+              {state.key === "waiting" && nextRetry ? (
+                <p className={styles.retry}>Next automatic retry: {new Date(nextRetry).toLocaleTimeString("en-GB", { timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit" })}</p>
               ) : null}
 
               <div className={styles.actions}>
