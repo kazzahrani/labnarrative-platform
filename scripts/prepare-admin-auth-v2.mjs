@@ -8,6 +8,12 @@ const thresholdToken = "__LABNARRATIVE_DISCOVERY_THRESHOLD__";
 const markerStart = "/* DISCOVERY_PATCH_COMPAT_START";
 const markerEnd = "DISCOVERY_PATCH_COMPAT_END */";
 
+const currentAutomation = fs.readFileSync(automationPath, "utf8");
+if (currentAutomation.includes("Engine v2 · evidence first")) {
+  console.log("Engine v2 automation page detected; legacy admin-auth and production scoring transforms skipped.");
+  process.exit(0);
+}
+
 function replaceRequired(source, oldText, newText, label) {
   if (source.includes(newText)) return source;
   if (!source.includes(oldText)) {
