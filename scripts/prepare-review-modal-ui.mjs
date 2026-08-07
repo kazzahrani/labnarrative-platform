@@ -57,6 +57,28 @@ if (!source.includes('event.key === "Escape" && setReviewModalRunId(null)')) {
   );
 }
 
+if (!source.includes('"labnarrative:review-outreach"')) {
+  const effectInsertionMarker = "  async function requestOtp(event: FormEvent) {";
+  const outreachReviewEffect = `  useEffect(() => {
+    const openOutreachReview = (event: Event) => {
+      const detail = (event as CustomEvent<{ runId?: string }>).detail;
+      const runId = detail?.runId || "";
+      if (!runId) return;
+      if (reviewRuns.some((run) => run.id === runId)) setReviewModalRunId(runId);
+    };
+    window.addEventListener("labnarrative:review-outreach", openOutreachReview as EventListener);
+    return () => window.removeEventListener("labnarrative:review-outreach", openOutreachReview as EventListener);
+  }, [reviewRuns]);
+
+`;
+  source = replaceRequired(
+    source,
+    effectInsertionMarker,
+    outreachReviewEffect + effectInsertionMarker,
+    "Outreach review popup bridge",
+  );
+}
+
 const oldStatusCell = '                  <td><span className={styles.status} data-status={prospect.status}>{statusText(prospect.status)}</span></td>';
 const newStatusCell = `                  <td>
                     <div className="productionStatusCell">
@@ -67,7 +89,7 @@ const newStatusCell = `                  <td>
                           type="button"
                           aria-label={\`Review \${prospect.pi_name}\`}
                           onClick={() => {
-                            const reviewRun = reviewRuns.find((run) => run.prospect_id === prospect.id);
+                            const reviewRun = reviewRuns.find((run) => run.prospect_id === prospect.id && run.source_pack?.auto_sequence !== true);
                             if (reviewRun) setReviewModalRunId(reviewRun.id);
                           }}
                         >
@@ -97,6 +119,14 @@ if (!source.includes("reviewModalBackdrop")) {
     reviewStartToken,
     "            {reviewRuns.filter((run) => run.id === reviewModalRunId).map((run) => {",
   );
+  reviewBlock = reviewBlock.replace(
+    '<div className={styles.cardHeader}><div><p className={styles.kicker}>Your single approval gate</p><h2>{run.prospects?.pi_name}</h2>',
+    '<div className={styles.cardHeader}><div><p className={styles.kicker}>{run.source_pack?.auto_sequence === true ? "Follow-up message · Ready to review" : "Your single approval gate"}</p><h2>{run.prospects?.pi_name}</h2>',
+  );
+  reviewBlock = reviewBlock.replace(
+    '<span className={styles.status} data-status={run.status}>{statusText(run.status)}</span>',
+    '<span className={styles.status} data-status={run.status}>{run.source_pack?.auto_sequence === true ? "Ready to review" : statusText(run.status)}</span>',
+  );
 
   const cardStart = '                <section className={`${styles.card} ${styles.reviewCard}`} key={run.id}>';
   if (!reviewBlock.includes(cardStart)) {
@@ -117,7 +147,7 @@ if (!source.includes("reviewModalBackdrop")) {
                     className="reviewModalShell"
                     role="dialog"
                     aria-modal="true"
-                    aria-label={\`Awaiting final review · \${run.prospects?.pi_name || "PI"}\`}
+                    aria-label={\`Email review · \${run.prospects?.pi_name || "PI"}\`}
                   >
                     <button
                       className="reviewModalClose"
@@ -148,6 +178,7 @@ for (const required of [
   "reviewModalShell",
   "reviewModalClose",
   'reviewRuns.filter((run) => run.id === reviewModalRunId)',
+  '"labnarrative:review-outreach"',
 ]) {
   if (!source.includes(required)) {
     throw new Error(`Review modal marker missing: ${required}`);
@@ -159,4 +190,4 @@ if (source.includes("            {reviewRuns.map((run) => {")) {
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Awaiting-final-review cards hidden from page flow and opened from table review buttons.");
+console.log("Review cards open as popups from website approval or Outreach sequences follow-up review.");
