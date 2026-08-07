@@ -196,6 +196,30 @@ export default function LiveProductionQueue() {
     return map;
   }, [events]);
 
+  const sortedRuns = useMemo(() => {
+    const activityTime = (run: Run) => {
+      const latestEvent = latestEventByRun.get(run.id);
+      const value = latestEvent?.created_at || run.last_heartbeat_at || run.updated_at;
+      const timestamp = value ? new Date(value).getTime() : 0;
+      return Number.isFinite(timestamp) ? timestamp : 0;
+    };
+
+    const progression = (run: Run) => {
+      const latestEvent = latestEventByRun.get(run.id);
+      return stageIndex(latestEvent?.step || run.current_step || "research");
+    };
+
+    return [...runs].sort((left, right) => {
+      const recentActivityDifference = activityTime(right) - activityTime(left);
+      if (recentActivityDifference !== 0) return recentActivityDifference;
+
+      const progressionDifference = progression(right) - progression(left);
+      if (progressionDifference !== 0) return progressionDifference;
+
+      return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+    });
+  }, [latestEventByRun, runs]);
+
   if (!mountNode) return null;
 
   return createPortal(
@@ -211,10 +235,10 @@ export default function LiveProductionQueue() {
 
       {loading ? <p className={styles.empty}>Loading live worker activity…</p> : null}
       {error ? <p className={styles.error}>{error}</p> : null}
-      {!loading && !error && runs.length === 0 ? <p className={styles.empty}>No PI is currently in production or automated recovery.</p> : null}
+      {!loading && !error && sortedRuns.length === 0 ? <p className={styles.empty}>No PI is currently in production or automated recovery.</p> : null}
 
       <div className={styles.list}>
-        {runs.map((run) => {
+        {sortedRuns.map((run) => {
           const latestEvent = latestEventByRun.get(run.id);
           const state = operationalState(run);
           const currentIndex = stageIndex(latestEvent?.step || run.current_step || "research");
