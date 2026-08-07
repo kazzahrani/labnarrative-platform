@@ -33,6 +33,7 @@ type SiteSequence = {
 };
 
 const STOP_DELIVERY = new Set(["bounced", "complained", "failed", "suppressed"]);
+const PENDING_REVIEW = new Set(["draft", "approved", "sending"]);
 const HEADER_ATTR = "data-labnarrative-outreach-sequence-header";
 const CELL_ATTR = "data-labnarrative-outreach-sequence-cell";
 
@@ -82,6 +83,14 @@ function derive(sequence: SiteSequence): { primary: string; secondary: string; t
       secondary: "No further email",
       tone: "#e58b75",
     };
+  }
+
+  if (sequence.follow2 && PENDING_REVIEW.has(sequence.follow2.status)) {
+    return { primary: "✓ E1 · ✓ F1 · ◐ F2", secondary: "F2 awaiting confirmation", tone: "#e0b568" };
+  }
+
+  if (sequence.follow1 && PENDING_REVIEW.has(sequence.follow1.status)) {
+    return { primary: "✓ E1 · ◐ F1 · ○ F2", secondary: "F1 awaiting confirmation", tone: "#e0b568" };
   }
 
   if (sequence.follow2?.status === "sent") {
