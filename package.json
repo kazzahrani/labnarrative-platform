@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run verify:templates",
+    "prebuild": "node scripts/prepare-figure-resolver.mjs && npm run verify:templates",
     "build": "next build",
     "start": "next start",
     "verify:figures": "node scripts/verify-research-figures.mjs",
