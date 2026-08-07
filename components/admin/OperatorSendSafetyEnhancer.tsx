@@ -10,16 +10,54 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const LEGACY_LABEL = "Approve website & send email";
 const SAFE_LABEL = "Send email now";
 
+async function hydrateBcc(card: HTMLElement, input: HTMLInputElement) {
+  const recipientInput = card.querySelector<HTMLInputElement>("input[type='email']:not([data-labnarrative-bcc-input='true'])");
+  const recipient = recipientInput?.value.trim().toLowerCase() || "";
+  if (!recipient) return;
+
+  const { data } = await supabase
+    .from("outreach_messages")
+    .select("bcc_email")
+    .eq("recipient_email", recipient)
+    .eq("status", "draft")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (data?.bcc_email && !input.value) input.value = data.bcc_email;
+}
+
+function ensureBccField(button: HTMLButtonElement) {
+  const card = button.closest<HTMLElement>("section");
+  if (!card || card.querySelector("[data-labnarrative-bcc-field='true']")) return;
+
+  const labels = Array.from(card.querySelectorAll<HTMLLabelElement>("label"));
+  const recipientLabel = labels.find((label) => label.textContent?.trim().startsWith("Recipient"));
+  if (!recipientLabel) return;
+
+  const bccLabel = document.createElement("label");
+  bccLabel.dataset.labnarrativeBccField = "true";
+  bccLabel.append(document.createTextNode("BCC test copy (optional)"));
+
+  const bccInput = document.createElement("input");
+  bccInput.type = "email";
+  bccInput.placeholder = "Your university email — hidden from the PI";
+  bccInput.autocomplete = "off";
+  bccInput.dataset.labnarrativeBccInput = "true";
+  bccLabel.append(bccInput);
+
+  recipientLabel.insertAdjacentElement("afterend", bccLabel);
+  void hydrateBcc(card, bccInput);
+}
+
 function prepareButtons() {
   for (const button of document.querySelectorAll<HTMLButtonElement>("button")) {
     const label = button.textContent?.trim();
     if (label !== LEGACY_LABEL && label !== SAFE_LABEL) continue;
 
     if (label === LEGACY_LABEL) button.textContent = SAFE_LABEL;
-    if (button.dataset.labnarrativeSendButton === "true") continue;
-
     button.title = "Irreversible: you must type the exact recipient email before sending.";
     button.dataset.labnarrativeSendButton = "true";
+    ensureBccField(button);
   }
 }
 
@@ -39,14 +77,7 @@ export default function OperatorSendSafetyEnhancer() {
     prepareButtons();
 
     const root = document.querySelector("main") ?? document.body;
-    const observer = new MutationObserver((mutations) => {
-      const buttonAdded = mutations.some((mutation) =>
-        Array.from(mutation.addedNodes).some((node) =>
-          node instanceof Element && (node.matches("button") || Boolean(node.querySelector("button"))),
-        ),
-      );
-      if (buttonAdded) schedulePreparation();
-    });
+    const observer = new MutationObserver(() => schedulePreparation());
     observer.observe(root, { childList: true, subtree: true });
 
     const interceptSend = async (event: MouseEvent) => {
@@ -54,11 +85,6 @@ export default function OperatorSendSafetyEnhancer() {
       if (!(target instanceof Element)) return;
       const button = target.closest<HTMLButtonElement>("button[data-labnarrative-send-button='true']");
       if (!button) return;
-
-      if (button.dataset.labnarrativeSendBypass === "true") {
-        delete button.dataset.labnarrativeSendBypass;
-        return;
-      }
 
       event.preventDefault();
       event.stopPropagation();
@@ -68,23 +94,29 @@ export default function OperatorSendSafetyEnhancer() {
       button.dataset.labnarrativeSendProcessing = "true";
 
       try {
-        const card = button.closest("section");
-        const recipientInput = card?.querySelector<HTMLInputElement>("input[type='email']");
+        const card = button.closest<HTMLElement>("section");
+        const recipientInput = card?.querySelector<HTMLInputElement>("input[type='email']:not([data-labnarrative-bcc-input='true'])");
+        const bccInput = card?.querySelector<HTMLInputElement>("input[data-labnarrative-bcc-input='true']");
         const subjectInput = card?.querySelector<HTMLInputElement>("input:not([type='email'])");
         const bodyTextarea = card?.querySelector<HTMLTextAreaElement>("textarea");
         const recipient = recipientInput?.value.trim().toLowerCase() || "";
+        const bcc = bccInput?.value.trim().toLowerCase() || "";
 
         if (!recipient || !recipient.includes("@")) {
           window.alert("A valid recipient email is required before sending.");
           return;
         }
+        if (bcc && !bcc.includes("@")) {
+          window.alert("The BCC test-copy address is not a valid email.");
+          return;
+        }
 
         const confirmation = window.prompt(
-          `This action immediately sends the outreach email and cannot be recalled.\n\nType the exact recipient email to continue:\n${recipient}`,
+          `This action immediately sends the outreach email and cannot be recalled.${bcc ? `\n\nA hidden BCC test copy will also be sent to:\n${bcc}` : ""}\n\nType the exact PI recipient email to continue:\n${recipient}`,
           "",
         );
         if (confirmation?.trim().toLowerCase() !== recipient) {
-          window.alert("The email was not sent. The confirmation did not exactly match the recipient.");
+          window.alert("The email was not sent. The confirmation did not exactly match the PI recipient.");
           return;
         }
 
@@ -110,7 +142,10 @@ export default function OperatorSendSafetyEnhancer() {
         const draft = drafts.find((item) => activeRunIds.has(item.production_run_id));
         if (!draft) throw new Error("This concept is no longer awaiting final review.");
 
-        const draftPatch: Record<string, string> = { recipient_email: recipient };
+        const draftPatch: Record<string, string> = {
+          recipient_email: recipient,
+          bcc_email: bcc,
+        };
         if (subjectInput?.value.trim()) draftPatch.subject = subjectInput.value.trim();
         if (bodyTextarea?.value) {
           draftPatch.body_text = bodyTextarea.value;
@@ -129,8 +164,24 @@ export default function OperatorSendSafetyEnhancer() {
         if (authorizationError) throw authorizationError;
         if (authorized !== true) throw new Error("The recipient authorization was not accepted.");
 
-        button.dataset.labnarrativeSendBypass = "true";
-        button.click();
+        const { data: sendResult, error: sendError } = await supabase.functions.invoke("operator-send-outreach", {
+          body: { runId: draft.production_run_id },
+        });
+        if (sendError) {
+          let detail = sendError.message;
+          const context = (sendError as { context?: Response }).context;
+          if (context) {
+            const parsed = await context.clone().json().catch(() => ({})) as { error?: string };
+            detail = parsed.error || detail;
+          }
+          throw new Error(detail);
+        }
+        if (sendResult?.error) throw new Error(sendResult.error);
+
+        button.disabled = true;
+        button.textContent = "Sent";
+        window.alert(bcc ? `Email sent. A hidden test copy was BCC'd to ${bcc}.` : "Email sent successfully.");
+        window.setTimeout(() => window.location.reload(), 500);
       } catch (error) {
         window.alert(error instanceof Error ? error.message : "The email could not be authorized for sending.");
       } finally {
