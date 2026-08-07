@@ -5,6 +5,7 @@ import AutomationNavEnhancer from "@/components/admin/AutomationNavEnhancer";
 import LiveProductionQueue from "@/components/admin/LiveProductionQueue";
 import OperatorSendSafetyEnhancer from "@/components/admin/OperatorSendSafetyEnhancer";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
+import OutreachSequencePanel from "@/components/admin/OutreachSequencePanel";
 import PipelineEventColorEnhancer from "@/components/admin/PipelineEventColorEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
         <LiveProductionQueue />
+        <OutreachSequencePanel />
         <OperatorSendSafetyEnhancer />
         {children}
       </body>
