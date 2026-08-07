@@ -8,6 +8,7 @@ type Prospect = { pi_name?: string; institution?: string; status?: string };
 type Message = {
   id: string;
   prospect_id: string;
+  production_run_id: string;
   message_kind: string;
   status: string;
   sent_at: string | null;
@@ -36,6 +37,12 @@ const button: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,.12)", borderRadius: 9, padding: "7px 10px", background: "rgba(255,255,255,.04)",
   color: "inherit", font: "inherit", fontSize: ".72rem", fontWeight: 750, cursor: "pointer",
 };
+const reviewButton: React.CSSProperties = {
+  ...button,
+  border: "1px solid rgba(224,181,104,.38)",
+  background: "rgba(224,181,104,.12)",
+  color: "#e0b568",
+};
 
 function fmt(value: string | null | undefined) {
   if (!value) return "—";
@@ -50,8 +57,8 @@ function derive(sequence: Sequence) {
   if (prospectStatus === "interested") return { label: "Interested · stopped", tone: "#52c794", next: "No further email" };
   const latestSent = [follow2, follow1, initial].find((m) => m?.status === "sent");
   if (latestSent?.delivery_status && blocked.has(latestSent.delivery_status)) return { label: `Stopped · ${latestSent.delivery_status}`, tone: "#e58b75", next: "No further email" };
-  if (follow2 && pendingReview.has(follow2.status)) return { label: "Follow-up 2 awaiting confirmation", tone: "#e0b568", next: "Review before sending" };
-  if (follow1 && pendingReview.has(follow1.status)) return { label: "Follow-up 1 awaiting confirmation", tone: "#e0b568", next: "Review before sending" };
+  if (follow2 && pendingReview.has(follow2.status)) return { label: "Follow-up 2 · Ready to review", tone: "#e0b568", next: "Review the draft before sending" };
+  if (follow1 && pendingReview.has(follow1.status)) return { label: "Follow-up 1 · Ready to review", tone: "#e0b568", next: "Review the draft before sending" };
   if (follow2?.status === "sent") return { label: "Complete", tone: "#8ba4b8", next: "Sequence finished" };
   if (follow1?.status === "sent" && !follow1.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email" };
   if (follow1?.status === "sent") return { label: "Follow-up 1 sent", tone: "#76b7d8", next: `Follow-up 2 · ${fmt(follow1.follow_up_at)}` };
@@ -64,6 +71,12 @@ function stepMark(message: Message | undefined) {
   if (message?.status === "sent") return "✓";
   if (message && pendingReview.has(message.status)) return "◐";
   return "○";
+}
+
+function pendingMessage(sequence: Sequence): Message | undefined {
+  if (sequence.follow2 && pendingReview.has(sequence.follow2.status)) return sequence.follow2;
+  if (sequence.follow1 && pendingReview.has(sequence.follow1.status)) return sequence.follow1;
+  return undefined;
 }
 
 export default function OutreachSequencePanel() {
@@ -101,7 +114,7 @@ export default function OutreachSequencePanel() {
   const load = useCallback(async () => {
     const { data, error: loadError } = await supabase
       .from("outreach_messages")
-      .select("id,prospect_id,message_kind,status,sent_at,follow_up_at,delivery_status,error_message,prospects(pi_name,institution,status)")
+      .select("id,prospect_id,production_run_id,message_kind,status,sent_at,follow_up_at,delivery_status,error_message,prospects(pi_name,institution,status)")
       .eq("is_test", false)
       .in("message_kind", ["initial", "followup_1", "followup_2"])
       .order("created_at", { ascending: false })
@@ -141,7 +154,7 @@ export default function OutreachSequencePanel() {
 
   const activeCount = sequences.filter((s) => {
     const state = derive(s);
-    return ["Email 1 sent", "Follow-up 1 sent", "Follow-up 1 awaiting confirmation", "Follow-up 2 awaiting confirmation"].includes(state.label);
+    return state.label === "Email 1 sent" || state.label === "Follow-up 1 sent" || state.label.includes("Ready to review");
   }).length;
   const visible = showAll ? sequences : sequences.slice(0, 8);
 
@@ -163,11 +176,17 @@ export default function OutreachSequencePanel() {
     await load(); setWorking("");
   }
 
+  function openReview(message: Message) {
+    window.dispatchEvent(new CustomEvent("labnarrative:review-outreach", {
+      detail: { runId: message.production_run_id, messageId: message.id },
+    }));
+  }
+
   if (!mount) return null;
   return createPortal(
     <section style={{ ...card, marginTop: 14 }} aria-label="Outreach sequences">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
-        <div><p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p><h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Three-message follow-up</h2><p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>{activeCount} active sequence{activeCount === 1 ? "" : "s"} · due dates prepare drafts; every follow-up requires confirmation</p></div>
+        <div><p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p><h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Three-message follow-up</h2><p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>{activeCount} active sequence{activeCount === 1 ? "" : "s"} · due dates prepare drafts; nothing sends without your review</p></div>
         <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(82,199,148,.12)", color: "#52c794", fontSize: ".68rem", fontWeight: 800 }}>LIVE</span>
       </div>
       {loading ? <p style={{ opacity: .65 }}>Loading outreach sequences…</p> : null}
@@ -176,7 +195,7 @@ export default function OutreachSequencePanel() {
         {visible.map((sequence) => {
           const state = derive(sequence);
           const schedulable = state.label === "Email 1 sent" || state.label === "Follow-up 1 sent";
-          const awaitingReview = state.label.includes("awaiting confirmation");
+          const review = pendingMessage(sequence);
           return <div key={sequence.prospectId} style={{ border: "1px solid rgba(255,255,255,.07)", borderRadius: 11, padding: "10px 11px", background: "rgba(255,255,255,.025)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
               <div style={{ minWidth: 0 }}><strong style={{ display: "block", fontSize: ".82rem" }}>{sequence.piName}</strong><small style={{ opacity: .58, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 360 }}>{sequence.institution}</small></div>
@@ -190,7 +209,7 @@ export default function OutreachSequencePanel() {
             <div style={{ marginTop: 7, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <small style={{ opacity: .65 }}>{state.next}</small>
               {schedulable ? <div style={{ display: "flex", gap: 6 }}><button disabled={working === sequence.prospectId} onClick={() => void prepareNext(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Prepare next now</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
-              {awaitingReview ? <button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button> : null}
+              {review ? <div style={{ display: "flex", gap: 6 }}><button type="button" onClick={() => openReview(review)} style={reviewButton}>Review message</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
             </div>
           </div>;
         })}
