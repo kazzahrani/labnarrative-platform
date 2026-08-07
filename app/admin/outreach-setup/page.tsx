@@ -110,7 +110,24 @@ export default function OutreachSetupPage() {
       const { data, error: invokeError } = await supabase.functions.invoke("resend-connect", {
         body: { apiKey: key },
       });
-      if (invokeError) throw new Error(invokeError.message);
+
+      if (invokeError) {
+        let detail = invokeError.message;
+        const context = (invokeError as { context?: unknown }).context;
+        if (
+          context &&
+          typeof context === "object" &&
+          "json" in context &&
+          typeof (context as { json?: unknown }).json === "function"
+        ) {
+          const parsed = await (context as { json: () => Promise<ConnectResult> })
+            .json()
+            .catch(() => ({} as ConnectResult));
+          detail = parsed.error || parsed.message || detail;
+        }
+        throw new Error(detail);
+      }
+
       const result = (data ?? {}) as ConnectResult;
       if (result.error) throw new Error(result.error);
       setApiKey("");
