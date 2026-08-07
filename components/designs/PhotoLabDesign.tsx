@@ -113,7 +113,7 @@ function Footer({ site, basePath }: { site: LabSite; basePath: string }) {
 function PageHero({ image, label, title, text }: { image?: string; label: string; title: string; text?: string }) {
   return (
     <section className={styles.pageHero}>
-      <Picture src={image} alt={title} fallback="LAB" />
+      {image && <Picture src={image} alt={title} fallback="" />}
       <div className={styles.pageHeroShade} />
       <div className={styles.pageHeroCopy}>
         <p>{label}</p>
@@ -144,7 +144,7 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
   return (
     <>
       <section className={styles.homeHero}>
-        <Picture src={heroImage} alt={`${site.labName} research`} fallback="PRIVES LAB" />
+        {heroImage && <Picture src={heroImage} alt={`${site.labName} research`} fallback="" />}
         <div className={styles.heroShade} />
         <div className={styles.heroCaption}>
           <p>{pages.home.topicLine}</p>
@@ -179,7 +179,7 @@ function Home({ site, basePath }: { site: LabSite; basePath: string }) {
         <div className={styles.researchGrid}>
           {projects.map((project, index) => (
             <Link className={styles.researchCard} href={`${basePath}/research/${project.slug}`} key={`${project.slug}-${index}`}>
-              <Picture src={project.figureImage || heroImage} alt={project.figureCaption || project.title} fallback={String(index + 1).padStart(2, "0")} />
+              {project.figureImage && <Picture src={project.figureImage} alt={project.figureCaption || project.title} fallback="" />}
               <div className={styles.cardShade} />
               <div className={styles.cardCopy}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
@@ -226,9 +226,14 @@ function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) 
           </header>
 
           {projects.map((project, index) => {
-            const figure = project.figureImage || hero;
+            const figure = project.figureImage;
             return (
-              <article className={`${styles.researchEditorialTopic} ${index % 2 === 1 ? styles.researchEditorialTopicReverse : ""}`} id={project.slug} key={`${project.slug}-${index}`}>
+              <article
+                className={`${styles.researchEditorialTopic} ${index % 2 === 1 ? styles.researchEditorialTopicReverse : ""}`}
+                id={project.slug}
+                key={`${project.slug}-${index}`}
+                style={!figure ? { gridTemplateColumns: "1fr" } : undefined}
+              >
                 <div className={styles.researchEditorialCopy}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <h2>{project.title}</h2>
@@ -237,10 +242,12 @@ function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) 
                     {(project.body || []).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}
                   </div>
                 </div>
-                <figure className={styles.researchEditorialFigure}>
-                  <Picture src={figure} alt={project.figureCaption || project.title} fallback={String(index + 1).padStart(2, "0")} />
-                  {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
-                </figure>
+                {figure && (
+                  <figure className={styles.researchEditorialFigure}>
+                    <Picture src={figure} alt={project.figureCaption || project.title} fallback="" />
+                    {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
+                  </figure>
+                )}
               </article>
             );
           })}
@@ -255,8 +262,12 @@ function ResearchIndex({ site, basePath }: { site: LabSite; basePath: string }) 
       <section className={styles.researchList}>
         {projects.map((project, index) => (
           <Link href={`${basePath}/research/${project.slug}`} key={`${project.slug}-${index}`}>
-            <div className={styles.researchListImage}><Picture src={project.figureImage || hero} alt={project.figureCaption || project.title} fallback={String(index + 1).padStart(2, "0")} /></div>
-            <div className={styles.researchListCopy}>
+            {project.figureImage && (
+              <div className={styles.researchListImage}>
+                <Picture src={project.figureImage} alt={project.figureCaption || project.title} fallback="" />
+              </div>
+            )}
+            <div className={styles.researchListCopy} style={!project.figureImage ? { gridColumn: "1 / -1" } : undefined}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               <h2>{project.title}</h2>
               <p>{project.summary}</p>
@@ -275,15 +286,20 @@ function ProjectDetail({ site, slug, basePath }: { site: LabSite; slug: string; 
   const index = projects.findIndex((project) => project.slug === slug);
   const project = projects[index];
   if (!project) return <ResearchIndex site={site} basePath={basePath} />;
-  const figure = project.figureImage || site.heroImage;
+  const figure = project.figureImage;
   const showExtendedDetails = site.slug !== "prives";
   return (
     <article className={styles.projectPage}>
       <PageHero image={figure} label={`${pages.research.programmeLabel} ${String(index + 1).padStart(2, "0")}`} title={project.title} text={project.summary} />
       <section className={styles.projectQuestion}><p>{pages.research.questionLabel}</p><h2>{project.question || project.title}</h2></section>
-      <section className={styles.projectNarrative}>
+      <section className={styles.projectNarrative} style={!figure ? { gridTemplateColumns: "1fr" } : undefined}>
         <div className={styles.projectBody}>{(project.body || []).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}</div>
-        <figure><Picture src={figure} alt={project.figureCaption || project.title} fallback={String(index + 1).padStart(2, "0")} />{project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}</figure>
+        {figure && (
+          <figure>
+            <Picture src={figure} alt={project.figureCaption || project.title} fallback="" />
+            {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
+          </figure>
+        )}
       </section>
       {showExtendedDetails && !!project.methods?.length && <section className={styles.detailList}><p>Approaches</p><div>{project.methods.map((method) => <span key={method}>{method}</span>)}</div></section>}
       {showExtendedDetails && !!project.papers?.length && <section className={styles.detailList}><p>Selected work</p><div>{project.papers.map((paper) => <span key={paper}>{paper}</span>)}</div></section>}
