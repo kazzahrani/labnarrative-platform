@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import ConceptAnalytics from "@/components/ConceptAnalytics";
 import SiteShell from "@/components/SiteShell";
 import { getSite, resolveSiteRoute } from "@/lib/sites";
 
@@ -18,5 +19,10 @@ export default async function LabSitePage({
     notFound();
   }
 
-  return <SiteShell site={site} route={resolveSiteRoute(path)} />;
+  return (
+    <>
+      <ConceptAnalytics slug={site.slug} />
+      <SiteShell site={site} route={resolveSiteRoute(path)} />
+    </>
+  );
 }
