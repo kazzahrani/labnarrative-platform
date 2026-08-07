@@ -27,6 +27,7 @@ type Sequence = {
 };
 
 const blocked = new Set(["bounced", "complained", "failed", "suppressed"]);
+const pendingReview = new Set(["draft", "approved", "sending"]);
 const card: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,.08)", borderRadius: 16, padding: 20,
   background: "rgba(18,35,48,.78)", color: "inherit", boxShadow: "0 12px 34px rgba(0,0,0,.16)", minWidth: 0,
@@ -49,12 +50,20 @@ function derive(sequence: Sequence) {
   if (prospectStatus === "interested") return { label: "Interested · stopped", tone: "#52c794", next: "No further email" };
   const latestSent = [follow2, follow1, initial].find((m) => m?.status === "sent");
   if (latestSent?.delivery_status && blocked.has(latestSent.delivery_status)) return { label: `Stopped · ${latestSent.delivery_status}`, tone: "#e58b75", next: "No further email" };
+  if (follow2 && pendingReview.has(follow2.status)) return { label: "Follow-up 2 awaiting confirmation", tone: "#e0b568", next: "Review before sending" };
+  if (follow1 && pendingReview.has(follow1.status)) return { label: "Follow-up 1 awaiting confirmation", tone: "#e0b568", next: "Review before sending" };
   if (follow2?.status === "sent") return { label: "Complete", tone: "#8ba4b8", next: "Sequence finished" };
   if (follow1?.status === "sent" && !follow1.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email" };
   if (follow1?.status === "sent") return { label: "Follow-up 1 sent", tone: "#76b7d8", next: `Follow-up 2 · ${fmt(follow1.follow_up_at)}` };
   if (initial?.status === "sent" && !initial.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email" };
   if (initial?.status === "sent") return { label: "Email 1 sent", tone: "#76b7d8", next: `Follow-up 1 · ${fmt(initial.follow_up_at)}` };
   return { label: "Not active", tone: "#8ba4b8", next: "—" };
+}
+
+function stepMark(message: Message | undefined) {
+  if (message?.status === "sent") return "✓";
+  if (message && pendingReview.has(message.status)) return "◐";
+  return "○";
 }
 
 export default function OutreachSequencePanel() {
@@ -131,7 +140,8 @@ export default function OutreachSequencePanel() {
   }, [messages]);
 
   const activeCount = sequences.filter((s) => {
-    const state = derive(s); return state.label === "Email 1 sent" || state.label === "Follow-up 1 sent";
+    const state = derive(s);
+    return ["Email 1 sent", "Follow-up 1 sent", "Follow-up 1 awaiting confirmation", "Follow-up 2 awaiting confirmation"].includes(state.label);
   }).length;
   const visible = showAll ? sequences : sequences.slice(0, 8);
 
@@ -143,13 +153,13 @@ export default function OutreachSequencePanel() {
     setWorking("");
   }
 
-  async function sendNext(prospectId: string) {
-    if (!window.confirm("Send this PI's next scheduled follow-up now?")) return;
+  async function prepareNext(prospectId: string) {
+    if (!window.confirm("Prepare this PI's next follow-up for review now? It will not be sent until you confirm it.")) return;
     setWorking(prospectId); setError("");
     const due = await supabase.rpc("force_outreach_followup_due", { p_prospect_id: prospectId });
     if (due.error) { setError(due.error.message); setWorking(""); return; }
     const result = await supabase.functions.invoke("outreach-sequence-worker", { body: { forceProspectId: prospectId } });
-    if (result.error) setError(result.error.message); else if ((result.data as { failures?: unknown[] } | null)?.failures?.length) setError("The follow-up worker returned a delivery failure.");
+    if (result.error) setError(result.error.message); else if ((result.data as { failures?: unknown[] } | null)?.failures?.length) setError("The follow-up worker could not prepare the review draft.");
     await load(); setWorking("");
   }
 
@@ -157,7 +167,7 @@ export default function OutreachSequencePanel() {
   return createPortal(
     <section style={{ ...card, marginTop: 14 }} aria-label="Outreach sequences">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
-        <div><p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p><h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Three-message follow-up</h2><p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>{activeCount} active sequence{activeCount === 1 ? "" : "s"} · automatic unless stopped by reply/delivery</p></div>
+        <div><p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p><h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Three-message follow-up</h2><p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>{activeCount} active sequence{activeCount === 1 ? "" : "s"} · due dates prepare drafts; every follow-up requires confirmation</p></div>
         <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(82,199,148,.12)", color: "#52c794", fontSize: ".68rem", fontWeight: 800 }}>LIVE</span>
       </div>
       {loading ? <p style={{ opacity: .65 }}>Loading outreach sequences…</p> : null}
@@ -165,7 +175,8 @@ export default function OutreachSequencePanel() {
       <div style={{ display: "grid", gap: 8 }}>
         {visible.map((sequence) => {
           const state = derive(sequence);
-          const active = state.label === "Email 1 sent" || state.label === "Follow-up 1 sent";
+          const schedulable = state.label === "Email 1 sent" || state.label === "Follow-up 1 sent";
+          const awaitingReview = state.label.includes("awaiting confirmation");
           return <div key={sequence.prospectId} style={{ border: "1px solid rgba(255,255,255,.07)", borderRadius: 11, padding: "10px 11px", background: "rgba(255,255,255,.025)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
               <div style={{ minWidth: 0 }}><strong style={{ display: "block", fontSize: ".82rem" }}>{sequence.piName}</strong><small style={{ opacity: .58, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 360 }}>{sequence.institution}</small></div>
@@ -173,12 +184,13 @@ export default function OutreachSequencePanel() {
             </div>
             <div style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 8, flexWrap: "wrap", fontSize: ".7rem" }}>
               <span style={{ opacity: sequence.initial?.status === "sent" ? 1 : .38 }}>✓ Email 1</span><span style={{ opacity: .3 }}>→</span>
-              <span style={{ opacity: sequence.follow1?.status === "sent" ? 1 : .55 }}>{sequence.follow1?.status === "sent" ? "✓" : "○"} Follow-up 1</span><span style={{ opacity: .3 }}>→</span>
-              <span style={{ opacity: sequence.follow2?.status === "sent" ? 1 : .55 }}>{sequence.follow2?.status === "sent" ? "✓" : "○"} Follow-up 2</span>
+              <span style={{ opacity: sequence.follow1 ? 1 : .55 }}>{stepMark(sequence.follow1)} Follow-up 1</span><span style={{ opacity: .3 }}>→</span>
+              <span style={{ opacity: sequence.follow2 ? 1 : .55 }}>{stepMark(sequence.follow2)} Follow-up 2</span>
             </div>
             <div style={{ marginTop: 7, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <small style={{ opacity: .65 }}>{state.next}</small>
-              {active ? <div style={{ display: "flex", gap: 6 }}><button disabled={working === sequence.prospectId} onClick={() => void sendNext(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Send next now</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
+              {schedulable ? <div style={{ display: "flex", gap: 6 }}><button disabled={working === sequence.prospectId} onClick={() => void prepareNext(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Prepare next now</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
+              {awaitingReview ? <button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button> : null}
             </div>
           </div>;
         })}
