@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
+import PhotoLabDesign from "@/components/designs/PhotoLabDesign";
 import type { LabSite, SiteRoute } from "@/lib/sites";
 
 type NaritaOverlapDesignProps = {
@@ -33,6 +34,7 @@ function documentTop(element: HTMLElement) {
 
 export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const useKineticDemoGallery = props.site.slug === "engeland" || props.site.slug === "prives";
 
   useEffect(() => {
     const root = rootRef.current;
@@ -221,7 +223,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
   }, [props.route.projectSlug, props.route.section]);
 
   useEffect(() => {
-    if (props.route.section !== "home") return;
+    if (props.route.section !== "home" || !useKineticDemoGallery) return;
 
     const root = rootRef.current;
     if (!root) return;
@@ -278,14 +280,18 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       observeGallery.disconnect();
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [props.route.section]);
+  }, [props.route.section, useKineticDemoGallery]);
 
   return (
     <div
       className={`narita-overlap-design narita-route-${props.route.section}`}
       ref={rootRef}
     >
-      <KineticPhotoLabDesign {...props} />
+      {useKineticDemoGallery ? (
+        <KineticPhotoLabDesign {...props} />
+      ) : (
+        <PhotoLabDesign {...props} />
+      )}
       <style jsx global>{`
         .narita-overlap-design {
           --narita-header-height: 112px;
