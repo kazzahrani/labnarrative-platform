@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const USER_AGENT = "LabNarrative-NCBI-OA-Figure/1.0 (+https://labnarrative.com)";
+const USER_AGENT = "LabNarrative-NCBI-OA-Figure/1.1 (+https://labnarrative.com)";
 const MAX_ARCHIVE_BYTES = 100 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MIN_IMAGE_BYTES = 4_000;
@@ -67,7 +67,12 @@ async function oaPackageUrl(pmcid: string) {
     const format = tag.match(/\bformat=["']([^"']+)/i)?.[1]?.toLowerCase() || "";
     const href = decodeXml(tag.match(/\bhref=["']([^"']+)/i)?.[1] || "");
     if (format !== "tgz" || !href) continue;
-    const https = href.replace(/^ftp:\/\/ftp\.ncbi\.nlm\.nih\.gov/i, "https://ftp.ncbi.nlm.nih.gov");
+    const https = href
+      .replace(/^ftp:\/\/ftp\.ncbi\.nlm\.nih\.gov/i, "https://ftp.ncbi.nlm.nih.gov")
+      .replace(
+        /^https:\/\/ftp\.ncbi\.nlm\.nih\.gov\/pub\/pmc\/oa_package\//i,
+        "https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/",
+      );
     const url = new URL(https);
     if (url.protocol === "https:" && url.hostname === "ftp.ncbi.nlm.nih.gov") return url;
   }
