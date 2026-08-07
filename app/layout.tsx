@@ -7,6 +7,7 @@ import OperatorSendSafetyEnhancer from "@/components/admin/OperatorSendSafetyEnh
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import OutreachSequencePanel from "@/components/admin/OutreachSequencePanel";
 import PipelineEventColorEnhancer from "@/components/admin/PipelineEventColorEnhancer";
+import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
 import "./platform-overrides.css";
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OutreachMonitorEnhancer />
         <LiveProductionQueue />
         <OutreachSequencePanel />
+        <WebsiteOutreachSequenceEnhancer />
         <OperatorSendSafetyEnhancer />
         {children}
       </body>
