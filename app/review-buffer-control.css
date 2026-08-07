@@ -163,6 +163,36 @@ html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferTarg
   color: #edf2f5;
 }
 
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewBufferReason,
+html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferReason {
+  border-color: #405566;
+  background: #223542;
+  color: #c7d4df;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewBufferState[data-state="paused"],
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewBufferState[data-state="limit-reached"],
+html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferState[data-state="paused"],
+html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferState[data-state="limit-reached"] {
+  border-color: #566b7a;
+  background: #263b49;
+  color: #d9e3eb;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewBufferPause[data-action="pause"],
+html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferPause[data-action="pause"] {
+  border-color: #566b7a;
+  background: #263b49;
+  color: #d9e3eb;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewBufferPause[data-action="resume"],
+html[data-platform-theme="dark"] body.platform-automation-page .reviewBufferPause[data-action="resume"] {
+  border-color: #4f796a;
+  background: #203b33;
+  color: #c4e3d6;
+}
+
 @media (max-width: 760px) {
   body.platform-automation-page .reviewBufferControl {
     grid-template-columns: 1fr;
