@@ -1,35 +1,21 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
 import { FormEvent, useEffect, useState } from "react";
+import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 type IntegrationState = {
   status: string;
   last_error: string;
   inbound_domain: string;
   inbound_status: string;
-  inbound_mx_name: string;
-  inbound_mx_value: string;
-  inbound_mx_priority: number | null;
 };
 
 type ConnectResult = {
   ok?: boolean;
   error?: string;
   message?: string;
-  inbound?: {
-    domain?: string;
-    status?: string;
-    mxName?: string;
-    mxValue?: string;
-    mxPriority?: number;
-  };
+  inbound?: { domain?: string; status?: string };
 };
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
 
 const shell: React.CSSProperties = {
   maxWidth: 860,
@@ -72,7 +58,7 @@ const buttonStyle: React.CSSProperties = {
 
 export default function OutreachSetupPage() {
   const [integration, setIntegration] = useState<IntegrationState | null>(null);
-  const [apiKey, setApiKey] = useState("");
+  const [receivingAddress, setReceivingAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [notice, setNotice] = useState("");
@@ -87,7 +73,7 @@ export default function OutreachSetupPage() {
     }
     const result = await supabase
       .from("resend_integration_state")
-      .select("status,last_error,inbound_domain,inbound_status,inbound_mx_name,inbound_mx_value,inbound_mx_priority")
+      .select("status,last_error,inbound_domain,inbound_status")
       .eq("id", "primary")
       .maybeSingle();
     if (result.error) setError(result.error.message);
@@ -101,37 +87,29 @@ export default function OutreachSetupPage() {
 
   async function connect(event: FormEvent) {
     event.preventDefault();
-    const key = apiKey.trim();
-    if (!key) return;
+    const address = receivingAddress.trim();
+    if (!address) return;
     setConnecting(true);
     setError("");
     setNotice("");
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke("resend-connect", {
-        body: { apiKey: key },
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshed.session) throw new Error("Administrator sign-in is required. Refresh the page and sign in again.");
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/resend-connect`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${refreshed.session.access_token}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ receivingAddress: address }),
       });
+      const result = (await response.json().catch(() => ({}))) as ConnectResult;
+      if (!response.ok || result.error) throw new Error(result.error || result.message || `Setup failed with HTTP ${response.status}.`);
 
-      if (invokeError) {
-        let detail = invokeError.message;
-        const context = (invokeError as { context?: unknown }).context;
-        if (
-          context &&
-          typeof context === "object" &&
-          "json" in context &&
-          typeof (context as { json?: unknown }).json === "function"
-        ) {
-          const parsed = await (context as { json: () => Promise<ConnectResult> })
-            .json()
-            .catch(() => ({} as ConnectResult));
-          detail = parsed.error || parsed.message || detail;
-        }
-        throw new Error(detail);
-      }
-
-      const result = (data ?? {}) as ConnectResult;
-      if (result.error) throw new Error(result.error);
-      setApiKey("");
-      setNotice(result.message || "Resend inbound reply handling is configured.");
+      setNotice(result.message || "Automatic reply detection is connected.");
+      setReceivingAddress("");
       await load();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Resend inbound setup failed.");
@@ -140,11 +118,7 @@ export default function OutreachSetupPage() {
     }
   }
 
-  const domain = integration?.inbound_domain || "reply.labnarrative.com";
-  const mxName = integration?.inbound_mx_name || "";
-  const mxValue = integration?.inbound_mx_value || "";
-  const mxPriority = integration?.inbound_mx_priority ?? 10;
-  const configured = Boolean(mxValue);
+  const connected = integration?.status === "connected" && integration?.inbound_status === "managed_ready" && Boolean(integration?.inbound_domain);
 
   return (
     <main style={shell}>
@@ -153,29 +127,29 @@ export default function OutreachSetupPage() {
       </p>
       <h1 style={{ margin: "8px 0 10px", fontSize: "clamp(30px,4vw,46px)", lineHeight: 1.05 }}>Automatic reply setup</h1>
       <p style={{ margin: "0 0 28px", maxWidth: 720, opacity: .72, lineHeight: 1.65 }}>
-        This one-time setup lets LabNarrative detect PI replies automatically, stop remaining follow-ups, keep the reply in the platform, and forward a copy to your LabNarrative mailbox.
+        LabNarrative will use Resend&apos;s free managed receiving domain for PI replies. This avoids a second custom-domain charge and requires no DNS changes.
       </p>
 
       <section style={card}>
-        <h2 style={{ marginTop: 0 }}>1. Connect a Resend Full access key</h2>
-        <p style={{ opacity: .72, lineHeight: 1.6 }}>
-          In Resend, create a new API key with <strong>Full access</strong>. Paste it here once. LabNarrative stores it securely in Supabase Vault; the key is not displayed again.
+        <h2 style={{ marginTop: 0 }}>1. Copy your Resend Receiving address</h2>
+        <p style={{ opacity: .72, lineHeight: 1.65 }}>
+          In Resend, open <strong>Emails → Receiving</strong>, click the <strong>⋯</strong> menu, then choose <strong>Receiving address</strong>. Copy the address ending in <strong>.resend.app</strong> and paste it below.
         </p>
         <form onSubmit={connect} style={{ display: "flex", gap: 10, alignItems: "stretch", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 420px" }}>
+          <div style={{ flex: "1 1 430px" }}>
             <input
-              aria-label="Resend Full access API key"
+              aria-label="Resend Receiving address"
               autoComplete="off"
               disabled={connecting}
-              onChange={(event) => setApiKey(event.target.value)}
-              placeholder="re_…"
+              onChange={(event) => setReceivingAddress(event.target.value)}
+              placeholder="anything@your-id.resend.app"
               style={inputStyle}
-              type="password"
-              value={apiKey}
+              type="text"
+              value={receivingAddress}
             />
           </div>
-          <button disabled={connecting || !apiKey.trim()} style={{ ...buttonStyle, opacity: connecting || !apiKey.trim() ? .55 : 1 }} type="submit">
-            {connecting ? "Connecting…" : "Connect & prepare inbound"}
+          <button disabled={connecting || !receivingAddress.trim()} style={{ ...buttonStyle, opacity: connecting || !receivingAddress.trim() ? .55 : 1 }} type="submit">
+            {connecting ? "Connecting…" : "Connect automatic replies"}
           </button>
         </form>
         {loading ? <p style={{ opacity: .65 }}>Checking current setup…</p> : null}
@@ -183,37 +157,24 @@ export default function OutreachSetupPage() {
         {error ? <p style={{ marginBottom: 0, color: "#a33", fontWeight: 700 }}>{error}</p> : null}
       </section>
 
-      <section style={{ ...card, marginTop: 18, opacity: configured ? 1 : .62 }}>
-        <h2 style={{ marginTop: 0 }}>2. Add the receiving MX record in Spaceship</h2>
-        {configured ? (
+      <section style={{ ...card, marginTop: 18 }}>
+        <h2 style={{ marginTop: 0 }}>2. Connection status</h2>
+        {connected ? (
           <>
-            <p style={{ opacity: .72, lineHeight: 1.6 }}>
-              Resend has prepared <strong>{domain}</strong>. Add this single MX record to the DNS zone for <strong>labnarrative.com</strong>.
-            </p>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-                <thead><tr><th style={{ textAlign: "left", padding: "10px 8px" }}>Type</th><th style={{ textAlign: "left", padding: "10px 8px" }}>Host / Name</th><th style={{ textAlign: "left", padding: "10px 8px" }}>Value</th><th style={{ textAlign: "left", padding: "10px 8px" }}>Priority</th></tr></thead>
-                <tbody><tr>
-                  <td style={{ padding: "12px 8px", borderTop: "1px solid rgba(120,130,125,.22)" }}>MX</td>
-                  <td style={{ padding: "12px 8px", borderTop: "1px solid rgba(120,130,125,.22)", fontFamily: "monospace" }}>{mxName}</td>
-                  <td style={{ padding: "12px 8px", borderTop: "1px solid rgba(120,130,125,.22)", fontFamily: "monospace" }}>{mxValue}</td>
-                  <td style={{ padding: "12px 8px", borderTop: "1px solid rgba(120,130,125,.22)" }}>{mxPriority}</td>
-                </tr></tbody>
-              </table>
-            </div>
-            <p style={{ marginBottom: 0, opacity: .66 }}>
-              Current Resend receiving status: <strong>{integration?.inbound_status || "waiting for DNS"}</strong>. Use an automatic/default TTL in Spaceship.
+            <p style={{ margin: "0 0 8px", fontWeight: 800, color: "#2d6a4f" }}>✓ Automatic reply detection is connected</p>
+            <p style={{ margin: 0, opacity: .72, lineHeight: 1.65 }}>
+              Receiving domain: <strong>{integration?.inbound_domain}</strong>. No Spaceship or DNS changes are required.
             </p>
           </>
         ) : (
-          <p style={{ marginBottom: 0 }}>Connect the Full access key above first; the exact MX record will appear here automatically.</p>
+          <p style={{ margin: 0, opacity: .72 }}>Paste the Resend Receiving address above to finish the one-time setup.</p>
         )}
       </section>
 
       <section style={{ ...card, marginTop: 18 }}>
-        <h2 style={{ marginTop: 0 }}>What happens after DNS is active</h2>
+        <h2 style={{ marginTop: 0 }}>What happens after connection</h2>
         <p style={{ marginBottom: 0, opacity: .72, lineHeight: 1.65 }}>
-          Every new outreach email uses a PI-specific address at <strong>{domain}</strong>. A reply is matched to the PI and email thread, saved in LabNarrative, forwarded to <strong>khaled@labnarrative.com</strong>, and the remaining follow-up sequence stops immediately. Follow-ups also reuse Message-ID headers so they stay grouped with Email 1 in major mail clients.
+          Every new outreach thread gets a unique PI-specific Reply-To address on the Resend-managed domain. Replies are matched to the PI and email thread, saved in LabNarrative, forwarded to <strong>khaled@labnarrative.com</strong>, and any remaining follow-ups stop immediately. Follow-ups also reuse Message-ID headers so they remain grouped with Email 1 in major mail clients.
         </p>
       </section>
     </main>
