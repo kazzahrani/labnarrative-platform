@@ -9,6 +9,9 @@ type Message = {
   id: string;
   prospect_id: string;
   production_run_id: string;
+  recipient_email: string;
+  subject: string;
+  body_text: string;
   message_kind: string;
   status: string;
   sent_at: string | null;
@@ -42,6 +45,25 @@ const reviewButton: React.CSSProperties = {
   border: "1px solid rgba(224,181,104,.38)",
   background: "rgba(224,181,104,.12)",
   color: "#e0b568",
+};
+const fieldLabel: React.CSSProperties = {
+  display: "grid",
+  gap: 7,
+  fontSize: ".72rem",
+  fontWeight: 800,
+  letterSpacing: ".01em",
+};
+const field: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid rgba(255,255,255,.12)",
+  borderRadius: 10,
+  background: "rgba(5,16,23,.58)",
+  color: "inherit",
+  padding: "10px 11px",
+  font: "inherit",
+  fontSize: ".82rem",
+  outline: "none",
 };
 
 function fmt(value: string | null | undefined) {
@@ -86,6 +108,7 @@ export default function OutreachSequencePanel() {
   const [working, setWorking] = useState<string>("");
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [reviewMessageId, setReviewMessageId] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined" || window.location.pathname !== "/admin/automation") return;
@@ -114,7 +137,7 @@ export default function OutreachSequencePanel() {
   const load = useCallback(async () => {
     const { data, error: loadError } = await supabase
       .from("outreach_messages")
-      .select("id,prospect_id,production_run_id,message_kind,status,sent_at,follow_up_at,delivery_status,error_message,prospects(pi_name,institution,status)")
+      .select("id,prospect_id,production_run_id,recipient_email,subject,body_text,message_kind,status,sent_at,follow_up_at,delivery_status,error_message,prospects(pi_name,institution,status)")
       .eq("is_test", false)
       .in("message_kind", ["initial", "followup_1", "followup_2"])
       .order("created_at", { ascending: false })
@@ -134,6 +157,25 @@ export default function OutreachSequencePanel() {
       .subscribe();
     return () => { window.clearInterval(poll); void supabase.removeChannel(channel); };
   }, [load, mount]);
+
+  const reviewMessage = useMemo(
+    () => reviewMessageId ? messages.find((message) => message.id === reviewMessageId) ?? null : null,
+    [messages, reviewMessageId],
+  );
+
+  useEffect(() => {
+    if (!reviewMessage) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setReviewMessageId("");
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [reviewMessage]);
 
   const sequences = useMemo(() => {
     const map = new Map<string, Sequence>();
@@ -177,44 +219,89 @@ export default function OutreachSequencePanel() {
   }
 
   function openReview(message: Message) {
-    window.dispatchEvent(new CustomEvent("labnarrative:review-outreach", {
-      detail: { runId: message.production_run_id, messageId: message.id },
-    }));
+    setReviewMessageId(message.id);
   }
 
   if (!mount) return null;
   return createPortal(
-    <section style={{ ...card, marginTop: 14 }} aria-label="Outreach sequences">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
-        <div><p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p><h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Three-message follow-up</h2><p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>{activeCount} active sequence{activeCount === 1 ? "" : "s"} · due dates prepare drafts; nothing sends without your review</p></div>
-        <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(82,199,148,.12)", color: "#52c794", fontSize: ".68rem", fontWeight: 800 }}>LIVE</span>
-      </div>
-      {loading ? <p style={{ opacity: .65 }}>Loading outreach sequences…</p> : null}
-      {error ? <p style={{ color: "#e58b75", fontWeight: 700, fontSize: ".76rem" }}>{error}</p> : null}
-      <div style={{ display: "grid", gap: 8 }}>
-        {visible.map((sequence) => {
-          const state = derive(sequence);
-          const schedulable = state.label === "Email 1 sent" || state.label === "Follow-up 1 sent";
-          const review = pendingMessage(sequence);
-          return <div key={sequence.prospectId} style={{ border: "1px solid rgba(255,255,255,.07)", borderRadius: 11, padding: "10px 11px", background: "rgba(255,255,255,.025)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
-              <div style={{ minWidth: 0 }}><strong style={{ display: "block", fontSize: ".82rem" }}>{sequence.piName}</strong><small style={{ opacity: .58, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 360 }}>{sequence.institution}</small></div>
-              <span style={{ color: state.tone, fontSize: ".7rem", fontWeight: 800, whiteSpace: "nowrap" }}>{state.label}</span>
-            </div>
-            <div style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 8, flexWrap: "wrap", fontSize: ".7rem" }}>
-              <span style={{ opacity: sequence.initial?.status === "sent" ? 1 : .38 }}>✓ Email 1</span><span style={{ opacity: .3 }}>→</span>
-              <span style={{ opacity: sequence.follow1 ? 1 : .55 }}>{stepMark(sequence.follow1)} Follow-up 1</span><span style={{ opacity: .3 }}>→</span>
-              <span style={{ opacity: sequence.follow2 ? 1 : .55 }}>{stepMark(sequence.follow2)} Follow-up 2</span>
-            </div>
-            <div style={{ marginTop: 7, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <small style={{ opacity: .65 }}>{state.next}</small>
-              {schedulable ? <div style={{ display: "flex", gap: 6 }}><button disabled={working === sequence.prospectId} onClick={() => void prepareNext(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Prepare next now</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
-              {review ? <div style={{ display: "flex", gap: 6 }}><button type="button" onClick={() => openReview(review)} style={reviewButton}>Review message</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
-            </div>
-          </div>;
-        })}
-      </div>
-      {sequences.length > 8 ? <button type="button" onClick={() => setShowAll((v) => !v)} style={{ ...button, marginTop: 10 }}>{showAll ? "Show recent only" : `Show all ${sequences.length}`}</button> : null}
-    </section>, mount,
+    <>
+      <section style={{ ...card, marginTop: 14 }} aria-label="Outreach sequences">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+          <div><p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p><h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Three-message follow-up</h2><p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>{activeCount} active sequence{activeCount === 1 ? "" : "s"} · due dates prepare drafts; nothing sends without your review</p></div>
+          <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(82,199,148,.12)", color: "#52c794", fontSize: ".68rem", fontWeight: 800 }}>LIVE</span>
+        </div>
+        {loading ? <p style={{ opacity: .65 }}>Loading outreach sequences…</p> : null}
+        {error ? <p style={{ color: "#e58b75", fontWeight: 700, fontSize: ".76rem" }}>{error}</p> : null}
+        <div style={{ display: "grid", gap: 8 }}>
+          {visible.map((sequence) => {
+            const state = derive(sequence);
+            const schedulable = state.label === "Email 1 sent" || state.label === "Follow-up 1 sent";
+            const review = pendingMessage(sequence);
+            return <div key={sequence.prospectId} style={{ border: "1px solid rgba(255,255,255,.07)", borderRadius: 11, padding: "10px 11px", background: "rgba(255,255,255,.025)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ minWidth: 0 }}><strong style={{ display: "block", fontSize: ".82rem" }}>{sequence.piName}</strong><small style={{ opacity: .58, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 360 }}>{sequence.institution}</small></div>
+                <span style={{ color: state.tone, fontSize: ".7rem", fontWeight: 800, whiteSpace: "nowrap" }}>{state.label}</span>
+              </div>
+              <div style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 8, flexWrap: "wrap", fontSize: ".7rem" }}>
+                <span style={{ opacity: sequence.initial?.status === "sent" ? 1 : .38 }}>✓ Email 1</span><span style={{ opacity: .3 }}>→</span>
+                <span style={{ opacity: sequence.follow1 ? 1 : .55 }}>{stepMark(sequence.follow1)} Follow-up 1</span><span style={{ opacity: .3 }}>→</span>
+                <span style={{ opacity: sequence.follow2 ? 1 : .55 }}>{stepMark(sequence.follow2)} Follow-up 2</span>
+              </div>
+              <div style={{ marginTop: 7, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <small style={{ opacity: .65 }}>{state.next}</small>
+                {schedulable ? <div style={{ display: "flex", gap: 6 }}><button disabled={working === sequence.prospectId} onClick={() => void prepareNext(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Prepare next now</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
+                {review ? <div style={{ display: "flex", gap: 6 }}><button type="button" onClick={() => openReview(review)} style={reviewButton}>Review message</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
+              </div>
+            </div>;
+          })}
+        </div>
+        {sequences.length > 8 ? <button type="button" onClick={() => setShowAll((v) => !v)} style={{ ...button, marginTop: 10 }}>{showAll ? "Show recent only" : `Show all ${sequences.length}`}</button> : null}
+      </section>
+
+      {reviewMessage ? (
+        <div
+          className="reviewModalBackdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setReviewMessageId("");
+          }}
+        >
+          <div className="reviewModalShell" role="dialog" aria-modal="true" aria-label={`Follow-up review · ${reviewMessage.prospects?.pi_name || "PI"}`}>
+            <button className="reviewModalClose" type="button" aria-label="Close review" onClick={() => setReviewMessageId("")}>×</button>
+            <section style={{ ...card, padding: 22, background: "#10232e", borderColor: "rgba(255,255,255,.10)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 18 }}>
+                <div>
+                  <p style={{ margin: 0, color: "#e0b568", textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 850 }}>Follow-up message · Ready to review</p>
+                  <h2 style={{ margin: "6px 0 3px", fontSize: "1.18rem" }}>{reviewMessage.prospects?.pi_name || "PI"}</h2>
+                  <p style={{ margin: 0, opacity: .62, fontSize: ".76rem" }}>{reviewMessage.prospects?.institution || ""}</p>
+                </div>
+                <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(224,181,104,.12)", color: "#e0b568", fontSize: ".68rem", fontWeight: 800 }}>Ready to review</span>
+              </div>
+
+              <div style={{ display: "grid", gap: 13 }}>
+                <label style={fieldLabel}>
+                  Recipient
+                  <input type="email" defaultValue={reviewMessage.recipient_email} style={field} />
+                </label>
+                <label style={fieldLabel}>
+                  Subject
+                  <input type="text" defaultValue={reviewMessage.subject} style={field} />
+                </label>
+                <label style={fieldLabel}>
+                  Message
+                  <textarea defaultValue={reviewMessage.body_text} rows={13} style={{ ...field, resize: "vertical", lineHeight: 1.55, minHeight: 245 }} />
+                </label>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+                <button type="button" onClick={() => setReviewMessageId("")} style={button}>Close</button>
+                <button type="button" style={{ ...button, background: "#2d655c", borderColor: "#3d7d71", color: "#f4fbf8", padding: "9px 14px" }}>Send email now</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      ) : null}
+    </>,
+    mount,
   );
 }
