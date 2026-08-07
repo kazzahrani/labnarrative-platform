@@ -75,7 +75,7 @@ async function fetchSource(url: URL, html = false) {
   if (!allowed(url)) throw new Error("Figure host is not approved.");
   const response = await timed(url, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; LabNarrative-Figure-Resolver/6.0; +https://labnarrative.com)",
+      "User-Agent": "Mozilla/5.0 (compatible; LabNarrative-Figure-Resolver/7.0; +https://labnarrative.com)",
       Accept: html
         ? "image/png,image/jpeg,image/webp,image/*;q=0.9,text/html;q=0.7,*/*;q=0.2"
         : "image/png,image/jpeg,image/webp,image/*;q=0.9,*/*;q=0.2",
@@ -196,8 +196,8 @@ function validateQuality(bytes: Uint8Array, contentType: string): Dimensions {
   const longSide = Math.max(size.width, size.height);
   const shortSide = Math.min(size.width, size.height);
   const area = size.width * size.height;
-  const wideScientificFigure = longSide >= 700 && shortSide >= 220 && area >= 220_000;
-  const squareScientificFigure = size.width >= 550 && size.height >= 550;
+  const wideScientificFigure = longSide >= 600 && shortSide >= 400 && area >= 280_000;
+  const squareScientificFigure = size.width >= 500 && size.height >= 500;
   if (!wideScientificFigure && !squareScientificFigure) {
     throw new Error(`Figure resolution is too low (${size.width}×${size.height}).`);
   }
@@ -300,8 +300,23 @@ export async function GET(request: NextRequest) {
       const response = await timed(endpoint, {
         headers: { Accept: "image/png,image/jpeg,image/webp,image/*" },
       }, 60_000);
-      if (!response.ok) throw new Error(await response.text());
-      return await imageResponse(response);
+      if (response.ok) return await imageResponse(response);
+
+      // Exact figure pages get a second independent extraction path. This handles
+      // PMC records whose Europe PMC XML/archive package is unavailable or incomplete.
+      if (/^\/articles\/PMC\d+\/figure\/[^/]+\/?$/i.test(source.pathname)
+        && source.hostname.toLowerCase() === "pmc.ncbi.nlm.nih.gov") {
+        const direct = new URL("/api/ncbi-figure-direct", request.nextUrl.origin);
+        direct.searchParams.set("url", source.toString());
+        const fallback = await timed(direct, {
+          headers: { Accept: "image/png,image/jpeg,image/webp,image/*" },
+        }, 60_000);
+        if (fallback.ok) return await imageResponse(fallback);
+        const archiveError = (await response.text()).slice(0, 300);
+        const directError = (await fallback.text()).slice(0, 300);
+        throw new Error(`NCBI archive resolver failed: ${archiveError} Direct figure-page fallback failed: ${directError}`);
+      }
+      throw new Error(await response.text());
     }
 
     const upstream = await fetchSource(source, true);
