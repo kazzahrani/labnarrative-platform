@@ -199,10 +199,17 @@ export default function OperatorSendSafetyEnhancer() {
         );
         if (sendError) {
           let detail = sendError.message;
-          const context = (sendError as { context?: Response }).context;
-          if (context) {
-            const parsed = await context.clone().json().catch(() => ({})) as { error?: string };
-            detail = parsed.error || detail;
+          const context = (sendError as { context?: unknown }).context;
+          if (
+            context &&
+            typeof context === "object" &&
+            "json" in context &&
+            typeof (context as { json?: unknown }).json === "function"
+          ) {
+            const parsed = await (context as { json: () => Promise<unknown> })
+              .json()
+              .catch(() => ({})) as { error?: string; message?: string };
+            detail = parsed.error || parsed.message || detail;
           }
           throw new Error(detail);
         }
