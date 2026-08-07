@@ -64,11 +64,12 @@ if (!source.includes('"labnarrative:review-outreach"')) {
       const detail = (event as CustomEvent<{ runId?: string }>).detail;
       const runId = detail?.runId || "";
       if (!runId) return;
-      if (reviewRuns.some((run) => run.id === runId)) setReviewModalRunId(runId);
+      setReviewModalRunId(runId);
+      void loadData();
     };
     window.addEventListener("labnarrative:review-outreach", openOutreachReview as EventListener);
     return () => window.removeEventListener("labnarrative:review-outreach", openOutreachReview as EventListener);
-  }, [reviewRuns]);
+  }, [loadData]);
 
 `;
   source = replaceRequired(
