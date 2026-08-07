@@ -1,0 +1,122 @@
+/* On-demand Awaiting final review modal for the Production Engine. */
+
+body.platform-automation-page .reviewModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: clamp(34px, 6vh, 72px) 18px 72px;
+  background: rgba(8, 17, 23, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+body.platform-automation-page .reviewModalShell {
+  position: relative;
+  width: clamp(
+    330px,
+    calc((min(1500px, calc(100vw - 56px)) - 20px) * 0.36),
+    540px
+  );
+  max-width: calc(100vw - 36px);
+}
+
+body.platform-automation-page .reviewModalShell > section {
+  width: 100%;
+  margin: 0;
+}
+
+body.platform-automation-page .reviewModalClose {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  z-index: 2;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(95, 121, 136, 0.42);
+  border-radius: 999px;
+  background: #1a2a34;
+  color: #e8eef3;
+  font: inherit;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+body.platform-automation-page .reviewModalClose:hover {
+  background: #223743;
+}
+
+body.platform-automation-page .productionStatusCell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.platform-automation-page .reviewTableButton {
+  min-height: 30px;
+  border: 1px solid rgba(77, 125, 146, 0.42);
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: rgba(34, 82, 102, 0.16);
+  color: inherit;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body.platform-automation-page .reviewTableButton:hover {
+  border-color: rgba(77, 125, 146, 0.72);
+  background: rgba(34, 82, 102, 0.26);
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewModalBackdrop,
+html[data-platform-theme="dark"] body.platform-automation-page .reviewModalBackdrop {
+  background: rgba(4, 11, 16, 0.8);
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewTableButton,
+html[data-platform-theme="dark"] body.platform-automation-page .reviewTableButton {
+  border-color: #39586a;
+  background: #1b3442;
+  color: #dceaf2;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .reviewTableButton:hover,
+html[data-platform-theme="dark"] body.platform-automation-page .reviewTableButton:hover {
+  border-color: #52788d;
+  background: #234252;
+}
+
+@media (max-width: 1150px) {
+  body.platform-automation-page .reviewModalShell {
+    width: min(100%, calc(100vw - 56px));
+    max-width: 900px;
+  }
+}
+
+@media (max-width: 760px) {
+  body.platform-automation-page .reviewModalBackdrop {
+    padding: 28px 12px 48px;
+  }
+
+  body.platform-automation-page .reviewModalShell {
+    width: calc(100vw - 24px);
+    max-width: none;
+  }
+
+  body.platform-automation-page .reviewModalClose {
+    top: -12px;
+    right: -6px;
+  }
+}
