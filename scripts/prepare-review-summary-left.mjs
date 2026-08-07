@@ -26,51 +26,6 @@ function sectionForMarker(text, marker, label) {
   };
 }
 
-const collectorMarker = "reviewNotesCollector";
-const activityMarker = "<p className={styles.kicker}>Recent activity</p>";
-const collectorSection = sectionForMarker(source, collectorMarker, "Review summary");
-const activitySection = sectionForMarker(source, activityMarker, "Recent activity");
-
-for (const section of [collectorSection, activitySection].sort((left, right) => right.start - left.start)) {
-  source = `${source.slice(0, section.start)}${source.slice(section.end)}`;
-}
-
-function findMatchingCurly(text, openingIndex) {
-  let depth = 0;
-  let quote = "";
-  let escaped = false;
-
-  for (let index = openingIndex; index < text.length; index += 1) {
-    const character = text[index];
-
-    if (quote) {
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-      if (character === "\\") {
-        escaped = true;
-        continue;
-      }
-      if (character === quote) quote = "";
-      continue;
-    }
-
-    if (character === '"' || character === "'" || character === "`") {
-      quote = character;
-      continue;
-    }
-
-    if (character === "{") depth += 1;
-    if (character === "}") {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
-  }
-
-  return -1;
-}
-
 function findMatchingDivClose(text, openingIndex) {
   const tagPattern = /<div\b[^>]*>|<\/div>/g;
   tagPattern.lastIndex = openingIndex;
@@ -89,49 +44,52 @@ function findMatchingDivClose(text, openingIndex) {
   return -1;
 }
 
-const buildableMarker = '"Buildable prospects · score 75–100"';
-const buildableMarkerIndex = source.indexOf(buildableMarker);
-if (buildableMarkerIndex === -1) {
-  throw new Error("The Buildable prospects window was not found.");
+const collectorMarker = "reviewNotesCollector";
+const activityMarker = "<p className={styles.kicker}>Recent activity</p>";
+const collectorSection = sectionForMarker(source, collectorMarker, "Review summary");
+const activitySection = sectionForMarker(source, activityMarker, "Recent activity");
+
+for (const section of [collectorSection, activitySection].sort((left, right) => right.start - left.start)) {
+  source = `${source.slice(0, section.start)}${source.slice(section.end)}`;
 }
 
-const buildableCallStart = source.lastIndexOf("{renderProspectTable(", buildableMarkerIndex);
-if (buildableCallStart === -1) {
-  throw new Error("The Buildable prospects render call was not found.");
+const gridToken = "<div className={styles.grid}>";
+const gridStart = source.indexOf(gridToken);
+if (gridStart === -1) {
+  throw new Error("The Production two-column grid was not found.");
 }
 
-const buildableCallClose = findMatchingCurly(source, buildableCallStart);
-if (buildableCallClose === -1) {
-  throw new Error("The end of the Buildable prospects window could not be identified.");
+const stackToken = "<div className={styles.stack}>";
+const leftStackStart = source.indexOf(stackToken, gridStart + gridToken.length);
+if (leftStackStart === -1) {
+  throw new Error("The left Production column was not found.");
 }
-const buildableCallEnd = buildableCallClose + 1;
 
-const rightColumnBlocks = [activitySection.block, collectorSection.block]
+const leftStackClose = findMatchingDivClose(source, leftStackStart);
+if (leftStackClose === -1) {
+  throw new Error("The end of the left Production column could not be identified.");
+}
+
+const leftColumnBlocks = [activitySection.block, collectorSection.block]
   .map((block) => `            ${block}`)
   .join("\n\n");
 
-source = `${source.slice(0, buildableCallEnd)}\n\n${rightColumnBlocks}${source.slice(buildableCallEnd)}`;
+source = `${source.slice(0, leftStackClose)}\n\n${leftColumnBlocks}\n          ${source.slice(leftStackClose)}`;
 
-const finalBuildableMarkerIndex = source.indexOf(buildableMarker);
-const finalBuildableCallStart = source.lastIndexOf("{renderProspectTable(", finalBuildableMarkerIndex);
-const finalBuildableCallClose = findMatchingCurly(source, finalBuildableCallStart);
 const finalActivity = sectionForMarker(source, activityMarker, "Final Recent activity");
 const finalCollector = sectionForMarker(source, collectorMarker, "Final Review summary");
+const finalGridStart = source.indexOf(gridToken);
+const finalLeftStackStart = source.indexOf(stackToken, finalGridStart + gridToken.length);
+const finalLeftStackClose = findMatchingDivClose(source, finalLeftStackStart);
 
 if (
-  finalBuildableCallStart === -1 ||
-  finalBuildableCallClose === -1 ||
-  finalActivity.start <= finalBuildableCallClose ||
+  finalLeftStackStart === -1 ||
+  finalLeftStackClose === -1 ||
+  finalActivity.start < finalLeftStackStart ||
+  finalCollector.end > finalLeftStackClose ||
   finalCollector.start <= finalActivity.end
 ) {
-  throw new Error("The right-column Production window order is incorrect.");
-}
-
-const betweenBuildableAndActivity = source
-  .slice(finalBuildableCallClose + 1, finalActivity.start)
-  .trim();
-if (betweenBuildableAndActivity) {
-  throw new Error("Recent activity is not immediately after Buildable prospects.");
+  throw new Error("Recent activity and Review summary were not placed in the left Production Engine column.");
 }
 
 const betweenActivityAndCollector = source
@@ -141,21 +99,9 @@ if (betweenActivityAndCollector) {
   throw new Error("Review summary is not immediately after Recent activity.");
 }
 
-const stackToken = "<div className={styles.stack}>";
-const rightStackStart = source.lastIndexOf(stackToken, finalBuildableMarkerIndex);
-const rightStackClose = findMatchingDivClose(source, rightStackStart);
-if (
-  rightStackStart === -1 ||
-  rightStackClose === -1 ||
-  finalActivity.start < rightStackStart ||
-  finalCollector.end > rightStackClose
-) {
-  throw new Error("Recent activity and Review summary were not placed in the right Production Engine column.");
-}
-
 if (source.includes("Each saved note begins with the PI name and is ready to paste into ChatGPT.")) {
   throw new Error("The Review summary explanatory sentence is still present.");
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Recent activity moved to the right Production Engine column above Review summary.");
+console.log("Recent activity and Review summary moved to the left Production Engine column.");
