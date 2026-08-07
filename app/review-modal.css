@@ -80,6 +80,45 @@ body.platform-automation-page .reviewTableButton:hover {
   background: rgba(34, 82, 102, 0.26);
 }
 
+body.platform-automation-page .bccTestCopyControl {
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(92, 120, 132, 0.24);
+  border-radius: 14px;
+  background: rgba(58, 91, 105, 0.07);
+  padding: 11px 12px;
+}
+
+body.platform-automation-page .bccTestCopyToggle {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 9px !important;
+  width: fit-content;
+  color: inherit !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  cursor: pointer;
+}
+
+body.platform-automation-page .bccTestCopyToggle input[type="checkbox"] {
+  width: 17px !important;
+  height: 17px;
+  min-width: 17px !important;
+  margin: 0;
+  accent-color: #2aaea9;
+  cursor: pointer;
+}
+
+body.platform-automation-page .bccTestCopyControl > input[type="email"] {
+  width: 100%;
+}
+
+body.platform-automation-page .bccTestCopyControl > input[hidden] {
+  display: none !important;
+}
+
 html[data-platform-theme="ocean"] body.platform-automation-page .reviewModalBackdrop,
 html[data-platform-theme="dark"] body.platform-automation-page .reviewModalBackdrop {
   background: rgba(4, 11, 16, 0.8);
@@ -96,6 +135,12 @@ html[data-platform-theme="ocean"] body.platform-automation-page .reviewTableButt
 html[data-platform-theme="dark"] body.platform-automation-page .reviewTableButton:hover {
   border-color: #52788d;
   background: #234252;
+}
+
+html[data-platform-theme="ocean"] body.platform-automation-page .bccTestCopyControl,
+html[data-platform-theme="dark"] body.platform-automation-page .bccTestCopyControl {
+  border-color: #304653;
+  background: #172a35;
 }
 
 @media (max-width: 1150px) {
