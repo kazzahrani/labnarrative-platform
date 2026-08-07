@@ -3,6 +3,15 @@ import fs from "node:fs";
 const sitesUrl = new URL("../lib/sites.ts", import.meta.url);
 let source = fs.readFileSync(sitesUrl, "utf8");
 
+const authoritativeSlugBefore = "    slug: row.content.slug || row.slug,";
+const authoritativeSlugAfter = "    slug: row.slug,";
+if (source.includes(authoritativeSlugBefore)) {
+  source = source.replace(authoritativeSlugBefore, authoritativeSlugAfter);
+}
+if (!source.includes(authoritativeSlugAfter)) {
+  throw new Error("Could not make the database row slug authoritative in hydrateSite().");
+}
+
 const replacement = `export async function getSite(slug: string): Promise<LabSite | undefined> {
   const normalizedSlug = slug.toLowerCase();
   const select = "select=slug,status,content,content_schema_version,design_key,design_version,design_settings";
@@ -36,11 +45,12 @@ const pattern = /export async function getSite\(slug: string\): Promise<LabSite 
 if (!pattern.test(source)) {
   if (source.includes("site_slug_aliases?select=site_id")) {
     console.log("Site slug alias resolution already prepared.");
-    process.exit(0);
+  } else {
+    throw new Error("Could not locate getSite() for alias support.");
   }
-  throw new Error("Could not locate getSite() for alias support.");
+} else {
+  source = source.replace(pattern, replacement);
 }
 
-source = source.replace(pattern, replacement);
 fs.writeFileSync(sitesUrl, source);
-console.log("Site slug alias resolution prepared.");
+console.log("Canonical site slug routing and alias resolution prepared.");
