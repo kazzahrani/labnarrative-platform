@@ -86,11 +86,11 @@ function derive(sequence: SiteSequence): { primary: string; secondary: string; t
   }
 
   if (sequence.follow2 && PENDING_REVIEW.has(sequence.follow2.status)) {
-    return { primary: "✓ E1 · ✓ F1 · ◐ F2", secondary: "F2 awaiting confirmation", tone: "#e0b568" };
+    return { primary: "✓ E1 · ✓ F1 · ◐ F2", secondary: "F2 ready to review", tone: "#e0b568" };
   }
 
   if (sequence.follow1 && PENDING_REVIEW.has(sequence.follow1.status)) {
-    return { primary: "✓ E1 · ◐ F1 · ○ F2", secondary: "F1 awaiting confirmation", tone: "#e0b568" };
+    return { primary: "✓ E1 · ◐ F1 · ○ F2", secondary: "F1 ready to review", tone: "#e0b568" };
   }
 
   if (sequence.follow2?.status === "sent") {
