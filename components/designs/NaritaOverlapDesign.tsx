@@ -438,7 +438,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           box-shadow: 0 -16px 38px rgba(0, 0, 0, 0.07);
         }
 
-        .narita-overlap-design .narita-overlap-panel:not(.narita-overlap-terminal) > img {
+        .narita-overlap-design .narita-overlap-panel:not(.narita-overlap-terminal) > img:not(.kinetic-gallery-slide) {
           transform: translate3d(
               0,
               var(--narita-image-offset, 0px),
@@ -448,6 +448,26 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           transform-origin: center center;
           transition: none !important;
           will-change: transform;
+        }
+
+        .narita-route-home .kinetic-photo-hero > .kinetic-gallery-slide {
+          transform: translate3d(
+              0,
+              calc(var(--kinetic-progress, 0) * -72px),
+              0
+            )
+            scale(1.065) !important;
+          transform-origin: center center;
+          will-change: transform;
+        }
+
+        .narita-route-home .kinetic-photo-hero > .kinetic-gallery-slide.is-active {
+          transform: translate3d(
+              0,
+              calc(var(--kinetic-progress, 0) * -72px),
+              0
+            )
+            scale(1.025) !important;
         }
 
         .narita-overlap-design .narita-overlap-panel:not(.narita-overlap-terminal) > div:nth-of-type(2) {
@@ -594,10 +614,28 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
             max-height: 210px !important;
           }
 
-          .narita-overlap-design .narita-overlap-panel > img,
+          .narita-overlap-design .narita-overlap-panel > img:not(.kinetic-gallery-slide),
           .narita-overlap-design .narita-overlap-panel > div:nth-of-type(2),
           .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img {
             transform: none !important;
+          }
+
+          .narita-route-home .kinetic-photo-hero > .kinetic-gallery-slide {
+            transform: translate3d(
+                0,
+                calc(var(--kinetic-progress, 0) * -28px),
+                0
+              )
+              scale(1.045) !important;
+          }
+
+          .narita-route-home .kinetic-photo-hero > .kinetic-gallery-slide.is-active {
+            transform: translate3d(
+                0,
+                calc(var(--kinetic-progress, 0) * -28px),
+                0
+              )
+              scale(1.015) !important;
           }
         }
 
