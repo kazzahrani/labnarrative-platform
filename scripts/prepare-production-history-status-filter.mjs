@@ -16,8 +16,8 @@ const statusOrderMarker = "const pipelineHistoryFilterOrder: ProspectStatus[] = 
 
 if (!source.includes(statusOrderMarker)) {
   const statusOrder = `const pipelineHistoryFilterOrder: ProspectStatus[] = [
-  "in_production",
   "awaiting_final_review",
+  "in_production",
   "revision_requested",
   "approved_to_send",
   "email_sent",
@@ -41,7 +41,7 @@ if (!source.includes("pipelineHistoryStatusFilter, setPipelineHistoryStatusFilte
   source = replaceRequired(
     source,
     "  const [pipelineHistoryPage, setPipelineHistoryPage] = useState(1);\n",
-    "  const [pipelineHistoryPage, setPipelineHistoryPage] = useState(1);\n  const [pipelineHistoryStatusFilter, setPipelineHistoryStatusFilter] = useState<\"all\" | ProspectStatus>(\"all\");\n",
+    "  const [pipelineHistoryPage, setPipelineHistoryPage] = useState(1);\n  const [pipelineHistoryStatusFilter, setPipelineHistoryStatusFilter] = useState<\"all\" | ProspectStatus>(\"awaiting_final_review\");\n",
     "Pipeline history status-filter state",
   );
 }
@@ -70,7 +70,7 @@ const newPipelineData = `  const pipelineHistoryAllProspects = useMemo(
 
   const pipelineHistoryStatuses = useMemo(() => {
     const ordered = pipelineHistoryFilterOrder.filter(
-      (status) => (pipelineHistoryStatusCounts.get(status) ?? 0) > 0,
+      (status) => status === "awaiting_final_review" || (pipelineHistoryStatusCounts.get(status) ?? 0) > 0,
     );
     const additional = Array.from(pipelineHistoryStatusCounts.keys()).filter(
       (status) => !pipelineHistoryFilterOrder.includes(status),
@@ -94,25 +94,16 @@ source = replaceRequired(
   "Pipeline history filtered data",
 );
 
-if (!source.includes("setPipelineHistoryStatusFilter(\"all\")")) {
-  const pageClampEffect = `  useEffect(() => {
+const pageClampEffect = `  useEffect(() => {
     setPipelineHistoryPage((current) => Math.min(current, pipelineHistoryPageCount));
   }, [pipelineHistoryPageCount]);`;
 
+if (!source.includes("setPipelineHistoryPage(1);\n  }, [pipelineHistoryStatusFilter]);")) {
   const filterEffects = `${pageClampEffect}
 
   useEffect(() => {
     setPipelineHistoryPage(1);
-  }, [pipelineHistoryStatusFilter]);
-
-  useEffect(() => {
-    if (
-      pipelineHistoryStatusFilter !== "all"
-      && !pipelineHistoryStatusCounts.has(pipelineHistoryStatusFilter)
-    ) {
-      setPipelineHistoryStatusFilter("all");
-    }
-  }, [pipelineHistoryStatusCounts, pipelineHistoryStatusFilter]);`;
+  }, [pipelineHistoryStatusFilter]);`;
 
   source = replaceRequired(
     source,
@@ -162,7 +153,7 @@ const historyToolbar = `              pipelineHistoryProspects.length,
                     key={status}
                     onClick={() => setPipelineHistoryStatusFilter(status)}
                   >
-                    <span>{statusText(status)}</span>
+                    <span>{status === "awaiting_final_review" ? "Awaiting confirmation" : statusText(status)}</span>
                     <strong>{pipelineHistoryStatusCounts.get(status) ?? 0}</strong>
                   </button>
                 ))}
@@ -181,7 +172,9 @@ source = replaceRequired(
               pipelineHistoryProspects.length,`,
   `              pipelineHistoryStatusFilter === "all"
                 ? "No prospects have entered production yet."
-                : "No records match this status.",
+                : pipelineHistoryStatusFilter === "awaiting_final_review"
+                  ? "No PIs are currently awaiting confirmation."
+                  : "No records match this status.",
               pipelineHistoryProspects.length,`,
   "Pipeline history filtered empty state",
 );
@@ -198,10 +191,11 @@ source = replaceRequired(
 
 for (const required of [
   statusOrderMarker,
-  "pipelineHistoryStatusFilter",
+  'useState<"all" | ProspectStatus>("awaiting_final_review")',
   "pipelineHistoryStatusCounts",
   "pipelineHistoryStatuses",
   "productionStatusFilters",
+  "Awaiting confirmation",
   "Filter active and completed records by status",
   "{toolbar}",
 ]) {
@@ -211,4 +205,4 @@ for (const required of [
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log("Active and completed records status filters prepared.");
+console.log("Active and completed records default to Awaiting confirmation with all status filters retained.");
