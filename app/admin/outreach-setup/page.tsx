@@ -25,11 +25,12 @@ const shell: React.CSSProperties = {
 };
 
 const card: React.CSSProperties = {
-  border: "1px solid rgba(120,130,125,.26)",
+  border: "1px solid rgba(148,163,184,.16)",
   borderRadius: 18,
   padding: 24,
-  background: "var(--background, #fff)",
-  boxShadow: "0 12px 36px rgba(0,0,0,.05)",
+  background: "#13232f",
+  color: "#edf3f6",
+  boxShadow: "0 12px 36px rgba(0,0,0,.22)",
 };
 
 const inputStyle: React.CSSProperties = {
@@ -37,9 +38,9 @@ const inputStyle: React.CSSProperties = {
   minHeight: 46,
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid rgba(120,130,125,.4)",
-  background: "transparent",
-  color: "inherit",
+  border: "1px solid rgba(148,163,184,.18)",
+  background: "#0b1722",
+  color: "#edf3f6",
   font: "inherit",
   boxSizing: "border-box",
 };
@@ -47,13 +48,14 @@ const inputStyle: React.CSSProperties = {
 const buttonStyle: React.CSSProperties = {
   minHeight: 44,
   padding: "10px 16px",
-  border: 0,
+  border: "1px solid rgba(255,255,255,.06)",
   borderRadius: 10,
-  background: "#183f34",
-  color: "white",
+  background: "#194b3d",
+  color: "#f5fbf8",
   font: "inherit",
   fontWeight: 700,
   cursor: "pointer",
+  boxShadow: "0 8px 20px rgba(0,0,0,.14)",
 };
 
 export default function OutreachSetupPage() {
@@ -131,8 +133,8 @@ export default function OutreachSetupPage() {
       </p>
 
       <section style={card}>
-        <h2 style={{ marginTop: 0 }}>1. Copy your Resend Receiving address</h2>
-        <p style={{ opacity: .72, lineHeight: 1.65 }}>
+        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>1. Copy your Resend Receiving address</h2>
+        <p style={{ color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
           In Resend, open <strong>Emails → Receiving</strong>, click the <strong>⋯</strong> menu, then choose <strong>Receiving address</strong>. Copy the address ending in <strong>.resend.app</strong> and paste it below.
         </p>
         <form onSubmit={connect} style={{ display: "flex", gap: 10, alignItems: "stretch", flexWrap: "wrap" }}>
@@ -152,28 +154,28 @@ export default function OutreachSetupPage() {
             {connecting ? "Connecting…" : "Connect automatic replies"}
           </button>
         </form>
-        {loading ? <p style={{ opacity: .65 }}>Checking current setup…</p> : null}
-        {notice ? <p style={{ marginBottom: 0, color: "#2d6a4f", fontWeight: 700 }}>{notice}</p> : null}
-        {error ? <p style={{ marginBottom: 0, color: "#a33", fontWeight: 700 }}>{error}</p> : null}
+        {loading ? <p style={{ color: "rgba(237,243,246,.62)" }}>Checking current setup…</p> : null}
+        {notice ? <p style={{ marginBottom: 0, color: "#8bd3b0", fontWeight: 700 }}>{notice}</p> : null}
+        {error ? <p style={{ marginBottom: 0, color: "#ff9b9b", fontWeight: 700 }}>{error}</p> : null}
       </section>
 
       <section style={{ ...card, marginTop: 18 }}>
-        <h2 style={{ marginTop: 0 }}>2. Connection status</h2>
+        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>2. Connection status</h2>
         {connected ? (
           <>
-            <p style={{ margin: "0 0 8px", fontWeight: 800, color: "#2d6a4f" }}>✓ Automatic reply detection is connected</p>
-            <p style={{ margin: 0, opacity: .72, lineHeight: 1.65 }}>
+            <p style={{ margin: "0 0 8px", fontWeight: 800, color: "#8bd3b0" }}>✓ Automatic reply detection is connected</p>
+            <p style={{ margin: 0, color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
               Receiving domain: <strong>{integration?.inbound_domain}</strong>. No Spaceship or DNS changes are required.
             </p>
           </>
         ) : (
-          <p style={{ margin: 0, opacity: .72 }}>Paste the Resend Receiving address above to finish the one-time setup.</p>
+          <p style={{ margin: 0, color: "rgba(237,243,246,.72)" }}>Paste the Resend Receiving address above to finish the one-time setup.</p>
         )}
       </section>
 
       <section style={{ ...card, marginTop: 18 }}>
-        <h2 style={{ marginTop: 0 }}>What happens after connection</h2>
-        <p style={{ marginBottom: 0, opacity: .72, lineHeight: 1.65 }}>
+        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>What happens after connection</h2>
+        <p style={{ marginBottom: 0, color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
           Every new outreach thread gets a unique PI-specific Reply-To address on the Resend-managed domain. Replies are matched to the PI and email thread, saved in LabNarrative, forwarded to <strong>khaled@labnarrative.com</strong>, and any remaining follow-ups stop immediately. Follow-ups also reuse Message-ID headers so they remain grouped with Email 1 in major mail clients.
         </p>
       </section>
