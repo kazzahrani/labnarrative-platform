@@ -44,28 +44,78 @@ function findMatchingDivClose(text, openingIndex) {
   return -1;
 }
 
-function lineForMarker(text, marker, label) {
-  const markerIndex = text.indexOf(marker);
-  if (markerIndex === -1) throw new Error(`${label} marker was not found.`);
-  const start = text.lastIndexOf("\n", markerIndex) + 1;
-  const nextBreak = text.indexOf("\n", markerIndex);
-  const end = nextBreak === -1 ? text.length : nextBreak;
-  return {
-    start,
-    end,
-    block: text.slice(start, end).trim(),
-  };
+function prospectTableCallFromStart(text, start, label) {
+  const openParen = text.indexOf("(", start);
+  if (openParen === -1) throw new Error(`${label} opening parenthesis was not found.`);
+
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+
+  for (let index = openParen; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (char === quote) quote = "";
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+
+    if (char === "(") depth += 1;
+    if (char === ")") {
+      depth -= 1;
+      if (depth === 0) {
+        let end = index + 1;
+        while (/\s/.test(text[end] || "")) end += 1;
+        if (text[end] !== "}") {
+          throw new Error(`${label} closing JSX brace was not found.`);
+        }
+        end += 1;
+        return {
+          start,
+          end,
+          block: text.slice(start, end).trim(),
+        };
+      }
+    }
+  }
+
+  throw new Error(`${label} call boundaries could not be identified.`);
+}
+
+function prospectTableCallForLabel(text, tableLabel, label) {
+  let searchFrom = 0;
+  while (searchFrom < text.length) {
+    const start = text.indexOf("{renderProspectTable(", searchFrom);
+    if (start === -1) break;
+    const call = prospectTableCallFromStart(text, start, label);
+    if (call.block.includes(`"${tableLabel}"`)) return call;
+    searchFrom = call.end;
+  }
+  throw new Error(`${label} marker was not found.`);
 }
 
 const collectorMarker = "reviewNotesCollector";
 const activityMarker = "<p className={styles.kicker}>Recent activity</p>";
-const historyMarker = 'renderProspectTable("Active and completed records"';
+const historyLabel = "Active and completed records";
 
 const collectorSection = sectionForMarker(source, collectorMarker, "Summary review");
 const activitySection = sectionForMarker(source, activityMarker, "Recent activity");
-const historyLine = lineForMarker(source, historyMarker, "Active and completed records");
+const historyCall = prospectTableCallForLabel(source, historyLabel, "Active and completed records");
 
-for (const block of [collectorSection, activitySection, historyLine].sort((left, right) => right.start - left.start)) {
+for (const block of [collectorSection, activitySection, historyCall].sort((left, right) => right.start - left.start)) {
   source = `${source.slice(0, block.start)}${source.slice(block.end)}`;
 }
 
@@ -86,13 +136,13 @@ if (leftStackOpenEnd === -1) {
   throw new Error("The opening line of the left Production column could not be identified.");
 }
 
-const orderedLeftBlocks = [historyLine.block, collectorSection.block, activitySection.block]
+const orderedLeftBlocks = [historyCall.block, collectorSection.block, activitySection.block]
   .map((block) => `            ${block}`)
   .join("\n\n");
 
 source = `${source.slice(0, leftStackOpenEnd + 1)}${orderedLeftBlocks}\n\n${source.slice(leftStackOpenEnd + 1)}`;
 
-const finalHistory = lineForMarker(source, historyMarker, "Final Active and completed records");
+const finalHistory = prospectTableCallForLabel(source, historyLabel, "Final Active and completed records");
 const finalCollector = sectionForMarker(source, collectorMarker, "Final Summary review");
 const finalActivity = sectionForMarker(source, activityMarker, "Final Recent activity");
 const finalGridStart = source.indexOf(gridToken);
