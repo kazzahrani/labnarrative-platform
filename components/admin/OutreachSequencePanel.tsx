@@ -50,8 +50,10 @@ function derive(sequence: Sequence) {
   const latestSent = [follow2, follow1, initial].find((m) => m?.status === "sent");
   if (latestSent?.delivery_status && blocked.has(latestSent.delivery_status)) return { label: `Stopped · ${latestSent.delivery_status}`, tone: "#e58b75", next: "No further email" };
   if (follow2?.status === "sent") return { label: "Complete", tone: "#8ba4b8", next: "Sequence finished" };
-  if (follow1?.status === "sent") return { label: "Follow-up 1 sent", tone: "#76b7d8", next: follow1.follow_up_at ? `Follow-up 2 · ${fmt(follow1.follow_up_at)}` : "Sequence stopped" };
-  if (initial?.status === "sent") return { label: "Email 1 sent", tone: "#76b7d8", next: initial.follow_up_at ? `Follow-up 1 · ${fmt(initial.follow_up_at)}` : "Sequence stopped" };
+  if (follow1?.status === "sent" && !follow1.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email" };
+  if (follow1?.status === "sent") return { label: "Follow-up 1 sent", tone: "#76b7d8", next: `Follow-up 2 · ${fmt(follow1.follow_up_at)}` };
+  if (initial?.status === "sent" && !initial.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email" };
+  if (initial?.status === "sent") return { label: "Email 1 sent", tone: "#76b7d8", next: `Follow-up 1 · ${fmt(initial.follow_up_at)}` };
   return { label: "Not active", tone: "#8ba4b8", next: "—" };
 }
 
