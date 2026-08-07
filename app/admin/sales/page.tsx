@@ -231,7 +231,6 @@ export default function SalesDashboardPage() {
         row.slug,
         row.outreach_status,
         row.prospect?.email ?? "",
-        row.prospect?.research_area ?? "",
       ].join(" ").toLowerCase().includes(query);
     });
 
