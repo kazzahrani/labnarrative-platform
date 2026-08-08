@@ -494,9 +494,9 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
         .narita-overlap-design:not(.narita-route-home) .narita-overlap-hero.kinetic-inner-hero,
         .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
           width: 100vw !important;
-          height: clamp(260px, 28vw, 360px) !important;
-          min-height: 260px !important;
-          max-height: 360px !important;
+          height: clamp(220px, 22vw, 300px) !important;
+          min-height: 220px !important;
+          max-height: 300px !important;
           margin-left: calc(50% - 50vw) !important;
         }
 
@@ -520,140 +520,19 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           transition: none !important;
         }
 
-        .narita-overlap-design .kinetic-reveal:not(.narita-overlap-panel) {
-          transform: none !important;
-        }
-
-        .narita-overlap-design main > footer {
-          position: relative !important;
-          top: auto !important;
-          z-index: var(--narita-footer-layer) !important;
-          transform: none !important;
-          background: #080808;
-          box-shadow: none !important;
-          will-change: auto;
-        }
-
-        @media (max-width: 980px) {
-          .narita-overlap-design main > header {
-            min-height: 124px !important;
-            padding-top: 18px !important;
-            padding-bottom: 15px !important;
-            gap: 10px !important;
-          }
-
-          .narita-overlap-design main > header > a {
-            font-size: clamp(19px, 3vw, 28px) !important;
-          }
-
-          .narita-overlap-design main > header > nav {
-            gap: 17px !important;
-          }
-
-          .narita-overlap-design main > header > nav a {
-            font-size: 9px !important;
-            letter-spacing: 0.13em !important;
-          }
-
-          .narita-overlap-design:not(.narita-route-home) .narita-overlap-hero.kinetic-inner-hero,
-          .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
-            height: clamp(235px, 38vw, 320px) !important;
-            min-height: 235px !important;
-            max-height: 320px !important;
-          }
-
-          .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
-            height: clamp(205px, 31vw, 270px) !important;
-            min-height: 205px !important;
-            max-height: 270px !important;
-          }
-        }
-
-        @media (max-width: 700px) {
-          .narita-overlap-design main > header {
-            min-height: 112px !important;
-            padding: 16px 20px 13px !important;
-            gap: 9px !important;
-          }
-
-          .narita-overlap-design main > header > a {
-            font-size: clamp(16px, 4.7vw, 22px) !important;
-            white-space: normal !important;
-          }
-
-          .narita-overlap-design main > header > nav {
-            gap: 15px !important;
-          }
-
-          .narita-overlap-design main > header > nav a {
-            font-size: 8.5px !important;
-          }
-
-          .narita-route-home .kinetic-gallery-controls {
-            bottom: 12px !important;
-            right: 12px !important;
-          }
-
+        @media (max-width: 700px), (prefers-reduced-motion: reduce) {
           .narita-overlap-design .narita-overlap-panel,
-          .narita-overlap-design .narita-overlap-hero {
+          .narita-overlap-design .narita-overlap-panel:not(.narita-overlap-terminal) {
             position: relative !important;
             top: auto !important;
             transform: none !important;
+            will-change: auto;
           }
 
-          .narita-overlap-design .narita-overlap-panel::before {
-            box-shadow: none;
-          }
-
-          .narita-overlap-design:not(.narita-route-home) .narita-overlap-hero.kinetic-inner-hero,
-          .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
-            width: 100% !important;
-            height: 230px !important;
-            min-height: 230px !important;
-            max-height: 230px !important;
-            margin-left: 0 !important;
-          }
-
-          .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
-            height: 210px !important;
-            min-height: 210px !important;
-            max-height: 210px !important;
-          }
-
-          .narita-overlap-design .narita-overlap-panel > img:not(.kinetic-gallery-slide),
-          .narita-overlap-design .narita-overlap-panel > div:nth-of-type(2),
-          .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img {
+          .narita-overlap-design .narita-overlap-panel:not(.narita-overlap-terminal) > img:not(.kinetic-gallery-slide),
+          .narita-overlap-design .narita-overlap-panel:not(.narita-overlap-terminal) > div:nth-of-type(2) {
             transform: none !important;
-          }
-
-          .narita-route-home .kinetic-photo-hero > .kinetic-gallery-slide {
-            transform: translate3d(
-                0,
-                calc(var(--kinetic-progress, 0) * -28px),
-                0
-              )
-              scale(1.045) !important;
-          }
-
-          .narita-route-home .kinetic-photo-hero > .kinetic-gallery-slide.is-active {
-            transform: translate3d(
-                0,
-                calc(var(--kinetic-progress, 0) * -28px),
-                0
-              )
-              scale(1.015) !important;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .narita-overlap-design .narita-overlap-panel,
-          .narita-overlap-design .narita-overlap-hero,
-          .narita-overlap-design .narita-overlap-panel > img,
-          .narita-overlap-design .narita-overlap-panel > div:nth-of-type(2),
-          .narita-overlap-design .narita-overlap-hero:not(.kinetic-photo-hero) > img {
-            position: relative !important;
-            top: auto !important;
-            transform: none !important;
+            will-change: auto;
           }
         }
       `}</style>
