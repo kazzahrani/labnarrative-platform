@@ -7,6 +7,7 @@ import EngineV2ApprovePublishEnhancer from "@/components/admin/EngineV2ApprovePu
 import EngineV2HardNavigation from "@/components/admin/EngineV2HardNavigation";
 import EngineV2OutreachWindow from "@/components/admin/EngineV2OutreachWindow";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
+import WebsiteConfirmPublishEnhancer from "@/components/admin/WebsiteConfirmPublishEnhancer";
 import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <EngineV2OutreachWindow />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
+        <WebsiteConfirmPublishEnhancer />
         <WebsiteOutreachSequenceEnhancer />
         <WebsiteDesignSwitcher />
         {children}
