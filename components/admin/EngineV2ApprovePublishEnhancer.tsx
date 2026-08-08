@@ -5,6 +5,7 @@ import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 type DashboardRun = {
   runId?: string;
+  piName?: string;
   slug?: string;
   state?: string;
 };
@@ -13,11 +14,9 @@ type DashboardPayload = {
   runs?: DashboardRun[];
 };
 
-function slugFromCard(button: HTMLButtonElement): string {
+function piNameFromCard(button: HTMLButtonElement): string {
   const card = button.closest<HTMLElement>("article");
-  const text = card?.textContent || "";
-  const match = text.match(/([a-z0-9-]+)\.labnarrative\.com/i);
-  return match?.[1]?.toLowerCase() || "";
+  return card?.querySelector("h3")?.textContent?.trim() || "";
 }
 
 function relabelApproveButtons() {
@@ -41,8 +40,6 @@ export default function EngineV2ApprovePublishEnhancer() {
       const label = button?.textContent?.trim();
       if (!button || (label !== "Approve" && label !== "Approve & Publish")) return;
 
-      // Intercept every approval click before the page's older native handler can use
-      // a run id captured by an earlier dashboard render.
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
@@ -89,16 +86,16 @@ export default function EngineV2ApprovePublishEnhancer() {
           }
         };
 
-        const slug = slugFromCard(button);
+        const piName = piNameFromCard(button);
         const dashboard = await callRpc<DashboardPayload>("engine_v2_admin_dashboard", {});
         const finalReviewRuns = (dashboard.runs ?? []).filter((run) => run.state === "final_review" && run.runId);
-        const liveRun = slug
-          ? finalReviewRuns.find((run) => run.slug?.toLowerCase() === slug)
+        const liveRun = piName
+          ? finalReviewRuns.find((run) => run.piName?.trim().toLowerCase() === piName.toLowerCase())
           : finalReviewRuns.length === 1 ? finalReviewRuns[0] : undefined;
 
         if (!liveRun?.runId) {
-          throw new Error(slug
-            ? `Current Final Review run could not be resolved for ${slug}. Refresh and try again.`
+          throw new Error(piName
+            ? `Current Final Review run could not be resolved for ${piName}. Refresh and try again.`
             : "Current Final Review run could not be resolved. Refresh and try again.");
         }
 
