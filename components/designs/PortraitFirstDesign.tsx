@@ -180,6 +180,8 @@ function Research({ site, basePath }: Pick<Props, "site" | "basePath">) {
 
 function Members({ site }: Pick<Props, "site">) {
   const people = site.members?.length ? site.members : site.team;
+  const portrait = portraitUrl(site);
+
   return (
     <section className={styles.inner}>
       <div className={styles.innerHeader}>
@@ -189,6 +191,22 @@ function Members({ site }: Pick<Props, "site">) {
           <p>Profiles are presented with clear typography and roles, so the laboratory can grow without requiring professional portraits or a group photograph for every member.</p>
         </div>
       </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 260px) minmax(0, 1fr)", gap: "clamp(28px, 5vw, 72px)", alignItems: "end", marginBottom: "clamp(48px, 6vw, 76px)", paddingBottom: "clamp(42px, 5vw, 64px)", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ overflow: "hidden", aspectRatio: "4 / 5", background: "#d8d4cb", border: "1px solid var(--line)" }}>
+          {portrait ? (
+            <img src={portrait} alt={`${site.piName}, ${site.title}`} style={{ width: "100%", height: "100%", display: "block", objectFit: "cover", filter: "saturate(0.82) contrast(1.03)" }} />
+          ) : (
+            <div className={styles.portraitFallback}>{initials(site.piName)}</div>
+          )}
+        </div>
+        <div>
+          <p className={styles.metaLabel}>Principal investigator</p>
+          <h2 style={{ margin: "14px 0 8px", fontSize: "clamp(32px, 4vw, 56px)", fontWeight: 560, letterSpacing: "-0.045em" }}>{site.piName}</h2>
+          <p style={{ margin: 0, maxWidth: 620, color: "var(--quiet)", lineHeight: 1.6 }}>{site.title} · {site.department}</p>
+        </div>
+      </div>
+
       <div className={styles.peopleGrid}>
         {people.map((member, index) => (
           <article className={styles.person} key={`${member.name}-${index}`}>
