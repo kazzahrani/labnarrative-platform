@@ -19,12 +19,25 @@ type OutreachStatus =
 type OutreachRecord = {
   id: string;
   slug: string;
+  status: string;
   outreach_status: OutreachStatus;
+};
+
+type OutreachDraft = {
+  runId: string;
+  piName: string;
+  slug: string;
+  recipientEmail: string;
+  subject: string;
+  bodyText: string;
+  status: "draft" | "sending" | "failed";
+  sentAt?: string | null;
+  providerMessageId?: string;
+  errorMessage?: string;
 };
 
 const outreachOptions: Array<{ value: OutreachStatus; label: string }> = [
   { value: "no_response_yet", label: "No response yet" },
-  { value: "not_contacted", label: "Not contacted" },
   { value: "replied", label: "Replied" },
   { value: "interested", label: "Interested" },
   { value: "meeting_scheduled", label: "Meeting scheduled" },
@@ -45,19 +58,37 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 function styleSelect(select: HTMLSelectElement) {
   Object.assign(select.style, {
-    width: "158px",
+    width: "116px",
     maxWidth: "100%",
     minWidth: "0",
-    minHeight: "31px",
-    padding: "4px 7px",
+    minHeight: "26px",
+    height: "26px",
+    padding: "2px 5px",
     border: "1px solid #bac6bf",
-    borderRadius: "7px",
+    borderRadius: "6px",
     background: "transparent",
     color: "inherit",
     font: "inherit",
-    fontSize: "0.64rem",
+    fontSize: "0.57rem",
     fontWeight: "700",
     cursor: "pointer",
+  });
+}
+
+function styleSendButton(button: HTMLButtonElement) {
+  Object.assign(button.style, {
+    marginTop: "4px",
+    minHeight: "25px",
+    padding: "3px 7px",
+    border: "1px solid rgba(34,193,181,.55)",
+    borderRadius: "6px",
+    background: "rgba(34,193,181,.12)",
+    color: "#74d8cf",
+    font: "inherit",
+    fontSize: "0.56rem",
+    fontWeight: "800",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
   });
 }
 
@@ -77,14 +108,14 @@ export default function OutreachMonitorEnhancer() {
 
     const showFeedback = (element: HTMLElement, message: string, isError = false) => {
       element.textContent = message;
-      element.style.color = isError ? "#b85c5c" : "#6d7a74";
+      element.style.color = isError ? "#e58b75" : "#8ba4b8";
       window.setTimeout(() => {
         if (element.textContent === message) element.textContent = "";
-      }, 1800);
+      }, 2200);
     };
 
     const displayStatus = (status: OutreachStatus): OutreachStatus =>
-      EMAIL_PROGRESS_STATUSES.has(status) ? "no_response_yet" : status;
+      status === "not_contacted" || EMAIL_PROGRESS_STATUSES.has(status) ? "no_response_yet" : status;
 
     const saveStatus = async (
       record: OutreachRecord,
@@ -93,7 +124,10 @@ export default function OutreachMonitorEnhancer() {
       nextStatus: OutreachStatus,
     ) => {
       const previousStatus = record.outreach_status;
-      if (nextStatus === previousStatus || (nextStatus === "no_response_yet" && EMAIL_PROGRESS_STATUSES.has(previousStatus))) return;
+      if (
+        nextStatus === previousStatus
+        || (nextStatus === "no_response_yet" && (previousStatus === "not_contacted" || EMAIL_PROGRESS_STATUSES.has(previousStatus)))
+      ) return;
 
       record.outreach_status = nextStatus;
       select.disabled = true;
@@ -118,6 +152,39 @@ export default function OutreachMonitorEnhancer() {
       }
 
       showFeedback(feedback, "Saved");
+    };
+
+    const prepareAndOpen = async (
+      record: OutreachRecord,
+      button: HTMLButtonElement,
+      feedback: HTMLElement,
+    ) => {
+      if (record.status !== "concept" || record.outreach_status !== "not_contacted") return;
+      const originalLabel = button.textContent || "Send concept";
+      button.disabled = true;
+      button.textContent = "Preparing…";
+      button.style.opacity = "0.65";
+      feedback.textContent = "";
+
+      try {
+        const { data, error } = await supabase.rpc("engine_v2_admin_prepare_site_outreach", {
+          p_site_id: record.id,
+        });
+        if (error) throw error;
+        const draft = data as OutreachDraft | null;
+        if (!draft?.runId) throw new Error("The outreach draft could not be prepared.");
+
+        window.dispatchEvent(new CustomEvent<OutreachDraft>("labnarrative:open-outreach-draft", {
+          detail: draft,
+        }));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not prepare email";
+        showFeedback(feedback, message.replaceAll("_", " "), true);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalLabel;
+        button.style.opacity = "1";
+      }
     };
 
     function enhanceTable() {
@@ -153,7 +220,8 @@ export default function OutreachMonitorEnhancer() {
         cell.replaceChildren();
         cell.dataset.label = "Outreach status";
         cell.dataset.outreachSlug = slug;
-        cell.style.minWidth = "166px";
+        cell.style.minWidth = "124px";
+        cell.style.width = "124px";
 
         const select = document.createElement("select");
         select.dataset.outreachSelect = "true";
@@ -171,15 +239,29 @@ export default function OutreachMonitorEnhancer() {
 
         const feedback = document.createElement("small");
         feedback.style.display = "block";
-        feedback.style.minHeight = "10px";
+        feedback.style.maxWidth = "116px";
+        feedback.style.minHeight = "8px";
         feedback.style.marginTop = "2px";
-        feedback.style.fontSize = "0.56rem";
+        feedback.style.fontSize = "0.49rem";
+        feedback.style.lineHeight = "1.15";
 
         select.addEventListener("change", () => {
           void saveStatus(record, select, feedback, select.value as OutreachStatus);
         });
 
-        cell.append(select, feedback);
+        cell.append(select);
+
+        if (record.status === "concept" && record.outreach_status === "not_contacted") {
+          const send = document.createElement("button");
+          send.type = "button";
+          send.textContent = "Send concept";
+          send.dataset.sendConcept = "true";
+          styleSendButton(send);
+          send.addEventListener("click", () => void prepareAndOpen(record, send, feedback));
+          cell.append(send);
+        }
+
+        cell.append(feedback);
       });
     }
 
@@ -192,7 +274,7 @@ export default function OutreachMonitorEnhancer() {
 
       const { data, error } = await supabase
         .from("sites")
-        .select("id,slug,outreach_status");
+        .select("id,slug,status,outreach_status");
 
       if (error || cancelled) return;
 
