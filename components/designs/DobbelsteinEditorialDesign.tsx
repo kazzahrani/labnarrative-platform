@@ -1,5 +1,5 @@
 import BourdonDesign from "@/components/designs/BourdonDesign";
-import type { LabSite, SiteRoute } from "@/lib/sites";
+import { getBourdonPages, type LabSite, type SiteRoute } from "@/lib/sites";
 
 export const DOBBELSTEIN_EDITORIAL_VARIANT = "dobbelstein-editorial-v1";
 
@@ -29,15 +29,14 @@ export default function DobbelsteinEditorialDesign({
   basePath: string;
   previewMode?: boolean;
 }) {
-  const pages = site.pages
-    ? {
-        ...site.pages,
-        home: {
-          ...site.pages.home,
-          homepageImage: "",
-        },
-      }
-    : site.pages;
+  const currentPages = getBourdonPages(site);
+  const pages = {
+    ...currentPages,
+    home: {
+      ...currentPages.home,
+      homepageImage: "",
+    },
+  };
 
   const editorialSite: LabSite = {
     ...site,
