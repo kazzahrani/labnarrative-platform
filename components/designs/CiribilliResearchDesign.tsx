@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, type CSSProperties } from "react";
+import { NARITA_HERO_IMAGE } from "@/components/designs/naritaShared";
 import {
   getBourdonPages,
   type LabSite,
@@ -18,6 +19,18 @@ type CiribilliResearchDesignProps = {
   previewMode?: boolean;
 };
 
+function safeAsset(value?: string): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith("/")) return value;
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value)) return value;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function researchProjects(site: LabSite): ResearchProject[] {
   if (site.research?.length) return site.research;
   return site.projects.map((project, index) => ({
@@ -25,6 +38,16 @@ function researchProjects(site: LabSite): ResearchProject[] {
     title: project.title,
     summary: project.description,
   }));
+}
+
+function Picture({ src, alt, fallback }: { src?: string; alt: string; fallback: string }) {
+  const image = safeAsset(src);
+  return image ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={image} alt={alt} />
+  ) : (
+    <div className={photoStyles.placeholder} aria-label={alt}>{fallback}</div>
+  );
 }
 
 export default function CiribilliResearchDesign({
@@ -36,6 +59,7 @@ export default function CiribilliResearchDesign({
   const mainRef = useRef<HTMLElement>(null);
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
+  const hero = NARITA_HERO_IMAGE;
   const variables = {
     "--pl-background": "#ffffff",
     "--pl-surface": "#ffffff",
@@ -72,6 +96,10 @@ export default function CiribilliResearchDesign({
         `${-(distance * 0.3).toFixed(2)}px`,
       );
       heroSection.style.setProperty(
+        "--ciribilli-image-offset",
+        `${-(distance * 0.09).toFixed(2)}px`,
+      );
+      heroSection.style.setProperty(
         "--ciribilli-copy-offset",
         `${-(distance * 0.13).toFixed(2)}px`,
       );
@@ -85,6 +113,9 @@ export default function CiribilliResearchDesign({
       measure();
       requestUpdate();
     };
+
+    const images = Array.from(main.querySelectorAll("img"));
+    images.forEach((image) => image.addEventListener("load", remeasure));
 
     const resizeObserver = typeof ResizeObserver !== "undefined"
       ? new ResizeObserver(remeasure)
@@ -103,9 +134,11 @@ export default function CiribilliResearchDesign({
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", remeasure);
       window.removeEventListener("load", remeasure);
+      images.forEach((image) => image.removeEventListener("load", remeasure));
       resizeObserver?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
       heroSection.style.removeProperty("--ciribilli-hero-offset");
+      heroSection.style.removeProperty("--ciribilli-image-offset");
       heroSection.style.removeProperty("--ciribilli-copy-offset");
       main.style.removeProperty("--ciribilli-header-height");
     };
@@ -142,6 +175,8 @@ export default function CiribilliResearchDesign({
       </header>
 
       <section className={`${photoStyles.pageHero} ${styles.hero}`}>
+        <Picture src={hero} alt="Research" fallback="LMCG" />
+        <div className={photoStyles.pageHeroShade} />
         <div className={`${photoStyles.pageHeroCopy} ${styles.heroCopy}`}>
           <p>{site.labName}</p>
           <h1>Research</h1>
