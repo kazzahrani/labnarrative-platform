@@ -4,6 +4,7 @@ import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhan
 import EngineV2HardNavigation from "@/components/admin/EngineV2HardNavigation";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import OutreachSequencePanel from "@/components/admin/OutreachSequencePanel";
+import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <OutreachMonitorEnhancer />
         <OutreachSequencePanel />
         <WebsiteOutreachSequenceEnhancer />
+        <WebsiteDesignSwitcher />
         {children}
       </body>
     </html>
