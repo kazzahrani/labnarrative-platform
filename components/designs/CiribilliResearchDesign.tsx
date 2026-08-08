@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, type CSSProperties } from "react";
-import { NARITA_HERO_IMAGE } from "@/components/designs/naritaShared";
 import {
   getBourdonPages,
   type LabSite,
@@ -19,18 +18,6 @@ type CiribilliResearchDesignProps = {
   previewMode?: boolean;
 };
 
-function safeAsset(value?: string): string | undefined {
-  if (!value) return undefined;
-  if (value.startsWith("/")) return value;
-  if (/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value)) return value;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function researchProjects(site: LabSite): ResearchProject[] {
   if (site.research?.length) return site.research;
   return site.projects.map((project, index) => ({
@@ -38,16 +25,6 @@ function researchProjects(site: LabSite): ResearchProject[] {
     title: project.title,
     summary: project.description,
   }));
-}
-
-function Picture({ src, alt, fallback }: { src?: string; alt: string; fallback: string }) {
-  const image = safeAsset(src);
-  return image ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={image} alt={alt} />
-  ) : (
-    <div className={photoStyles.placeholder} aria-label={alt}>{fallback}</div>
-  );
 }
 
 export default function CiribilliResearchDesign({
@@ -59,7 +36,6 @@ export default function CiribilliResearchDesign({
   const mainRef = useRef<HTMLElement>(null);
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
-  const hero = NARITA_HERO_IMAGE;
   const variables = {
     "--pl-background": "#ffffff",
     "--pl-surface": "#ffffff",
@@ -96,10 +72,6 @@ export default function CiribilliResearchDesign({
         `${-(distance * 0.3).toFixed(2)}px`,
       );
       heroSection.style.setProperty(
-        "--ciribilli-image-offset",
-        `${-(distance * 0.09).toFixed(2)}px`,
-      );
-      heroSection.style.setProperty(
         "--ciribilli-copy-offset",
         `${-(distance * 0.13).toFixed(2)}px`,
       );
@@ -113,9 +85,6 @@ export default function CiribilliResearchDesign({
       measure();
       requestUpdate();
     };
-
-    const images = Array.from(main.querySelectorAll("img"));
-    images.forEach((image) => image.addEventListener("load", remeasure));
 
     const resizeObserver = typeof ResizeObserver !== "undefined"
       ? new ResizeObserver(remeasure)
@@ -134,11 +103,9 @@ export default function CiribilliResearchDesign({
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", remeasure);
       window.removeEventListener("load", remeasure);
-      images.forEach((image) => image.removeEventListener("load", remeasure));
       resizeObserver?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
       heroSection.style.removeProperty("--ciribilli-hero-offset");
-      heroSection.style.removeProperty("--ciribilli-image-offset");
       heroSection.style.removeProperty("--ciribilli-copy-offset");
       main.style.removeProperty("--ciribilli-header-height");
     };
@@ -175,8 +142,6 @@ export default function CiribilliResearchDesign({
       </header>
 
       <section className={`${photoStyles.pageHero} ${styles.hero}`}>
-        <Picture src={hero} alt="Research" fallback="LMCG" />
-        <div className={photoStyles.pageHeroShade} />
         <div className={`${photoStyles.pageHeroCopy} ${styles.heroCopy}`}>
           <p>{site.labName}</p>
           <h1>Research</h1>
@@ -190,38 +155,25 @@ export default function CiribilliResearchDesign({
           {pages.research.introduction && <div>{pages.research.introduction}</div>}
         </header>
 
-        {projects.map((project, index) => {
-          const figure = project.figureImage;
-          return (
-            <article
-              className={photoStyles.researchEditorialTopic}
-              id={project.slug}
-              key={`${project.slug}-${index}`}
-              style={!figure ? { gridTemplateColumns: "1fr" } : undefined}
-            >
-              <div className={photoStyles.researchEditorialCopy}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <h2>{project.title}</h2>
-                {project.summary && <p className={photoStyles.researchEditorialLead}>{project.summary}</p>}
-                <div className={photoStyles.researchEditorialBody}>
-                  {(project.body || []).map((paragraph, paragraphIndex) => (
-                    <p key={paragraphIndex}>{paragraph}</p>
-                  ))}
-                </div>
+        {projects.map((project, index) => (
+          <article
+            className={photoStyles.researchEditorialTopic}
+            id={project.slug}
+            key={`${project.slug}-${index}`}
+            style={{ gridTemplateColumns: "1fr" }}
+          >
+            <div className={photoStyles.researchEditorialCopy}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h2>{project.title}</h2>
+              {project.summary && <p className={photoStyles.researchEditorialLead}>{project.summary}</p>}
+              <div className={photoStyles.researchEditorialBody}>
+                {(project.body || []).map((paragraph, paragraphIndex) => (
+                  <p key={paragraphIndex}>{paragraph}</p>
+                ))}
               </div>
-              {figure && (
-                <figure className={photoStyles.researchEditorialFigure}>
-                  <Picture
-                    src={figure}
-                    alt={project.figureCaption || project.title}
-                    fallback={String(index + 1).padStart(2, "0")}
-                  />
-                  {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
-                </figure>
-              )}
-            </article>
-          );
-        })}
+            </div>
+          </article>
+        ))}
       </section>
 
       <footer className={`${photoStyles.footer} ${styles.footer}`}>
