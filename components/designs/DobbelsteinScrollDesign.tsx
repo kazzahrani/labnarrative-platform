@@ -10,7 +10,7 @@ export const DOBBELSTEIN_SCROLL_VARIANT = "dobbelstein-scroll-v1";
 
 const SECTION_COLORS = [
   "#f3f6f3",
-  "#117b79",
+  "var(--bn-teal)",
   "#f5efe5",
   "#e9f0f3",
 ] as const;
@@ -220,12 +220,9 @@ export default function DobbelsteinScrollDesign({
         .dobbelstein-scroll-route-home .bn-home-overview h2,
         .dobbelstein-scroll-route-home .bn-home-overview p,
         .dobbelstein-scroll-route-home .bn-home-overview a,
-        .dobbelstein-scroll-route-home .bn-home-overview .bn-eyebrow {
-          color: #f7fbfa !important;
-        }
-
+        .dobbelstein-scroll-route-home .bn-home-overview .bn-eyebrow,
         .dobbelstein-scroll-route-home .bn-home-overview .bn-text-link span {
-          color: #f7fbfa !important;
+          color: var(--bn-white) !important;
         }
 
         .dobbelstein-scroll-route-home .bn-home-programmes > .bn-page-shell {
@@ -239,7 +236,7 @@ export default function DobbelsteinScrollDesign({
         }
 
         .dobbelstein-scroll-route-home .bn-join-strip {
-          background: #117b79 !important;
+          background: var(--bn-teal) !important;
         }
 
         @media (max-width: 760px), (prefers-reduced-motion: reduce) {
