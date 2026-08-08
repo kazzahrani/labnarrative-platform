@@ -6,6 +6,7 @@ import AdminWorkspaceTabs from "@/components/admin/AdminWorkspaceTabs";
 import EngineV2ApprovePublishEnhancer from "@/components/admin/EngineV2ApprovePublishEnhancer";
 import EngineV2HardNavigation from "@/components/admin/EngineV2HardNavigation";
 import EngineV2OutreachWindow from "@/components/admin/EngineV2OutreachWindow";
+import FinishDraftsAction from "@/components/admin/FinishDraftsAction";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import WebsiteConfirmPublishEnhancer from "@/components/admin/WebsiteConfirmPublishEnhancer";
 import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <EngineV2ApprovePublishEnhancer />
         <EngineV2HardNavigation />
         <EngineV2OutreachWindow />
+        <FinishDraftsAction />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
         <WebsiteConfirmPublishEnhancer />
