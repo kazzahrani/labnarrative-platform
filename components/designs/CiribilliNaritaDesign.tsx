@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import NaritaOverlapDesign from "@/components/designs/NaritaOverlapDesign";
-import { withNaritaHero } from "@/components/designs/naritaShared";
+import {
+  withNaritaHero,
+  withoutNaritaResearchImages,
+} from "@/components/designs/naritaShared";
 import type { LabSite, SiteRoute } from "@/lib/sites";
 
 type CiribilliNaritaDesignProps = {
@@ -14,7 +17,10 @@ type CiribilliNaritaDesignProps = {
 
 export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const naritaSite = withNaritaHero(props.site);
+  const heroSite = withNaritaHero(props.site);
+  const naritaSite = props.route.section === "research"
+    ? withoutNaritaResearchImages(heroSite)
+    : heroSite;
 
   useEffect(() => {
     if (props.route.section !== "home") return;
