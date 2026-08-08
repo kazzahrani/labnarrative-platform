@@ -1,0 +1,24 @@
+/* Engine v3 Final Review: keep human-gate cards inside the locked blue/dark platform palette. */
+body main article:has([data-status="awaiting_final_review"]) div[class*="event"] {
+  border-color: #2b4655 !important;
+  border-left-color: #24b5b2 !important;
+  background: #132532 !important;
+  color: #e8f1f5 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 8px 20px rgba(3, 13, 20, 0.14) !important;
+}
+
+body main article:has([data-status="awaiting_final_review"]) div[class*="event"] > strong {
+  color: #f3f7f9 !important;
+}
+
+body main article:has([data-status="awaiting_final_review"]) div[class*="event"] > span {
+  color: #aebbc4 !important;
+}
+
+body main article:has([data-status="awaiting_final_review"]) div[class*="event"]:hover {
+  border-color: #355666 !important;
+  border-left-color: #24b5b2 !important;
+  background: #162a38 !important;
+}
