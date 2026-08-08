@@ -1,40 +1,11 @@
 "use client";
 
 import { createClient, type Session } from "@supabase/supabase-js";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./automation.module.css";
 
-type EngineRunState =
-  | "research"
-  | "build"
-  | "assets"
-  | "verify"
-  | "final_review"
-  | "blocked"
-  | "approved"
-  | "published";
-
-type ReviewDecision = "approve" | "return_build" | "return_assets" | "cancel";
-
-type EngineRun = {
-  runId: string;
-  prospectId: string;
-  piName: string;
-  slug: string;
-  score: number | null;
-  state: EngineRunState;
-  blockedReason: string | null;
-  startedAt: string | null;
-  updatedAt: string | null;
-  siteId: string | null;
-  siteStatus: string | null;
-  previewPath: string | null;
-  publicUrl: string | null;
-  verificationTotal: number;
-  verificationPassed: number;
-  researchEvidence: number;
-  assets: number;
-};
+type V3State = "producing" | "final_review" | "published" | "completed" | "blocked" | "cancelled";
 
 type QueueItem = {
   prospectId: string;
@@ -42,44 +13,52 @@ type QueueItem = {
   slug: string;
   institution: string;
   score: number | null;
-  priority: number | null;
-  createdAt: string;
+  queuedAt: string | null;
 };
 
-type DashboardData = {
+type Run = {
+  runId: string;
+  prospectId: string;
+  siteId: string | null;
+  piName: string;
+  slug: string;
+  state: V3State;
+  blockedReason: string | null;
+  startedAt: string;
+  updatedAt: string;
+  previewPath: string | null;
+  publicUrl: string | null;
+  evidenceCount: number;
+  assetCount: number;
+};
+
+type Dashboard = {
   runtime: {
     enabled: boolean;
     version: number;
-    mode: string;
-    maxConcurrency: number;
+    mode: "manual_test" | "scheduled_chatgpt" | "paused";
+    max_per_run: number;
+    default_design_variant: string;
     note: string;
-    updatedAt: string;
+    updated_at: string;
   };
   counts: {
     eligibleQueue: number;
-    active: number;
+    producing: number;
     finalReview: number;
-    blocked: number;
-    approved: number;
     published: number;
+    blocked: number;
+    completed: number;
   };
-  runs: EngineRun[];
   queue: QueueItem[];
-};
-
-type PublishResult = {
-  runId?: string;
-  state?: string;
-  siteId?: string;
-  publicUrl?: string;
-  idempotent?: boolean;
+  runs: Run[];
 };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-function formatDate(value: string | null | undefined): string {
+function dateTime(value?: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
@@ -93,50 +72,22 @@ function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-function stateLabel(state: EngineRunState): string {
-  const labels: Record<EngineRunState, string> = {
-    research: "Research",
-    build: "Build",
-    assets: "Assets",
-    verify: "Verify",
+function stateLabel(state: V3State) {
+  return ({
+    producing: "Producing",
     final_review: "Final Review",
-    blocked: "Blocked",
-    approved: "Approved",
     published: "Published",
-  };
-  return labels[state];
+    completed: "Completed",
+    blocked: "Blocked",
+    cancelled: "Cancelled",
+  } as const)[state];
 }
 
-function stateDescription(state: EngineRunState): string {
-  const labels: Record<EngineRunState, string> = {
-    research: "Verifying identity, official research sources and PubMed records.",
-    build: "Writing the private text-first concept from verified evidence only.",
-    assets: "Separating portrait, hero and optional research-image roles.",
-    verify: "Running deterministic evidence and asset checks.",
-    final_review: "Private concept is ready for your decision.",
-    blocked: "The engine stopped rather than guessing. See the exact reason below.",
-    approved: "Human review approved. One explicit Publish click will make the concept public.",
-    published: "The approved concept is live on its LabNarrative subdomain. Outreach remains separate.",
-  };
-  return labels[state];
-}
-
-function actionError(payload: unknown, status: number): string {
-  if (payload && typeof payload === "object") {
-    const row = payload as { message?: unknown; details?: unknown; hint?: unknown; error?: unknown };
-    for (const value of [row.message, row.details, row.hint, row.error]) {
-      if (typeof value === "string" && value.trim()) return value;
-    }
-  }
-  return `Request failed (${status}).`;
-}
-
-async function rpcRequest<T>(session: Session, functionName: string, body: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
+async function rpc<T>(session: Session, name: string, body: Record<string, unknown> = {}): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-
+  const timeout = window.setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${functionName}`, {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -147,134 +98,38 @@ async function rpcRequest<T>(session: Session, functionName: string, body: Recor
       cache: "no-store",
       signal: controller.signal,
     });
-
     const text = await response.text();
-    let payload: unknown = null;
-    if (text) {
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        payload = text;
-      }
+    const payload = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+      const row = payload as { message?: string; details?: string; hint?: string } | null;
+      throw new Error(row?.message || row?.details || row?.hint || `${name} failed (${response.status}).`);
     }
-
-    if (!response.ok) throw new Error(actionError(payload, response.status));
     return payload as T;
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("The action timed out. Please try once more.");
-    }
+    if (error instanceof Error && error.name === "AbortError") throw new Error("The action timed out. Try again.");
     throw error;
   } finally {
     window.clearTimeout(timeout);
   }
 }
 
-function RunCard({
-  run,
-  actionKey,
-  onReview,
-  onPublish,
-}: {
-  run: EngineRun;
-  actionKey: string;
-  onReview: (runId: string, decision: ReviewDecision) => Promise<void>;
-  onPublish: (runId: string) => Promise<void>;
-}) {
-  const isReview = run.state === "final_review";
-  const isApproved = run.state === "approved";
-  const isPublished = run.state === "published";
-  const isBusy = actionKey.startsWith(`${run.runId}:`);
-  const busyAction = isBusy ? actionKey.split(":")[1] : "";
-
-  return (
-    <article className={styles.card} style={{ display: "grid", gap: 14 }}>
-      <div className={styles.cardHeader}>
-        <div>
-          <p className={styles.kicker}>{stateLabel(run.state)}</p>
-          <h3 style={{ marginBottom: 4 }}>{run.piName}</h3>
-          <p className={styles.muted} style={{ margin: 0 }}>{run.slug}.labnarrative.com · score {run.score ?? "—"}</p>
-        </div>
-        <span className={styles.status} data-status={run.state === "blocked" ? "needs_attention" : run.state === "final_review" ? "awaiting_final_review" : run.state === "published" ? "live" : "running"}>
-          {stateLabel(run.state)}
-        </span>
-      </div>
-
-      <p style={{ margin: 0 }}>{stateDescription(run.state)}</p>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 13 }}>
-        <span>Evidence: <strong>{run.researchEvidence}</strong></span>
-        <span>Verified assets: <strong>{run.assets}</strong></span>
-        <span>Checks: <strong>{run.verificationPassed}/{run.verificationTotal}</strong></span>
-        <span>Updated: <strong>{formatDate(run.updatedAt)}</strong></span>
-      </div>
-
-      {run.blockedReason ? (
-        <div className={`${styles.notice} ${styles.error}`} style={{ margin: 0 }}>
-          <strong>Stopped safely:</strong> {run.blockedReason}
-        </div>
-      ) : null}
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {run.previewPath ? (
-          <a className={styles.buttonSecondary} href={run.previewPath} target="_blank" rel="noreferrer">
-            Open private preview ↗
-          </a>
-        ) : null}
-        {run.publicUrl ? (
-          <a className={isPublished ? styles.button : styles.buttonSecondary} href={run.publicUrl} target="_blank" rel="noreferrer">
-            Open live site ↗
-          </a>
-        ) : null}
-        {isReview ? (
-          <>
-            <button className={styles.button} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "approve")}>
-              {busyAction === "approve" ? "Approving…" : "Approve"}
-            </button>
-            <button className={styles.buttonSecondary} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "return_build")}>
-              {busyAction === "return_build" ? "Returning…" : "Return to Build"}
-            </button>
-            <button className={styles.buttonSecondary} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "return_assets")}>
-              {busyAction === "return_assets" ? "Returning…" : "Return to Assets"}
-            </button>
-            <button className={styles.buttonSecondary} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "cancel")}>
-              {busyAction === "cancel" ? "Cancelling…" : "Cancel"}
-            </button>
-          </>
-        ) : null}
-        {isApproved ? (
-          <button className={styles.button} disabled={isBusy} type="button" onClick={() => void onPublish(run.runId)}>
-            {busyAction === "publish" ? "Publishing…" : "Publish concept"}
-          </button>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
-export default function AutomationControlCentre() {
+export default function EngineV3ControlCentre() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [notice, setNotice] = useState("");
-  const [noticeError, setNoticeError] = useState(false);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(false);
-  const [engineWorking, setEngineWorking] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState(false);
   const [actionKey, setActionKey] = useState("");
 
-  const loadData = useCallback(async (currentSession: Session) => {
-    if (!currentSession) return;
+  const load = useCallback(async (activeSession: Session) => {
     setLoading(true);
     try {
-      const data = await rpcRequest<DashboardData>(currentSession, "engine_v2_admin_dashboard", {}, 8000);
-      setDashboard(data);
-      setNoticeError(false);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Engine v2 dashboard could not be loaded.");
-      setNoticeError(true);
+      setDashboard(await rpc<Dashboard>(activeSession, "engine_v3_admin_dashboard"));
+      setError(false);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Engine v3 dashboard could not be loaded.");
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -282,190 +137,71 @@ export default function AutomationControlCentre() {
 
   useEffect(() => {
     let mounted = true;
-
     void supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setSession(data.session);
       setAuthReady(true);
-      if (data.session) void loadData(data.session);
+      if (data.session) void load(data.session);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if (!mounted || event === "INITIAL_SESSION") return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
       setSession(nextSession);
       setAuthReady(true);
-      if (!nextSession) {
-        setDashboard(null);
-        return;
-      }
-      if (event === "SIGNED_IN") {
-        window.setTimeout(() => void loadData(nextSession), 0);
-      }
+      if (nextSession) void load(nextSession);
+      else setDashboard(null);
     });
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, [load]);
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [loadData]);
+  const producing = useMemo(() => dashboard?.runs.filter((run) => run.state === "producing") ?? [], [dashboard]);
+  const finalReview = useMemo(() => dashboard?.runs.filter((run) => run.state === "final_review") ?? [], [dashboard]);
+  const blocked = useMemo(() => dashboard?.runs.filter((run) => run.state === "blocked") ?? [], [dashboard]);
+  const recentPublished = useMemo(() => dashboard?.runs.filter((run) => ["published", "completed"].includes(run.state)).slice(0, 12) ?? [], [dashboard]);
 
-  const activeRuns = useMemo(() => dashboard?.runs.filter((run) => ["research", "build", "assets", "verify"].includes(run.state)) ?? [], [dashboard]);
-  const finalReviewRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "final_review") ?? [], [dashboard]);
-  const blockedRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "blocked") ?? [], [dashboard]);
-  const approvedRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "approved") ?? [], [dashboard]);
-  const publishedRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "published") ?? [], [dashboard]);
-
-  async function requestOtp(event: FormEvent) {
-    event.preventDefault();
-    setNotice("");
-    setNoticeError(false);
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: false } });
-    if (error) {
-      setNotice(error.message);
-      setNoticeError(true);
-      return;
-    }
-    setOtpSent(true);
-    setNotice("A six-digit verification code has been sent to your email.");
-  }
-
-  async function verifyOtp(event: FormEvent) {
-    event.preventDefault();
-    const token = otp.replace(/\D/g, "").slice(0, 6);
-    if (token.length !== 6) {
-      setNotice("Enter the complete six-digit code.");
-      setNoticeError(true);
-      return;
-    }
-    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token, type: "email" });
-    if (error) {
-      setNotice(error.message);
-      setNoticeError(true);
-    }
-  }
-
-  function applyReviewLocally(runId: string, decision: ReviewDecision) {
-    setDashboard((current) => {
-      if (!current) return current;
-      const existing = current.runs.find((run) => run.runId === runId);
-      if (!existing) return current;
-
-      const target = decision === "approve" ? "approved" : decision === "return_build" ? "build" : decision === "return_assets" ? "assets" : "cancelled";
-      if (existing.state === target) return current;
-
-      const counts = { ...current.counts };
-      if (existing.state === "final_review") counts.finalReview = Math.max(0, counts.finalReview - 1);
-      if (target === "approved") counts.approved += 1;
-      if (target === "build" || target === "assets") counts.active += 1;
-
-      const runs = target === "cancelled"
-        ? current.runs.filter((run) => run.runId !== runId)
-        : current.runs.map((run) => run.runId === runId ? { ...run, state: target as EngineRunState, updatedAt: new Date().toISOString() } : run);
-
-      return { ...current, counts, runs };
-    });
-  }
-
-  async function setEngineEnabled(enabled: boolean) {
-    if (!session || engineWorking) return;
-    setEngineWorking(true);
-    try {
-      await rpcRequest(session, "engine_v2_admin_set_enabled", { p_enabled: enabled });
-      setDashboard((current) => current ? {
-        ...current,
-        runtime: { ...current.runtime, enabled, updatedAt: new Date().toISOString() },
-      } : current);
-      setNotice(enabled ? "Engine v2 resumed." : "Engine v2 paused. No new stages will be dispatched.");
-      setNoticeError(false);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Engine state could not be changed.");
-      setNoticeError(true);
-    } finally {
-      setEngineWorking(false);
-    }
-  }
-
-  async function reviewRun(runId: string, decision: ReviewDecision) {
+  async function approvePublish(runId: string) {
     if (!session || actionKey) return;
-    setActionKey(`${runId}:${decision}`);
-    try {
-      await rpcRequest(session, "engine_v2_admin_review", { p_run_id: runId, p_decision: decision, p_note: null });
-      applyReviewLocally(runId, decision);
-      setNotice(
-        decision === "approve" ? "Concept approved. It is still private until you click Publish concept." :
-        decision === "return_build" ? "Concept returned to Build." :
-        decision === "return_assets" ? "Concept returned to Assets." :
-        "Run cancelled.",
-      );
-      setNoticeError(false);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Review decision could not be saved.");
-      setNoticeError(true);
-    } finally {
-      setActionKey("");
-    }
-  }
-
-  async function publishRun(runId: string) {
-    if (!session || actionKey) return;
+    if (!window.confirm("Approve this concept and publish it? Outreach will NOT be sent.")) return;
     setActionKey(`${runId}:publish`);
     try {
-      const data = await rpcRequest<PublishResult>(session, "engine_v2_admin_publish", { p_run_id: runId });
-      const publicUrl = data?.publicUrl || "";
-
-      setDashboard((current) => {
-        if (!current) return current;
-        const existing = current.runs.find((run) => run.runId === runId);
-        if (!existing) return current;
-        const wasApproved = existing.state === "approved";
-        return {
-          ...current,
-          counts: {
-            ...current.counts,
-            approved: wasApproved ? Math.max(0, current.counts.approved - 1) : current.counts.approved,
-            published: existing.state === "published" ? current.counts.published : current.counts.published + 1,
-          },
-          runs: current.runs.map((run) => run.runId === runId ? {
-            ...run,
-            state: "published",
-            siteStatus: "concept",
-            previewPath: null,
-            publicUrl: publicUrl || run.publicUrl || `https://${run.slug}.labnarrative.com`,
-            updatedAt: new Date().toISOString(),
-          } : run),
-        };
-      });
-
-      setNotice(publicUrl ? `Concept published: ${publicUrl}` : "Concept published successfully.");
-      setNoticeError(false);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Concept could not be published.");
-      setNoticeError(true);
+      await rpc(session, "engine_v3_admin_approve_publish", { p_run_id: runId, p_note: null });
+      setNotice("Concept approved and published. Outreach was not sent.");
+      setError(false);
+      await load(session);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Publish failed.");
+      setError(true);
     } finally {
       setActionKey("");
     }
   }
 
-  if (!authReady) return <main className={styles.page}><div className={styles.login}>Loading administrator access…</div></main>;
+  async function returnToProduction(runId: string) {
+    if (!session || actionKey) return;
+    const note = window.prompt("What should ChatGPT revise before Final Review?")?.trim();
+    if (note === undefined) return;
+    setActionKey(`${runId}:return`);
+    try {
+      await rpc(session, "engine_v3_admin_return_to_production", { p_run_id: runId, p_note: note || null });
+      setNotice("Returned to ChatGPT production.");
+      setError(false);
+      await load(session);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Return to production failed.");
+      setError(true);
+    } finally {
+      setActionKey("");
+    }
+  }
 
+  if (!authReady) return <main className={styles.page}><div className={styles.login}>Preparing Engine v3…</div></main>;
   if (!session) {
     return (
       <main className={styles.page}>
         <section className={styles.login}>
-          <p className={styles.kicker}>LabNarrative administration</p>
-          <h1>Engine v2</h1>
-          {!otpSent ? (
-            <form onSubmit={requestOtp}>
-              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Administrator email" required />
-              <button className={styles.button} type="submit">Send verification code</button>
-            </form>
-          ) : (
-            <form onSubmit={verifyOtp}>
-              <input inputMode="numeric" value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="Six-digit code" required />
-              <button className={styles.button} type="submit">Verify and continue</button>
-            </form>
-          )}
-          {notice ? <p className={`${styles.notice} ${noticeError ? styles.error : ""}`}>{notice}</p> : null}
+          <p className={styles.kicker}>Engine v3</p>
+          <h1>Administrator sign-in required.</h1>
+          <p className={styles.muted}>Sign in through the LabNarrative administrator dashboard, then return to Production.</p>
+          <Link className={styles.button} href="/admin">Open administrator dashboard</Link>
         </section>
       </main>
     );
@@ -474,105 +210,73 @@ export default function AutomationControlCentre() {
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
-        <div><a className={styles.brand} href="/">LabNarrative</a><span className={styles.muted}>Engine v2</span></div>
-        <nav>
-          <a href="/admin/sites">Websites</a>
-          <a href="/admin/discovery">Discovery</a>
-          <a href="/admin">Editor</a>
-          <button className={styles.buttonSecondary} type="button" onClick={() => void supabase.auth.signOut()}>Sign out</button>
-        </nav>
+        <div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Engine v3</span></div>
+        <nav><span>{session.user.email}</span><Link href="/admin/sites">Websites</Link><Link href="/admin/discovery">Discovery</Link></nav>
       </header>
 
       <div className={styles.main}>
         <section className={styles.hero}>
           <div>
-            <p className={styles.kicker}>Engine v2 · evidence first</p>
-            <h1>Queue → Research → Build → Assets → Verify → Final Review → Approve → Publish</h1>
-            <p className={styles.heroCopy}>One PI is processed at a time. Scientific uncertainty stops the run instead of inventing a match. Final Review never blocks the next PI. Publishing requires your explicit approval and a separate Publish click. Outreach remains separate.</p>
+            <p className={styles.kicker}>ChatGPT-native production</p>
+            <h1>Engine v3</h1>
+            <p className={styles.heroCopy}>ChatGPT performs the research, scientific writing, reasoning and production. Supabase is the source of truth. There is no autonomous OpenAI API worker and no API-credit dependency.</p>
           </div>
           <div className={styles.heroActions}>
-            <button className={dashboard?.runtime.enabled ? styles.buttonSecondary : styles.button} type="button" disabled={engineWorking || !dashboard} onClick={() => void setEngineEnabled(!dashboard?.runtime.enabled)}>
-              {engineWorking ? "Saving…" : dashboard?.runtime.enabled ? "Pause engine" : "Resume engine"}
-            </button>
-            <button className={styles.buttonSecondary} type="button" disabled={loading} onClick={() => session && void loadData(session)}>{loading ? "Refreshing…" : "Refresh"}</button>
+            <button className={styles.button} disabled={loading} onClick={() => void load(session)} type="button">{loading ? "Refreshing…" : "Refresh"}</button>
+            <Link className={styles.buttonSecondary} href="/admin/sites">Website Monitor</Link>
           </div>
         </section>
 
-        {notice ? <p className={`${styles.notice} ${noticeError ? styles.error : ""}`}>{notice}</p> : null}
+        {notice ? <p className={`${styles.notice} ${error ? styles.error : ""}`}>{notice}</p> : null}
 
-        <section className={styles.stats} aria-label="Engine v2 totals">
-          <div className={styles.stat}><span>Engine</span><strong>{dashboard?.runtime.enabled ? "ON" : "OFF"}</strong></div>
-          <div className={styles.stat}><span>Eligible queue</span><strong>{dashboard?.counts.eligibleQueue ?? "—"}</strong></div>
-          <div className={styles.stat}><span>Active production</span><strong>{dashboard?.counts.active ?? "—"}</strong></div>
-          <div className={styles.stat}><span>Final Review</span><strong>{dashboard?.counts.finalReview ?? "—"}</strong></div>
-          <div className={styles.stat}><span>Approved</span><strong>{dashboard?.counts.approved ?? "—"}</strong></div>
-          <div className={styles.stat}><span>Published</span><strong>{dashboard?.counts.published ?? "—"}</strong></div>
-          <div className={styles.stat}><span>Blocked safely</span><strong>{dashboard?.counts.blocked ?? "—"}</strong></div>
+        <section className={styles.stats}>
+          <article className={styles.stat}><span>Eligible queue</span><strong>{dashboard?.counts.eligibleQueue ?? "—"}</strong></article>
+          <article className={styles.stat}><span>Producing</span><strong>{dashboard?.counts.producing ?? "—"}</strong></article>
+          <article className={styles.stat}><span>Final Review</span><strong>{dashboard?.counts.finalReview ?? "—"}</strong></article>
+          <article className={styles.stat}><span>Published</span><strong>{dashboard?.counts.published ?? "—"}</strong></article>
+          <article className={styles.stat}><span>Blocked</span><strong>{dashboard?.counts.blocked ?? "—"}</strong></article>
         </section>
 
-        <div className={styles.grid}>
+        <section className={styles.grid}>
           <div className={styles.stack}>
-            <section className={styles.card}>
-              <div className={styles.cardHeader}>
-                <div><p className={styles.kicker}>Live production</p><h2>{activeRuns.length ? "One PI is moving through v2" : "No active PI right now"}</h2></div>
-                <span className={styles.status} data-status={dashboard?.runtime.enabled ? "running" : "paused"}>{dashboard?.runtime.enabled ? "Automatic" : "Paused"}</span>
+            <article className={styles.card}>
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Runtime</p><h2>Clean v3 core</h2></div><span className={styles.status} data-status={dashboard?.runtime.enabled ? "running" : "needs_attention"}>{dashboard?.runtime.enabled ? "Enabled" : "Paused"}</span></div>
+              <p className={styles.muted}>Mode: <strong>{dashboard?.runtime.mode ?? "—"}</strong></p>
+              <p className={styles.muted}>Maximum per ChatGPT run: <strong>{dashboard?.runtime.max_per_run ?? 4}</strong></p>
+              <p className={styles.muted}>Default design: <strong>{dashboard?.runtime.default_design_variant ?? "ciribilli-narita-v1"}</strong></p>
+              <p className={styles.muted}>{dashboard?.runtime.note}</p>
+              <p className={styles.muted}>No background production cron is running. Scheduling comes only after the manual v3 test passes.</p>
+            </article>
+
+            <article className={styles.card}>
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Eligible queue</p><h2>Next prospects</h2></div><span className={styles.status}>{dashboard?.queue.length ?? 0}</span></div>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead><tr><th>PI</th><th>Institution</th><th>Score</th><th>Queued</th></tr></thead>
+                  <tbody>
+                    {(dashboard?.queue ?? []).slice(0, 30).map((item) => <tr key={item.prospectId}><td><strong>{item.piName}</strong><br/><span className={styles.muted}>{item.slug}</span></td><td>{item.institution}</td><td>{item.score ?? "—"}</td><td>{dateTime(item.queuedAt)}</td></tr>)}
+                  </tbody>
+                </table>
               </div>
-              <p className={styles.muted}>{dashboard?.runtime.note ?? "Loading engine state…"}</p>
-            </section>
-            {activeRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
-
-            <section className={styles.card}>
-              <div className={styles.cardHeader}><div><p className={styles.kicker}>Final Review</p><h2>{finalReviewRuns.length} private concept{finalReviewRuns.length === 1 ? "" : "s"} waiting</h2></div></div>
-              {finalReviewRuns.length === 0 ? <p className={styles.muted}>Nothing is waiting for review.</p> : null}
-            </section>
-            {finalReviewRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
-
-            {approvedRuns.length ? (
-              <section className={styles.card}>
-                <div className={styles.cardHeader}><div><p className={styles.kicker}>Approved · ready to publish</p><h2>{approvedRuns.length} concept{approvedRuns.length === 1 ? "" : "s"}</h2></div></div>
-                <p className={styles.muted}>These concepts passed human review but are still private. Publish only when you want the subdomain to become public.</p>
-              </section>
-            ) : null}
-            {approvedRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
-
-            {publishedRuns.length ? (
-              <section className={styles.card}>
-                <div className={styles.cardHeader}><div><p className={styles.kicker}>Published</p><h2>{publishedRuns.length} live concept{publishedRuns.length === 1 ? "" : "s"}</h2></div></div>
-                <p className={styles.muted}>Published concepts are public. No outreach is sent by this action.</p>
-              </section>
-            ) : null}
-            {publishedRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
+            </article>
           </div>
 
           <div className={styles.stack}>
-            <section className={styles.card}>
-              <div className={styles.cardHeader}><div><p className={styles.kicker}>Eligible queue</p><h2>{dashboard?.counts.eligibleQueue ?? 0} PIs waiting</h2></div></div>
-              <div style={{ display: "grid", gap: 10 }}>
-                {(dashboard?.queue ?? []).slice(0, 15).map((item, index) => (
-                  <div key={item.prospectId} style={{ display: "grid", gridTemplateColumns: "32px minmax(0,1fr) auto", gap: 10, alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(22,35,31,.10)" }}>
-                    <span className={styles.muted}>{String(index + 1).padStart(2, "0")}</span>
-                    <div><strong>{item.piName}</strong><div className={styles.muted} style={{ fontSize: 13 }}>{item.institution || "Institution not yet recorded"}</div></div>
-                    <strong>{item.score ?? "—"}</strong>
-                  </div>
-                ))}
-                {(dashboard?.queue.length ?? 0) > 15 ? <p className={styles.muted}>Showing the next 15 queued PIs.</p> : null}
-              </div>
-            </section>
+            <article className={styles.card}>
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Current work</p><h2>ChatGPT production</h2></div><span className={styles.status} data-status="in_production">{producing.length}</span></div>
+              {producing.length === 0 ? <p className={styles.muted}>No PI is currently claimed. The first manual v3 test will appear here.</p> : producing.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.slug} · evidence {run.evidenceCount} · assets {run.assetCount}</span><time>{dateTime(run.updatedAt)}</time>{run.previewPath ? <div className={styles.formActions}><a className={styles.buttonSecondary} href={run.previewPath} target="_blank" rel="noreferrer">Open draft ↗</a></div> : null}</div>)}
+            </article>
 
-            <section className={styles.card}>
-              <div className={styles.cardHeader}><div><p className={styles.kicker}>Blocked safely</p><h2>{blockedRuns.length} run{blockedRuns.length === 1 ? "" : "s"}</h2></div></div>
-              <p className={styles.muted}>Blocked runs do not consume the production slot. No automatic recovery is running.</p>
-              <div style={{ display: "grid", gap: 12 }}>
-                {blockedRuns.map((run) => (
-                  <div key={run.runId} style={{ paddingTop: 10, borderTop: "1px solid rgba(22,35,31,.10)" }}>
-                    <strong>{run.piName}</strong>
-                    <p className={styles.muted} style={{ margin: "4px 0 0" }}>{run.blockedReason || "Unknown blocker"}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <article className={styles.card}>
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Human gate</p><h2>Final Review</h2></div><span className={styles.status} data-status="awaiting_final_review">{finalReview.length}</span></div>
+              {finalReview.length === 0 ? <p className={styles.muted}>Successful ChatGPT runs stop here before publication.</p> : finalReview.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.slug} · verified evidence {run.evidenceCount} · verified assets {run.assetCount}</span><div className={styles.formActions}>{run.previewPath ? <a className={styles.buttonSecondary} href={run.previewPath} target="_blank" rel="noreferrer">Preview ↗</a> : null}<button className={styles.button} disabled={Boolean(actionKey)} onClick={() => void approvePublish(run.runId)} type="button">{actionKey === `${run.runId}:publish` ? "Publishing…" : "Approve & Publish"}</button><button className={styles.buttonSecondary} disabled={Boolean(actionKey)} onClick={() => void returnToProduction(run.runId)} type="button">Return to ChatGPT</button></div></div>)}
+            </article>
+
+            {blocked.length ? <article className={styles.card}><div className={styles.cardHeader}><div><p className={styles.kicker}>Fail closed</p><h2>Blocked</h2></div><span className={styles.status} data-status="needs_attention">{blocked.length}</span></div>{blocked.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.blockedReason || "Blocked without a recorded reason."}</span><time>{dateTime(run.updatedAt)}</time></div>)}</article> : null}
+
+            {recentPublished.length ? <article className={styles.card}><div className={styles.cardHeader}><div><p className={styles.kicker}>Recent</p><h2>Published by v3</h2></div></div>{recentPublished.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{stateLabel(run.state)}</span>{run.publicUrl ? <div className={styles.formActions}><a className={styles.buttonSecondary} href={run.publicUrl} target="_blank" rel="noreferrer">Open site ↗</a></div> : null}</div>)}</article> : null}
           </div>
-        </div>
+        </section>
       </div>
     </main>
   );
