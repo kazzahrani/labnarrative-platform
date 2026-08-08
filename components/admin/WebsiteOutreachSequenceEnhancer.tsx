@@ -212,17 +212,33 @@ export default function WebsiteOutreachSequenceEnhancer() {
       if (!table) return;
 
       const headerRow = table.querySelector<HTMLTableRowElement>("thead tr");
-      if (headerRow && !headerRow.querySelector(`[${HEADER_ATTR}]`)) {
-        const header = document.createElement("th");
-        header.setAttribute(HEADER_ATTR, "true");
-        header.textContent = "Automatic follow-up";
-        const websiteStatusHeader = Array.from(headerRow.children).find((node) => node.textContent?.trim() === "Website status");
-        if (websiteStatusHeader) websiteStatusHeader.insertAdjacentElement("afterend", header);
-        else headerRow.appendChild(header);
+      if (!headerRow) return;
+
+      const outreachHeader = Array.from(headerRow.children).find((node) =>
+        (node as HTMLElement).dataset.outreachColumn === "true" || node.textContent?.trim() === "Outreach status"
+      );
+      if (!outreachHeader) return;
+
+      let automaticHeader = headerRow.querySelector<HTMLElement>(`[${HEADER_ATTR}]`);
+      if (!automaticHeader) {
+        automaticHeader = document.createElement("th");
+        automaticHeader.setAttribute(HEADER_ATTR, "true");
+        automaticHeader.textContent = "Automatic follow-up";
+      }
+      if (outreachHeader.nextElementSibling !== automaticHeader) {
+        outreachHeader.insertAdjacentElement("afterend", automaticHeader);
       }
 
       for (const row of Array.from(table.querySelectorAll<HTMLTableRowElement>("tbody tr"))) {
-        if (row.querySelector(`[${CELL_ATTR}]`)) continue;
+        const outreachCell = Array.from(row.children).find((node) => node.getAttribute("data-label") === "Outreach status") as HTMLElement | undefined;
+        if (!outreachCell) continue;
+
+        const existingCell = row.querySelector<HTMLElement>(`[${CELL_ATTR}]`);
+        if (existingCell) {
+          if (outreachCell.nextElementSibling !== existingCell) outreachCell.insertAdjacentElement("afterend", existingCell);
+          continue;
+        }
+
         const buttons = Array.from(row.querySelectorAll<HTMLButtonElement>("button"));
         const slugButton = buttons.find((candidate) => sequencesBySlug.has((candidate.textContent || "").trim()));
         const slug = (slugButton?.textContent || "").trim();
@@ -233,7 +249,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
         const cell = document.createElement("td");
         cell.setAttribute(CELL_ATTR, "true");
         cell.setAttribute("data-label", "Automatic follow-up");
-        cell.style.minWidth = "245px";
+        cell.style.minWidth = "220px";
 
         const statusLine = document.createElement("div");
         statusLine.style.display = "flex";
@@ -244,8 +260,8 @@ export default function WebsiteOutreachSequenceEnhancer() {
         const primary = document.createElement("strong");
         primary.textContent = state.label;
         primary.style.color = state.tone;
-        primary.style.fontSize = ".76rem";
-        primary.style.lineHeight = "1.35";
+        primary.style.fontSize = ".72rem";
+        primary.style.lineHeight = "1.3";
 
         const automatic = document.createElement("span");
         automatic.textContent = "AUTOMATIC";
@@ -253,7 +269,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
         automatic.style.borderRadius = "999px";
         automatic.style.background = "rgba(82,199,148,.10)";
         automatic.style.color = "#52c794";
-        automatic.style.fontSize = ".56rem";
+        automatic.style.fontSize = ".54rem";
         automatic.style.fontWeight = "800";
         automatic.style.letterSpacing = ".04em";
 
@@ -261,8 +277,8 @@ export default function WebsiteOutreachSequenceEnhancer() {
 
         const progress = document.createElement("div");
         progress.textContent = `${sequence.initial?.status === "sent" ? "✓" : "○"} E1  →  ${mark(sequence.follow1)} F1  →  ${mark(sequence.follow2)} F2`;
-        progress.style.marginTop = "5px";
-        progress.style.fontSize = ".69rem";
+        progress.style.marginTop = "4px";
+        progress.style.fontSize = ".66rem";
         progress.style.fontWeight = "700";
         progress.style.opacity = ".82";
         progress.style.whiteSpace = "nowrap";
@@ -270,10 +286,10 @@ export default function WebsiteOutreachSequenceEnhancer() {
         const secondary = document.createElement("small");
         secondary.textContent = state.secondary;
         secondary.style.display = "block";
-        secondary.style.marginTop = "4px";
+        secondary.style.marginTop = "3px";
         secondary.style.opacity = ".62";
-        secondary.style.fontSize = ".67rem";
-        secondary.style.lineHeight = "1.35";
+        secondary.style.fontSize = ".64rem";
+        secondary.style.lineHeight = "1.3";
         secondary.style.whiteSpace = "nowrap";
 
         cell.append(statusLine, progress, secondary);
@@ -282,23 +298,21 @@ export default function WebsiteOutreachSequenceEnhancer() {
           const stop = document.createElement("button");
           stop.type = "button";
           stop.textContent = "Stop sequence";
-          stop.style.marginTop = "7px";
+          stop.style.marginTop = "6px";
           stop.style.border = "1px solid rgba(148,163,184,.25)";
           stop.style.borderRadius = "999px";
-          stop.style.padding = "5px 8px";
+          stop.style.padding = "4px 7px";
           stop.style.background = "transparent";
           stop.style.color = "inherit";
           stop.style.font = "inherit";
-          stop.style.fontSize = ".63rem";
+          stop.style.fontSize = ".6rem";
           stop.style.fontWeight = "750";
           stop.style.cursor = "pointer";
           stop.addEventListener("click", () => void stopSequence(sequence, stop));
           cell.appendChild(stop);
         }
 
-        const websiteStatusCell = Array.from(row.children).find((node) => node.getAttribute("data-label") === "Website status") || row.children.item(2);
-        if (websiteStatusCell) websiteStatusCell.insertAdjacentElement("afterend", cell);
-        else row.appendChild(cell);
+        outreachCell.insertAdjacentElement("afterend", cell);
       }
     };
 
