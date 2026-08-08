@@ -76,6 +76,22 @@
   background: #182d37;
 }
 
+.actions button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.actions .deviceButtonActive {
+  border-color: #34705e;
+  background: #16372f;
+  color: #aaf0d8;
+}
+
+.actions .deviceButtonActive:hover {
+  border-color: #4b8f77;
+  background: #194a3c;
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

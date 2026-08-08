@@ -5,6 +5,7 @@ export const runtime = "nodejs";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const INTERNAL_DEVICE_COOKIE = "labnarrative_internal_device";
 
 function trimText(value: unknown, maxLength: number): string {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -20,6 +21,12 @@ export async function POST(request: NextRequest) {
       || host === `www.${rootDomain}`
       || host === `platform.${rootDomain}`
     ) {
+      return new NextResponse(null, { status: 204 });
+    }
+
+    // Defense in depth: even if client-side analytics code runs, a device
+    // explicitly marked as internal must never create a sales analytics event.
+    if (request.cookies.get(INTERNAL_DEVICE_COOKIE)?.value === "1") {
       return new NextResponse(null, { status: 204 });
     }
 
