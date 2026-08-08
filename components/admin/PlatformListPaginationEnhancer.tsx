@@ -27,24 +27,37 @@ function text(value: string | null | undefined): string {
   return (value || "").trim();
 }
 
-function itemDisplay(item: HTMLElement): string {
-  if (item.dataset.platformPaginationDisplay !== undefined) {
-    return item.dataset.platformPaginationDisplay === "__empty__" ? "" : item.dataset.platformPaginationDisplay;
-  }
-  const current = item.style.display;
+function rememberDisplay(item: HTMLElement) {
+  if (item.dataset.platformPaginationDisplay !== undefined) return;
+  const current = item.style.getPropertyValue("display");
+  const priority = item.style.getPropertyPriority("display");
   item.dataset.platformPaginationDisplay = current || "__empty__";
-  return current;
+  item.dataset.platformPaginationDisplayPriority = priority || "__empty__";
 }
 
 function restoreDisplay(item: HTMLElement) {
-  item.style.display = itemDisplay(item);
+  rememberDisplay(item);
+  const value = item.dataset.platformPaginationDisplay === "__empty__"
+    ? ""
+    : item.dataset.platformPaginationDisplay || "";
+  const priority = item.dataset.platformPaginationDisplayPriority === "__empty__"
+    ? ""
+    : item.dataset.platformPaginationDisplayPriority || "";
+
+  if (!value) item.style.removeProperty("display");
+  else item.style.setProperty("display", value, priority);
   delete item.dataset.platformPaginationHidden;
 }
 
 function hideItem(item: HTMLElement) {
-  itemDisplay(item);
-  item.style.display = "none";
+  rememberDisplay(item);
+  item.style.setProperty("display", "none", "important");
   item.dataset.platformPaginationHidden = "true";
+}
+
+function isAvailableToPaginator(item: HTMLElement): boolean {
+  if (item.dataset.platformPaginationHidden === "true") return true;
+  return window.getComputedStyle(item).display !== "none";
 }
 
 function pageNumbers(page: number, total: number): Array<number | "…"> {
@@ -100,7 +113,10 @@ export default function PlatformListPaginationEnhancer() {
         control.dataset.platformPaginationId = id;
         controls.set(id, control);
       }
-      if (control.previousElementSibling !== anchor) anchor.insertAdjacentElement("afterend", control);
+
+      if (control.nextElementSibling !== anchor) {
+        anchor.insertAdjacentElement("beforebegin", control);
+      }
       return control;
     };
 
@@ -185,23 +201,24 @@ export default function PlatformListPaginationEnhancer() {
       anchor: Element,
       keyFor: (item: HTMLElement, index: number) => string,
     ) => {
-      if (!items.length) {
+      const availableItems = items.filter(isAvailableToPaginator);
+      if (!availableItems.length) {
         controls.get(id)?.remove();
         controls.delete(id);
         return;
       }
 
-      const signature = items.map((item, index) => keyFor(item, index)).join("|");
-      const state = ensureState(id, signature, items.length);
+      const signature = availableItems.map((item, index) => keyFor(item, index)).join("|");
+      const state = ensureState(id, signature, availableItems.length);
       const start = (state.page - 1) * state.pageSize;
       const end = start + state.pageSize;
 
-      items.forEach((item, index) => {
+      availableItems.forEach((item, index) => {
         if (index >= start && index < end) restoreDisplay(item);
         else hideItem(item);
       });
 
-      renderControl(id, anchor, items.length, state);
+      renderControl(id, anchor, availableItems.length, state);
     };
 
     const tableKey = (row: HTMLElement, index: number): string => {
@@ -246,7 +263,7 @@ export default function PlatformListPaginationEnhancer() {
 
       groups.forEach((group) => {
         const items = articles.filter((article) => group.states.includes(runCardState(article)));
-        const anchor = items.at(-1);
+        const anchor = items[0];
         if (!anchor) {
           controls.get(`${pathname}:runs:${group.id}`)?.remove();
           controls.delete(`${pathname}:runs:${group.id}`);
@@ -374,6 +391,8 @@ export default function PlatformListPaginationEnhancer() {
 
     observer = new MutationObserver(schedule);
     observer.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener("input", schedule, true);
+    document.addEventListener("change", schedule, true);
     applyAll();
 
     if (pathname === "/admin/automation") {
@@ -388,6 +407,8 @@ export default function PlatformListPaginationEnhancer() {
       window.cancelAnimationFrame(frame);
       if (queueTimer) window.clearInterval(queueTimer);
       window.removeEventListener("focus", refreshQueue);
+      document.removeEventListener("input", schedule, true);
+      document.removeEventListener("change", schedule, true);
       controls.forEach((control) => control.remove());
       document.querySelectorAll<HTMLElement>("[data-platform-pagination-hidden='true']").forEach(restoreDisplay);
       document.querySelectorAll<HTMLElement>("[data-platform-queue-extra]").forEach((node) => node.remove());
