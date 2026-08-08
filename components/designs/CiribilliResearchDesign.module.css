@@ -1,5 +1,5 @@
 .site {
-  --ciribilli-header-height: 136px;
+  --ciribilli-header-height: 132px;
   min-height: 100vh;
   overflow: visible !important;
   isolation: isolate;
@@ -10,19 +10,20 @@
   position: sticky !important;
   top: 0;
   z-index: 100 !important;
-  min-height: 136px !important;
-  padding: 22px clamp(24px, 5vw, 76px) 19px !important;
+  height: 132px !important;
+  min-height: 132px !important;
+  padding: 17px clamp(24px, 5vw, 76px) 15px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
   justify-content: center !important;
-  gap: 13px !important;
+  gap: 10px !important;
 }
 
 .wordmark {
   max-width: 100%;
-  font-size: clamp(22px, 2.15vw, 34px) !important;
-  line-height: 1.08 !important;
+  font-size: clamp(24px, 2vw, 32px) !important;
+  line-height: 1 !important;
   white-space: nowrap !important;
 }
 
@@ -31,7 +32,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: clamp(15px, 1.8vw, 28px) !important;
+  gap: clamp(17px, 1.75vw, 27px) !important;
   flex-wrap: nowrap !important;
   white-space: nowrap;
   overflow-x: auto;
@@ -45,8 +46,9 @@
 
 .header nav a {
   flex: 0 0 auto;
-  padding: 7px 0 9px !important;
+  padding: 6px 0 8px !important;
   font-size: 10px !important;
+  line-height: 1.2 !important;
   letter-spacing: .145em !important;
 }
 
@@ -139,15 +141,20 @@
 }
 
 @media (max-width: 980px) {
+  .site {
+    --ciribilli-header-height: 122px;
+  }
+
   .header {
-    min-height: 124px !important;
-    padding-top: 18px !important;
-    padding-bottom: 15px !important;
-    gap: 10px !important;
+    height: 122px !important;
+    min-height: 122px !important;
+    padding-top: 15px !important;
+    padding-bottom: 13px !important;
+    gap: 9px !important;
   }
 
   .wordmark {
-    font-size: clamp(19px, 3vw, 28px) !important;
+    font-size: clamp(21px, 2.8vw, 28px) !important;
   }
 
   .header nav {
@@ -167,10 +174,15 @@
 }
 
 @media (max-width: 700px) {
+  .site {
+    --ciribilli-header-height: 108px;
+  }
+
   .header {
-    min-height: 112px !important;
-    padding: 16px 20px 13px !important;
-    gap: 9px !important;
+    height: 108px !important;
+    min-height: 108px !important;
+    padding: 13px 20px 11px !important;
+    gap: 8px !important;
   }
 
   .wordmark {
