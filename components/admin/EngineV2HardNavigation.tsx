@@ -21,21 +21,24 @@ export default function EngineV2HardNavigation() {
       const link = target.closest<HTMLAnchorElement>("a[href]");
       if (!link) return;
 
-      let path = "";
+      let url: URL;
       try {
-        const url = new URL(link.href, window.location.origin);
+        url = new URL(link.href, window.location.origin);
         if (url.origin !== window.location.origin) return;
-        path = url.pathname;
       } catch {
         return;
       }
 
-      if (!CLEAN_ADMIN_PAGES.has(path) || path === window.location.pathname) return;
+      if (!CLEAN_ADMIN_PAGES.has(url.pathname)) return;
+
+      const destination = `${url.pathname}${url.search}${url.hash}`;
+      const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (destination === current) return;
 
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      window.location.assign(path);
+      window.location.assign(destination);
     };
 
     document.addEventListener("click", navigateCleanly, true);
