@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 const STORAGE_KEY = "labnarrative-platform-theme";
 const PAGE_CLASSES = [
@@ -35,11 +35,11 @@ function isOperationalHost(hostname: string): boolean {
 function applyBlueTheme() {
   document.documentElement.dataset.platformTheme = "ocean";
   document.documentElement.style.colorScheme = "dark";
+  window.localStorage.setItem(STORAGE_KEY, "ocean");
 }
 
 export default function PlatformThemeToggle() {
   const pathname = usePathname();
-  const [available, setAvailable] = useState(false);
 
   useEffect(() => {
     const operationalHost = isOperationalHost(window.location.hostname);
@@ -52,7 +52,6 @@ export default function PlatformThemeToggle() {
       document.body.classList.remove("platform-theme-active");
       delete document.documentElement.dataset.platformTheme;
       document.documentElement.style.colorScheme = "";
-      setAvailable(false);
       return;
     }
 
@@ -69,24 +68,7 @@ export default function PlatformThemeToggle() {
     }
 
     applyBlueTheme();
-    window.localStorage.setItem(STORAGE_KEY, "ocean");
-    setAvailable(true);
   }, [pathname]);
 
-  if (!available) return null;
-
-  return (
-    <div aria-label="Platform appearance: Blue" className="platform-theme-toggle platform-theme-toggle-locked">
-      <button
-        aria-label="Blue theme"
-        aria-pressed="true"
-        className="platform-theme-option"
-        tabIndex={-1}
-        type="button"
-      >
-        <span aria-hidden="true">◆</span>
-        <strong>Blue</strong>
-      </button>
-    </div>
-  );
+  return null;
 }
