@@ -198,6 +198,7 @@ export default function DobbelsteinScrollDesign({
           transform: translateX(50%);
           background: var(--dobbelstein-panel-background);
           pointer-events: none;
+          box-shadow: none !important;
         }
 
         .dobbelstein-scroll-route-home .dobbelstein-scroll-panel:not(.dobbelstein-scroll-terminal) {
@@ -206,10 +207,6 @@ export default function DobbelsteinScrollDesign({
           z-index: calc(10 + var(--dobbelstein-panel-layer, 0)) !important;
           transform: translate3d(0, var(--dobbelstein-panel-offset, 0px), 0) !important;
           will-change: transform;
-        }
-
-        .dobbelstein-scroll-route-home .dobbelstein-scroll-panel:not(.dobbelstein-scroll-terminal)::before {
-          box-shadow: 0 -18px 42px rgba(14, 35, 42, 0.09);
         }
 
         .dobbelstein-scroll-route-home .dobbelstein-scroll-terminal {
