@@ -31,11 +31,12 @@ function blockFor(source, selector) {
 const shell = read("components/SiteShell.tsx");
 const photoDesign = read("components/designs/PhotoLabDesign.tsx");
 const researchCss = read("components/designs/CiribilliResearchDesign.module.css");
+const ciribilliMotion = read("components/designs/CiribilliNaritaDesign.tsx");
 
 requireText(
   shell,
-  'const CIRIBILLI_RESEARCH_HERO = "https://upload.wikimedia.org/wikipedia/commons/b/b3/HeLa-I.jpg";',
-  "the approved microscopy hero must remain the Research hero source",
+  'const CIRIBILLI_RESEARCH_HERO = "https://upload.wikimedia.org/wikipedia/commons/2/21/HeLa-II.jpg";',
+  "the approved red microscopy hero must remain the Research hero source",
 );
 requireText(
   shell,
@@ -54,8 +55,18 @@ requireText(
 );
 requireText(
   shell,
-  "return <NaritaOverlapDesign site={site}",
-  "Home and the other tabs must retain the Narita layout",
+  "return <CiribilliNaritaDesign site={site}",
+  "Home and the other tabs must retain the Ciribilli Narita layout",
+);
+requireText(
+  ciribilliMotion,
+  "const distance = reducedMotion ? 0 : window.scrollY;",
+  "the homepage hero motion must remain directly tied to scrollY",
+);
+requireText(
+  ciribilliMotion,
+  "--ciribilli-home-panel-offset",
+  "the homepage hero must retain its constant linear panel offset",
 );
 
 requireText(
