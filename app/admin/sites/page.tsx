@@ -15,18 +15,14 @@ type DomainStatus =
   | "error"
   | "legacy";
 
-type SiteContent = {
-  labName?: string;
-  piName?: string;
-  institution?: string;
-  headline?: string;
-};
-
 type SiteRow = {
   id: string;
   slug: string;
   status: SiteStatus;
-  content: SiteContent | null;
+  lab_name: string | null;
+  pi_name: string | null;
+  institution: string | null;
+  headline: string | null;
   created_at: string;
   updated_at: string;
   domain_status: DomainStatus;
@@ -75,7 +71,7 @@ const domainLabels: Record<DomainStatus, string> = {
 };
 
 function siteName(site: SiteRow): string {
-  return site.content?.labName?.trim() || site.slug;
+  return site.lab_name?.trim() || site.slug;
 }
 
 function timestamp(value: string): number {
@@ -177,7 +173,7 @@ export default function SiteMonitorPage() {
     const { data, error } = await supabase
       .from("sites")
       .select(
-        "id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_settings,design_version,content_schema_version",
+        "id,slug,status,lab_name:content->>labName,pi_name:content->>piName,institution:content->>institution,headline:content->>headline,created_at,updated_at,domain_status,domain_url,domain_error,design_key,design_settings,design_version,content_schema_version",
       )
       .order("created_at", { ascending: false })
       .order("updated_at", { ascending: false })
@@ -186,7 +182,7 @@ export default function SiteMonitorPage() {
     if (error) {
       setNotice(error.message);
     } else {
-      setSites((data ?? []) as SiteRow[]);
+      setSites((data ?? []) as unknown as SiteRow[]);
     }
 
     setLoading(false);
@@ -248,9 +244,9 @@ export default function SiteMonitorPage() {
       return [
         siteName(site),
         site.slug,
-        site.content?.piName ?? "",
-        site.content?.institution ?? "",
-        site.content?.headline ?? "",
+        site.pi_name ?? "",
+        site.institution ?? "",
+        site.headline ?? "",
         site.status,
         site.domain_status,
         site.design_key,
@@ -452,8 +448,8 @@ export default function SiteMonitorPage() {
                     </button>
                   </td>
                   <td data-label="PI and institution">
-                    <strong>{site.content?.piName || "—"}</strong>
-                    <span>{site.content?.institution || "—"}</span>
+                    <strong>{site.pi_name || "—"}</strong>
+                    <span>{site.institution || "—"}</span>
                   </td>
                   <td data-label="Website status">
                     <span className={`${styles.badge} ${styles[`status_${site.status}`]}`}>{statusLabels[site.status]}</span>
