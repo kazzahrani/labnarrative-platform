@@ -9,10 +9,10 @@ import type { LabSite, SiteRoute } from "@/lib/sites";
 export const DOBBELSTEIN_SCROLL_VARIANT = "dobbelstein-scroll-v1";
 
 const SECTION_COLORS = [
-  "#f3f6f3",
-  "#e5efea",
-  "#f5efe5",
-  "#e9f0f3",
+  "#f4f3ef",
+  "#dce8f2",
+  "#f1dfcf",
+  "#dfe8dc",
 ] as const;
 
 const SECTION_SCROLL_SPEED = 0.22;
@@ -156,7 +156,7 @@ export default function DobbelsteinScrollDesign({
         .dobbelstein-scroll-shell {
           --dobbelstein-header-height: 104px;
           min-height: 100vh;
-          background: #f3f6f3;
+          background: #f4f3ef;
         }
 
         .dobbelstein-scroll-route-home .bourdon-site {
