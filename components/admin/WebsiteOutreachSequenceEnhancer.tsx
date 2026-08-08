@@ -3,17 +3,8 @@
 import { useEffect } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
-type Site = {
-  id: string;
-  slug: string;
-  outreach_status: string | null;
-};
-
-type Prospect = {
-  site_id: string | null;
-  status: string | null;
-};
-
+type Site = { id: string; slug: string; outreach_status: string | null };
+type Prospect = { site_id: string | null; status: string | null };
 type Message = {
   site_id: string | null;
   message_kind: string;
@@ -23,7 +14,6 @@ type Message = {
   delivery_status: string | null;
   created_at: string;
 };
-
 type SiteSequence = {
   site: Site;
   prospectStatus: string;
@@ -33,7 +23,6 @@ type SiteSequence = {
 };
 
 const STOP_DELIVERY = new Set(["bounced", "complained", "failed", "suppressed"]);
-const PENDING_REVIEW = new Set(["draft", "approved", "sending"]);
 const HEADER_ATTR = "data-labnarrative-outreach-sequence-header";
 const CELL_ATTR = "data-labnarrative-outreach-sequence-cell";
 
@@ -75,22 +64,16 @@ function derive(sequence: SiteSequence): { primary: string; secondary: string; t
     return { primary: "Interested · stopped", secondary: "No further email", tone: "#52c794" };
   }
 
-  const latestSent = [sequence.follow2, sequence.follow1, sequence.initial]
-    .find((message) => message?.status === "sent");
+  const latestSent = [sequence.follow2, sequence.follow1, sequence.initial].find((message) => message?.status === "sent");
   if (latestSent?.delivery_status && STOP_DELIVERY.has(latestSent.delivery_status)) {
-    return {
-      primary: `Stopped · ${latestSent.delivery_status}`,
-      secondary: "No further email",
-      tone: "#e58b75",
-    };
+    return { primary: `Stopped · ${latestSent.delivery_status}`, secondary: "No further email", tone: "#e58b75" };
   }
 
-  if (sequence.follow2 && PENDING_REVIEW.has(sequence.follow2.status)) {
-    return { primary: "✓ E1 · ✓ F1 · ◐ F2", secondary: "F2 ready to review", tone: "#e0b568" };
+  if (sequence.follow2?.status === "sending") {
+    return { primary: "✓ E1 · ✓ F1 · ◐ F2", secondary: "F2 sending automatically", tone: "#e0b568" };
   }
-
-  if (sequence.follow1 && PENDING_REVIEW.has(sequence.follow1.status)) {
-    return { primary: "✓ E1 · ◐ F1 · ○ F2", secondary: "F1 ready to review", tone: "#e0b568" };
+  if (sequence.follow1?.status === "sending") {
+    return { primary: "✓ E1 · ◐ F1 · ○ F2", secondary: "F1 sending automatically", tone: "#e0b568" };
   }
 
   if (sequence.follow2?.status === "sent") {
@@ -101,7 +84,7 @@ function derive(sequence: SiteSequence): { primary: string; secondary: string; t
     const due = sequence.follow1.follow_up_at;
     return {
       primary: "✓ E1 · ✓ F1 · ○ F2",
-      secondary: due ? `F2 due ${fmt(due)}` : "Sequence stopped",
+      secondary: due ? `F2 automatic ${fmt(due)}` : "Sequence stopped",
       tone: due ? "#76b7d8" : "#8ba4b8",
     };
   }
@@ -110,7 +93,7 @@ function derive(sequence: SiteSequence): { primary: string; secondary: string; t
     const due = sequence.initial.follow_up_at;
     return {
       primary: "✓ E1 · ○ F1 · ○ F2",
-      secondary: due ? `F1 due ${fmt(due)}` : "Sequence stopped",
+      secondary: due ? `F1 automatic ${fmt(due)}` : "Sequence stopped",
       tone: due ? "#76b7d8" : "#8ba4b8",
     };
   }
@@ -131,9 +114,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
       if (window.location.pathname !== "/admin/sites") return null;
       for (const table of Array.from(document.querySelectorAll<HTMLTableElement>("table"))) {
         const headings = Array.from(table.querySelectorAll("thead th")).map((node) => node.textContent?.trim());
-        if (headings.includes("Website") && headings.includes("PI and institution") && headings.includes("Website status")) {
-          return table;
-        }
+        if (headings.includes("Website") && headings.includes("PI and institution") && headings.includes("Website status")) return table;
       }
       return null;
     };
@@ -148,9 +129,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
         const header = document.createElement("th");
         header.setAttribute(HEADER_ATTR, "true");
         header.textContent = "Outreach sequence";
-        const websiteStatusHeader = Array.from(headerRow.children).find(
-          (node) => node.textContent?.trim() === "Website status",
-        );
+        const websiteStatusHeader = Array.from(headerRow.children).find((node) => node.textContent?.trim() === "Website status");
         if (websiteStatusHeader) websiteStatusHeader.insertAdjacentElement("afterend", header);
         else headerRow.appendChild(header);
       }
@@ -167,7 +146,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
         const cell = document.createElement("td");
         cell.setAttribute(CELL_ATTR, "true");
         cell.setAttribute("data-label", "Outreach sequence");
-        cell.style.minWidth = "168px";
+        cell.style.minWidth = "178px";
 
         const primary = document.createElement("strong");
         primary.textContent = state.primary;
@@ -187,9 +166,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
 
         cell.append(primary, secondary);
 
-        const websiteStatusCell = Array.from(row.children).find(
-          (node) => node.getAttribute("data-label") === "Website status",
-        ) || row.children.item(2);
+        const websiteStatusCell = Array.from(row.children).find((node) => node.getAttribute("data-label") === "Website status") || row.children.item(2);
         if (websiteStatusCell) websiteStatusCell.insertAdjacentElement("afterend", cell);
         else row.appendChild(cell);
       }
@@ -218,10 +195,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
 
       const bySite = new Map<string, SiteSequence>();
       for (const site of (siteResult.data || []) as Site[]) {
-        bySite.set(site.id, {
-          site,
-          prospectStatus: prospects.get(site.id) || "",
-        });
+        bySite.set(site.id, { site, prospectStatus: prospects.get(site.id) || "" });
       }
 
       for (const message of (messageResult.data || []) as Message[]) {
@@ -233,10 +207,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
         if (message.message_kind === "followup_2") sequence.follow2 = latest(sequence.follow2, message);
       }
 
-      sequencesBySlug = new Map(
-        Array.from(bySite.values()).map((sequence) => [sequence.site.slug, sequence]),
-      );
-
+      sequencesBySlug = new Map(Array.from(bySite.values()).map((sequence) => [sequence.site.slug, sequence]));
       document.querySelectorAll(`[${CELL_ATTR}]`).forEach((node) => node.remove());
       apply();
     };
