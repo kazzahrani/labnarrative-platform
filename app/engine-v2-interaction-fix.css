@@ -1,0 +1,39 @@
+/* Engine v2 owns its interaction layer. Keep the global theme control out of the header hit-area. */
+body.platform-automation-page .platform-theme-toggle {
+  top: auto !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  z-index: 12 !important;
+  height: auto !important;
+  min-width: 0 !important;
+  padding: 6px !important;
+  gap: 4px !important;
+  pointer-events: none;
+}
+
+body.platform-automation-page .platform-theme-toggle .platform-theme-option {
+  min-width: 42px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  padding: 5px 8px;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+body.platform-automation-page .platform-theme-toggle .platform-theme-option strong {
+  display: none;
+}
+
+body.platform-automation-page .platform-theme-toggle .platform-theme-option[aria-pressed="true"] {
+  background: rgba(21, 50, 41, 0.12);
+}
+
+html[data-platform-theme="dark"] body.platform-automation-page .platform-theme-toggle .platform-theme-option[aria-pressed="true"],
+html[data-platform-theme="mid"] body.platform-automation-page .platform-theme-toggle .platform-theme-option[aria-pressed="true"],
+html[data-platform-theme="ocean"] body.platform-automation-page .platform-theme-toggle .platform-theme-option[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.12);
+}
