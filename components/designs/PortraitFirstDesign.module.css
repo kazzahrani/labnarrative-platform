@@ -366,6 +366,55 @@
   font-weight: 700;
 }
 
+.joinPortrait {
+  display: grid;
+  grid-template-columns: minmax(96px, 132px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: end;
+}
+
+.joinPortraitImage {
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  border: 1px solid rgba(255,255,255,0.34);
+  background: #d8d4cb;
+}
+
+.joinPortraitImage img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(0.82) contrast(1.03);
+}
+
+.joinPortraitImage .portraitFallback {
+  font-size: 38px;
+}
+
+.joinPortrait strong {
+  display: block;
+  margin-top: 9px;
+  color: #fff;
+  font-size: clamp(21px, 2vw, 28px);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+}
+
+.joinPortrait p {
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.joinContact {
+  margin-top: 54px;
+}
+
+.joinContact a {
+  display: inline-block;
+  margin-top: 28px;
+}
+
 .innerHeader {
   display: grid;
   grid-template-columns: minmax(140px, 0.28fr) minmax(0, 1fr);
@@ -514,5 +563,6 @@
   .listItem { grid-template-columns: 50px minmax(0, 1fr); }
   .listItem > span:last-child { grid-column: 2; }
   .peopleGrid, .contactGrid { grid-template-columns: 1fr; }
+  .joinPortrait { grid-template-columns: 92px minmax(0, 1fr); }
   .footer { grid-template-columns: 1fr; align-items: start; }
 }
