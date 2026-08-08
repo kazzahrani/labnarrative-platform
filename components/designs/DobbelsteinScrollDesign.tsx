@@ -9,10 +9,10 @@ import type { LabSite, SiteRoute } from "@/lib/sites";
 export const DOBBELSTEIN_SCROLL_VARIANT = "dobbelstein-scroll-v1";
 
 const SECTION_COLORS = [
-  "#f4f3ef",
-  "#dce8f2",
-  "#f1dfcf",
-  "#dfe8dc",
+  "#f3f6f3",
+  "#117b79",
+  "#f5efe5",
+  "#e9f0f3",
 ] as const;
 
 const SECTION_SCROLL_SPEED = 0.22;
@@ -156,7 +156,7 @@ export default function DobbelsteinScrollDesign({
         .dobbelstein-scroll-shell {
           --dobbelstein-header-height: 104px;
           min-height: 100vh;
-          background: #f4f3ef;
+          background: #f3f6f3;
         }
 
         .dobbelstein-scroll-route-home .bourdon-site {
@@ -214,6 +214,18 @@ export default function DobbelsteinScrollDesign({
           padding-top: clamp(84px, 11svh, 132px);
           padding-bottom: clamp(84px, 11svh, 132px);
           align-content: center;
+        }
+
+        .dobbelstein-scroll-route-home .bn-home-overview,
+        .dobbelstein-scroll-route-home .bn-home-overview h2,
+        .dobbelstein-scroll-route-home .bn-home-overview p,
+        .dobbelstein-scroll-route-home .bn-home-overview a,
+        .dobbelstein-scroll-route-home .bn-home-overview .bn-eyebrow {
+          color: #f7fbfa !important;
+        }
+
+        .dobbelstein-scroll-route-home .bn-home-overview .bn-text-link span {
+          color: #f7fbfa !important;
         }
 
         .dobbelstein-scroll-route-home .bn-home-programmes > .bn-page-shell {
