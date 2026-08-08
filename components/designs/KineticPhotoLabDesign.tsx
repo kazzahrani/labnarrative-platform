@@ -41,6 +41,8 @@ const PRIVES_SLIDES: GallerySlide[] = [
   },
 ];
 
+const CIRIBILLI_HOME_SLIDES: GallerySlide[] = [PRIVES_SLIDES[1]];
+
 const ENGELAND_SLIDES: GallerySlide[] = [
   {
     src: "https://upload.wikimedia.org/wikipedia/commons/0/0d/0300_Flourescence_Stained.jpg",
@@ -95,6 +97,10 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     if (!root || !main) return;
 
     const slides = slidesForSite(props.site.slug);
+    const homeSlides = props.site.slug === "ciribilli"
+      ? CIRIBILLI_HOME_SLIDES
+      : slides;
+    const hasMultipleHomeSlides = homeSlides.length > 1;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const sectionRoot = props.route.projectSlug
       ? main.querySelector(":scope > article") ?? main
@@ -232,19 +238,24 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     const originalAlt = image.alt;
 
     homeHero.classList.add("kinetic-photo-hero");
-    homeHero.setAttribute("aria-roledescription", "carousel");
-    homeHero.setAttribute("aria-label", `${props.site.labName} microscopy gallery`);
+    if (hasMultipleHomeSlides) {
+      homeHero.setAttribute("aria-roledescription", "carousel");
+      homeHero.setAttribute("aria-label", `${props.site.labName} microscopy gallery`);
+    } else {
+      homeHero.removeAttribute("aria-roledescription");
+      homeHero.setAttribute("aria-label", `${props.site.labName} microscopy image`);
+    }
 
     const slideNodes: HTMLImageElement[] = [image];
     const addedNodes: HTMLElement[] = [];
     image.removeAttribute("srcset");
-    image.src = slides[0].src;
-    image.alt = slides[0].alt;
+    image.src = homeSlides[0].src;
+    image.alt = homeSlides[0].alt;
     image.classList.add("kinetic-gallery-slide", "is-active");
     image.dataset.galleryIndex = "0";
     image.setAttribute("aria-hidden", "false");
 
-    slides.slice(1).forEach((slide, offset) => {
+    homeSlides.slice(1).forEach((slide, offset) => {
       const nextImage = document.createElement("img");
       nextImage.src = slide.src;
       nextImage.alt = slide.alt;
@@ -261,11 +272,11 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     const credit = document.createElement("div");
     credit.className = "kinetic-gallery-credit";
     credit.setAttribute("aria-live", "polite");
-    credit.textContent = slides[0].credit;
+    credit.textContent = homeSlides[0].credit;
     homeHero.appendChild(credit);
     addedNodes.push(credit);
 
-    if (!isPrives) {
+    if (!isPrives && hasMultipleHomeSlides) {
       const scrollCue = document.createElement("div");
       scrollCue.className = "kinetic-scroll-cue";
       scrollCue.textContent = "Scroll to explore";
@@ -273,26 +284,34 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       addedNodes.push(scrollCue);
     }
 
-    const controls = document.createElement("div");
-    controls.className = "kinetic-gallery-controls";
-    const previous = isPrives ? undefined : makeButton("kinetic-gallery-arrow", "Previous microscopy image", "←");
-    const next = isPrives ? undefined : makeButton("kinetic-gallery-arrow", "Next microscopy image", "→");
-    const dots = document.createElement("div");
-    dots.className = "kinetic-gallery-dots";
-    dots.setAttribute("role", "tablist");
-    dots.setAttribute("aria-label", "Choose microscopy image");
-    const dotNodes = slides.map((slide, index) => {
-      const dot = makeButton("kinetic-gallery-dot", `Show image ${index + 1}: ${slide.alt}`, "");
-      dot.setAttribute("role", "tab");
-      dot.setAttribute("aria-selected", index === 0 ? "true" : "false");
-      if (index === 0) dot.classList.add("is-active");
-      dots.appendChild(dot);
-      return dot;
-    });
-    if (previous && next) controls.append(previous, dots, next);
-    else controls.append(dots);
-    homeHero.appendChild(controls);
-    addedNodes.push(controls);
+    let previous: HTMLButtonElement | undefined;
+    let next: HTMLButtonElement | undefined;
+    const dotNodes: HTMLButtonElement[] = [];
+
+    if (hasMultipleHomeSlides) {
+      const controls = document.createElement("div");
+      controls.className = "kinetic-gallery-controls";
+      previous = isPrives ? undefined : makeButton("kinetic-gallery-arrow", "Previous microscopy image", "←");
+      next = isPrives ? undefined : makeButton("kinetic-gallery-arrow", "Next microscopy image", "→");
+      const dots = document.createElement("div");
+      dots.className = "kinetic-gallery-dots";
+      dots.setAttribute("role", "tablist");
+      dots.setAttribute("aria-label", "Choose microscopy image");
+
+      homeSlides.forEach((slide, index) => {
+        const dot = makeButton("kinetic-gallery-dot", `Show image ${index + 1}: ${slide.alt}`, "");
+        dot.setAttribute("role", "tab");
+        dot.setAttribute("aria-selected", index === 0 ? "true" : "false");
+        if (index === 0) dot.classList.add("is-active");
+        dots.appendChild(dot);
+        dotNodes.push(dot);
+      });
+
+      if (previous && next) controls.append(previous, dots, next);
+      else controls.append(dots);
+      homeHero.appendChild(controls);
+      addedNodes.push(controls);
+    }
 
     let activeIndex = 0;
     let timer = 0;
@@ -300,7 +319,7 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     let pointerStartX: number | undefined;
 
     const showSlide = (nextIndex: number) => {
-      activeIndex = (nextIndex + slides.length) % slides.length;
+      activeIndex = (nextIndex + homeSlides.length) % homeSlides.length;
       slideNodes.forEach((slideImage, index) => {
         const active = index === activeIndex;
         slideImage.classList.toggle("is-active", active);
@@ -311,7 +330,7 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
         dot.classList.toggle("is-active", active);
         dot.setAttribute("aria-selected", active ? "true" : "false");
       });
-      credit.textContent = slides[activeIndex].credit;
+      credit.textContent = homeSlides[activeIndex].credit;
     };
 
     const stopTimer = () => {
@@ -322,7 +341,7 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       stopTimer();
       const interval = isPrives ? 10000 : 6500;
       const motionAllowsAutoplay = isPrives || !reducedMotion;
-      if (motionAllowsAutoplay && !paused && !document.hidden) {
+      if (hasMultipleHomeSlides && motionAllowsAutoplay && !paused && !document.hidden) {
         timer = window.setInterval(() => showSlide(activeIndex + 1), interval);
       }
     };
@@ -342,15 +361,17 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
     previous?.addEventListener("click", goPrevious);
     next?.addEventListener("click", goNext);
     dotNodes.forEach((dot, index) => dot.addEventListener("click", () => { showSlide(index); startTimer(); }));
-    if (!isPrives) {
+    if (hasMultipleHomeSlides && !isPrives) {
       homeHero.addEventListener("mouseenter", pause);
       homeHero.addEventListener("mouseleave", resume);
       homeHero.addEventListener("focusin", pause);
       homeHero.addEventListener("focusout", resume);
     }
-    homeHero.addEventListener("pointerdown", onPointerDown);
-    homeHero.addEventListener("pointerup", onPointerUp);
-    document.addEventListener("visibilitychange", onVisibilityChange);
+    if (hasMultipleHomeSlides) {
+      homeHero.addEventListener("pointerdown", onPointerDown);
+      homeHero.addEventListener("pointerup", onPointerUp);
+      document.addEventListener("visibilitychange", onVisibilityChange);
+    }
     startTimer();
 
     return () => {
@@ -359,7 +380,7 @@ export default function KineticPhotoLabDesign(props: KineticPhotoLabDesignProps)
       document.removeEventListener("visibilitychange", onVisibilityChange);
       previous?.removeEventListener("click", goPrevious);
       next?.removeEventListener("click", goNext);
-      if (!isPrives) {
+      if (hasMultipleHomeSlides && !isPrives) {
         homeHero.removeEventListener("mouseenter", pause);
         homeHero.removeEventListener("mouseleave", resume);
         homeHero.removeEventListener("focusin", pause);
