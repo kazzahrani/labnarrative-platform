@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import NaritaOverlapDesign from "@/components/designs/NaritaOverlapDesign";
+import { withNaritaHero } from "@/components/designs/naritaShared";
 import type { LabSite, SiteRoute } from "@/lib/sites";
 
 type CiribilliNaritaDesignProps = {
@@ -13,6 +14,7 @@ type CiribilliNaritaDesignProps = {
 
 export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const naritaSite = withNaritaHero(props.site);
 
   useEffect(() => {
     if (props.route.section !== "home") return;
@@ -51,7 +53,7 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
 
   return (
     <div className="ciribilli-narita-shell" ref={rootRef}>
-      <NaritaOverlapDesign {...props} />
+      <NaritaOverlapDesign {...props} site={naritaSite} />
       <style jsx global>{`
         .ciribilli-narita-shell {
           --ciribilli-gutter: clamp(24px, 5vw, 76px);
