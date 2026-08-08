@@ -32,6 +32,17 @@ function documentTop(element: HTMLElement) {
   return top;
 }
 
+function isStaticHomepageSection(section: HTMLElement) {
+  const containsStaticBlock =
+    section.matches(".bn-pi-home, .bn-join-strip") ||
+    Boolean(section.querySelector(".bn-pi-home, .bn-join-strip"));
+
+  const text = section.textContent ?? "";
+  const containsStaticHeading = /Principal investigator|Join the lab/i.test(text);
+
+  return containsStaticBlock || containsStaticHeading;
+}
+
 export default function DobbelsteinScrollDesign({
   site,
   route,
@@ -71,16 +82,12 @@ export default function DobbelsteinScrollDesign({
     const sections = Array.from(main.querySelectorAll<HTMLElement>(":scope > section"));
     if (!sections.length) return;
 
-    const joinSection = sections.find((section) => section.classList.contains("bn-join-strip"));
-    const piSection = sections.find((section) => section.classList.contains("bn-pi-home"));
-    const moving = sections.filter(
-      (section) => section !== joinSection && section !== piSection,
-    );
+    const staticSections = sections.filter(isStaticHomepageSection);
+    const moving = sections.filter((section) => !staticSections.includes(section));
 
     header?.classList.add("dobbelstein-scroll-chrome");
     footer?.classList.add("dobbelstein-scroll-chrome");
-    joinSection?.classList.add("dobbelstein-scroll-static");
-    piSection?.classList.add("dobbelstein-scroll-static");
+    staticSections.forEach((section) => section.classList.add("dobbelstein-scroll-static"));
 
     moving.forEach((section, index) => {
       section.classList.add("dobbelstein-scroll-panel");
@@ -127,8 +134,7 @@ export default function DobbelsteinScrollDesign({
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(remeasure) : undefined;
     resizeObserver?.observe(main);
     moving.forEach((section) => resizeObserver?.observe(section));
-    if (joinSection) resizeObserver?.observe(joinSection);
-    if (piSection) resizeObserver?.observe(piSection);
+    staticSections.forEach((section) => resizeObserver?.observe(section));
 
     measure();
     update();
@@ -142,8 +148,7 @@ export default function DobbelsteinScrollDesign({
       if (frame) window.cancelAnimationFrame(frame);
       header?.classList.remove("dobbelstein-scroll-chrome");
       footer?.classList.remove("dobbelstein-scroll-chrome");
-      joinSection?.classList.remove("dobbelstein-scroll-static");
-      piSection?.classList.remove("dobbelstein-scroll-static");
+      staticSections.forEach((section) => section.classList.remove("dobbelstein-scroll-static"));
       moving.forEach((section) => {
         section.classList.remove("dobbelstein-scroll-panel");
         section.style.removeProperty("--dobbelstein-panel-layer");
@@ -186,13 +191,12 @@ export default function DobbelsteinScrollDesign({
           will-change: auto !important;
         }
 
-        .dobbelstein-scroll-route-home .bourdon-site > .bn-site-header {
+        .dobbelstein-scroll-route-home .dobbelstein-scroll-static {
           z-index: 100 !important;
         }
 
-        .dobbelstein-scroll-route-home .bourdon-site > .bn-footer,
-        .dobbelstein-scroll-route-home .bn-join-strip,
-        .dobbelstein-scroll-route-home .bn-pi-home {
+        .dobbelstein-scroll-route-home .bourdon-site > .bn-site-header,
+        .dobbelstein-scroll-route-home .bourdon-site > .bn-footer {
           z-index: 100 !important;
         }
 
