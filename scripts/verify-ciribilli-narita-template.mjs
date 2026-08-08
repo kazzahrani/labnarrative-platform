@@ -38,7 +38,7 @@ const naritaShared = read("components/designs/naritaShared.ts");
 requireText(
   naritaShared,
   'export const NARITA_HERO_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/2/21/HeLa-II.jpg";',
-  "the approved red microscopy image must remain the canonical Narita home hero",
+  "the approved red microscopy image must remain the canonical Narita hero",
 );
 requireText(
   naritaShared,
@@ -48,7 +48,7 @@ requireText(
 requireText(
   naritaShared,
   "topPortrait: NARITA_HERO_IMAGE",
-  "legacy Narita home hero fields must also resolve to the canonical red microscopy image",
+  "legacy Narita hero fields must also resolve to the canonical red microscopy image",
 );
 requireText(
   ciribilliMotion,
@@ -61,14 +61,19 @@ requireText(
   "the normalized Narita site must be passed into the shared renderer",
 );
 
-if (researchDesign.includes("NARITA_HERO_IMAGE")) {
+requireText(
+  researchDesign,
+  "const hero = NARITA_HERO_IMAGE;",
+  "the Research tab must retain the canonical red microscopy hero",
+);
+requireText(
+  researchDesign,
+  '<Picture src={hero} alt="Research" fallback="LMCG" />',
+  "the Research hero image must remain visible",
+);
+if (researchDesign.includes("project.figureImage")) {
   throw new Error(
-    "Ciribilli Narita template lock failed: Research must not render the canonical homepage hero image",
-  );
-}
-if (researchDesign.includes("figureImage")) {
-  throw new Error(
-    "Ciribilli Narita template lock failed: Research project sections must be image-free",
+    "Ciribilli Narita template lock failed: Research project sections must remain image-free",
   );
 }
 requireText(
@@ -139,7 +144,15 @@ if (/const portrait\s*=\s*[^;]*(heroImage|homepageImage|topPortrait|figureImage)
 }
 
 const heroBlock = blockFor(researchCss, ".hero {");
-requireText(heroBlock, "background: #111111 !important;", "the image-free Research hero must retain its dark editorial background");
 requireText(heroBlock, "box-shadow: none !important;", "the Research hero must not have a box shadow");
+
+const overlayBlock = blockFor(researchCss, ".hero > div:first-of-type {");
+requireText(overlayBlock, "background: rgba(0, 0, 0, 0.2) !important;", "the Research hero overlay must stay uniform and subtle");
+requireText(overlayBlock, "box-shadow: none !important;", "the Research hero overlay must not cast a shadow");
+if (overlayBlock.includes("linear-gradient")) {
+  throw new Error(
+    "Ciribilli Narita template lock failed: the Research hero overlay must not contain a bottom-darkening gradient",
+  );
+}
 
 console.log("Ciribilli Narita template lock verified.");
