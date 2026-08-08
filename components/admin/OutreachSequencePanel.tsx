@@ -8,16 +8,11 @@ type Prospect = { pi_name?: string; institution?: string; status?: string };
 type Message = {
   id: string;
   prospect_id: string;
-  production_run_id: string;
-  recipient_email: string;
-  subject: string;
-  body_text: string;
   message_kind: string;
   status: string;
   sent_at: string | null;
   follow_up_at: string | null;
   delivery_status: string | null;
-  error_message: string | null;
   prospects: Prospect | null;
 };
 type Sequence = {
@@ -31,156 +26,161 @@ type Sequence = {
 };
 
 const blocked = new Set(["bounced", "complained", "failed", "suppressed"]);
-const pendingReview = new Set(["draft", "approved", "sending"]);
 const card: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,.08)", borderRadius: 16, padding: 20,
-  background: "rgba(18,35,48,.78)", color: "inherit", boxShadow: "0 12px 34px rgba(0,0,0,.16)", minWidth: 0,
+  border: "1px solid rgba(255,255,255,.08)",
+  borderRadius: 16,
+  padding: 20,
+  background: "rgba(18,35,48,.78)",
+  color: "inherit",
+  boxShadow: "0 12px 34px rgba(0,0,0,.16)",
+  minWidth: 0,
 };
 const button: React.CSSProperties = {
-  border: "1px solid rgba(255,255,255,.12)", borderRadius: 9, padding: "7px 10px", background: "rgba(255,255,255,.04)",
-  color: "inherit", font: "inherit", fontSize: ".72rem", fontWeight: 750, cursor: "pointer",
-};
-const reviewButton: React.CSSProperties = {
-  ...button,
-  border: "1px solid rgba(224,181,104,.38)",
-  background: "rgba(224,181,104,.12)",
-  color: "#e0b568",
-};
-const fieldLabel: React.CSSProperties = {
-  display: "grid",
-  gap: 7,
-  fontSize: ".72rem",
-  fontWeight: 800,
-  letterSpacing: ".01em",
-};
-const field: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
   border: "1px solid rgba(255,255,255,.12)",
-  borderRadius: 10,
-  background: "rgba(5,16,23,.58)",
+  borderRadius: 9,
+  padding: "7px 10px",
+  background: "rgba(255,255,255,.04)",
   color: "inherit",
-  padding: "10px 11px",
   font: "inherit",
-  fontSize: ".82rem",
-  outline: "none",
+  fontSize: ".72rem",
+  fontWeight: 750,
+  cursor: "pointer",
 };
 
 function fmt(value: string | null | undefined) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Riyadh", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d);
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Riyadh",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(d);
 }
 
 function derive(sequence: Sequence) {
   const { initial, follow1, follow2, prospectStatus } = sequence;
-  if (prospectStatus === "replied") return { label: "Replied · stopped", tone: "#52c794", next: "No further email" };
-  if (prospectStatus === "interested") return { label: "Interested · stopped", tone: "#52c794", next: "No further email" };
+  if (prospectStatus === "replied") return { label: "Replied · stopped", tone: "#52c794", next: "No further email", active: false };
+  if (prospectStatus === "interested") return { label: "Interested · stopped", tone: "#52c794", next: "No further email", active: false };
+
   const latestSent = [follow2, follow1, initial].find((m) => m?.status === "sent");
-  if (latestSent?.delivery_status && blocked.has(latestSent.delivery_status)) return { label: `Stopped · ${latestSent.delivery_status}`, tone: "#e58b75", next: "No further email" };
-  if (follow2 && pendingReview.has(follow2.status)) return { label: "Follow-up 2 · Ready to review", tone: "#e0b568", next: "Review the draft before sending" };
-  if (follow1 && pendingReview.has(follow1.status)) return { label: "Follow-up 1 · Ready to review", tone: "#e0b568", next: "Review the draft before sending" };
-  if (follow2?.status === "sent") return { label: "Complete", tone: "#8ba4b8", next: "Sequence finished" };
-  if (follow1?.status === "sent" && !follow1.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email" };
-  if (follow1?.status === "sent") return { label: "Follow-up 1 sent", tone: "#76b7d8", next: `Follow-up 2 · ${fmt(follow1.follow_up_at)}` };
-  if (initial?.status === "sent" && !initial.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email" };
-  if (initial?.status === "sent") return { label: "Email 1 sent", tone: "#76b7d8", next: `Follow-up 1 · ${fmt(initial.follow_up_at)}` };
-  return { label: "Not active", tone: "#8ba4b8", next: "—" };
+  if (latestSent?.delivery_status && blocked.has(latestSent.delivery_status)) {
+    return { label: `Stopped · ${latestSent.delivery_status}`, tone: "#e58b75", next: "No further email", active: false };
+  }
+
+  if (follow2?.status === "sending") return { label: "Follow-up 2 · Sending", tone: "#e0b568", next: "Automatic delivery in progress", active: true };
+  if (follow1?.status === "sending") return { label: "Follow-up 1 · Sending", tone: "#e0b568", next: "Automatic delivery in progress", active: true };
+  if (follow2?.status === "sent") return { label: "Complete", tone: "#8ba4b8", next: "Sequence finished", active: false };
+  if (follow1?.status === "sent" && !follow1.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email", active: false };
+  if (follow1?.status === "sent") return { label: "Follow-up 1 sent", tone: "#76b7d8", next: `Follow-up 2 · ${fmt(follow1.follow_up_at)}`, active: true };
+  if (initial?.status === "sent" && !initial.follow_up_at) return { label: "Stopped", tone: "#8ba4b8", next: "No further email", active: false };
+  if (initial?.status === "sent") return { label: "Email 1 sent", tone: "#76b7d8", next: `Follow-up 1 · ${fmt(initial.follow_up_at)}`, active: true };
+  return { label: "Not active", tone: "#8ba4b8", next: "—", active: false };
 }
 
 function stepMark(message: Message | undefined) {
   if (message?.status === "sent") return "✓";
-  if (message && pendingReview.has(message.status)) return "◐";
+  if (message?.status === "sending") return "◐";
   return "○";
-}
-
-function pendingMessage(sequence: Sequence): Message | undefined {
-  if (sequence.follow2 && pendingReview.has(sequence.follow2.status)) return sequence.follow2;
-  if (sequence.follow1 && pendingReview.has(sequence.follow1.status)) return sequence.follow1;
-  return undefined;
 }
 
 export default function OutreachSequencePanel() {
   const [mount, setMount] = useState<HTMLElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-  const [working, setWorking] = useState<string>("");
+  const [working, setWorking] = useState("");
   const [error, setError] = useState("");
   const [showAll, setShowAll] = useState(false);
-  const [reviewMessageId, setReviewMessageId] = useState("");
 
   useEffect(() => {
-    if (typeof window === "undefined" || window.location.pathname !== "/admin/automation") return;
+    if (typeof window === "undefined" || window.location.pathname !== "/admin/sites") return;
     let disposed = false;
     let node: HTMLDivElement | null = null;
+
+    const findMonitorTable = () => {
+      for (const table of Array.from(document.querySelectorAll<HTMLTableElement>("table"))) {
+        const headings = Array.from(table.querySelectorAll("thead th")).map((item) => item.textContent?.trim());
+        if (headings.includes("Website") && headings.includes("PI and institution") && headings.includes("Website status")) return table;
+      }
+      return null;
+    };
+
     const place = () => {
       if (disposed) return;
-      const anchor = document.querySelector<HTMLElement>("[data-live-production-queue='true']");
+      const table = findMonitorTable();
+      const anchor = table?.parentElement;
       if (!anchor?.parentElement) return;
+
       if (!node) {
         node = document.createElement("div");
         node.dataset.outreachSequencePanel = "true";
-        anchor.insertAdjacentElement("afterend", node);
+        anchor.insertAdjacentElement("beforebegin", node);
         setMount(node);
-      } else if (node.previousElementSibling !== anchor) {
-        anchor.insertAdjacentElement("afterend", node);
+      } else if (node.nextElementSibling !== anchor) {
+        anchor.insertAdjacentElement("beforebegin", node);
       }
     };
+
     place();
     const observer = new MutationObserver(place);
     observer.observe(document.body, { childList: true, subtree: true });
     const timer = window.setInterval(place, 700);
-    return () => { disposed = true; observer.disconnect(); window.clearInterval(timer); node?.remove(); setMount(null); };
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      window.clearInterval(timer);
+      node?.remove();
+      setMount(null);
+    };
   }, []);
 
   const load = useCallback(async () => {
     const { data, error: loadError } = await supabase
       .from("outreach_messages")
-      .select("id,prospect_id,production_run_id,recipient_email,subject,body_text,message_kind,status,sent_at,follow_up_at,delivery_status,error_message,prospects(pi_name,institution,status)")
+      .select("id,prospect_id,message_kind,status,sent_at,follow_up_at,delivery_status,prospects(pi_name,institution,status)")
       .eq("is_test", false)
       .in("message_kind", ["initial", "followup_1", "followup_2"])
       .order("created_at", { ascending: false })
-      .limit(400);
-    if (loadError) { setError(loadError.message); setLoading(false); return; }
+      .limit(500);
+
+    if (loadError) {
+      setError(loadError.message);
+      setLoading(false);
+      return;
+    }
     setMessages((data || []) as unknown as Message[]);
-    setError(""); setLoading(false);
+    setError("");
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     if (!mount) return;
     void load();
     const poll = window.setInterval(() => void load(), 15000);
-    const channel = supabase.channel("labnarrative-outreach-sequences")
+    const channel = supabase.channel("labnarrative-outreach-sequences-sites")
       .on("postgres_changes", { event: "*", schema: "public", table: "outreach_messages" }, () => void load())
       .on("postgres_changes", { event: "*", schema: "public", table: "prospects" }, () => void load())
       .subscribe();
-    return () => { window.clearInterval(poll); void supabase.removeChannel(channel); };
-  }, [load, mount]);
-
-  const reviewMessage = useMemo(
-    () => reviewMessageId ? messages.find((message) => message.id === reviewMessageId) ?? null : null,
-    [messages, reviewMessageId],
-  );
-
-  useEffect(() => {
-    if (!reviewMessage) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setReviewMessageId("");
-    };
-    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
+      window.clearInterval(poll);
+      void supabase.removeChannel(channel);
     };
-  }, [reviewMessage]);
+  }, [load, mount]);
 
   const sequences = useMemo(() => {
     const map = new Map<string, Sequence>();
     for (const message of [...messages].reverse()) {
-      if (!map.has(message.prospect_id)) map.set(message.prospect_id, { prospectId: message.prospect_id, piName: message.prospects?.pi_name || "PI", institution: message.prospects?.institution || "", prospectStatus: message.prospects?.status || "" });
+      if (!map.has(message.prospect_id)) {
+        map.set(message.prospect_id, {
+          prospectId: message.prospect_id,
+          piName: message.prospects?.pi_name || "PI",
+          institution: message.prospects?.institution || "",
+          prospectStatus: message.prospects?.status || "",
+        });
+      }
       const row = map.get(message.prospect_id)!;
       row.piName = message.prospects?.pi_name || row.piName;
       row.institution = message.prospects?.institution || row.institution;
@@ -189,119 +189,93 @@ export default function OutreachSequencePanel() {
       if (message.message_kind === "followup_1") row.follow1 = message;
       if (message.message_kind === "followup_2") row.follow2 = message;
     }
+
     return Array.from(map.values())
-      .filter((s) => s.initial)
-      .sort((a, b) => new Date(b.follow2?.sent_at || b.follow1?.sent_at || b.initial?.sent_at || 0).getTime() - new Date(a.follow2?.sent_at || a.follow1?.sent_at || a.initial?.sent_at || 0).getTime());
+      .filter((sequence) => sequence.initial)
+      .sort((a, b) => {
+        const aState = derive(a);
+        const bState = derive(b);
+        if (aState.active !== bState.active) return aState.active ? -1 : 1;
+        const aTime = new Date(a.follow2?.sent_at || a.follow1?.sent_at || a.initial?.sent_at || 0).getTime();
+        const bTime = new Date(b.follow2?.sent_at || b.follow1?.sent_at || b.initial?.sent_at || 0).getTime();
+        return bTime - aTime;
+      });
   }, [messages]);
 
-  const activeCount = sequences.filter((s) => {
-    const state = derive(s);
-    return state.label === "Email 1 sent" || state.label === "Follow-up 1 sent" || state.label.includes("Ready to review");
-  }).length;
+  const activeCount = sequences.filter((sequence) => derive(sequence).active).length;
   const visible = showAll ? sequences : sequences.slice(0, 8);
 
   async function stop(prospectId: string) {
-    if (!window.confirm("Stop all remaining follow-ups for this PI?")) return;
-    setWorking(prospectId); setError("");
+    if (!window.confirm("Stop all remaining automatic follow-ups for this PI?")) return;
+    setWorking(prospectId);
+    setError("");
     const { error: rpcError } = await supabase.rpc("manual_stop_outreach_sequence", { p_prospect_id: prospectId });
-    if (rpcError) setError(rpcError.message); else await load();
+    if (rpcError) setError(rpcError.message);
+    else await load();
     setWorking("");
   }
 
-  async function prepareNext(prospectId: string) {
-    if (!window.confirm("Prepare this PI's next follow-up for review now? It will not be sent until you confirm it.")) return;
-    setWorking(prospectId); setError("");
-    const due = await supabase.rpc("force_outreach_followup_due", { p_prospect_id: prospectId });
-    if (due.error) { setError(due.error.message); setWorking(""); return; }
-    const result = await supabase.functions.invoke("outreach-sequence-worker", { body: { forceProspectId: prospectId } });
-    if (result.error) setError(result.error.message); else if ((result.data as { failures?: unknown[] } | null)?.failures?.length) setError("The follow-up worker could not prepare the review draft.");
-    await load(); setWorking("");
-  }
-
-  function openReview(message: Message) {
-    setReviewMessageId(message.id);
-  }
-
   if (!mount) return null;
+
   return createPortal(
-    <>
-      <section style={{ ...card, marginTop: 14 }} aria-label="Outreach sequences">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
-          <div><p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p><h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Three-message follow-up</h2><p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>{activeCount} active sequence{activeCount === 1 ? "" : "s"} · due dates prepare drafts; nothing sends without your review</p></div>
-          <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(82,199,148,.12)", color: "#52c794", fontSize: ".68rem", fontWeight: 800 }}>LIVE</span>
+    <section style={{ ...card, margin: "16px 0" }} aria-label="Automatic outreach sequences">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+        <div>
+          <p style={{ margin: 0, opacity: .58, textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 800 }}>Outreach sequences</p>
+          <h2 style={{ margin: "5px 0 3px", fontSize: "1.15rem" }}>Automatic three-message follow-up</h2>
+          <p style={{ margin: 0, opacity: .66, fontSize: ".78rem" }}>
+            {activeCount} active sequence{activeCount === 1 ? "" : "s"} · Follow-up 1 sends after 5 days · Follow-up 2 sends 8 days later · replies and delivery failures stop the sequence
+          </p>
         </div>
-        {loading ? <p style={{ opacity: .65 }}>Loading outreach sequences…</p> : null}
-        {error ? <p style={{ color: "#e58b75", fontWeight: 700, fontSize: ".76rem" }}>{error}</p> : null}
-        <div style={{ display: "grid", gap: 8 }}>
-          {visible.map((sequence) => {
-            const state = derive(sequence);
-            const schedulable = state.label === "Email 1 sent" || state.label === "Follow-up 1 sent";
-            const review = pendingMessage(sequence);
-            return <div key={sequence.prospectId} style={{ border: "1px solid rgba(255,255,255,.07)", borderRadius: 11, padding: "10px 11px", background: "rgba(255,255,255,.025)" }}>
+        <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(82,199,148,.12)", color: "#52c794", fontSize: ".68rem", fontWeight: 800 }}>AUTOMATIC</span>
+      </div>
+
+      {loading ? <p style={{ opacity: .65 }}>Loading outreach sequences…</p> : null}
+      {error ? <p style={{ color: "#e58b75", fontWeight: 700, fontSize: ".76rem" }}>{error}</p> : null}
+
+      <div style={{ display: "grid", gap: 8 }}>
+        {visible.map((sequence) => {
+          const state = derive(sequence);
+          return (
+            <div key={sequence.prospectId} style={{ border: "1px solid rgba(255,255,255,.07)", borderRadius: 11, padding: "10px 11px", background: "rgba(255,255,255,.025)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
-                <div style={{ minWidth: 0 }}><strong style={{ display: "block", fontSize: ".82rem" }}>{sequence.piName}</strong><small style={{ opacity: .58, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 360 }}>{sequence.institution}</small></div>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ display: "block", fontSize: ".82rem" }}>{sequence.piName}</strong>
+                  <small style={{ opacity: .58, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 520 }}>{sequence.institution}</small>
+                </div>
                 <span style={{ color: state.tone, fontSize: ".7rem", fontWeight: 800, whiteSpace: "nowrap" }}>{state.label}</span>
               </div>
+
               <div style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 8, flexWrap: "wrap", fontSize: ".7rem" }}>
-                <span style={{ opacity: sequence.initial?.status === "sent" ? 1 : .38 }}>✓ Email 1</span><span style={{ opacity: .3 }}>→</span>
+                <span>✓ Email 1</span><span style={{ opacity: .3 }}>→</span>
                 <span style={{ opacity: sequence.follow1 ? 1 : .55 }}>{stepMark(sequence.follow1)} Follow-up 1</span><span style={{ opacity: .3 }}>→</span>
                 <span style={{ opacity: sequence.follow2 ? 1 : .55 }}>{stepMark(sequence.follow2)} Follow-up 2</span>
               </div>
+
               <div style={{ marginTop: 7, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <small style={{ opacity: .65 }}>{state.next}</small>
-                {schedulable ? <div style={{ display: "flex", gap: 6 }}><button disabled={working === sequence.prospectId} onClick={() => void prepareNext(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Prepare next now</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
-                {review ? <div style={{ display: "flex", gap: 6 }}><button type="button" onClick={() => openReview(review)} style={reviewButton}>Review message</button><button disabled={working === sequence.prospectId} onClick={() => void stop(sequence.prospectId)} style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}>Stop sequence</button></div> : null}
+                {state.active ? (
+                  <button
+                    disabled={working === sequence.prospectId}
+                    onClick={() => void stop(sequence.prospectId)}
+                    style={{ ...button, opacity: working === sequence.prospectId ? .5 : 1 }}
+                    type="button"
+                  >
+                    Stop sequence
+                  </button>
+                ) : null}
               </div>
-            </div>;
-          })}
-        </div>
-        {sequences.length > 8 ? <button type="button" onClick={() => setShowAll((v) => !v)} style={{ ...button, marginTop: 10 }}>{showAll ? "Show recent only" : `Show all ${sequences.length}`}</button> : null}
-      </section>
+            </div>
+          );
+        })}
+      </div>
 
-      {reviewMessage ? (
-        <div
-          className="reviewModalBackdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) setReviewMessageId("");
-          }}
-        >
-          <div className="reviewModalShell" role="dialog" aria-modal="true" aria-label={`Follow-up review · ${reviewMessage.prospects?.pi_name || "PI"}`}>
-            <button className="reviewModalClose" type="button" aria-label="Close review" onClick={() => setReviewMessageId("")}>×</button>
-            <section style={{ ...card, padding: 22, background: "#10232e", borderColor: "rgba(255,255,255,.10)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 18 }}>
-                <div>
-                  <p style={{ margin: 0, color: "#e0b568", textTransform: "uppercase", letterSpacing: ".08em", fontSize: ".68rem", fontWeight: 850 }}>Follow-up message · Ready to review</p>
-                  <h2 style={{ margin: "6px 0 3px", fontSize: "1.18rem" }}>{reviewMessage.prospects?.pi_name || "PI"}</h2>
-                  <p style={{ margin: 0, opacity: .62, fontSize: ".76rem" }}>{reviewMessage.prospects?.institution || ""}</p>
-                </div>
-                <span style={{ padding: "5px 8px", borderRadius: 999, background: "rgba(224,181,104,.12)", color: "#e0b568", fontSize: ".68rem", fontWeight: 800 }}>Ready to review</span>
-              </div>
-
-              <div style={{ display: "grid", gap: 13 }}>
-                <label style={fieldLabel}>
-                  Recipient
-                  <input type="email" defaultValue={reviewMessage.recipient_email} style={field} />
-                </label>
-                <label style={fieldLabel}>
-                  Subject
-                  <input type="text" defaultValue={reviewMessage.subject} style={field} />
-                </label>
-                <label style={fieldLabel}>
-                  Message
-                  <textarea defaultValue={reviewMessage.body_text} rows={13} style={{ ...field, resize: "vertical", lineHeight: 1.55, minHeight: 245 }} />
-                </label>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-                <button type="button" onClick={() => setReviewMessageId("")} style={button}>Close</button>
-                <button type="button" style={{ ...button, background: "#2d655c", borderColor: "#3d7d71", color: "#f4fbf8", padding: "9px 14px" }}>Send email now</button>
-              </div>
-            </section>
-          </div>
-        </div>
+      {sequences.length > 8 ? (
+        <button type="button" onClick={() => setShowAll((value) => !value)} style={{ ...button, marginTop: 10 }}>
+          {showAll ? "Show recent only" : `Show all ${sequences.length}`}
+        </button>
       ) : null}
-    </>,
+    </section>,
     mount,
   );
 }
