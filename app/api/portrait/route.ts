@@ -5,6 +5,9 @@ const ALLOWED_SOURCE_HOSTS = [
   "sussex.ac.uk",
   "qub.ac.uk",
   "birmingham.ac.uk",
+  "massgeneral.org",
+  "mgh.harvard.edu",
+  "dfhcc.harvard.edu",
 ];
 
 function sourceHostAllowed(hostname: string) {
