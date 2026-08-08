@@ -18,6 +18,11 @@ export const DOBBELSTEIN_EDITORIAL_SETTINGS = {
   templatePolicy: "bourdon_only_v1",
 } as const;
 
+function cleanPortrait(value?: string) {
+  if (!value) return "";
+  return value.toLowerCase().includes("hela-") ? "" : value;
+}
+
 export default function DobbelsteinEditorialDesign({
   site,
   route,
@@ -30,11 +35,23 @@ export default function DobbelsteinEditorialDesign({
   previewMode?: boolean;
 }) {
   const currentPages = getBourdonPages(site);
+  const memberPortrait = cleanPortrait(site.members?.[0]?.image);
+  const portrait =
+    memberPortrait ||
+    cleanPortrait(currentPages.home.piImage) ||
+    cleanPortrait(currentPages.contact.piImage);
+
   const pages = {
     ...currentPages,
     home: {
       ...currentPages.home,
       homepageImage: "",
+      topPortrait: portrait,
+      piImage: portrait,
+    },
+    contact: {
+      ...currentPages.contact,
+      piImage: portrait,
     },
   };
 
