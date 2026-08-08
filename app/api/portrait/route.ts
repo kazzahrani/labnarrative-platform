@@ -8,6 +8,10 @@ const ALLOWED_SOURCE_HOSTS = [
   "massgeneral.org",
   "mgh.harvard.edu",
   "dfhcc.harvard.edu",
+  "uni-wuerzburg.de",
+  "dana-farber.org",
+  "westlake.edu.cn",
+  "ucsf.edu",
 ];
 
 function sourceHostAllowed(hostname: string) {
