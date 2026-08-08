@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhancer";
-import AutomationNavEnhancer from "@/components/admin/AutomationNavEnhancer";
-import LiveProductionQueue from "@/components/admin/LiveProductionQueue";
-import OperatorSendSafetyEnhancer from "@/components/admin/OperatorSendSafetyEnhancer";
+import EngineV2HardNavigation from "@/components/admin/EngineV2HardNavigation";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import OutreachSequencePanel from "@/components/admin/OutreachSequencePanel";
-import PipelineEventColorEnhancer from "@/components/admin/PipelineEventColorEnhancer";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
@@ -59,14 +56,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <AdminLandingRedirect />
         <AdminAuthRecoveryEnhancer />
-        <AutomationNavEnhancer />
-        <PipelineEventColorEnhancer />
+        <EngineV2HardNavigation />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
-        <LiveProductionQueue />
         <OutreachSequencePanel />
         <WebsiteOutreachSequenceEnhancer />
-        <OperatorSendSafetyEnhancer />
         {children}
       </body>
     </html>
