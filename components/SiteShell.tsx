@@ -100,7 +100,7 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
     && Boolean(route.projectSlug)
     && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
 
-  if (designVariant === "Reisman-v1") {
+  if (designVariant === "portrait-first-v1") {
     return <PortraitFirstDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
