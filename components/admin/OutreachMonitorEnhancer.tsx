@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { useEffect } from "react";
 
 type OutreachStatus =
+  | "no_response_yet"
   | "not_contacted"
   | "email_1_sent"
   | "email_2_sent"
@@ -22,6 +23,7 @@ type OutreachRecord = {
 };
 
 const outreachOptions: Array<{ value: OutreachStatus; label: string }> = [
+  { value: "no_response_yet", label: "No response yet" },
   { value: "not_contacted", label: "Not contacted" },
   { value: "replied", label: "Replied" },
   { value: "interested", label: "Interested" },
@@ -36,7 +38,6 @@ const EMAIL_PROGRESS_STATUSES = new Set<OutreachStatus>([
   "email_2_sent",
   "email_3_sent",
 ]);
-const SEQUENCE_PROGRESS_VALUE = "__sequence_progress__";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -82,6 +83,9 @@ export default function OutreachMonitorEnhancer() {
       }, 1800);
     };
 
+    const displayStatus = (status: OutreachStatus): OutreachStatus =>
+      EMAIL_PROGRESS_STATUSES.has(status) ? "no_response_yet" : status;
+
     const saveStatus = async (
       record: OutreachRecord,
       select: HTMLSelectElement,
@@ -89,7 +93,7 @@ export default function OutreachMonitorEnhancer() {
       nextStatus: OutreachStatus,
     ) => {
       const previousStatus = record.outreach_status;
-      if (nextStatus === previousStatus) return;
+      if (nextStatus === previousStatus || (nextStatus === "no_response_yet" && EMAIL_PROGRESS_STATUSES.has(previousStatus))) return;
 
       record.outreach_status = nextStatus;
       select.disabled = true;
@@ -108,7 +112,7 @@ export default function OutreachMonitorEnhancer() {
 
       if (error) {
         record.outreach_status = previousStatus;
-        select.value = EMAIL_PROGRESS_STATUSES.has(previousStatus) ? SEQUENCE_PROGRESS_VALUE : previousStatus;
+        select.value = displayStatus(previousStatus);
         showFeedback(feedback, "Could not save", true);
         return;
       }
@@ -156,14 +160,6 @@ export default function OutreachMonitorEnhancer() {
         select.setAttribute("aria-label", `Outreach status for ${slug}`);
         styleSelect(select);
 
-        if (EMAIL_PROGRESS_STATUSES.has(record.outreach_status)) {
-          const sequenceOption = document.createElement("option");
-          sequenceOption.value = SEQUENCE_PROGRESS_VALUE;
-          sequenceOption.textContent = "No response yet";
-          sequenceOption.disabled = true;
-          select.append(sequenceOption);
-        }
-
         outreachOptions.forEach(({ value, label }) => {
           const option = document.createElement("option");
           option.value = value;
@@ -171,9 +167,7 @@ export default function OutreachMonitorEnhancer() {
           select.append(option);
         });
 
-        select.value = EMAIL_PROGRESS_STATUSES.has(record.outreach_status)
-          ? SEQUENCE_PROGRESS_VALUE
-          : record.outreach_status || "not_contacted";
+        select.value = displayStatus(record.outreach_status || "not_contacted");
 
         const feedback = document.createElement("small");
         feedback.style.display = "block";
@@ -182,7 +176,6 @@ export default function OutreachMonitorEnhancer() {
         feedback.style.fontSize = "0.56rem";
 
         select.addEventListener("change", () => {
-          if (select.value === SEQUENCE_PROGRESS_VALUE) return;
           void saveStatus(record, select, feedback, select.value as OutreachStatus);
         });
 
