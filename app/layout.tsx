@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhancer";
 import EngineV2HardNavigation from "@/components/admin/EngineV2HardNavigation";
+import EngineV2OutreachWindow from "@/components/admin/EngineV2OutreachWindow";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import OutreachSequencePanel from "@/components/admin/OutreachSequencePanel";
 import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AdminLandingRedirect />
         <AdminAuthRecoveryEnhancer />
         <EngineV2HardNavigation />
+        <EngineV2OutreachWindow />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
         <OutreachSequencePanel />
