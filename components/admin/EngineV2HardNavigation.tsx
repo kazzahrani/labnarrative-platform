@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 
-const CLEAN_ADMIN_DESTINATIONS = new Set([
+const CLEAN_ADMIN_PAGES = new Set([
+  "/admin/automation",
   "/admin/sites",
   "/admin/discovery",
   "/admin",
@@ -10,7 +11,7 @@ const CLEAN_ADMIN_DESTINATIONS = new Set([
 
 export default function EngineV2HardNavigation() {
   useEffect(() => {
-    if (window.location.pathname !== "/admin/automation") return;
+    if (!CLEAN_ADMIN_PAGES.has(window.location.pathname)) return;
 
     const navigateCleanly = (event: MouseEvent) => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -28,7 +29,7 @@ export default function EngineV2HardNavigation() {
         return;
       }
 
-      if (!CLEAN_ADMIN_DESTINATIONS.has(path)) return;
+      if (!CLEAN_ADMIN_PAGES.has(path) || path === window.location.pathname) return;
 
       event.preventDefault();
       event.stopPropagation();
