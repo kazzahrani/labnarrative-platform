@@ -1,0 +1,115 @@
+.platformListPagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 10px 0 2px;
+  padding: 7px 0 0;
+  border-top: 1px solid rgba(125, 145, 158, 0.18);
+  color: inherit;
+}
+
+.platformListPaginationSummary {
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.65;
+  white-space: nowrap;
+}
+
+.platformListPaginationControls,
+.platformListPageSize,
+.platformListPageButtons {
+  display: flex;
+  align-items: center;
+}
+
+.platformListPaginationControls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px 10px;
+}
+
+.platformListPageSize {
+  gap: 5px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.platformListPageSize select {
+  width: auto !important;
+  min-width: 54px !important;
+  min-height: 27px !important;
+  height: 27px !important;
+  border: 1px solid #38515e !important;
+  border-radius: 7px !important;
+  background: #13212a !important;
+  color: #dbe3e8 !important;
+  padding: 0 19px 0 7px !important;
+  box-shadow: none !important;
+  font: inherit !important;
+  font-size: 0.66rem !important;
+  font-weight: 800 !important;
+  cursor: pointer;
+}
+
+.platformListPageButtons {
+  gap: 4px;
+}
+
+.platformListPageButtons button {
+  min-width: 27px !important;
+  min-height: 27px !important;
+  width: auto !important;
+  height: 27px !important;
+  border: 1px solid #38515e !important;
+  border-radius: 7px !important;
+  background: #182832 !important;
+  color: #dbe3e8 !important;
+  padding: 0 7px !important;
+  box-shadow: none !important;
+  font: inherit !important;
+  font-size: 0.64rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  cursor: pointer;
+}
+
+.platformListPageButtons button:hover:not(:disabled) {
+  border-color: rgba(36, 181, 178, 0.78) !important;
+  background: rgba(36, 181, 178, 0.16) !important;
+}
+
+.platformListPageButtons button[aria-current="page"] {
+  border-color: #24b5b2 !important;
+  background: #24b5b2 !important;
+  color: #071b22 !important;
+}
+
+.platformListPageButtons button:disabled {
+  cursor: default;
+  opacity: 0.32;
+}
+
+.platformListPageEllipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  height: 27px;
+  font-size: 0.64rem;
+  opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+  .platformListPagination,
+  .platformListPaginationControls {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .platformListPaginationControls {
+    width: 100%;
+  }
+}
