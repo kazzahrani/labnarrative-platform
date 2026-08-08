@@ -6,6 +6,7 @@ const CLEAN_ADMIN_PAGES = new Set([
   "/admin/automation",
   "/admin/sites",
   "/admin/discovery",
+  "/admin/sales",
   "/admin",
 ]);
 
