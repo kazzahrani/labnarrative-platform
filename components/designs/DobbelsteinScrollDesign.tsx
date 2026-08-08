@@ -16,11 +16,11 @@ const SECTION_COLORS = [
   "#117b79",
 ] as const;
 
+const SECTION_SCROLL_SPEED = 0.22;
+
 type Measurement = {
   element: HTMLElement;
   start: number;
-  speed: number;
-  copySpeed: number;
 };
 
 function documentTop(element: HTMLElement) {
@@ -68,11 +68,15 @@ export default function DobbelsteinScrollDesign({
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const header = main.querySelector<HTMLElement>(":scope > .bn-site-header");
+    const footer = main.querySelector<HTMLElement>(":scope > .bn-footer");
     const sections = Array.from(main.querySelectorAll<HTMLElement>(":scope > section"));
     if (!sections.length) return;
 
     const terminal = sections[sections.length - 1];
     const moving = sections.slice(0, -1);
+
+    header?.classList.add("dobbelstein-scroll-chrome");
+    footer?.classList.add("dobbelstein-scroll-chrome");
 
     sections.forEach((section, index) => {
       section.classList.add("dobbelstein-scroll-panel");
@@ -87,20 +91,20 @@ export default function DobbelsteinScrollDesign({
     const measure = () => {
       const headerHeight = header?.offsetHeight ?? 104;
       root.style.setProperty("--dobbelstein-header-height", `${headerHeight}px`);
-      measurements = moving.map((element, index) => ({
+      measurements = moving.map((element) => ({
         element,
         start: Math.max(0, documentTop(element) - headerHeight),
-        speed: index === 0 ? 0.28 : 0.22,
-        copySpeed: index === 0 ? 0.11 : 0.085,
       }));
     };
 
     const update = () => {
       frame = 0;
-      measurements.forEach(({ element, start, speed, copySpeed }) => {
+      measurements.forEach(({ element, start }) => {
         const distance = reducedMotion ? 0 : Math.max(0, window.scrollY - start);
-        element.style.setProperty("--dobbelstein-panel-offset", `${-(distance * speed).toFixed(2)}px`);
-        element.style.setProperty("--dobbelstein-copy-offset", `${-(distance * copySpeed).toFixed(2)}px`);
+        element.style.setProperty(
+          "--dobbelstein-panel-offset",
+          `${-(distance * SECTION_SCROLL_SPEED).toFixed(2)}px`,
+        );
       });
     };
 
@@ -127,12 +131,13 @@ export default function DobbelsteinScrollDesign({
       window.removeEventListener("resize", remeasure);
       resizeObserver?.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
+      header?.classList.remove("dobbelstein-scroll-chrome");
+      footer?.classList.remove("dobbelstein-scroll-chrome");
       sections.forEach((section) => {
         section.classList.remove("dobbelstein-scroll-panel", "dobbelstein-scroll-terminal");
         section.style.removeProperty("--dobbelstein-panel-layer");
         section.style.removeProperty("--dobbelstein-panel-background");
         section.style.removeProperty("--dobbelstein-panel-offset");
-        section.style.removeProperty("--dobbelstein-copy-offset");
       });
       root.style.removeProperty("--dobbelstein-header-height");
     };
@@ -159,9 +164,19 @@ export default function DobbelsteinScrollDesign({
           overflow: visible !important;
         }
 
+        .dobbelstein-scroll-route-home .dobbelstein-scroll-chrome {
+          transform: none !important;
+          will-change: auto !important;
+        }
+
         .dobbelstein-scroll-route-home .bourdon-site > .bn-site-header {
-          position: sticky !important;
-          top: 0;
+          position: relative !important;
+          top: auto !important;
+          z-index: 100 !important;
+        }
+
+        .dobbelstein-scroll-route-home .bourdon-site > .bn-footer {
+          position: relative !important;
           z-index: 100 !important;
         }
 
@@ -170,7 +185,6 @@ export default function DobbelsteinScrollDesign({
           isolation: isolate;
           min-height: clamp(560px, 78svh, 820px);
           background: var(--dobbelstein-panel-background) !important;
-          scroll-margin-top: var(--dobbelstein-header-height);
           transform-origin: center top;
           transition: none !important;
         }
@@ -188,7 +202,7 @@ export default function DobbelsteinScrollDesign({
 
         .dobbelstein-scroll-route-home .dobbelstein-scroll-panel:not(.dobbelstein-scroll-terminal) {
           position: sticky !important;
-          top: var(--dobbelstein-header-height) !important;
+          top: 0 !important;
           z-index: calc(10 + var(--dobbelstein-panel-layer, 0)) !important;
           transform: translate3d(0, var(--dobbelstein-panel-offset, 0px), 0) !important;
           will-change: transform;
@@ -201,13 +215,6 @@ export default function DobbelsteinScrollDesign({
         .dobbelstein-scroll-route-home .dobbelstein-scroll-terminal {
           z-index: calc(10 + var(--dobbelstein-panel-layer, 0));
           min-height: auto;
-        }
-
-        .dobbelstein-scroll-route-home .dobbelstein-scroll-panel > .bn-page-shell,
-        .dobbelstein-scroll-route-home .dobbelstein-scroll-panel.bn-page-shell > * {
-          transform: translate3d(0, var(--dobbelstein-copy-offset, 0px), 0);
-          transition: none !important;
-          will-change: transform;
         }
 
         .dobbelstein-scroll-route-home .bn-home-overview,
@@ -224,12 +231,9 @@ export default function DobbelsteinScrollDesign({
           padding-bottom: clamp(84px, 10svh, 126px);
         }
 
-        .dobbelstein-scroll-route-home .bn-home-hero {
-          min-height: calc(100svh - var(--dobbelstein-header-height)) !important;
-        }
-
+        .dobbelstein-scroll-route-home .bn-home-hero,
         .dobbelstein-scroll-route-home .bn-home-hero .bn-hero-grid {
-          min-height: calc(100svh - var(--dobbelstein-header-height)) !important;
+          min-height: 100svh !important;
         }
 
         .dobbelstein-scroll-route-home .bn-join-strip {
@@ -238,9 +242,7 @@ export default function DobbelsteinScrollDesign({
 
         @media (max-width: 760px), (prefers-reduced-motion: reduce) {
           .dobbelstein-scroll-route-home .dobbelstein-scroll-panel,
-          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel:not(.dobbelstein-scroll-terminal),
-          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel > .bn-page-shell,
-          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel.bn-page-shell > * {
+          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel:not(.dobbelstein-scroll-terminal) {
             position: relative !important;
             top: auto !important;
             transform: none !important;
