@@ -491,6 +491,7 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           z-index: 10 !important;
         }
 
+        .narita-overlap-design:not(.narita-route-home) main > .narita-overlap-hero,
         .narita-overlap-design:not(.narita-route-home) .narita-overlap-hero.kinetic-inner-hero,
         .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
           width: 100vw !important;
