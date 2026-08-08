@@ -13,7 +13,6 @@ const SECTION_COLORS = [
   "#e5efea",
   "#f5efe5",
   "#e9f0f3",
-  "#117b79",
 ] as const;
 
 const SECTION_SCROLL_SPEED = 0.22;
@@ -72,15 +71,15 @@ export default function DobbelsteinScrollDesign({
     const sections = Array.from(main.querySelectorAll<HTMLElement>(":scope > section"));
     if (!sections.length) return;
 
-    const terminal = sections[sections.length - 1];
-    const moving = sections.slice(0, -1);
+    const joinSection = sections.find((section) => section.classList.contains("bn-join-strip"));
+    const moving = sections.filter((section) => section !== joinSection);
 
     header?.classList.add("dobbelstein-scroll-chrome");
     footer?.classList.add("dobbelstein-scroll-chrome");
+    joinSection?.classList.add("dobbelstein-scroll-static");
 
-    sections.forEach((section, index) => {
+    moving.forEach((section, index) => {
       section.classList.add("dobbelstein-scroll-panel");
-      if (section === terminal) section.classList.add("dobbelstein-scroll-terminal");
       section.style.setProperty("--dobbelstein-panel-layer", String(index));
       section.style.setProperty("--dobbelstein-panel-background", SECTION_COLORS[index % SECTION_COLORS.length]);
     });
@@ -119,7 +118,8 @@ export default function DobbelsteinScrollDesign({
 
     const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(remeasure) : undefined;
     resizeObserver?.observe(main);
-    sections.forEach((section) => resizeObserver?.observe(section));
+    moving.forEach((section) => resizeObserver?.observe(section));
+    if (joinSection) resizeObserver?.observe(joinSection);
 
     measure();
     update();
@@ -133,8 +133,9 @@ export default function DobbelsteinScrollDesign({
       if (frame) window.cancelAnimationFrame(frame);
       header?.classList.remove("dobbelstein-scroll-chrome");
       footer?.classList.remove("dobbelstein-scroll-chrome");
-      sections.forEach((section) => {
-        section.classList.remove("dobbelstein-scroll-panel", "dobbelstein-scroll-terminal");
+      joinSection?.classList.remove("dobbelstein-scroll-static");
+      moving.forEach((section) => {
+        section.classList.remove("dobbelstein-scroll-panel");
         section.style.removeProperty("--dobbelstein-panel-layer");
         section.style.removeProperty("--dobbelstein-panel-background");
         section.style.removeProperty("--dobbelstein-panel-offset");
@@ -164,29 +165,34 @@ export default function DobbelsteinScrollDesign({
           overflow: visible !important;
         }
 
-        .dobbelstein-scroll-route-home .dobbelstein-scroll-chrome {
+        .dobbelstein-scroll-route-home .dobbelstein-scroll-chrome,
+        .dobbelstein-scroll-route-home .dobbelstein-scroll-static {
+          position: relative !important;
+          top: auto !important;
           transform: none !important;
           will-change: auto !important;
         }
 
         .dobbelstein-scroll-route-home .bourdon-site > .bn-site-header {
-          position: relative !important;
-          top: auto !important;
           z-index: 100 !important;
         }
 
-        .dobbelstein-scroll-route-home .bourdon-site > .bn-footer {
-          position: relative !important;
+        .dobbelstein-scroll-route-home .bourdon-site > .bn-footer,
+        .dobbelstein-scroll-route-home .bn-join-strip {
           z-index: 100 !important;
         }
 
         .dobbelstein-scroll-route-home .dobbelstein-scroll-panel {
-          position: relative;
+          position: sticky !important;
+          top: 0 !important;
           isolation: isolate;
           min-height: clamp(560px, 78svh, 820px);
           background: var(--dobbelstein-panel-background) !important;
           transform-origin: center top;
           transition: none !important;
+          z-index: calc(10 + var(--dobbelstein-panel-layer, 0)) !important;
+          transform: translate3d(0, var(--dobbelstein-panel-offset, 0px), 0) !important;
+          will-change: transform;
         }
 
         .dobbelstein-scroll-route-home .dobbelstein-scroll-panel::before {
@@ -199,19 +205,6 @@ export default function DobbelsteinScrollDesign({
           background: var(--dobbelstein-panel-background);
           pointer-events: none;
           box-shadow: none !important;
-        }
-
-        .dobbelstein-scroll-route-home .dobbelstein-scroll-panel:not(.dobbelstein-scroll-terminal) {
-          position: sticky !important;
-          top: 0 !important;
-          z-index: calc(10 + var(--dobbelstein-panel-layer, 0)) !important;
-          transform: translate3d(0, var(--dobbelstein-panel-offset, 0px), 0) !important;
-          will-change: transform;
-        }
-
-        .dobbelstein-scroll-route-home .dobbelstein-scroll-terminal {
-          z-index: calc(10 + var(--dobbelstein-panel-layer, 0));
-          min-height: auto;
         }
 
         .dobbelstein-scroll-route-home .bn-home-overview,
@@ -238,15 +231,11 @@ export default function DobbelsteinScrollDesign({
         }
 
         @media (max-width: 760px), (prefers-reduced-motion: reduce) {
-          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel,
-          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel:not(.dobbelstein-scroll-terminal) {
+          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel {
             position: relative !important;
             top: auto !important;
             transform: none !important;
             will-change: auto;
-          }
-
-          .dobbelstein-scroll-route-home .dobbelstein-scroll-panel {
             min-height: auto;
           }
         }
