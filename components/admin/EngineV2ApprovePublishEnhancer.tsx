@@ -21,16 +21,17 @@ export default function EngineV2ApprovePublishEnhancer() {
   useEffect(() => {
     if (window.location.pathname !== "/admin/automation") return;
 
-    relabelApproveButtons();
-    const observer = new MutationObserver(relabelApproveButtons);
-    observer.observe(document.body, { childList: true, subtree: true });
+    // The dashboard loads asynchronously. A few bounded one-shot relabels keep the
+    // visible action simple without introducing a page-wide observer or polling loop.
+    const timers = [0, 350, 900, 1800].map((delay) => window.setTimeout(relabelApproveButtons, delay));
 
     const handleClick = async (event: MouseEvent) => {
       if (event.button !== 0) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
       const button = target.closest<HTMLButtonElement>("button");
-      if (!button || button.textContent?.trim() !== "Approve & Publish") return;
+      const label = button?.textContent?.trim();
+      if (!button || (label !== "Approve" && label !== "Approve & Publish")) return;
 
       const slug = slugFromCard(button);
       if (!slug) return;
@@ -81,13 +82,15 @@ export default function EngineV2ApprovePublishEnhancer() {
           }
         };
 
+        // Resolve the current live run by slug at click time. This deliberately does
+        // not trust a run id held by an older dashboard render.
         const review = await callRpc<{ runId?: string }>("engine_v2_admin_review_by_slug", {
           p_slug: slug,
           p_decision: "approve",
           p_note: null,
         });
 
-        if (!review.runId) throw new Error("Approval succeeded but the run identifier was not returned.");
+        if (!review.runId) throw new Error("Approval succeeded but the current run identifier was not returned.");
         approved = true;
         button.textContent = "Publishing…";
 
@@ -114,7 +117,7 @@ export default function EngineV2ApprovePublishEnhancer() {
 
     document.addEventListener("click", handleClick, true);
     return () => {
-      observer.disconnect();
+      timers.forEach((timer) => window.clearTimeout(timer));
       document.removeEventListener("click", handleClick, true);
     };
   }, []);
