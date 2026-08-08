@@ -230,6 +230,8 @@ function Publications({ site }: Pick<Props, "site">) {
 }
 
 function Join({ site, basePath }: Pick<Props, "site" | "basePath">) {
+  const portrait = portraitUrl(site);
+
   return (
     <section className={styles.inner}>
       <div className={styles.innerHeader}>
@@ -241,7 +243,26 @@ function Join({ site, basePath }: Pick<Props, "site" | "basePath">) {
       </div>
       <div className={styles.statement}>
         <div className={styles.statementMain}><blockquote>Tell us what you want to understand—and why this laboratory is the right place to ask it.</blockquote></div>
-        <div className={styles.statementAside}><p>Include your background, research interests, relevant experience and expected timing or funding route.</p><Link href={`${basePath}/contact`}>Contact the laboratory →</Link></div>
+        <div className={styles.statementAside}>
+          <div className={styles.joinPortrait}>
+            <div className={styles.joinPortraitImage}>
+              {portrait ? (
+                <img src={portrait} alt={`${site.piName}, ${site.title}`} />
+              ) : (
+                <div className={styles.portraitFallback}>{initials(site.piName)}</div>
+              )}
+            </div>
+            <div>
+              <span className={styles.metaLabel}>Principal investigator</span>
+              <strong>{site.piName}</strong>
+              <p>{site.title}</p>
+            </div>
+          </div>
+          <div className={styles.joinContact}>
+            <p>Include your background, research interests, relevant experience and expected timing or funding route.</p>
+            <Link href={`${basePath}/contact`}>Contact the laboratory →</Link>
+          </div>
+        </div>
       </div>
     </section>
   );
