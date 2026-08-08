@@ -1,8 +1,7 @@
 "use client";
 
 import { createClient, type Session } from "@supabase/supabase-js";
-import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./automation.module.css";
 
 type EngineRunState =
@@ -14,6 +13,8 @@ type EngineRunState =
   | "blocked"
   | "approved"
   | "published";
+
+type ReviewDecision = "approve" | "return_build" | "return_assets" | "cancel";
 
 type EngineRun = {
   runId: string;
@@ -66,6 +67,14 @@ type DashboardData = {
   queue: QueueItem[];
 };
 
+type PublishResult = {
+  runId?: string;
+  state?: string;
+  siteId?: string;
+  publicUrl?: string;
+  idempotent?: boolean;
+};
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -112,20 +121,72 @@ function stateDescription(state: EngineRunState): string {
   return labels[state];
 }
 
+function actionError(payload: unknown, status: number): string {
+  if (payload && typeof payload === "object") {
+    const row = payload as { message?: unknown; details?: unknown; hint?: unknown; error?: unknown };
+    for (const value of [row.message, row.details, row.hint, row.error]) {
+      if (typeof value === "string" && value.trim()) return value;
+    }
+  }
+  return `Request failed (${status}).`;
+}
+
+async function rpcRequest<T>(session: Session, functionName: string, body: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${functionName}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: supabaseKey,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let payload: unknown = null;
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = text;
+      }
+    }
+
+    if (!response.ok) throw new Error(actionError(payload, response.status));
+    return payload as T;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("The action timed out. Please try once more.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 function RunCard({
   run,
-  working,
+  actionKey,
   onReview,
   onPublish,
 }: {
   run: EngineRun;
-  working: boolean;
-  onReview: (runId: string, decision: "approve" | "return_build" | "return_assets" | "cancel") => Promise<void>;
+  actionKey: string;
+  onReview: (runId: string, decision: ReviewDecision) => Promise<void>;
   onPublish: (runId: string) => Promise<void>;
 }) {
   const isReview = run.state === "final_review";
   const isApproved = run.state === "approved";
   const isPublished = run.state === "published";
+  const isBusy = actionKey.startsWith(`${run.runId}:`);
+  const busyAction = isBusy ? actionKey.split(":")[1] : "";
+
   return (
     <article className={styles.card} style={{ display: "grid", gap: 14 }}>
       <div className={styles.cardHeader}>
@@ -156,25 +217,35 @@ function RunCard({
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {run.previewPath ? (
-          <Link className={styles.buttonSecondary} href={run.previewPath} target="_blank">
+          <a className={styles.buttonSecondary} href={run.previewPath} target="_blank" rel="noreferrer">
             Open private preview ↗
-          </Link>
+          </a>
         ) : null}
         {run.publicUrl ? (
-          <Link className={isPublished ? styles.button : styles.buttonSecondary} href={run.publicUrl} target="_blank">
+          <a className={isPublished ? styles.button : styles.buttonSecondary} href={run.publicUrl} target="_blank" rel="noreferrer">
             Open live site ↗
-          </Link>
+          </a>
         ) : null}
         {isReview ? (
           <>
-            <button className={styles.button} disabled={working} type="button" onClick={() => void onReview(run.runId, "approve")}>Approve</button>
-            <button className={styles.buttonSecondary} disabled={working} type="button" onClick={() => void onReview(run.runId, "return_build")}>Return to Build</button>
-            <button className={styles.buttonSecondary} disabled={working} type="button" onClick={() => void onReview(run.runId, "return_assets")}>Return to Assets</button>
-            <button className={styles.buttonSecondary} disabled={working} type="button" onClick={() => void onReview(run.runId, "cancel")}>Cancel</button>
+            <button className={styles.button} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "approve")}>
+              {busyAction === "approve" ? "Approving…" : "Approve"}
+            </button>
+            <button className={styles.buttonSecondary} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "return_build")}>
+              {busyAction === "return_build" ? "Returning…" : "Return to Build"}
+            </button>
+            <button className={styles.buttonSecondary} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "return_assets")}>
+              {busyAction === "return_assets" ? "Returning…" : "Return to Assets"}
+            </button>
+            <button className={styles.buttonSecondary} disabled={isBusy} type="button" onClick={() => void onReview(run.runId, "cancel")}>
+              {busyAction === "cancel" ? "Cancelling…" : "Cancel"}
+            </button>
           </>
         ) : null}
         {isApproved ? (
-          <button className={styles.button} disabled={working} type="button" onClick={() => void onPublish(run.runId)}>Publish concept</button>
+          <button className={styles.button} disabled={isBusy} type="button" onClick={() => void onPublish(run.runId)}>
+            {busyAction === "publish" ? "Publishing…" : "Publish concept"}
+          </button>
         ) : null}
       </div>
     </article>
@@ -191,48 +262,52 @@ export default function AutomationControlCentre() {
   const [notice, setNotice] = useState("");
   const [noticeError, setNoticeError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [working, setWorking] = useState(false);
-  const pollLock = useRef(false);
+  const [engineWorking, setEngineWorking] = useState(false);
+  const [actionKey, setActionKey] = useState("");
 
-  const loadData = useCallback(async (activeSession?: Session | null) => {
-    const currentSession = activeSession ?? session;
-    if (!currentSession || pollLock.current) return;
-    pollLock.current = true;
+  const loadData = useCallback(async (currentSession: Session) => {
+    if (!currentSession) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc("engine_v2_admin_dashboard");
-      if (error) throw error;
-      setDashboard(data as DashboardData);
+      const data = await rpcRequest<DashboardData>(currentSession, "engine_v2_admin_dashboard", {}, 8000);
+      setDashboard(data);
       setNoticeError(false);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Engine v2 dashboard could not be loaded.");
       setNoticeError(true);
     } finally {
       setLoading(false);
-      pollLock.current = false;
     }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    let mounted = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
       setSession(data.session);
       setAuthReady(true);
       if (data.session) void loadData(data.session);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted || event === "INITIAL_SESSION") return;
       setSession(nextSession);
       setAuthReady(true);
-      if (nextSession) void loadData(nextSession);
-      else setDashboard(null);
+      if (!nextSession) {
+        setDashboard(null);
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        window.setTimeout(() => void loadData(nextSession), 0);
+      }
     });
-    return () => subscription.unsubscribe();
-  }, [loadData]);
 
-  useEffect(() => {
-    if (!session) return;
-    const timer = window.setInterval(() => void loadData(), 10_000);
-    return () => window.clearInterval(timer);
-  }, [loadData, session]);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loadData]);
 
   const activeRuns = useMemo(() => dashboard?.runs.filter((run) => ["research", "build", "assets", "verify"].includes(run.state)) ?? [], [dashboard]);
   const finalReviewRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "final_review") ?? [], [dashboard]);
@@ -269,57 +344,105 @@ export default function AutomationControlCentre() {
     }
   }
 
+  function applyReviewLocally(runId: string, decision: ReviewDecision) {
+    setDashboard((current) => {
+      if (!current) return current;
+      const existing = current.runs.find((run) => run.runId === runId);
+      if (!existing) return current;
+
+      const target = decision === "approve" ? "approved" : decision === "return_build" ? "build" : decision === "return_assets" ? "assets" : "cancelled";
+      if (existing.state === target) return current;
+
+      const counts = { ...current.counts };
+      if (existing.state === "final_review") counts.finalReview = Math.max(0, counts.finalReview - 1);
+      if (target === "approved") counts.approved += 1;
+      if (target === "build" || target === "assets") counts.active += 1;
+
+      const runs = target === "cancelled"
+        ? current.runs.filter((run) => run.runId !== runId)
+        : current.runs.map((run) => run.runId === runId ? { ...run, state: target as EngineRunState, updatedAt: new Date().toISOString() } : run);
+
+      return { ...current, counts, runs };
+    });
+  }
+
   async function setEngineEnabled(enabled: boolean) {
-    setWorking(true);
+    if (!session || engineWorking) return;
+    setEngineWorking(true);
     try {
-      const { error } = await supabase.rpc("engine_v2_admin_set_enabled", { p_enabled: enabled });
-      if (error) throw error;
+      await rpcRequest(session, "engine_v2_admin_set_enabled", { p_enabled: enabled });
+      setDashboard((current) => current ? {
+        ...current,
+        runtime: { ...current.runtime, enabled, updatedAt: new Date().toISOString() },
+      } : current);
       setNotice(enabled ? "Engine v2 resumed." : "Engine v2 paused. No new stages will be dispatched.");
       setNoticeError(false);
-      await loadData();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Engine state could not be changed.");
       setNoticeError(true);
     } finally {
-      setWorking(false);
+      setEngineWorking(false);
     }
   }
 
-  async function reviewRun(runId: string, decision: "approve" | "return_build" | "return_assets" | "cancel") {
-    setWorking(true);
+  async function reviewRun(runId: string, decision: ReviewDecision) {
+    if (!session || actionKey) return;
+    setActionKey(`${runId}:${decision}`);
     try {
-      const { error } = await supabase.rpc("engine_v2_admin_review", { p_run_id: runId, p_decision: decision, p_note: null });
-      if (error) throw error;
+      await rpcRequest(session, "engine_v2_admin_review", { p_run_id: runId, p_decision: decision, p_note: null });
+      applyReviewLocally(runId, decision);
       setNotice(
-        decision === "approve" ? "Concept approved. Use Publish concept when you are ready to make it public." :
+        decision === "approve" ? "Concept approved. It is still private until you click Publish concept." :
         decision === "return_build" ? "Concept returned to Build." :
         decision === "return_assets" ? "Concept returned to Assets." :
         "Run cancelled.",
       );
       setNoticeError(false);
-      await loadData();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Review decision could not be saved.");
       setNoticeError(true);
     } finally {
-      setWorking(false);
+      setActionKey("");
     }
   }
 
   async function publishRun(runId: string) {
-    setWorking(true);
+    if (!session || actionKey) return;
+    setActionKey(`${runId}:publish`);
     try {
-      const { data, error } = await supabase.rpc("engine_v2_admin_publish", { p_run_id: runId });
-      if (error) throw error;
-      const publicUrl = typeof data === "object" && data && "publicUrl" in data ? String((data as { publicUrl?: unknown }).publicUrl ?? "") : "";
+      const data = await rpcRequest<PublishResult>(session, "engine_v2_admin_publish", { p_run_id: runId });
+      const publicUrl = data?.publicUrl || "";
+
+      setDashboard((current) => {
+        if (!current) return current;
+        const existing = current.runs.find((run) => run.runId === runId);
+        if (!existing) return current;
+        const wasApproved = existing.state === "approved";
+        return {
+          ...current,
+          counts: {
+            ...current.counts,
+            approved: wasApproved ? Math.max(0, current.counts.approved - 1) : current.counts.approved,
+            published: existing.state === "published" ? current.counts.published : current.counts.published + 1,
+          },
+          runs: current.runs.map((run) => run.runId === runId ? {
+            ...run,
+            state: "published",
+            siteStatus: "concept",
+            previewPath: null,
+            publicUrl: publicUrl || run.publicUrl || `https://${run.slug}.labnarrative.com`,
+            updatedAt: new Date().toISOString(),
+          } : run),
+        };
+      });
+
       setNotice(publicUrl ? `Concept published: ${publicUrl}` : "Concept published successfully.");
       setNoticeError(false);
-      await loadData();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Concept could not be published.");
       setNoticeError(true);
     } finally {
-      setWorking(false);
+      setActionKey("");
     }
   }
 
@@ -351,8 +474,13 @@ export default function AutomationControlCentre() {
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
-        <div><Link className={styles.brand} href="/">LabNarrative</Link><span className={styles.muted}>Engine v2</span></div>
-        <nav><Link href="/admin/sites">Websites</Link><Link href="/admin/discovery">Discovery</Link><Link href="/admin">Editor</Link><button className={styles.buttonSecondary} type="button" onClick={() => void supabase.auth.signOut()}>Sign out</button></nav>
+        <div><a className={styles.brand} href="/">LabNarrative</a><span className={styles.muted}>Engine v2</span></div>
+        <nav>
+          <a href="/admin/sites">Websites</a>
+          <a href="/admin/discovery">Discovery</a>
+          <a href="/admin">Editor</a>
+          <button className={styles.buttonSecondary} type="button" onClick={() => void supabase.auth.signOut()}>Sign out</button>
+        </nav>
       </header>
 
       <div className={styles.main}>
@@ -363,10 +491,10 @@ export default function AutomationControlCentre() {
             <p className={styles.heroCopy}>One PI is processed at a time. Scientific uncertainty stops the run instead of inventing a match. Final Review never blocks the next PI. Publishing requires your explicit approval and a separate Publish click. Outreach remains separate.</p>
           </div>
           <div className={styles.heroActions}>
-            <button className={dashboard?.runtime.enabled ? styles.buttonSecondary : styles.button} type="button" disabled={working || !dashboard} onClick={() => void setEngineEnabled(!dashboard?.runtime.enabled)}>
-              {dashboard?.runtime.enabled ? "Pause engine" : "Resume engine"}
+            <button className={dashboard?.runtime.enabled ? styles.buttonSecondary : styles.button} type="button" disabled={engineWorking || !dashboard} onClick={() => void setEngineEnabled(!dashboard?.runtime.enabled)}>
+              {engineWorking ? "Saving…" : dashboard?.runtime.enabled ? "Pause engine" : "Resume engine"}
             </button>
-            <button className={styles.buttonSecondary} type="button" disabled={loading} onClick={() => void loadData()}>Refresh</button>
+            <button className={styles.buttonSecondary} type="button" disabled={loading} onClick={() => session && void loadData(session)}>{loading ? "Refreshing…" : "Refresh"}</button>
           </div>
         </section>
 
@@ -391,13 +519,13 @@ export default function AutomationControlCentre() {
               </div>
               <p className={styles.muted}>{dashboard?.runtime.note ?? "Loading engine state…"}</p>
             </section>
-            {activeRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
+            {activeRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
 
             <section className={styles.card}>
               <div className={styles.cardHeader}><div><p className={styles.kicker}>Final Review</p><h2>{finalReviewRuns.length} private concept{finalReviewRuns.length === 1 ? "" : "s"} waiting</h2></div></div>
               {finalReviewRuns.length === 0 ? <p className={styles.muted}>Nothing is waiting for review.</p> : null}
             </section>
-            {finalReviewRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
+            {finalReviewRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
 
             {approvedRuns.length ? (
               <section className={styles.card}>
@@ -405,7 +533,7 @@ export default function AutomationControlCentre() {
                 <p className={styles.muted}>These concepts passed human review but are still private. Publish only when you want the subdomain to become public.</p>
               </section>
             ) : null}
-            {approvedRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
+            {approvedRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
 
             {publishedRuns.length ? (
               <section className={styles.card}>
@@ -413,7 +541,7 @@ export default function AutomationControlCentre() {
                 <p className={styles.muted}>Published concepts are public. No outreach is sent by this action.</p>
               </section>
             ) : null}
-            {publishedRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
+            {publishedRuns.map((run) => <RunCard key={run.runId} run={run} actionKey={actionKey} onReview={reviewRun} onPublish={publishRun} />)}
           </div>
 
           <div className={styles.stack}>
