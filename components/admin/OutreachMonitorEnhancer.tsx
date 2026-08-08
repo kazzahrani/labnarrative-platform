@@ -69,8 +69,8 @@ function styleSelect(select: HTMLSelectElement) {
     background: "transparent",
     color: "inherit",
     font: "inherit",
-    fontSize: "0.57rem",
-    fontWeight: "700",
+    fontSize: "0.49rem",
+    fontWeight: "650",
     cursor: "pointer",
   });
 }
@@ -232,6 +232,8 @@ export default function OutreachMonitorEnhancer() {
           const option = document.createElement("option");
           option.value = value;
           option.textContent = label;
+          option.style.fontSize = "0.49rem";
+          option.style.fontWeight = "650";
           select.append(option);
         });
 
