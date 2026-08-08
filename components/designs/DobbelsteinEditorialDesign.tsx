@@ -38,9 +38,37 @@ export default function DobbelsteinEditorialDesign({
     },
   };
 
+  const incomingVariant = site.design?.settings?.variant;
+  const useInlineResearch = incomingVariant === DOBBELSTEIN_EDITORIAL_VARIANT;
+
+  const research = useInlineResearch && site.research?.length
+    ? site.research.map((project) => {
+        const detailBlocks = [
+          project.summary,
+          ...(project.body ?? []),
+          project.methods?.length
+            ? `Approaches\n${project.methods.map((item) => `• ${item}`).join("\n")}`
+            : "",
+          project.papers?.length
+            ? `Selected work\n${project.papers.map((item) => `• ${item}`).join("\n")}`
+            : "",
+        ].filter(Boolean);
+
+        return {
+          ...project,
+          slug: "",
+          summary: detailBlocks.join("\n\n"),
+          body: [],
+          methods: [],
+          papers: [],
+        };
+      })
+    : site.research;
+
   const editorialSite: LabSite = {
     ...site,
     heroImage: "",
+    research,
     pages,
     design: {
       key: "bourdon-full",
@@ -52,12 +80,29 @@ export default function DobbelsteinEditorialDesign({
     },
   };
 
+  const editorialRoute = useInlineResearch && route.section === "research" && route.projectSlug
+    ? { ...route, projectSlug: undefined }
+    : route;
+
   return (
-    <BourdonDesign
-      site={editorialSite}
-      route={route}
-      basePath={basePath}
-      previewMode={previewMode}
-    />
+    <div className={useInlineResearch ? "dobbelstein-editorial-design" : undefined}>
+      <BourdonDesign
+        site={editorialSite}
+        route={editorialRoute}
+        basePath={basePath}
+        previewMode={previewMode}
+      />
+      {useInlineResearch && (
+        <style>{`
+          .dobbelstein-editorial-design .bn-research-page article > div > p {
+            white-space: pre-line;
+          }
+
+          .dobbelstein-editorial-design .bn-research-page article > div > .bn-text-link {
+            display: none !important;
+          }
+        `}</style>
+      )}
+    </div>
   );
 }
