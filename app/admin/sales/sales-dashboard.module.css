@@ -2,33 +2,56 @@
   min-height: 100vh;
   background: #0c1a23;
   color: #eef4f1;
-  padding: 28px;
+  padding: 0;
 }
 
 .shell {
-  width: min(1480px, 100%);
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  align-items: flex-start;
-  margin-bottom: 28px;
+  align-items: center;
+  min-height: 72px;
+  margin: 0;
+  padding: 0 126px 0 28px;
+  border-bottom: 1px solid #263947;
+  background: #17242e;
+}
+
+.topbar > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+.topbar > div:first-child::after {
+  content: "Sales";
+  color: #a5b0ba;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .brand {
   color: #f3f7f5;
-  font-weight: 760;
+  font-weight: 800;
   letter-spacing: -0.03em;
   font-size: 1.05rem;
 }
 
 .kicker {
-  margin: 18px 0 8px;
+  margin: 0 0 9px;
   color: #91a7a0;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.14em;
 }
@@ -36,37 +59,49 @@
 .title {
   margin: 0;
   color: #f4f7f6;
-  font-size: clamp(2.1rem, 4vw, 4.1rem);
+  font-size: clamp(2.2rem, 3.5vw, 3.65rem);
   max-width: 850px;
-  line-height: 0.98;
-  letter-spacing: -0.055em;
-  font-weight: 620;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 700;
 }
 
 .subtitle {
-  margin: 16px 0 0;
+  margin: 14px 0 0;
   max-width: 760px;
   color: #a4b4b0;
-  font-size: 1rem;
-  line-height: 1.65;
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.shell > [data-sales-workspace-hero="true"] {
+  width: min(1500px, calc(100% - 56px));
+  max-width: none !important;
+  margin: 0 auto;
+  padding: 44px 0 30px !important;
 }
 
 .actions {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .actions a,
 .actions button {
+  min-height: 38px;
   border: 1px solid #2c424c;
   background: #132630;
   color: #e9f0ed;
-  border-radius: 999px;
-  padding: 10px 15px;
+  border-radius: 11px;
+  padding: 0 13px;
   font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -93,10 +128,11 @@
 }
 
 .metrics {
+  width: min(1500px, calc(100% - 56px));
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 24px;
+  margin: 0 auto 24px;
 }
 
 .metric {
@@ -137,6 +173,8 @@
 }
 
 .panel {
+  width: min(1500px, calc(100% - 56px));
+  margin: 0 auto 32px;
   background: #10232d;
   border: 1px solid #2a404a;
   border-radius: 22px;
@@ -167,7 +205,7 @@
 .search {
   width: min(340px, 100%);
   border: 1px solid #314a55;
-  border-radius: 999px;
+  border-radius: 11px;
   padding: 10px 14px;
   font: inherit;
   color: #edf4f1;
@@ -304,7 +342,8 @@
 }
 
 .notice {
-  margin: 0 0 16px;
+  width: min(1500px, calc(100% - 56px));
+  margin: 0 auto 16px;
   padding: 12px 14px;
   border-radius: 12px;
   background: #2c2617;
@@ -319,14 +358,62 @@
 }
 
 @media (max-width: 760px) {
-  .page { padding: 18px; }
-  .topbar { flex-direction: column; }
-  .actions { justify-content: flex-start; }
-  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .panelHeader { flex-direction: column; align-items: stretch; }
-  .search { width: 100%; }
+  .topbar {
+    min-height: 64px;
+    padding: 0 62px 0 18px;
+  }
+
+  .topbar > div:first-child {
+    gap: 10px;
+  }
+
+  .topbar > div:first-child::after {
+    font-size: 0.82rem;
+  }
+
+  .actions {
+    gap: 6px;
+  }
+
+  .actions button {
+    min-height: 34px;
+    padding: 0 9px;
+    font-size: 0.68rem;
+  }
+
+  .shell > [data-sales-workspace-hero="true"],
+  .metrics,
+  .panel,
+  .notice {
+    width: min(100% - 36px, 1500px);
+  }
+
+  .shell > [data-sales-workspace-hero="true"] {
+    padding: 34px 0 24px !important;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panelHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .actions button:first-child {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
-  .metrics { grid-template-columns: 1fr; }
+  .metrics {
+    grid-template-columns: 1fr;
+  }
 }
