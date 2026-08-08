@@ -124,14 +124,14 @@ export default function WebsiteConfirmPublishEnhancer() {
         const siteId = run.siteId || published.siteId;
         if (!siteId) throw new Error("Published concept did not return a site ID.");
 
+        updateRowAfterPublish(row, run.slug);
+        runsBySlug.delete(run.slug);
+
         button.textContent = "Preparing email…";
         const draft = await rpc<OutreachDraft>("engine_v2_admin_prepare_site_outreach", {
           p_site_id: siteId,
         });
         if (!draft?.runId) throw new Error("The outreach draft could not be prepared after publishing.");
-
-        updateRowAfterPublish(row, run.slug);
-        runsBySlug.delete(run.slug);
 
         window.dispatchEvent(new CustomEvent<OutreachDraft>("labnarrative:open-outreach-draft", {
           detail: draft,
@@ -140,6 +140,11 @@ export default function WebsiteConfirmPublishEnhancer() {
         const message = error instanceof Error && error.name === "AbortError"
           ? "The action timed out. Please try again."
           : error instanceof Error ? error.message : "Confirm & publish could not be completed.";
+
+        if (run.state === "published") {
+          window.alert(`The concept was published successfully, but the outreach window could not be prepared: ${message}\n\nThe published Concept has been preserved safely.`);
+          return;
+        }
 
         button.disabled = false;
         button.style.cursor = "pointer";
