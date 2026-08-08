@@ -3,13 +3,8 @@ import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhancer";
 import AdminHeaderCleanup from "@/components/admin/AdminHeaderCleanup";
 import AdminWorkspaceTabs from "@/components/admin/AdminWorkspaceTabs";
-import EngineV2ApprovePublishEnhancer from "@/components/admin/EngineV2ApprovePublishEnhancer";
-import EngineV2HardNavigation from "@/components/admin/EngineV2HardNavigation";
-import EngineV2OutreachWindow from "@/components/admin/EngineV2OutreachWindow";
-import FinishDraftsAction from "@/components/admin/FinishDraftsAction";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import PlatformListPaginationEnhancer from "@/components/admin/PlatformListPaginationEnhancer";
-import WebsiteConfirmPublishEnhancer from "@/components/admin/WebsiteConfirmPublishEnhancer";
 import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
@@ -46,7 +41,6 @@ import "./resend-delivery-tracking.css";
 import "./review-buffer-control.css";
 import "./review-modal.css";
 import "./bourdon-simple-header.css";
-import "./engine-v2-interaction-fix.css";
 import "./blue-theme-lock.css";
 import "./platform-list-pagination.css";
 
@@ -67,13 +61,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AdminAuthRecoveryEnhancer />
         <AdminWorkspaceTabs />
         <AdminHeaderCleanup />
-        <EngineV2ApprovePublishEnhancer />
-        <EngineV2HardNavigation />
-        <EngineV2OutreachWindow />
-        <FinishDraftsAction />
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
-        <WebsiteConfirmPublishEnhancer />
         <WebsiteOutreachSequenceEnhancer />
         <WebsiteDesignSwitcher />
         <PlatformListPaginationEnhancer />
