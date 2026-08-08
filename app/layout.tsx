@@ -8,6 +8,7 @@ import EngineV2HardNavigation from "@/components/admin/EngineV2HardNavigation";
 import EngineV2OutreachWindow from "@/components/admin/EngineV2OutreachWindow";
 import FinishDraftsAction from "@/components/admin/FinishDraftsAction";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
+import PlatformListPaginationEnhancer from "@/components/admin/PlatformListPaginationEnhancer";
 import WebsiteConfirmPublishEnhancer from "@/components/admin/WebsiteConfirmPublishEnhancer";
 import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
@@ -47,6 +48,7 @@ import "./review-modal.css";
 import "./bourdon-simple-header.css";
 import "./engine-v2-interaction-fix.css";
 import "./blue-theme-lock.css";
+import "./platform-list-pagination.css";
 
 export const metadata: Metadata = {
   title: {
@@ -74,6 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <WebsiteConfirmPublishEnhancer />
         <WebsiteOutreachSequenceEnhancer />
         <WebsiteDesignSwitcher />
+        <PlatformListPaginationEnhancer />
         {children}
       </body>
     </html>
