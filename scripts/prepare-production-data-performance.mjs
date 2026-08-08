@@ -37,6 +37,14 @@ if (source.includes(pollingBlock)) {
   source = source.replace(pollingBlock, "\n");
 }
 
+const runStateOld = '      setRuns((runResult.data ?? []) as unknown as ProductionRun[]);';
+const runStateNew = '      setRuns(((runResult.data ?? []) as unknown as ProductionRun[]).filter((run) => run.source_pack?.auto_sequence !== true));';
+if (source.includes(runStateOld)) source = source.replace(runStateOld, runStateNew);
+
+const eventStateOld = '      setEvents((eventResult.data ?? []) as PipelineEvent[]);';
+const eventStateNew = '      setEvents(((eventResult.data ?? []) as PipelineEvent[]).filter((event) => !event.event_type.startsWith("followup_")));';
+if (source.includes(eventStateOld)) source = source.replace(eventStateOld, eventStateNew);
+
 if (!source.includes("run.source_pack?.auto_sequence !== true")) {
   const activeIndex = source.indexOf("const activeRun = useMemo(");
   if (activeIndex !== -1) {
@@ -69,6 +77,4 @@ if (source.includes("sites(id,slug,status,domain_status,domain_url,content)")) {
 }
 
 fs.writeFileSync(pageUrl, source);
-console.log(source.includes("run.source_pack?.auto_sequence !== true")
-  ? "Production loading stabilized; follow-up reviews do not occupy website production."
-  : "Production loading stabilized; follow-up review remains safely non-sending even if the optional active-slot UI filter was not applicable.");
+console.log("Production loading stabilized; automatic outreach runs and follow-up events stay in Websites, not Production.");
