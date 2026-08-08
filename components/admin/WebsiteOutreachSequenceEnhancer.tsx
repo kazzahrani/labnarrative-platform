@@ -14,6 +14,11 @@ type Message = {
   delivery_status: string | null;
   created_at: string;
 };
+type Reply = {
+  prospect_id: string;
+  received_at: string;
+  reply_kind: string;
+};
 type SiteSequence = {
   site: Site;
   prospectId: string;
@@ -21,6 +26,7 @@ type SiteSequence = {
   initial?: Message;
   follow1?: Message;
   follow2?: Message;
+  latestAutoReplyAt?: string;
 };
 type SequenceState = {
   label: string;
@@ -145,7 +151,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
       if (disposed || loading || window.location.pathname !== "/admin/sites") return;
       loading = true;
       try {
-        const [siteResult, prospectResult, messageResult] = await Promise.all([
+        const [siteResult, prospectResult, messageResult, replyResult] = await Promise.all([
           supabase.from("sites").select("id,slug,outreach_status"),
           supabase.from("prospects").select("id,site_id,status").not("site_id", "is", null),
           supabase
@@ -155,13 +161,20 @@ export default function WebsiteOutreachSequenceEnhancer() {
             .in("message_kind", ["initial", "followup_1", "followup_2"])
             .not("site_id", "is", null)
             .order("created_at", { ascending: true }),
+          supabase
+            .from("outreach_replies")
+            .select("prospect_id,received_at,reply_kind")
+            .eq("reply_kind", "automatic")
+            .order("received_at", { ascending: false }),
         ]);
 
-        if (disposed || siteResult.error || prospectResult.error || messageResult.error) return;
+        if (disposed || siteResult.error || prospectResult.error || messageResult.error || replyResult.error) return;
 
         const prospects = new Map<string, Prospect>();
+        const siteByProspect = new Map<string, string>();
         for (const row of (prospectResult.data || []) as Prospect[]) {
           if (row.site_id && !prospects.has(row.site_id)) prospects.set(row.site_id, row);
+          if (row.site_id) siteByProspect.set(row.id, row.site_id);
         }
 
         const bySite = new Map<string, SiteSequence>();
@@ -181,6 +194,16 @@ export default function WebsiteOutreachSequenceEnhancer() {
           if (message.message_kind === "initial" && message.status === "sent") sequence.initial = latest(sequence.initial, message);
           if (message.message_kind === "followup_1") sequence.follow1 = latest(sequence.follow1, message);
           if (message.message_kind === "followup_2") sequence.follow2 = latest(sequence.follow2, message);
+        }
+
+        for (const reply of (replyResult.data || []) as Reply[]) {
+          const siteId = siteByProspect.get(reply.prospect_id);
+          if (!siteId) continue;
+          const sequence = bySite.get(siteId);
+          if (!sequence) continue;
+          if (!sequence.latestAutoReplyAt || time(reply.received_at) > time(sequence.latestAutoReplyAt)) {
+            sequence.latestAutoReplyAt = reply.received_at;
+          }
         }
 
         sequencesBySlug = new Map(Array.from(bySite.values()).map((sequence) => [sequence.site.slug, sequence]));
@@ -249,7 +272,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
         const cell = document.createElement("td");
         cell.setAttribute(CELL_ATTR, "true");
         cell.setAttribute("data-label", "Automatic follow-up");
-        cell.style.minWidth = "220px";
+        cell.style.minWidth = "230px";
 
         const statusLine = document.createElement("div");
         statusLine.style.display = "flex";
@@ -294,6 +317,19 @@ export default function WebsiteOutreachSequenceEnhancer() {
 
         cell.append(statusLine, progress, secondary);
 
+        if (sequence.latestAutoReplyAt) {
+          const autoReply = document.createElement("small");
+          autoReply.textContent = `↪ Auto-reply received · ${fmt(sequence.latestAutoReplyAt)} · sequence continues`;
+          autoReply.style.display = "block";
+          autoReply.style.marginTop = "4px";
+          autoReply.style.color = "#e0b568";
+          autoReply.style.fontSize = ".62rem";
+          autoReply.style.fontWeight = "700";
+          autoReply.style.lineHeight = "1.3";
+          autoReply.style.whiteSpace = "nowrap";
+          cell.appendChild(autoReply);
+        }
+
         if (state.active && sequence.prospectId) {
           const stop = document.createElement("button");
           stop.type = "button";
@@ -325,6 +361,7 @@ export default function WebsiteOutreachSequenceEnhancer() {
     const channel = supabase.channel("labnarrative-website-outreach-table")
       .on("postgres_changes", { event: "*", schema: "public", table: "outreach_messages" }, () => void load())
       .on("postgres_changes", { event: "*", schema: "public", table: "prospects" }, () => void load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "outreach_replies" }, () => void load())
       .subscribe();
 
     return () => {
