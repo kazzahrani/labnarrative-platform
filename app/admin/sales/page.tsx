@@ -8,7 +8,7 @@ import styles from "./sales-dashboard.module.css";
 type SummaryRow = {
   site_id: string;
   slug: string;
-  site_status: "concept" | "live";
+  site_status: "draft" | "concept" | "live";
   outreach_status: string;
   pi_name: string;
   institution: string;
@@ -17,6 +17,17 @@ type SummaryRow = {
   cta_clicks: number | string;
   first_viewed_at: string | null;
   last_viewed_at: string | null;
+};
+
+type DraftSiteRow = {
+  id: string;
+  slug: string;
+  status: "draft";
+  outreach_status: string;
+  content: {
+    piName?: string;
+    institution?: string;
+  } | null;
 };
 
 type ProspectRow = {
@@ -85,6 +96,15 @@ function stageLabel(value: string): string {
 
 function stageIsHot(value: string, visits: number): boolean {
   return REPLIED_STAGES.has(value) || visits >= 2;
+}
+
+function stagePriority(value: string): number {
+  if (value === "client") return 5;
+  if (value === "proposal_sent") return 4;
+  if (value === "meeting_scheduled") return 3;
+  if (value === "interested") return 2;
+  if (value === "replied") return 1;
+  return 0;
 }
 
 function hasInternalDeviceCookie(): boolean {
@@ -168,10 +188,15 @@ export default function SalesDashboardPage() {
     setRole("admin");
 
     try {
-      const [summaryResult, prospectRows, sentResult] = await Promise.all([
+      const [summaryResult, draftResult, prospectRows, sentResult] = await Promise.all([
         supabase
           .from("sales_concept_summary")
           .select("site_id,slug,site_status,outreach_status,pi_name,institution,page_views,visits,cta_clicks,first_viewed_at,last_viewed_at"),
+        supabase
+          .from("sites")
+          .select("id,slug,status,outreach_status,content")
+          .eq("status", "draft")
+          .in("outreach_status", Array.from(REPLIED_STAGES)),
         fetchAllProspects(),
         supabase
           .from("outreach_messages")
@@ -182,9 +207,27 @@ export default function SalesDashboardPage() {
       ]);
 
       if (summaryResult.error) throw summaryResult.error;
+      if (draftResult.error) throw draftResult.error;
       if (sentResult.error) throw sentResult.error;
 
-      setSummaries((summaryResult.data ?? []) as SummaryRow[]);
+      const engagedDrafts: SummaryRow[] = ((draftResult.data ?? []) as DraftSiteRow[]).map((site) => ({
+        site_id: site.id,
+        slug: site.slug,
+        site_status: "draft",
+        outreach_status: site.outreach_status,
+        pi_name: site.content?.piName || site.slug,
+        institution: site.content?.institution || "",
+        page_views: 0,
+        visits: 0,
+        cta_clicks: 0,
+        first_viewed_at: null,
+        last_viewed_at: null,
+      }));
+
+      setSummaries([
+        ...((summaryResult.data ?? []) as SummaryRow[]),
+        ...engagedDrafts,
+      ]);
       setProspects(prospectRows);
       setSentCount(sentResult.count ?? 0);
     } catch (error) {
@@ -271,11 +314,16 @@ export default function SalesDashboardPage() {
     });
 
     return [...filtered].sort((a, b) => {
+      const stageDifference = stagePriority(b.outreach_status) - stagePriority(a.outreach_status);
+      if (stageDifference !== 0) return stageDifference;
+
       const aLast = a.last_viewed_at ? Date.parse(a.last_viewed_at) : 0;
       const bLast = b.last_viewed_at ? Date.parse(b.last_viewed_at) : 0;
       if (bLast !== aLast) return bLast - aLast;
+
       const visitDifference = numberValue(b.visits) - numberValue(a.visits);
       if (visitDifference !== 0) return visitDifference;
+
       return (b.prospect?.qualification_score ?? 0) - (a.prospect?.qualification_score ?? 0);
     });
   }, [rows, search]);
@@ -392,7 +440,7 @@ export default function SalesDashboardPage() {
           <div className={styles.panelHeader}>
             <div>
               <h2>Concept activity</h2>
-              <p>Most recently viewed concepts appear first. Repeat visits are a useful intent signal.</p>
+              <p>Engaged leads appear first, followed by the most recently viewed concepts.</p>
             </div>
             <input
               className={styles.search}
@@ -421,6 +469,8 @@ export default function SalesDashboardPage() {
                 {visibleRows.map((row) => {
                   const visits = numberValue(row.visits);
                   const stage = row.outreach_status || "not_contacted";
+                  const isDraftLead = row.site_status === "draft";
+
                   return (
                     <tr key={row.site_id}>
                       <td className={styles.pi}>
@@ -428,22 +478,26 @@ export default function SalesDashboardPage() {
                         <small>{row.institution || row.prospect?.institution || "—"}</small>
                       </td>
                       <td>
-                        <a
-                          className={styles.conceptLink}
-                          href={`https://${row.slug}.${rootDomain}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {row.slug}.{rootDomain} ↗
-                        </a>
+                        {isDraftLead ? (
+                          <span className={styles.muted}>Private draft · not tracked</span>
+                        ) : (
+                          <a
+                            className={styles.conceptLink}
+                            href={`https://${row.slug}.${rootDomain}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {row.slug}.{rootDomain} ↗
+                          </a>
+                        )}
                       </td>
                       <td>
                         <span className={`${styles.stage} ${stageIsHot(stage, visits) ? styles.hot : ""}`}>
                           {stageLabel(stage)}
                         </span>
                       </td>
-                      <td className={styles.number}>{visits}</td>
-                      <td className={styles.number}>{numberValue(row.page_views)}</td>
+                      <td className={styles.number}>{isDraftLead ? "—" : visits}</td>
+                      <td className={styles.number}>{isDraftLead ? "—" : numberValue(row.page_views)}</td>
                       <td className={styles.muted}>{formatDateTime(row.first_viewed_at)}</td>
                       <td className={styles.muted}>{formatDateTime(row.last_viewed_at)}</td>
                       <td className={styles.number}>{row.prospect?.qualification_score ?? "—"}</td>
@@ -454,7 +508,7 @@ export default function SalesDashboardPage() {
             </table>
             {visibleRows.length === 0 && (
               <div className={styles.empty}>
-                {search ? "No concepts match this search." : "No concept activity has been recorded yet."}
+                {search ? "No concepts match this search." : "No sales activity has been recorded yet."}
               </div>
             )}
           </div>
