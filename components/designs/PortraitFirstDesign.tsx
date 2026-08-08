@@ -9,6 +9,13 @@ type Props = {
   previewMode?: boolean;
 };
 
+type ResearchListItem = {
+  slug: string;
+  title: string;
+  summary: string;
+  question?: string;
+};
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -130,11 +137,18 @@ function Home({ site, basePath }: Pick<Props, "site" | "basePath">) {
 }
 
 function Research({ site, basePath }: Pick<Props, "site" | "basePath">) {
-  const projects = site.research?.length ? site.research : site.projects.map((project, index) => ({
-    slug: `project-${index + 1}`,
-    title: project.title,
-    summary: project.description,
-  }));
+  const projects: ResearchListItem[] = site.research?.length
+    ? site.research.map((project) => ({
+        slug: project.slug,
+        title: project.title,
+        summary: project.summary,
+        question: project.question,
+      }))
+    : site.projects.map((project, index) => ({
+        slug: `project-${index + 1}`,
+        title: project.title,
+        summary: project.description,
+      }));
 
   return (
     <section className={styles.inner}>
@@ -152,7 +166,7 @@ function Research({ site, basePath }: Pick<Props, "site" | "basePath">) {
             <div>
               <h2>{project.title}</h2>
               <p>{project.summary}</p>
-              {"question" in project && project.question ? <p><strong>Question:</strong> {project.question}</p> : null}
+              {project.question ? <p><strong>Question:</strong> {project.question}</p> : null}
             </div>
             <span>Research programme</span>
           </article>
