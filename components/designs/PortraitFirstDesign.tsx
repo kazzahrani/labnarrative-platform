@@ -54,7 +54,7 @@ function Footer({ site, basePath }: Pick<Props, "site" | "basePath">) {
   return (
     <footer className={styles.footer}>
       <strong>{site.labName}</strong>
-      <Link href={basePath}>University of South Carolina</Link>
+      <Link href={basePath}>{site.institution}</Link>
       <span>Powered by LabNarrative</span>
     </footer>
   );
@@ -63,6 +63,7 @@ function Footer({ site, basePath }: Pick<Props, "site" | "basePath">) {
 function Home({ site, basePath }: Pick<Props, "site" | "basePath">) {
   const portrait = portraitUrl(site);
   const focus = site.focusAreas.slice(0, 4);
+  const centralQuestion = site.research?.find((project) => Boolean(project.question))?.question || site.headline;
 
   return (
     <>
@@ -104,7 +105,7 @@ function Home({ site, basePath }: Pick<Props, "site" | "basePath">) {
         <div className={styles.sectionIntro}>
           <p className={styles.sectionLabel}>Research programme</p>
           <div>
-            <h2>One laboratory. Four connected regulatory questions.</h2>
+            <h2>One laboratory. Connected lines of investigation.</h2>
             <p>{site.overview || site.introduction}</p>
           </div>
         </div>
@@ -122,12 +123,12 @@ function Home({ site, basePath }: Pick<Props, "site" | "basePath">) {
 
       <section className={styles.statement}>
         <div className={styles.statementMain}>
-          <blockquote>How do cells decide when p53 is expressed, stabilized, and allowed to change cell fate?</blockquote>
+          <blockquote>{centralQuestion}</blockquote>
         </div>
         <div className={styles.statementAside}>
           <div>
             <p className={styles.sectionLabel}>Scientific direction</p>
-            <p>The laboratory connects transcriptional control, DNA-damage responses and non-coding RNA biology to understand how regulatory decisions are altered in cancer.</p>
+            <p>{site.overview || site.introduction}</p>
           </div>
           <Link href={`${basePath}/publications`}>Selected publications →</Link>
         </div>
@@ -142,7 +143,7 @@ function Research({ site, basePath }: Pick<Props, "site" | "basePath">) {
         slug: project.slug,
         title: project.title,
         summary: project.summary,
-        question: typeof project.question === "string" ? project.question : undefined,
+        question: project.question,
       }))
     : site.projects.map((project, index) => ({
         slug: `project-${index + 1}`,
@@ -155,7 +156,7 @@ function Research({ site, basePath }: Pick<Props, "site" | "basePath">) {
       <div className={styles.innerHeader}>
         <p className={styles.sectionLabel}>Research</p>
         <div>
-          <h1>Regulatory questions across p53 and leukemia cell state.</h1>
+          <h1>Questions that organise the laboratory.</h1>
           <p>{site.overview || site.introduction}</p>
         </div>
       </div>
@@ -184,8 +185,8 @@ function Members({ site }: Pick<Props, "site">) {
       <div className={styles.innerHeader}>
         <p className={styles.sectionLabel}>People</p>
         <div>
-          <h1>A research group defined by the questions, not by a photo wall.</h1>
-          <p>Profiles are intentionally presented with clear typography and roles. Additional members can be added without requiring professional portraits or a group photograph.</p>
+          <h1>The people behind the research.</h1>
+          <p>Profiles are presented with clear typography and roles, so the laboratory can grow without requiring professional portraits or a group photograph for every member.</p>
         </div>
       </div>
       <div className={styles.peopleGrid}>
@@ -207,8 +208,8 @@ function Publications({ site }: Pick<Props, "site">) {
       <div className={styles.innerHeader}>
         <p className={styles.sectionLabel}>Publications</p>
         <div>
-          <h1>Selected work across p53 regulation and cancer biology.</h1>
-          <p>A concise record of landmark and representative publications from the laboratory.</p>
+          <h1>Selected work from the laboratory.</h1>
+          <p>A concise record of landmark and representative publications.</p>
         </div>
       </div>
       <div className={styles.list}>
@@ -235,7 +236,7 @@ function Join({ site, basePath }: Pick<Props, "site" | "basePath">) {
         <p className={styles.sectionLabel}>Join the lab</p>
         <div>
           <h1>Bring a precise question and a strong scientific fit.</h1>
-          <p>Prospective students, postdoctoral researchers and collaborators whose interests align with p53 regulation, cellular stress or RNA biology are welcome to get in touch.</p>
+          <p>Prospective students, postdoctoral researchers and collaborators whose interests align with the laboratory’s research are welcome to get in touch.</p>
         </div>
       </div>
       <div className={styles.statement}>
