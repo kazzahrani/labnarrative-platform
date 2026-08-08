@@ -183,7 +183,6 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       : undefined;
     resizeObserver?.observe(main);
     panels.forEach((panel) => resizeObserver?.observe(panel));
-    flowTailElements.forEach((element) => resizeObserver?.observe(element));
 
     measure();
     update();
@@ -208,14 +207,14 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
       panels.forEach((panel) => {
         panel.classList.remove(
           "narita-overlap-panel",
-          "narita-overlap-hero",
           "narita-overlap-terminal",
+          "narita-overlap-hero",
         );
         panel.style.removeProperty("--narita-panel-layer");
+        panel.style.removeProperty("--narita-panel-background");
         panel.style.removeProperty("--narita-panel-offset");
         panel.style.removeProperty("--narita-image-offset");
         panel.style.removeProperty("--narita-copy-offset");
-        panel.style.removeProperty("--narita-panel-background");
       });
       root.style.removeProperty("--narita-header-height");
       root.style.removeProperty("--narita-footer-layer");
@@ -493,7 +492,11 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
 
         .narita-overlap-design:not(.narita-route-home) main > .narita-overlap-hero,
         .narita-overlap-design:not(.narita-route-home) .narita-overlap-hero.kinetic-inner-hero,
-        .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
+        .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero,
+        .narita-route-publications main > section:first-of-type,
+        .narita-route-members main > section:first-of-type,
+        .narita-route-join main > section:first-of-type,
+        .narita-route-contact main > section:first-of-type {
           width: 100vw !important;
           height: clamp(220px, 22vw, 300px) !important;
           min-height: 220px !important;
@@ -501,10 +504,48 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           margin-left: calc(50% - 50vw) !important;
         }
 
-        .narita-overlap-design:not(.narita-route-home) main > article > .narita-overlap-hero {
-          height: clamp(220px, 22vw, 300px) !important;
-          min-height: 220px !important;
-          max-height: 300px !important;
+        .narita-route-publications main > section:first-of-type > div:last-of-type,
+        .narita-route-members main > section:first-of-type > div:last-of-type,
+        .narita-route-join main > section:first-of-type > div:last-of-type,
+        .narita-route-contact main > section:first-of-type > div:last-of-type {
+          top: 50% !important;
+          bottom: auto !important;
+          left: clamp(42px, 9vw, 150px) !important;
+          right: clamp(42px, 9vw, 150px) !important;
+          max-width: min(980px, calc(100vw - 84px)) !important;
+          transform: translate3d(0, -50%, 0) !important;
+          will-change: auto !important;
+        }
+
+        .narita-route-publications main > section:first-of-type > div:last-of-type h1,
+        .narita-route-members main > section:first-of-type > div:last-of-type h1,
+        .narita-route-join main > section:first-of-type > div:last-of-type h1,
+        .narita-route-contact main > section:first-of-type > div:last-of-type h1 {
+          max-width: min(780px, 76vw) !important;
+          margin: 0 !important;
+          font-size: clamp(34px, 3.5vw, 56px) !important;
+          line-height: 0.98 !important;
+          letter-spacing: -0.035em !important;
+        }
+
+        .narita-route-publications main > section:first-of-type > div:last-of-type p,
+        .narita-route-members main > section:first-of-type > div:last-of-type p,
+        .narita-route-join main > section:first-of-type > div:last-of-type p,
+        .narita-route-contact main > section:first-of-type > div:last-of-type p {
+          margin-bottom: 12px !important;
+          font-size: 10px !important;
+          line-height: 1 !important;
+          letter-spacing: 0.28em !important;
+        }
+
+        .narita-route-publications main > section:first-of-type > div:last-of-type > div,
+        .narita-route-members main > section:first-of-type > div:last-of-type > div,
+        .narita-route-join main > section:first-of-type > div:last-of-type > div,
+        .narita-route-contact main > section:first-of-type > div:last-of-type > div {
+          max-width: 760px !important;
+          margin-top: 16px !important;
+          font-size: clamp(15px, 1.45vw, 19px) !important;
+          line-height: 1.45 !important;
         }
 
         .narita-overlap-design .narita-overlap-hero:not(.narita-overlap-terminal):not(.kinetic-photo-hero) > img {
@@ -534,6 +575,25 @@ export default function NaritaOverlapDesign(props: NaritaOverlapDesignProps) {
           .narita-overlap-design .narita-overlap-panel:not(.narita-overlap-terminal) > div:nth-of-type(2) {
             transform: none !important;
             will-change: auto;
+          }
+
+          .narita-route-publications main > section:first-of-type > div:last-of-type,
+          .narita-route-members main > section:first-of-type > div:last-of-type,
+          .narita-route-join main > section:first-of-type > div:last-of-type,
+          .narita-route-contact main > section:first-of-type > div:last-of-type {
+            left: 24px !important;
+            right: 24px !important;
+            max-width: calc(100vw - 48px) !important;
+            transform: translateY(-50%) !important;
+          }
+
+          .narita-route-publications main > section:first-of-type > div:last-of-type h1,
+          .narita-route-members main > section:first-of-type > div:last-of-type h1,
+          .narita-route-join main > section:first-of-type > div:last-of-type h1,
+          .narita-route-contact main > section:first-of-type > div:last-of-type h1 {
+            max-width: 88vw !important;
+            font-size: clamp(25px, 7vw, 34px) !important;
+            line-height: 1.02 !important;
           }
         }
       `}</style>
