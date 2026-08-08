@@ -57,9 +57,9 @@
   top: var(--ciribilli-header-height) !important;
   z-index: 10 !important;
   width: 100%;
-  height: clamp(260px, 28vw, 360px) !important;
-  min-height: 260px !important;
-  max-height: 360px !important;
+  height: clamp(220px, 22vw, 300px) !important;
+  min-height: 220px !important;
+  max-height: 300px !important;
   margin-bottom: 0 !important;
   overflow: hidden !important;
   transform: translate3d(0, var(--ciribilli-hero-offset, 0px), 0) !important;
@@ -167,9 +167,9 @@
   }
 
   .hero {
-    height: clamp(235px, 38vw, 320px) !important;
-    min-height: 235px !important;
-    max-height: 320px !important;
+    height: clamp(210px, 30vw, 270px) !important;
+    min-height: 210px !important;
+    max-height: 270px !important;
   }
 }
 
@@ -202,9 +202,9 @@
     position: relative !important;
     top: auto !important;
     width: 100% !important;
-    height: 230px !important;
-    min-height: 230px !important;
-    max-height: 230px !important;
+    height: 200px !important;
+    min-height: 200px !important;
+    max-height: 200px !important;
     transform: none !important;
     will-change: auto;
   }
