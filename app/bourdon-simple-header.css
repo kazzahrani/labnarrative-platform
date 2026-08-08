@@ -1,0 +1,38 @@
+/* LabNarrative — simplified Bourdon header
+   Keeps the Bourdon structure while removing the decorative circular portrait
+   from the top-left wordmark and giving the sticky header a strong brand color. */
+
+.bourdon-site .bn-site-header {
+  background: var(--bn-teal);
+  border-bottom-color: color-mix(in srgb, var(--bn-white) 28%, transparent);
+}
+
+.bourdon-site .bn-wordmark {
+  gap: 0;
+}
+
+.bourdon-site .bn-wordmark-mark {
+  display: none;
+}
+
+.bourdon-site .bn-wordmark strong,
+.bourdon-site .bn-wordmark small {
+  color: var(--bn-white);
+}
+
+.bourdon-site .bn-wordmark small {
+  opacity: 0.76;
+}
+
+.bourdon-site .bn-site-header nav a {
+  color: color-mix(in srgb, var(--bn-white) 78%, transparent);
+}
+
+.bourdon-site .bn-site-header nav a:hover,
+.bourdon-site .bn-site-header nav a.active {
+  color: var(--bn-white);
+}
+
+.bourdon-site .bn-site-header nav a::after {
+  background: var(--bn-white);
+}
