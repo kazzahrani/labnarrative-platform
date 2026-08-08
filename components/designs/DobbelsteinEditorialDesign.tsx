@@ -9,7 +9,7 @@ export const DOBBELSTEIN_EDITORIAL_SETTINGS = {
   homeHeroLayout: "text-only",
   programmesLayout: "grid",
   piLayout: "image-left",
-  researchIndexLayout: "alternating",
+  researchIndexLayout: "image-right",
   projectLayout: "split",
   membersColumns: 3,
   pageIntroStyle: "teal",
