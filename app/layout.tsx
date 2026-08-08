@@ -41,6 +41,7 @@ import "./production-pagination.css";
 import "./resend-delivery-tracking.css";
 import "./review-buffer-control.css";
 import "./review-modal.css";
+import "./bourdon-simple-header.css";
 
 export const metadata: Metadata = {
   title: {
