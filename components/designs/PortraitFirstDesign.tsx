@@ -142,7 +142,7 @@ function Research({ site, basePath }: Pick<Props, "site" | "basePath">) {
         slug: project.slug,
         title: project.title,
         summary: project.summary,
-        question: project.question,
+        question: typeof project.question === "string" ? project.question : undefined,
       }))
     : site.projects.map((project, index) => ({
         slug: `project-${index + 1}`,
