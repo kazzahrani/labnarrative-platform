@@ -62,12 +62,24 @@
   max-height: 360px !important;
   margin-bottom: 0 !important;
   overflow: hidden !important;
-  background: #111111 !important;
   transform: translate3d(0, var(--ciribilli-hero-offset, 0px), 0) !important;
   transform-origin: center top;
   transition: none !important;
   box-shadow: none !important;
   will-change: transform;
+}
+
+.hero > img {
+  object-position: center 46% !important;
+  transform: translate3d(0, var(--ciribilli-image-offset, 0px), 0) scale(1.1) !important;
+  transform-origin: center center;
+  transition: none !important;
+  will-change: transform;
+}
+
+.hero > div:first-of-type {
+  background: rgba(0, 0, 0, 0.2) !important;
+  box-shadow: none !important;
 }
 
 .heroCopy {
@@ -79,7 +91,6 @@
   justify-content: center !important;
   gap: 12px !important;
   padding: 22px clamp(42px, 9vw, 150px) !important;
-  color: #ffffff !important;
   transform: translate3d(0, var(--ciribilli-copy-offset, 0px), 0) !important;
   transition: none !important;
   will-change: transform;
@@ -87,7 +98,6 @@
 
 .heroCopy p {
   margin: 0 !important;
-  color: #ffffff !important;
   font-size: 10px !important;
   font-weight: 600 !important;
   letter-spacing: .28em !important;
@@ -97,7 +107,6 @@
 .heroCopy h1 {
   max-width: min(760px, 72vw) !important;
   margin: 0 !important;
-  color: #ffffff !important;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   font-size: clamp(34px, 3.5vw, 56px) !important;
   font-weight: 400 !important;
@@ -200,11 +209,15 @@
     will-change: auto;
   }
 
+  .hero > img,
+  .heroCopy {
+    transform: none !important;
+    will-change: auto;
+  }
+
   .heroCopy {
     gap: 9px !important;
     padding: 20px 24px !important;
-    transform: none !important;
-    will-change: auto;
   }
 
   .heroCopy p {
@@ -228,6 +241,7 @@
     will-change: auto;
   }
 
+  .hero > img,
   .heroCopy {
     transform: none !important;
     will-change: auto;
