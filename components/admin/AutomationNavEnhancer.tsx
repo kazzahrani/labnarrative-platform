@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 const ADMIN_PAGES = [
   { pathname: "/admin/discovery", title: "Prospects Discovery", navLabel: "Discovery" },
-  { pathname: "/admin/automation", title: "Production Engine", navLabel: "Production" },
+  { pathname: "/admin/automation", title: "Engine v2", navLabel: "Production" },
   { pathname: "/admin/sites", title: "Websites Monitor", navLabel: "Websites" },
 ] as const;
 
@@ -34,6 +34,12 @@ export default function AutomationNavEnhancer() {
 
   useEffect(() => {
     removeInjectedAdminLinks();
+
+    // Engine v2 owns its own header. Do not observe or mutate this page.
+    if (pathname === "/admin/automation") {
+      document.title = "Engine v2 | LabNarrative";
+      return;
+    }
 
     if (!pathname.startsWith("/admin")) return;
 
