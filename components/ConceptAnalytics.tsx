@@ -7,6 +7,7 @@ const SESSION_KEY = "labnarrative:concept-session";
 const SOURCE_KEY = "labnarrative:concept-source";
 const MEDIUM_KEY = "labnarrative:concept-medium";
 const CAMPAIGN_KEY = "labnarrative:concept-campaign";
+const INTERNAL_DEVICE_COOKIE = "labnarrative_internal_device";
 
 function safeSessionGet(key: string): string {
   try {
@@ -22,6 +23,16 @@ function safeSessionSet(key: string, value: string) {
     window.sessionStorage.setItem(key, value);
   } catch {
     // Analytics must never interfere with the concept website.
+  }
+}
+
+function hasInternalDeviceCookie(): boolean {
+  try {
+    return document.cookie
+      .split(";")
+      .some((entry) => entry.trim() === `${INTERNAL_DEVICE_COOKIE}=1`);
+  } catch {
+    return false;
   }
 }
 
@@ -42,7 +53,8 @@ export default function ConceptAnalytics({ slug }: { slug: string }) {
     const host = window.location.hostname.toLowerCase();
 
     // Count only real public LabNarrative concept subdomains. This excludes
-    // localhost, Vercel previews, the main marketing site, and /admin previews.
+    // localhost, Vercel previews, the main marketing site, /admin previews,
+    // and devices explicitly marked as LabNarrative internal devices.
     if (
       host === "localhost"
       || host.endsWith(".vercel.app")
@@ -50,6 +62,7 @@ export default function ConceptAnalytics({ slug }: { slug: string }) {
       || host === `www.${rootDomain}`
       || host === `platform.${rootDomain}`
       || !host.endsWith(`.${rootDomain}`)
+      || hasInternalDeviceCookie()
     ) {
       return;
     }
