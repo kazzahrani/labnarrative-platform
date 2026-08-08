@@ -38,7 +38,7 @@ const naritaShared = read("components/designs/naritaShared.ts");
 requireText(
   naritaShared,
   'export const NARITA_HERO_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/2/21/HeLa-II.jpg";',
-  "the approved red microscopy image must remain the canonical Narita hero",
+  "the approved red microscopy image must remain the canonical Narita home hero",
 );
 requireText(
   naritaShared,
@@ -48,37 +48,33 @@ requireText(
 requireText(
   naritaShared,
   "topPortrait: NARITA_HERO_IMAGE",
-  "legacy Narita hero fields must also resolve to the canonical red microscopy image",
+  "legacy Narita home hero fields must also resolve to the canonical red microscopy image",
 );
 requireText(
   ciribilliMotion,
-  "const naritaSite = withNaritaHero(props.site);",
-  "all shared Narita routes must normalize their hero through the canonical hero helper",
+  "withNaritaHero(props.site)",
+  "shared Narita routes must normalize their homepage hero through the canonical hero helper",
 );
 requireText(
   ciribilliMotion,
   "<NaritaOverlapDesign {...props} site={naritaSite} />",
   "the normalized Narita site must be passed into the shared renderer",
 );
-requireText(
-  researchDesign,
-  "const hero = NARITA_HERO_IMAGE;",
-  "the Research tab must use the canonical red microscopy hero",
-);
-requireText(
-  researchDesign,
-  "const figure = project.figureImage;",
-  "research projects must only use their own specific figure image",
-);
-if (researchDesign.includes("project.figureImage || hero")) {
+
+if (researchDesign.includes("NARITA_HERO_IMAGE")) {
   throw new Error(
-    "Ciribilli Narita template lock failed: research projects without a specific image must not inherit the microscopy hero",
+    "Ciribilli Narita template lock failed: Research must not render the canonical homepage hero image",
+  );
+}
+if (researchDesign.includes("figureImage")) {
+  throw new Error(
+    "Ciribilli Narita template lock failed: Research project sections must be image-free",
   );
 }
 requireText(
   researchDesign,
-  "style={!figure ? { gridTemplateColumns: \"1fr\" } : undefined}",
-  "research projects without figures must render as text-only full-width sections",
+  'style={{ gridTemplateColumns: "1fr" }}',
+  "all Research projects must render as full-width text-only sections",
 );
 requireText(
   shell,
@@ -143,15 +139,7 @@ if (/const portrait\s*=\s*[^;]*(heroImage|homepageImage|topPortrait|figureImage)
 }
 
 const heroBlock = blockFor(researchCss, ".hero {");
+requireText(heroBlock, "background: #111111 !important;", "the image-free Research hero must retain its dark editorial background");
 requireText(heroBlock, "box-shadow: none !important;", "the Research hero must not have a box shadow");
-
-const overlayBlock = blockFor(researchCss, ".hero > div:first-of-type {");
-requireText(overlayBlock, "background: rgba(0, 0, 0, 0.2) !important;", "the Research hero overlay must stay uniform and subtle");
-requireText(overlayBlock, "box-shadow: none !important;", "the Research hero overlay must not cast a shadow");
-if (overlayBlock.includes("linear-gradient")) {
-  throw new Error(
-    "Ciribilli Narita template lock failed: the Research hero overlay must not contain a bottom-darkening gradient",
-  );
-}
 
 console.log("Ciribilli Narita template lock verified.");
