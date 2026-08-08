@@ -6,6 +6,7 @@ import CiribilliResearchDesign from "@/components/designs/CiribilliResearchDesig
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
+import PortraitFirstDesign from "@/components/designs/PortraitFirstDesign";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import SourcedBourdonResearchDesign from "@/components/designs/SourcedBourdonResearchDesign";
 import SourcedEditorialProjectDesign from "@/components/designs/SourcedEditorialProjectDesign";
@@ -98,6 +99,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
   const isSourcedProjectRoute = route.section === "research"
     && Boolean(route.projectSlug)
     && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
+
+  if (designVariant === "portrait-first-v1") {
+    return <PortraitFirstDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
 
   if (designVariant === "engeland-modern-v1") {
     return <EngelandDesignWithFigures site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
