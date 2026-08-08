@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     if (
       !SLUG_PATTERN.test(slug)
       || !UUID_PATTERN.test(sessionId)
-      || !["page_view", "cta_click"].includes(eventType)
+      || !["page_view", "engaged_visit", "cta_click"].includes(eventType)
       || !path.startsWith("/")
     ) {
       return NextResponse.json({ error: "Invalid analytics event." }, { status: 400 });
