@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
+import CiribilliNaritaDesign from "@/components/designs/CiribilliNaritaDesign";
 import CiribilliResearchDesign from "@/components/designs/CiribilliResearchDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
-import NaritaOverlapDesign from "@/components/designs/NaritaOverlapDesign";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import SourcedBourdonResearchDesign from "@/components/designs/SourcedBourdonResearchDesign";
 import SourcedEditorialProjectDesign from "@/components/designs/SourcedEditorialProjectDesign";
@@ -17,7 +17,7 @@ import {
   type SiteTemplate,
 } from "@/lib/sites";
 
-const CIRIBILLI_RESEARCH_HERO = "https://upload.wikimedia.org/wikipedia/commons/b/b3/HeLa-I.jpg";
+const CIRIBILLI_RESEARCH_HERO = "https://upload.wikimedia.org/wikipedia/commons/2/21/HeLa-II.jpg";
 
 function resolveTemplate(value: LabSite["template"]): SiteTemplate {
   return value === "editorial"
@@ -108,7 +108,7 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
       const researchSite = { ...site, heroImage: CIRIBILLI_RESEARCH_HERO };
       return <CiribilliResearchDesign site={researchSite} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
     }
-    return <NaritaOverlapDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+    return <CiribilliNaritaDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === "prives-photo-lab-v1") {
