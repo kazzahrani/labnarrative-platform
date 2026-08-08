@@ -24,3 +24,39 @@ export function withNaritaHero(site: LabSite): LabSite {
     pages,
   };
 }
+
+export function withoutNaritaResearchImages(site: LabSite): LabSite {
+  const pages = site.pages
+    ? {
+        ...site.pages,
+        ...(site.pages.home
+          ? {
+              home: {
+                ...site.pages.home,
+                topPortrait: "",
+                homepageImage: "",
+              },
+            }
+          : {}),
+      }
+    : site.pages;
+
+  return {
+    ...site,
+    heroImage: "",
+    pages,
+    research: site.research?.map((project) => ({
+      ...project,
+      figureImage: "",
+    })),
+    design: site.design
+      ? {
+          ...site.design,
+          settings: {
+            ...(site.design.settings ?? {}),
+            researchIndexLayout: "text-only",
+          },
+        }
+      : site.design,
+  };
+}
