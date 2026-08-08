@@ -1,7 +1,7 @@
 .page {
   min-height: 100vh;
-  background: #f4f6f1;
-  color: #17352c;
+  background: #0c1a23;
+  color: #eef4f1;
   padding: 28px;
 }
 
@@ -19,6 +19,7 @@
 }
 
 .brand {
+  color: #f3f7f5;
   font-weight: 760;
   letter-spacing: -0.03em;
   font-size: 1.05rem;
@@ -26,7 +27,7 @@
 
 .kicker {
   margin: 18px 0 8px;
-  color: #64776f;
+  color: #91a7a0;
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -34,6 +35,7 @@
 
 .title {
   margin: 0;
+  color: #f4f7f6;
   font-size: clamp(2.1rem, 4vw, 4.1rem);
   max-width: 850px;
   line-height: 0.98;
@@ -44,7 +46,7 @@
 .subtitle {
   margin: 16px 0 0;
   max-width: 760px;
-  color: #66766f;
+  color: #a4b4b0;
   font-size: 1rem;
   line-height: 1.65;
 }
@@ -58,9 +60,9 @@
 
 .actions a,
 .actions button {
-  border: 1px solid #ced7d1;
-  background: #fff;
-  color: #17352c;
+  border: 1px solid #2c424c;
+  background: #132630;
+  color: #e9f0ed;
   border-radius: 999px;
   padding: 10px 15px;
   font: inherit;
@@ -70,7 +72,8 @@
 
 .actions button:hover,
 .actions a:hover {
-  border-color: #779184;
+  border-color: #5f8177;
+  background: #182d37;
 }
 
 .metrics {
@@ -81,8 +84,8 @@
 }
 
 .metric {
-  background: #fff;
-  border: 1px solid #dce3de;
+  background: #132630;
+  border: 1px solid #2a404a;
   border-radius: 18px;
   padding: 18px;
   min-height: 126px;
@@ -90,7 +93,7 @@
 
 .metric span {
   display: block;
-  color: #718078;
+  color: #91a49e;
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -99,22 +102,27 @@
 
 .metric strong {
   display: block;
+  color: #edf4f1;
   font-size: 2rem;
   line-height: 1;
   letter-spacing: -0.04em;
   font-weight: 640;
 }
 
+.metric:first-child strong {
+  color: #73d9ba;
+}
+
 .metric small {
   display: block;
   margin-top: 8px;
-  color: #7b8982;
+  color: #9fb0ab;
   line-height: 1.35;
 }
 
 .panel {
-  background: #fff;
-  border: 1px solid #dce3de;
+  background: #10232d;
+  border: 1px solid #2a404a;
   border-radius: 22px;
   overflow: hidden;
 }
@@ -125,102 +133,122 @@
   align-items: flex-end;
   gap: 18px;
   padding: 20px 22px;
-  border-bottom: 1px solid #e4e9e5;
+  border-bottom: 1px solid #263b45;
 }
 
 .panelHeader h2 {
   margin: 0 0 5px;
+  color: #e9f0ed;
   font-size: 1.18rem;
 }
 
 .panelHeader p {
   margin: 0;
-  color: #77857f;
+  color: #98aaa5;
   font-size: 0.9rem;
 }
 
 .search {
   width: min(340px, 100%);
-  border: 1px solid #cfd8d2;
+  border: 1px solid #314a55;
   border-radius: 999px;
   padding: 10px 14px;
   font: inherit;
-  color: inherit;
-  background: #f9faf8;
+  color: #edf4f1;
+  background: #0c1b24;
+}
+
+.search::placeholder {
+  color: #7f938d;
+}
+
+.search:focus {
+  border-color: #5f9b88;
+  outline: 2px solid rgba(115, 217, 186, 0.18);
+  outline-offset: 2px;
 }
 
 .tableWrap {
   width: 100%;
   overflow-x: auto;
+  background: #10232d;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   min-width: 1120px;
+  color: #dce7e3;
+  background: #10232d;
 }
 
 .table th {
   text-align: left;
   padding: 12px 16px;
-  color: #78867f;
+  color: #8fa39d;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 650;
-  background: #fafbf9;
-  border-bottom: 1px solid #e6ebe7;
+  background: #0d1f28;
+  border-bottom: 1px solid #263b45;
 }
 
 .table td {
   padding: 15px 16px;
-  border-bottom: 1px solid #edf0ed;
+  border-bottom: 1px solid #213640;
   vertical-align: middle;
   font-size: 0.9rem;
+  background: #10232d;
 }
 
-.table tbody tr:hover {
-  background: #fafcf9;
+.table tbody tr:hover td {
+  background: #142b35;
 }
 
 .pi strong {
   display: block;
+  color: #e9f0ed;
   font-size: 0.96rem;
 }
 
 .pi small,
 .muted {
-  color: #7b8982;
+  color: #8fa19c;
 }
 
 .conceptLink {
-  color: #1f654e;
+  color: #73d9ba;
   text-decoration: none;
   font-weight: 620;
 }
 
 .conceptLink:hover {
+  color: #96ead0;
   text-decoration: underline;
 }
 
 .stage {
   display: inline-flex;
   align-items: center;
+  border: 1px solid #25483e;
   border-radius: 999px;
   padding: 6px 10px;
-  background: #eef3ef;
-  color: #3f5d51;
+  background: #16372f;
+  color: #9ddbc8;
   font-size: 0.76rem;
   font-weight: 620;
   white-space: nowrap;
 }
 
 .hot {
-  background: #e1eee7;
-  color: #17543e;
+  border-color: #34705e;
+  background: #194a3c;
+  color: #aaf0d8;
 }
 
 .number {
+  color: #d8e3df;
   font-variant-numeric: tabular-nums;
   font-weight: 650;
 }
@@ -228,32 +256,34 @@
 .empty {
   padding: 44px 22px;
   text-align: center;
-  color: #7a8881;
+  color: #8fa19c;
+  background: #10232d;
 }
 
 .authCard {
   width: min(620px, calc(100% - 32px));
   margin: 12vh auto 0;
-  background: #fff;
-  border: 1px solid #dbe2dd;
+  background: #132630;
+  border: 1px solid #2a404a;
   border-radius: 24px;
   padding: 28px;
 }
 
 .authCard h1 {
   margin: 8px 0 12px;
+  color: #eef4f1;
   font-size: 2rem;
 }
 
 .authCard p {
-  color: #6f7f77;
+  color: #9fb0ab;
   line-height: 1.6;
 }
 
 .authCard a {
   display: inline-block;
   margin-top: 8px;
-  color: #1f654e;
+  color: #73d9ba;
   font-weight: 650;
 }
 
@@ -261,9 +291,9 @@
   margin: 0 0 16px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #fff7e8;
-  border: 1px solid #ead7ae;
-  color: #765c27;
+  background: #2c2617;
+  border: 1px solid #5e5030;
+  color: #e6cf91;
 }
 
 @media (max-width: 1180px) {
