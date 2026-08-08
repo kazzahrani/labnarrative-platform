@@ -36,6 +36,13 @@ type OutreachDraft = {
   errorMessage?: string;
 };
 
+type OutreachSentDetail = {
+  runId: string;
+  slug: string;
+  piName: string;
+  kind: "sent" | "personal";
+};
+
 const outreachOptions: Array<{ value: OutreachStatus; label: string }> = [
   { value: "no_response_yet", label: "No response yet" },
   { value: "replied", label: "Replied" },
@@ -89,6 +96,7 @@ function styleSendButton(button: HTMLButtonElement) {
     fontWeight: "800",
     cursor: "pointer",
     whiteSpace: "nowrap",
+    transition: "background .16s ease, opacity .16s ease, transform .16s ease",
   });
 }
 
@@ -165,11 +173,14 @@ export default function OutreachMonitorEnhancer() {
       feedback: HTMLElement,
     ) => {
       if (record.status !== "concept" || record.outreach_status !== "not_contacted") return;
-      const originalLabel = button.textContent || "Send concept";
+      const originalLabel = "Send concept";
       button.disabled = true;
       button.textContent = "Preparing…";
-      button.style.opacity = "0.65";
+      button.style.opacity = "0.56";
+      button.style.background = "rgba(34,193,181,.26)";
+      button.style.transform = "translateY(1px)";
       feedback.textContent = "";
+      let prepared = false;
 
       try {
         const { data, error } = await supabase.rpc("engine_v2_admin_prepare_site_outreach", {
@@ -179,6 +190,15 @@ export default function OutreachMonitorEnhancer() {
         const draft = data as OutreachDraft | null;
         if (!draft?.runId) throw new Error("The outreach draft could not be prepared.");
 
+        prepared = true;
+        button.dataset.outreachRunId = draft.runId;
+        button.textContent = "Ready to send";
+        button.disabled = false;
+        button.style.cursor = "pointer";
+        button.style.opacity = "0.7";
+        button.style.background = "rgba(34,193,181,.24)";
+        button.style.transform = "none";
+
         window.dispatchEvent(new CustomEvent<OutreachDraft>("labnarrative:open-outreach-draft", {
           detail: draft,
         }));
@@ -186,10 +206,42 @@ export default function OutreachMonitorEnhancer() {
         const message = error instanceof Error ? error.message : "Could not prepare email";
         showFeedback(feedback, message.replaceAll("_", " "), true);
       } finally {
-        button.disabled = false;
-        button.textContent = originalLabel;
-        button.style.opacity = "1";
+        if (!prepared) {
+          button.disabled = false;
+          button.textContent = originalLabel;
+          button.style.cursor = "pointer";
+          button.style.opacity = "1";
+          button.style.background = "rgba(34,193,181,.12)";
+          button.style.transform = "none";
+        }
       }
+    };
+
+    const handleOutreachSent = (event: Event) => {
+      const detail = (event as CustomEvent<OutreachSentDetail>).detail;
+      if (!detail?.slug) return;
+
+      const record = records.get(detail.slug);
+      if (record) record.outreach_status = "email_1_sent";
+
+      const cell = Array.from(document.querySelectorAll<HTMLElement>("[data-outreach-slug]"))
+        .find((candidate) => candidate.dataset.outreachSlug === detail.slug);
+      if (!cell) return;
+
+      const select = cell.querySelector<HTMLSelectElement>("select[data-outreach-select]");
+      if (select) select.value = "no_response_yet";
+
+      const send = cell.querySelector<HTMLButtonElement>("button[data-send-concept]");
+      if (send) {
+        send.disabled = true;
+        send.textContent = "Sent";
+        send.style.opacity = "0.42";
+        send.style.background = "rgba(34,193,181,.3)";
+        window.setTimeout(() => send.remove(), 260);
+      }
+
+      const feedback = cell.querySelector<HTMLElement>("small");
+      if (feedback) showFeedback(feedback, detail.kind === "personal" ? "Marked sent" : "Sent");
     };
 
     function enhanceTable() {
@@ -297,6 +349,7 @@ export default function OutreachMonitorEnhancer() {
       enhanceTable();
       observer = new MutationObserver(scheduleEnhancement);
       observer.observe(document.body, { childList: true, subtree: true });
+      window.addEventListener("labnarrative:outreach-sent", handleOutreachSent as EventListener);
     };
 
     void initialize();
@@ -305,6 +358,7 @@ export default function OutreachMonitorEnhancer() {
       cancelled = true;
       observer?.disconnect();
       window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("labnarrative:outreach-sent", handleOutreachSent as EventListener);
     };
   }, []);
 
