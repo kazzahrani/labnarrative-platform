@@ -1,0 +1,104 @@
+/* LabNarrative operational workspace is intentionally locked to the Blue theme. */
+
+.platform-theme-toggle-locked {
+  min-width: auto !important;
+  width: auto !important;
+  height: 38px !important;
+  padding: 3px !important;
+  gap: 0 !important;
+}
+
+.platform-theme-toggle-locked .platform-theme-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 72px;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: #1eb8b0;
+  color: #092126;
+  font: inherit;
+  cursor: default;
+  pointer-events: none;
+}
+
+.platform-theme-toggle-locked .platform-theme-option span {
+  font-size: 0.72rem;
+}
+
+.platform-theme-toggle-locked .platform-theme-option strong {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+body.platform-theme-active .platform-header,
+body.platform-theme-active .admin-topbar,
+body.platform-monitor-page header,
+body.platform-automation-page > main > header,
+body.platform-discovery-page > main > header,
+body.platform-sales-page header {
+  padding-right: 126px !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-sales-page > main,
+html[data-platform-theme="ocean"] body.platform-sales-page > main > div {
+  background: #101a22 !important;
+  color: #d9e0e6 !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-sales-page header {
+  min-height: 72px !important;
+  border-color: #263947 !important;
+  background: #17242e !important;
+  color: #d9e0e6 !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(16px);
+}
+
+html[data-platform-theme="ocean"] body.platform-sales-page header button {
+  border-color: #2d4252 !important;
+  background: #182630 !important;
+  color: #d9e0e6 !important;
+  box-shadow: none !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-sales-page header button:hover {
+  border-color: #3b586c !important;
+  background: #22313f !important;
+}
+
+html[data-platform-theme="ocean"] body.platform-sales-page h1 {
+  font-size: clamp(2.2rem, 3.5vw, 3.65rem) !important;
+  line-height: 1.04 !important;
+  max-width: 850px !important;
+}
+
+@media (max-width: 680px) {
+  .platform-theme-toggle-locked {
+    width: auto !important;
+    min-width: auto !important;
+    right: 10px !important;
+  }
+
+  .platform-theme-toggle-locked .platform-theme-option {
+    min-width: 38px;
+    width: 38px;
+    padding: 0;
+  }
+
+  .platform-theme-toggle-locked .platform-theme-option strong {
+    display: none;
+  }
+
+  body.platform-theme-active .platform-header,
+  body.platform-theme-active .admin-topbar,
+  body.platform-monitor-page header,
+  body.platform-automation-page > main > header,
+  body.platform-discovery-page > main > header,
+  body.platform-sales-page header {
+    padding-right: 62px !important;
+  }
+}
