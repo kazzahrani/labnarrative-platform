@@ -59,14 +59,11 @@ export default function AdminHeaderCleanup() {
       const utilities = utilityContainer(header);
       if (!utilities) return;
 
-      // Shared workspace tabs own navigation. The workspace header is reserved for
-      // identity/session utilities only.
       header.querySelectorAll<HTMLAnchorElement>("nav a[href], a[href]").forEach((link) => {
         if (!LEGACY_ADMIN_PATHS.has(pathFor(link))) return;
         if (link.closest("nav") || window.location.pathname === "/admin/sales") link.remove();
       });
 
-      // Remove old page-specific account controls, but never rebuild our own controls.
       utilities.querySelectorAll<HTMLElement>("span:not([data-admin-header-email])").forEach((span) => {
         if (looksLikeEmail(span.textContent || "")) span.remove();
       });
@@ -76,7 +73,6 @@ export default function AdminHeaderCleanup() {
       });
 
       if (window.location.pathname === "/admin/sales") {
-        // Sales keeps only the device-exclusion control in addition to email + sign out.
         utilities.querySelectorAll<HTMLButtonElement>("button:not([data-admin-header-signout])").forEach((button) => {
           const label = (button.textContent || "").trim().toLowerCase();
           const isDevice = label.includes("device") || label.includes("checking device");
@@ -126,14 +122,16 @@ export default function AdminHeaderCleanup() {
         utilities.appendChild(signOut);
       }
 
-      // Keep the exact utility order requested: device (Sales only), email, Sign out.
-      if (email && email.parentElement === utilities) utilities.appendChild(email);
-      if (signOut.parentElement === utilities) utilities.appendChild(signOut);
+      // Exact order: optional Sales device control, admin email, Sign out.
+      if (email && email.nextElementSibling !== signOut) {
+        utilities.insertBefore(email, signOut);
+      }
+      if (signOut !== utilities.lastElementChild) {
+        utilities.appendChild(signOut);
+      }
 
       if (window.location.pathname !== "/admin/sales") return;
 
-      // Sales used to combine its hero copy with the utility header. Keep the header
-      // compact and render the Sales intro immediately below the shared tabs.
       const title = header.querySelector<HTMLElement>("h1");
       const kicker = title?.previousElementSibling as HTMLElement | null;
       const subtitle = title?.nextElementSibling as HTMLElement | null;
