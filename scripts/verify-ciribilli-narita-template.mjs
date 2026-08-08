@@ -30,23 +30,60 @@ function blockFor(source, selector) {
 
 const shell = read("components/SiteShell.tsx");
 const photoDesign = read("components/designs/PhotoLabDesign.tsx");
+const researchDesign = read("components/designs/CiribilliResearchDesign.tsx");
 const researchCss = read("components/designs/CiribilliResearchDesign.module.css");
 const ciribilliMotion = read("components/designs/CiribilliNaritaDesign.tsx");
+const naritaShared = read("components/designs/naritaShared.ts");
 
 requireText(
-  shell,
-  'const CIRIBILLI_RESEARCH_HERO = "https://upload.wikimedia.org/wikipedia/commons/2/21/HeLa-II.jpg";',
-  "the approved red microscopy hero must remain the Research hero source",
+  naritaShared,
+  'export const NARITA_HERO_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/2/21/HeLa-II.jpg";',
+  "the approved red microscopy image must remain the canonical Narita hero",
+);
+requireText(
+  naritaShared,
+  "homepageImage: NARITA_HERO_IMAGE",
+  "all Narita home pages must override site-specific homepage hero images",
+);
+requireText(
+  naritaShared,
+  "topPortrait: NARITA_HERO_IMAGE",
+  "legacy Narita hero fields must also resolve to the canonical red microscopy image",
+);
+requireText(
+  ciribilliMotion,
+  "const naritaSite = withNaritaHero(props.site);",
+  "all shared Narita routes must normalize their hero through the canonical hero helper",
+);
+requireText(
+  ciribilliMotion,
+  "<NaritaOverlapDesign {...props} site={naritaSite} />",
+  "the normalized Narita site must be passed into the shared renderer",
+);
+requireText(
+  researchDesign,
+  "const hero = NARITA_HERO_IMAGE;",
+  "the Research tab must use the canonical red microscopy hero",
+);
+requireText(
+  researchDesign,
+  "const figure = project.figureImage;",
+  "research projects must only use their own specific figure image",
+);
+if (researchDesign.includes("project.figureImage || hero")) {
+  throw new Error(
+    "Ciribilli Narita template lock failed: research projects without a specific image must not inherit the microscopy hero",
+  );
+}
+requireText(
+  researchDesign,
+  "style={!figure ? { gridTemplateColumns: \"1fr\" } : undefined}",
+  "research projects without figures must render as text-only full-width sections",
 );
 requireText(
   shell,
   'if (designVariant === "ciribilli-narita-v1")',
   "the canonical variant routing is missing",
-);
-requireText(
-  shell,
-  "const researchSite = { ...site, heroImage: CIRIBILLI_RESEARCH_HERO };",
-  "Research must receive the approved inner-page microscopy hero rather than a project figure",
 );
 requireText(
   shell,
