@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import BourdonDesign from "@/components/designs/BourdonDesign";
 import CiribilliNaritaDesign from "@/components/designs/CiribilliNaritaDesign";
 import CiribilliResearchDesign from "@/components/designs/CiribilliResearchDesign";
+import DobbelsteinEditorialDesign, { DOBBELSTEIN_EDITORIAL_VARIANT } from "@/components/designs/DobbelsteinEditorialDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
@@ -99,6 +100,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
   const isSourcedProjectRoute = route.section === "research"
     && Boolean(route.projectSlug)
     && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
+
+  if (designVariant === DOBBELSTEIN_EDITORIAL_VARIANT) {
+    return <DobbelsteinEditorialDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
 
   if (designVariant === "portrait-first-v1") {
     return <PortraitFirstDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
