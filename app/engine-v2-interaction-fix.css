@@ -37,3 +37,10 @@ html[data-platform-theme="mid"] body.platform-automation-page .platform-theme-to
 html[data-platform-theme="ocean"] body.platform-automation-page .platform-theme-toggle .platform-theme-option[aria-pressed="true"] {
   background: rgba(255, 255, 255, 0.12);
 }
+
+/* Engine v2 outreach uses the opposite corner so it never covers the theme picker. */
+body.platform-automation-page > button[style*="2147483000"] {
+  left: 18px !important;
+  right: auto !important;
+  bottom: 18px !important;
+}
