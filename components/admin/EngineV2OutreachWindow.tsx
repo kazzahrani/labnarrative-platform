@@ -181,6 +181,13 @@ export default function EngineV2OutreachWindow() {
     else setOpen(false);
   }
 
+  function finishWithoutReload(completed: Draft, kind: "sent" | "personal") {
+    window.dispatchEvent(new CustomEvent("labnarrative:outreach-sent", {
+      detail: { runId: completed.runId, slug: completed.slug, piName: completed.piName, kind },
+    }));
+    setNotice("");
+  }
+
   async function sendNow() {
     if (!active || working) return;
     setWorking("send");
@@ -213,11 +220,14 @@ export default function EngineV2OutreachWindow() {
       const payload = await response.json().catch(() => ({})) as { error?: string; providerMessageId?: string; alreadySent?: boolean };
       if (!response.ok) throw new Error(payload.error || `Email send failed (${response.status}).`);
 
-      const sentRunId = active.runId;
-      const sentName = active.piName;
-      removeCompletedDraft(sentRunId);
-      setNotice(`Email sent to ${sentName}.`);
-      window.setTimeout(() => window.location.reload(), 450);
+      const completed = active;
+      removeCompletedDraft(completed.runId);
+      if (window.location.pathname === "/admin/sites") {
+        finishWithoutReload(completed, "sent");
+      } else {
+        setNotice(`Email sent to ${completed.piName}.`);
+        window.setTimeout(() => window.location.reload(), 450);
+      }
     } catch (sendError) {
       setError(sendError instanceof Error && sendError.name === "AbortError" ? "Email sending timed out. Check the status before retrying." : messageFrom(sendError));
       if (window.location.pathname === "/admin/automation") void loadPending(false);
@@ -244,11 +254,14 @@ export default function EngineV2OutreachWindow() {
       });
       if (confirmError) throw confirmError;
 
-      const sentRunId = active.runId;
-      const sentName = active.piName;
-      removeCompletedDraft(sentRunId);
-      setNotice(`Marked ${sentName} as sent from personal email.`);
-      window.setTimeout(() => window.location.reload(), 450);
+      const completed = active;
+      removeCompletedDraft(completed.runId);
+      if (window.location.pathname === "/admin/sites") {
+        finishWithoutReload(completed, "personal");
+      } else {
+        setNotice(`Marked ${completed.piName} as sent from personal email.`);
+        window.setTimeout(() => window.location.reload(), 450);
+      }
     } catch (confirmError) {
       setError(messageFrom(confirmError));
     } finally {
