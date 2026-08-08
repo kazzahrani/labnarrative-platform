@@ -23,9 +23,6 @@ type OutreachRecord = {
 
 const outreachOptions: Array<{ value: OutreachStatus; label: string }> = [
   { value: "not_contacted", label: "Not contacted" },
-  { value: "email_1_sent", label: "Email 1 sent" },
-  { value: "email_2_sent", label: "Email 2 sent" },
-  { value: "email_3_sent", label: "Email 3 sent" },
   { value: "replied", label: "Replied" },
   { value: "interested", label: "Interested" },
   { value: "meeting_scheduled", label: "Meeting scheduled" },
@@ -34,22 +31,30 @@ const outreachOptions: Array<{ value: OutreachStatus; label: string }> = [
   { value: "not_pursuing", label: "Closed / not pursuing" },
 ];
 
+const EMAIL_PROGRESS_STATUSES = new Set<OutreachStatus>([
+  "email_1_sent",
+  "email_2_sent",
+  "email_3_sent",
+]);
+const SEQUENCE_PROGRESS_VALUE = "__sequence_progress__";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function styleSelect(select: HTMLSelectElement) {
   Object.assign(select.style, {
-    width: "100%",
-    minWidth: "150px",
-    minHeight: "36px",
-    padding: "7px 9px",
+    width: "158px",
+    maxWidth: "100%",
+    minWidth: "0",
+    minHeight: "31px",
+    padding: "4px 7px",
     border: "1px solid #bac6bf",
-    borderRadius: "5px",
+    borderRadius: "7px",
     background: "transparent",
     color: "inherit",
     font: "inherit",
-    fontSize: "0.68rem",
+    fontSize: "0.64rem",
     fontWeight: "700",
     cursor: "pointer",
   });
@@ -103,7 +108,7 @@ export default function OutreachMonitorEnhancer() {
 
       if (error) {
         record.outreach_status = previousStatus;
-        select.value = previousStatus;
+        select.value = EMAIL_PROGRESS_STATUSES.has(previousStatus) ? SEQUENCE_PROGRESS_VALUE : previousStatus;
         showFeedback(feedback, "Could not save", true);
         return;
       }
@@ -144,11 +149,20 @@ export default function OutreachMonitorEnhancer() {
         cell.replaceChildren();
         cell.dataset.label = "Outreach status";
         cell.dataset.outreachSlug = slug;
+        cell.style.minWidth = "166px";
 
         const select = document.createElement("select");
         select.dataset.outreachSelect = "true";
         select.setAttribute("aria-label", `Outreach status for ${slug}`);
         styleSelect(select);
+
+        if (EMAIL_PROGRESS_STATUSES.has(record.outreach_status)) {
+          const sequenceOption = document.createElement("option");
+          sequenceOption.value = SEQUENCE_PROGRESS_VALUE;
+          sequenceOption.textContent = "No response yet";
+          sequenceOption.disabled = true;
+          select.append(sequenceOption);
+        }
 
         outreachOptions.forEach(({ value, label }) => {
           const option = document.createElement("option");
@@ -157,15 +171,18 @@ export default function OutreachMonitorEnhancer() {
           select.append(option);
         });
 
-        select.value = record.outreach_status || "not_contacted";
+        select.value = EMAIL_PROGRESS_STATUSES.has(record.outreach_status)
+          ? SEQUENCE_PROGRESS_VALUE
+          : record.outreach_status || "not_contacted";
 
         const feedback = document.createElement("small");
         feedback.style.display = "block";
-        feedback.style.minHeight = "14px";
-        feedback.style.marginTop = "4px";
-        feedback.style.fontSize = "0.58rem";
+        feedback.style.minHeight = "10px";
+        feedback.style.marginTop = "2px";
+        feedback.style.fontSize = "0.56rem";
 
         select.addEventListener("change", () => {
+          if (select.value === SEQUENCE_PROGRESS_VALUE) return;
           void saveStatus(record, select, feedback, select.value as OutreachStatus);
         });
 
