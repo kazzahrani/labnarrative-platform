@@ -16,6 +16,8 @@ type Draft = {
   errorMessage?: string;
 };
 
+const SUPPORTED_PATHS = new Set(["/admin/automation", "/admin/sites"]);
+
 const panel: React.CSSProperties = {
   position: "fixed",
   inset: "72px 24px 24px",
@@ -61,6 +63,10 @@ function messageFrom(error: unknown): string {
   return "The outreach action could not be completed.";
 }
 
+function currentPathSupported(): boolean {
+  return typeof window !== "undefined" && SUPPORTED_PATHS.has(window.location.pathname);
+}
+
 export default function EngineV2OutreachWindow() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [activeRunId, setActiveRunId] = useState("");
@@ -102,10 +108,12 @@ export default function EngineV2OutreachWindow() {
   }, []);
 
   useEffect(() => {
-    if (window.location.pathname !== "/admin/automation") return;
-    void loadPending(true);
+    if (!currentPathSupported()) return;
+
+    if (window.location.pathname === "/admin/automation") void loadPending(true);
 
     const observePublish = (event: MouseEvent) => {
+      if (window.location.pathname !== "/admin/automation") return;
       const target = event.target;
       if (!(target instanceof Element)) return;
       const clicked = target.closest("button");
@@ -116,8 +124,26 @@ export default function EngineV2OutreachWindow() {
       window.setTimeout(() => void loadPending(true), 4500);
     };
 
+    const openPreparedDraft = (event: Event) => {
+      const custom = event as CustomEvent<Draft>;
+      const draft = custom.detail;
+      if (!draft?.runId) return;
+      setDrafts((current) => {
+        const without = current.filter((item) => item.runId !== draft.runId);
+        return [draft, ...without];
+      });
+      setActiveRunId(draft.runId);
+      setNotice("");
+      setError("");
+      setOpen(true);
+    };
+
     document.addEventListener("click", observePublish, false);
-    return () => document.removeEventListener("click", observePublish, false);
+    window.addEventListener("labnarrative:open-outreach-draft", openPreparedDraft as EventListener);
+    return () => {
+      document.removeEventListener("click", observePublish, false);
+      window.removeEventListener("labnarrative:open-outreach-draft", openPreparedDraft as EventListener);
+    };
   }, [loadPending]);
 
   async function saveCurrentDraft() {
@@ -194,7 +220,7 @@ export default function EngineV2OutreachWindow() {
       window.setTimeout(() => window.location.reload(), 450);
     } catch (sendError) {
       setError(sendError instanceof Error && sendError.name === "AbortError" ? "Email sending timed out. Check the status before retrying." : messageFrom(sendError));
-      void loadPending(false);
+      if (window.location.pathname === "/admin/automation") void loadPending(false);
     } finally {
       setWorking("");
     }
@@ -230,7 +256,7 @@ export default function EngineV2OutreachWindow() {
     }
   }
 
-  if (typeof window === "undefined" || window.location.pathname !== "/admin/automation") return null;
+  if (!currentPathSupported()) return null;
   if (!drafts.length && !notice) return null;
 
   if (!open) {
