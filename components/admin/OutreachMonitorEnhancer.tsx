@@ -106,6 +106,11 @@ export default function OutreachMonitorEnhancer() {
       animationFrame = window.requestAnimationFrame(enhanceTable);
     };
 
+    const removeOverviewBlocks = () => {
+      document.querySelectorAll<HTMLElement>("main section[aria-label='Status definitions'], main section[aria-label='Website totals and status filters']")
+        .forEach((section) => section.remove());
+    };
+
     const showFeedback = (element: HTMLElement, message: string, isError = false) => {
       element.textContent = message;
       element.style.color = isError ? "#e58b75" : "#8ba4b8";
@@ -189,6 +194,8 @@ export default function OutreachMonitorEnhancer() {
 
     function enhanceTable() {
       if (cancelled) return;
+
+      removeOverviewBlocks();
 
       const table = document.querySelector<HTMLTableElement>("main table");
       if (!table) return;
