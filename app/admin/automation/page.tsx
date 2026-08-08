@@ -12,7 +12,8 @@ type EngineRunState =
   | "verify"
   | "final_review"
   | "blocked"
-  | "approved";
+  | "approved"
+  | "published";
 
 type EngineRun = {
   runId: string;
@@ -27,6 +28,7 @@ type EngineRun = {
   siteId: string | null;
   siteStatus: string | null;
   previewPath: string | null;
+  publicUrl: string | null;
   verificationTotal: number;
   verificationPassed: number;
   researchEvidence: number;
@@ -58,6 +60,7 @@ type DashboardData = {
     finalReview: number;
     blocked: number;
     approved: number;
+    published: number;
   };
   runs: EngineRun[];
   queue: QueueItem[];
@@ -90,6 +93,7 @@ function stateLabel(state: EngineRunState): string {
     final_review: "Final Review",
     blocked: "Blocked",
     approved: "Approved",
+    published: "Published",
   };
   return labels[state];
 }
@@ -102,7 +106,8 @@ function stateDescription(state: EngineRunState): string {
     verify: "Running deterministic evidence and asset checks.",
     final_review: "Private concept is ready for your decision.",
     blocked: "The engine stopped rather than guessing. See the exact reason below.",
-    approved: "Human review approved. Publication is still a separate manual step.",
+    approved: "Human review approved. One explicit Publish click will make the concept public.",
+    published: "The approved concept is live on its LabNarrative subdomain. Outreach remains separate.",
   };
   return labels[state];
 }
@@ -111,12 +116,16 @@ function RunCard({
   run,
   working,
   onReview,
+  onPublish,
 }: {
   run: EngineRun;
   working: boolean;
   onReview: (runId: string, decision: "approve" | "return_build" | "return_assets" | "cancel") => Promise<void>;
+  onPublish: (runId: string) => Promise<void>;
 }) {
   const isReview = run.state === "final_review";
+  const isApproved = run.state === "approved";
+  const isPublished = run.state === "published";
   return (
     <article className={styles.card} style={{ display: "grid", gap: 14 }}>
       <div className={styles.cardHeader}>
@@ -125,7 +134,7 @@ function RunCard({
           <h3 style={{ marginBottom: 4 }}>{run.piName}</h3>
           <p className={styles.muted} style={{ margin: 0 }}>{run.slug}.labnarrative.com · score {run.score ?? "—"}</p>
         </div>
-        <span className={styles.status} data-status={run.state === "blocked" ? "needs_attention" : run.state === "final_review" ? "awaiting_final_review" : "running"}>
+        <span className={styles.status} data-status={run.state === "blocked" ? "needs_attention" : run.state === "final_review" ? "awaiting_final_review" : run.state === "published" ? "live" : "running"}>
           {stateLabel(run.state)}
         </span>
       </div>
@@ -151,6 +160,11 @@ function RunCard({
             Open private preview ↗
           </Link>
         ) : null}
+        {run.publicUrl ? (
+          <Link className={isPublished ? styles.button : styles.buttonSecondary} href={run.publicUrl} target="_blank">
+            Open live site ↗
+          </Link>
+        ) : null}
         {isReview ? (
           <>
             <button className={styles.button} disabled={working} type="button" onClick={() => void onReview(run.runId, "approve")}>Approve</button>
@@ -158,6 +172,9 @@ function RunCard({
             <button className={styles.buttonSecondary} disabled={working} type="button" onClick={() => void onReview(run.runId, "return_assets")}>Return to Assets</button>
             <button className={styles.buttonSecondary} disabled={working} type="button" onClick={() => void onReview(run.runId, "cancel")}>Cancel</button>
           </>
+        ) : null}
+        {isApproved ? (
+          <button className={styles.button} disabled={working} type="button" onClick={() => void onPublish(run.runId)}>Publish concept</button>
         ) : null}
       </div>
     </article>
@@ -221,6 +238,7 @@ export default function AutomationControlCentre() {
   const finalReviewRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "final_review") ?? [], [dashboard]);
   const blockedRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "blocked") ?? [], [dashboard]);
   const approvedRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "approved") ?? [], [dashboard]);
+  const publishedRuns = useMemo(() => dashboard?.runs.filter((run) => run.state === "published") ?? [], [dashboard]);
 
   async function requestOtp(event: FormEvent) {
     event.preventDefault();
@@ -273,7 +291,7 @@ export default function AutomationControlCentre() {
       const { error } = await supabase.rpc("engine_v2_admin_review", { p_run_id: runId, p_decision: decision, p_note: null });
       if (error) throw error;
       setNotice(
-        decision === "approve" ? "Concept approved. It remains private until publication is built and explicitly triggered." :
+        decision === "approve" ? "Concept approved. Use Publish concept when you are ready to make it public." :
         decision === "return_build" ? "Concept returned to Build." :
         decision === "return_assets" ? "Concept returned to Assets." :
         "Run cancelled.",
@@ -282,6 +300,23 @@ export default function AutomationControlCentre() {
       await loadData();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Review decision could not be saved.");
+      setNoticeError(true);
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function publishRun(runId: string) {
+    setWorking(true);
+    try {
+      const { data, error } = await supabase.rpc("engine_v2_admin_publish", { p_run_id: runId });
+      if (error) throw error;
+      const publicUrl = typeof data === "object" && data && "publicUrl" in data ? String((data as { publicUrl?: unknown }).publicUrl ?? "") : "";
+      setNotice(publicUrl ? `Concept published: ${publicUrl}` : "Concept published successfully.");
+      setNoticeError(false);
+      await loadData();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Concept could not be published.");
       setNoticeError(true);
     } finally {
       setWorking(false);
@@ -324,8 +359,8 @@ export default function AutomationControlCentre() {
         <section className={styles.hero}>
           <div>
             <p className={styles.kicker}>Engine v2 · evidence first</p>
-            <h1>Queue → Research → Build → Assets → Verify → Final Review</h1>
-            <p className={styles.heroCopy}>One PI is processed at a time. Scientific uncertainty stops the run instead of inventing a match. Final Review never blocks the next PI. Publication and outreach are not automated.</p>
+            <h1>Queue → Research → Build → Assets → Verify → Final Review → Approve → Publish</h1>
+            <p className={styles.heroCopy}>One PI is processed at a time. Scientific uncertainty stops the run instead of inventing a match. Final Review never blocks the next PI. Publishing requires your explicit approval and a separate Publish click. Outreach remains separate.</p>
           </div>
           <div className={styles.heroActions}>
             <button className={dashboard?.runtime.enabled ? styles.buttonSecondary : styles.button} type="button" disabled={working || !dashboard} onClick={() => void setEngineEnabled(!dashboard?.runtime.enabled)}>
@@ -342,6 +377,8 @@ export default function AutomationControlCentre() {
           <div className={styles.stat}><span>Eligible queue</span><strong>{dashboard?.counts.eligibleQueue ?? "—"}</strong></div>
           <div className={styles.stat}><span>Active production</span><strong>{dashboard?.counts.active ?? "—"}</strong></div>
           <div className={styles.stat}><span>Final Review</span><strong>{dashboard?.counts.finalReview ?? "—"}</strong></div>
+          <div className={styles.stat}><span>Approved</span><strong>{dashboard?.counts.approved ?? "—"}</strong></div>
+          <div className={styles.stat}><span>Published</span><strong>{dashboard?.counts.published ?? "—"}</strong></div>
           <div className={styles.stat}><span>Blocked safely</span><strong>{dashboard?.counts.blocked ?? "—"}</strong></div>
         </section>
 
@@ -354,13 +391,29 @@ export default function AutomationControlCentre() {
               </div>
               <p className={styles.muted}>{dashboard?.runtime.note ?? "Loading engine state…"}</p>
             </section>
-            {activeRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} />)}
+            {activeRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
 
             <section className={styles.card}>
               <div className={styles.cardHeader}><div><p className={styles.kicker}>Final Review</p><h2>{finalReviewRuns.length} private concept{finalReviewRuns.length === 1 ? "" : "s"} waiting</h2></div></div>
               {finalReviewRuns.length === 0 ? <p className={styles.muted}>Nothing is waiting for review.</p> : null}
             </section>
-            {finalReviewRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} />)}
+            {finalReviewRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
+
+            {approvedRuns.length ? (
+              <section className={styles.card}>
+                <div className={styles.cardHeader}><div><p className={styles.kicker}>Approved · ready to publish</p><h2>{approvedRuns.length} concept{approvedRuns.length === 1 ? "" : "s"}</h2></div></div>
+                <p className={styles.muted}>These concepts passed human review but are still private. Publish only when you want the subdomain to become public.</p>
+              </section>
+            ) : null}
+            {approvedRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
+
+            {publishedRuns.length ? (
+              <section className={styles.card}>
+                <div className={styles.cardHeader}><div><p className={styles.kicker}>Published</p><h2>{publishedRuns.length} live concept{publishedRuns.length === 1 ? "" : "s"}</h2></div></div>
+                <p className={styles.muted}>Published concepts are public. No outreach is sent by this action.</p>
+              </section>
+            ) : null}
+            {publishedRuns.map((run) => <RunCard key={run.runId} run={run} working={working} onReview={reviewRun} onPublish={publishRun} />)}
           </div>
 
           <div className={styles.stack}>
@@ -390,13 +443,6 @@ export default function AutomationControlCentre() {
                 ))}
               </div>
             </section>
-
-            {approvedRuns.length ? (
-              <section className={styles.card}>
-                <div className={styles.cardHeader}><div><p className={styles.kicker}>Approved</p><h2>{approvedRuns.length} concept{approvedRuns.length === 1 ? "" : "s"}</h2></div></div>
-                <p className={styles.muted}>Approval does not publish or send outreach yet.</p>
-              </section>
-            ) : null}
           </div>
         </div>
       </div>
