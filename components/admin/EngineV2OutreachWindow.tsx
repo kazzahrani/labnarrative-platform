@@ -120,19 +120,24 @@ export default function EngineV2OutreachWindow() {
     return () => document.removeEventListener("click", observePublish, false);
   }, [loadPending]);
 
+  async function saveCurrentDraft() {
+    if (!active) return;
+    const { error: saveError } = await supabase.rpc("engine_v2_admin_outreach_save", {
+      p_run_id: active.runId,
+      p_recipient_email: active.recipientEmail,
+      p_subject: active.subject,
+      p_body_text: active.bodyText,
+    });
+    if (saveError) throw saveError;
+  }
+
   async function saveDraft() {
     if (!active || working) return false;
     setWorking("save");
     setNotice("");
     setError("");
     try {
-      const { error: saveError } = await supabase.rpc("engine_v2_admin_outreach_save", {
-        p_run_id: active.runId,
-        p_recipient_email: active.recipientEmail,
-        p_subject: active.subject,
-        p_body_text: active.bodyText,
-      });
-      if (saveError) throw saveError;
+      await saveCurrentDraft();
       setNotice("Draft saved.");
       return true;
     } catch (saveError) {
@@ -143,6 +148,13 @@ export default function EngineV2OutreachWindow() {
     }
   }
 
+  function removeCompletedDraft(runId: string) {
+    const remaining = drafts.filter((item) => item.runId !== runId);
+    setDrafts(remaining);
+    if (remaining.length) setActiveRunId(remaining[0].runId);
+    else setOpen(false);
+  }
+
   async function sendNow() {
     if (!active || working) return;
     setWorking("send");
@@ -150,13 +162,7 @@ export default function EngineV2OutreachWindow() {
     setError("");
 
     try {
-      const { error: saveError } = await supabase.rpc("engine_v2_admin_outreach_save", {
-        p_run_id: active.runId,
-        p_recipient_email: active.recipientEmail,
-        p_subject: active.subject,
-        p_body_text: active.bodyText,
-      });
-      if (saveError) throw saveError;
+      await saveCurrentDraft();
 
       const { data: auth } = await supabase.auth.getSession();
       const token = auth.session?.access_token;
@@ -181,16 +187,44 @@ export default function EngineV2OutreachWindow() {
       const payload = await response.json().catch(() => ({})) as { error?: string; providerMessageId?: string; alreadySent?: boolean };
       if (!response.ok) throw new Error(payload.error || `Email send failed (${response.status}).`);
 
+      const sentRunId = active.runId;
       const sentName = active.piName;
-      const remaining = drafts.filter((item) => item.runId !== active.runId);
-      setDrafts(remaining);
-      if (remaining.length) setActiveRunId(remaining[0].runId);
-      else setOpen(false);
+      removeCompletedDraft(sentRunId);
       setNotice(`Email sent to ${sentName}.`);
       window.setTimeout(() => window.location.reload(), 450);
     } catch (sendError) {
       setError(sendError instanceof Error && sendError.name === "AbortError" ? "Email sending timed out. Check the status before retrying." : messageFrom(sendError));
       void loadPending(false);
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function confirmPersonalSent() {
+    if (!active || working) return;
+    const confirmed = window.confirm(
+      `Confirm that you already sent this email to ${active.recipientEmail} from your personal email?\n\nLabNarrative will NOT send an email. This only marks the outreach as sent and completes this production item.`
+    );
+    if (!confirmed) return;
+
+    setWorking("personal");
+    setNotice("");
+    setError("");
+
+    try {
+      await saveCurrentDraft();
+      const { error: confirmError } = await supabase.rpc("engine_v2_admin_confirm_personal_sent", {
+        p_run_id: active.runId,
+      });
+      if (confirmError) throw confirmError;
+
+      const sentRunId = active.runId;
+      const sentName = active.piName;
+      removeCompletedDraft(sentRunId);
+      setNotice(`Marked ${sentName} as sent from personal email.`);
+      window.setTimeout(() => window.location.reload(), 450);
+    } catch (confirmError) {
+      setError(messageFrom(confirmError));
     } finally {
       setWorking("");
     }
@@ -204,7 +238,7 @@ export default function EngineV2OutreachWindow() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        style={{ ...button, position: "fixed", right: 24, bottom: 24, zIndex: 2147483000, background: "#1b6456", boxShadow: "0 12px 34px rgba(0,0,0,.28)" }}
+        style={{ ...button, position: "fixed", left: 24, bottom: 24, zIndex: 2147483000, background: "#1b6456", boxShadow: "0 12px 34px rgba(0,0,0,.28)" }}
       >
         Outreach ready{drafts.length ? ` (${drafts.length})` : ""}
       </button>
@@ -261,10 +295,11 @@ export default function EngineV2OutreachWindow() {
                 Email
                 <textarea style={{ ...field, minHeight: 300, resize: "vertical", lineHeight: 1.55 }} value={active.bodyText} onChange={(event) => updateActive({ bodyText: event.target.value })} />
               </label>
-              <p style={{ margin: 0, opacity: .55, fontSize: 11 }}>Sender: LabNarrative &lt;khaled@labnarrative.com&gt; · Nothing sends until you click “Send email now”.</p>
+              <p style={{ margin: 0, opacity: .55, fontSize: 11 }}>Sender: LabNarrative &lt;khaled@labnarrative.com&gt; · “Send email now” sends through LabNarrative. “Confirm sent from personal email” never sends anything.</p>
               <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
                 <button type="button" style={button} disabled={Boolean(working)} onClick={() => void saveDraft()}>{working === "save" ? "Saving…" : "Save draft"}</button>
                 <button type="button" style={{ ...button, background: "#1b6456", borderColor: "rgba(143,205,188,.35)" }} disabled={Boolean(working)} onClick={() => void sendNow()}>{working === "send" ? "Sending…" : "Send email now"}</button>
+                <button type="button" style={{ ...button, background: "rgba(255,255,255,.035)", borderColor: "rgba(255,255,255,.2)" }} disabled={Boolean(working)} onClick={() => void confirmPersonalSent()}>{working === "personal" ? "Confirming…" : "Confirm sent from personal email"}</button>
               </div>
             </div>
           ) : null}
