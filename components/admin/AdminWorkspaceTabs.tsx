@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 const TABS = [
-  { label: "Websites", href: "/admin/sites" },
-  { label: "Production", href: "/admin/automation" },
   { label: "Discovery", href: "/admin/discovery" },
+  { label: "Production", href: "/admin/automation" },
+  { label: "Websites", href: "/admin/sites" },
   { label: "Sales", href: "/admin/sales" },
 ] as const;
 
