@@ -187,6 +187,7 @@ export default function EngineV2OutreachWindow() {
       if (remaining.length) setActiveRunId(remaining[0].runId);
       else setOpen(false);
       setNotice(`Email sent to ${sentName}.`);
+      window.setTimeout(() => window.location.reload(), 450);
     } catch (sendError) {
       setError(sendError instanceof Error && sendError.name === "AbortError" ? "Email sending timed out. Check the status before retrying." : messageFrom(sendError));
       void loadPending(false);
