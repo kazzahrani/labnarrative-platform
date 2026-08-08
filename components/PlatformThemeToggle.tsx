@@ -3,8 +3,6 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type PlatformTheme = "grey" | "mid" | "ocean" | "dark";
-
 const STORAGE_KEY = "labnarrative-platform-theme";
 const PAGE_CLASSES = [
   "platform-home-page",
@@ -12,13 +10,7 @@ const PAGE_CLASSES = [
   "platform-monitor-page",
   "platform-automation-page",
   "platform-discovery-page",
-];
-
-const THEME_OPTIONS: Array<{ value: PlatformTheme; label: string; icon: string }> = [
-  { value: "grey", label: "Light", icon: "☀" },
-  { value: "mid", label: "Mid", icon: "◐" },
-  { value: "ocean", label: "Blue", icon: "◆" },
-  { value: "dark", label: "Dark", icon: "☾" },
+  "platform-sales-page",
 ];
 
 function isOperationalHost(hostname: string): boolean {
@@ -40,21 +32,13 @@ function isOperationalHost(hostname: string): boolean {
   return subdomain === "platform" || subdomain === "admin";
 }
 
-function applyTheme(theme: PlatformTheme) {
-  document.documentElement.dataset.platformTheme = theme;
-  document.documentElement.style.colorScheme = theme === "grey" ? "light" : "dark";
-}
-
-function resolveStoredTheme(value: string | null): PlatformTheme {
-  if (value === "dark" || value === "mid" || value === "ocean") return value;
-
-  // Both previous Light and Grey preferences resolve to the current Light theme.
-  return "grey";
+function applyBlueTheme() {
+  document.documentElement.dataset.platformTheme = "ocean";
+  document.documentElement.style.colorScheme = "dark";
 }
 
 export default function PlatformThemeToggle() {
   const pathname = usePathname();
-  const [theme, setTheme] = useState<PlatformTheme>("grey");
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
@@ -80,39 +64,29 @@ export default function PlatformThemeToggle() {
       document.body.classList.add("platform-automation-page");
     } else if (pathname.startsWith("/admin/discovery")) {
       document.body.classList.add("platform-discovery-page");
+    } else if (pathname.startsWith("/admin/sales")) {
+      document.body.classList.add("platform-sales-page");
     }
 
-    const initialTheme = resolveStoredTheme(window.localStorage.getItem(STORAGE_KEY));
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
-    window.localStorage.setItem(STORAGE_KEY, initialTheme);
+    applyBlueTheme();
+    window.localStorage.setItem(STORAGE_KEY, "ocean");
     setAvailable(true);
   }, [pathname]);
-
-  function selectTheme(nextTheme: PlatformTheme) {
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-    window.localStorage.setItem(STORAGE_KEY, nextTheme);
-  }
 
   if (!available) return null;
 
   return (
-    <div aria-label="Platform appearance" className="platform-theme-toggle" role="group">
-      {THEME_OPTIONS.map((option) => (
-        <button
-          aria-label={`Use ${option.label.toLowerCase()} theme`}
-          aria-pressed={theme === option.value}
-          className="platform-theme-option"
-          key={option.value}
-          onClick={() => selectTheme(option.value)}
-          title={`${option.label} theme`}
-          type="button"
-        >
-          <span aria-hidden="true">{option.icon}</span>
-          <strong>{option.label}</strong>
-        </button>
-      ))}
+    <div aria-label="Platform appearance: Blue" className="platform-theme-toggle platform-theme-toggle-locked">
+      <button
+        aria-label="Blue theme"
+        aria-pressed="true"
+        className="platform-theme-option"
+        tabIndex={-1}
+        type="button"
+      >
+        <span aria-hidden="true">◆</span>
+        <strong>Blue</strong>
+      </button>
     </div>
   );
 }
