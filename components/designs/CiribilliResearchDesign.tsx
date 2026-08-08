@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, type CSSProperties } from "react";
+import { NARITA_HERO_IMAGE } from "@/components/designs/naritaShared";
 import {
   getBourdonPages,
   type LabSite,
@@ -58,7 +59,7 @@ export default function CiribilliResearchDesign({
   const mainRef = useRef<HTMLElement>(null);
   const pages = getBourdonPages(site);
   const projects = researchProjects(site);
-  const hero = site.heroImage || pages.home.homepageImage || pages.home.topPortrait;
+  const hero = NARITA_HERO_IMAGE;
   const variables = {
     "--pl-background": "#ffffff",
     "--pl-surface": "#ffffff",
@@ -190,9 +191,14 @@ export default function CiribilliResearchDesign({
         </header>
 
         {projects.map((project, index) => {
-          const figure = project.figureImage || hero;
+          const figure = project.figureImage;
           return (
-            <article className={photoStyles.researchEditorialTopic} id={project.slug} key={`${project.slug}-${index}`}>
+            <article
+              className={photoStyles.researchEditorialTopic}
+              id={project.slug}
+              key={`${project.slug}-${index}`}
+              style={!figure ? { gridTemplateColumns: "1fr" } : undefined}
+            >
               <div className={photoStyles.researchEditorialCopy}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <h2>{project.title}</h2>
@@ -203,14 +209,16 @@ export default function CiribilliResearchDesign({
                   ))}
                 </div>
               </div>
-              <figure className={photoStyles.researchEditorialFigure}>
-                <Picture
-                  src={figure}
-                  alt={project.figureCaption || project.title}
-                  fallback={String(index + 1).padStart(2, "0")}
-                />
-                {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
-              </figure>
+              {figure && (
+                <figure className={photoStyles.researchEditorialFigure}>
+                  <Picture
+                    src={figure}
+                    alt={project.figureCaption || project.title}
+                    fallback={String(index + 1).padStart(2, "0")}
+                  />
+                  {project.figureCaption && <figcaption>{project.figureCaption}</figcaption>}
+                </figure>
+              )}
             </article>
           );
         })}
