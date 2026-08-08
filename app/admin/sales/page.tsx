@@ -37,6 +37,8 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
+const INTERNAL_DEVICE_COOKIE = "labnarrative_internal_device";
+const INTERNAL_DEVICE_MAX_AGE = 60 * 60 * 24 * 365;
 
 const REPLIED_STAGES = new Set([
   "replied",
@@ -85,6 +87,27 @@ function stageIsHot(value: string, visits: number): boolean {
   return REPLIED_STAGES.has(value) || visits >= 2;
 }
 
+function hasInternalDeviceCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie
+    .split(";")
+    .some((entry) => entry.trim() === `${INTERNAL_DEVICE_COOKIE}=1`);
+}
+
+function setInternalDeviceCookie(excluded: boolean) {
+  if (typeof window === "undefined") return;
+
+  const host = window.location.hostname.toLowerCase();
+  const domain = host === rootDomain || host.endsWith(`.${rootDomain}`)
+    ? `; Domain=.${rootDomain}`
+    : "";
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  const maxAge = excluded ? INTERNAL_DEVICE_MAX_AGE : 0;
+  const value = excluded ? "1" : "";
+
+  document.cookie = `${INTERNAL_DEVICE_COOKIE}=${value}; Path=/; Max-Age=${maxAge}; SameSite=Lax${domain}${secure}`;
+}
+
 async function fetchAllProspects(): Promise<ProspectRow[]> {
   const pageSize = 1000;
   const rows: ProspectRow[] = [];
@@ -115,6 +138,8 @@ export default function SalesDashboardPage() {
   const [prospects, setProspects] = useState<ProspectRow[]>([]);
   const [sentCount, setSentCount] = useState(0);
   const [search, setSearch] = useState("");
+  const [deviceExcluded, setDeviceExcluded] = useState(false);
+  const [deviceStatusReady, setDeviceStatusReady] = useState(false);
 
   const loadSales = useCallback(async (activeSession: Session) => {
     setLoading(true);
@@ -170,6 +195,11 @@ export default function SalesDashboardPage() {
   }, []);
 
   useEffect(() => {
+    setDeviceExcluded(hasInternalDeviceCookie());
+    setDeviceStatusReady(true);
+  }, []);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthReady(true);
@@ -193,6 +223,12 @@ export default function SalesDashboardPage() {
 
     return () => subscription.unsubscribe();
   }, [loadSales]);
+
+  const toggleDeviceExclusion = useCallback(() => {
+    const nextExcluded = !deviceExcluded;
+    setInternalDeviceCookie(nextExcluded);
+    setDeviceExcluded(hasInternalDeviceCookie());
+  }, [deviceExcluded]);
 
   const prospectBySite = useMemo(() => {
     const map = new Map<string, ProspectRow>();
@@ -293,6 +329,22 @@ export default function SalesDashboardPage() {
             </p>
           </div>
           <div className={styles.actions}>
+            <button
+              type="button"
+              className={deviceExcluded ? styles.deviceButtonActive : undefined}
+              onClick={toggleDeviceExclusion}
+              disabled={!deviceStatusReady}
+              aria-pressed={deviceExcluded}
+              title={deviceExcluded
+                ? "This browser is excluded from concept analytics. Click to include it for testing."
+                : "Exclude visits from this browser across all LabNarrative concept subdomains."}
+            >
+              {!deviceStatusReady
+                ? "Checking device…"
+                : deviceExcluded
+                  ? "✓ Device excluded"
+                  : "Exclude this device"}
+            </button>
             <button type="button" onClick={() => void loadSales(session)} disabled={loading}>
               {loading ? "Refreshing…" : "Refresh"}
             </button>
