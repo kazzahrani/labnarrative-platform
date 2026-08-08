@@ -56,7 +56,7 @@ requireText(
 requireText(
   shell,
   "return <CiribilliNaritaDesign site={site}",
-  "Home and the other tabs must retain the Ciribilli Narita layout",
+  "Home and the other tabs must retain the shared Narita layout",
 );
 requireText(
   ciribilliMotion,
@@ -67,6 +67,31 @@ requireText(
   ciribilliMotion,
   "--ciribilli-home-panel-offset",
   "the homepage hero must retain its constant linear panel offset",
+);
+requireText(
+  ciribilliMotion,
+  "--ciribilli-gutter: clamp(24px, 5vw, 76px);",
+  "the wordmark, navigation and hero copy must retain a shared responsive gutter",
+);
+requireText(
+  ciribilliMotion,
+  "--narita-header-height: 132px;",
+  "the desktop Narita header must retain the approved compact height",
+);
+requireText(
+  ciribilliMotion,
+  "height: calc(100svh - var(--narita-header-height)) !important;",
+  "the homepage hero must fit the remaining viewport beneath the header",
+);
+requireText(
+  ciribilliMotion,
+  "font-size: clamp(46px, min(7vw, 10svh), 96px) !important;",
+  "the homepage hero typography must remain constrained by both viewport width and height",
+);
+requireText(
+  ciribilliMotion,
+  "object-position: center center !important;",
+  "the homepage microscopy image must remain centered within the viewport-fit hero",
 );
 
 requireText(
