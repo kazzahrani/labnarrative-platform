@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import SiteShell from "@/components/SiteShell";
+import VisualOverridesHost from "@/components/VisualOverridesHost";
 import { resolveSiteRoute, type LabSite } from "@/lib/sites";
 
 type SiteRow = {
@@ -123,6 +124,8 @@ export default function AdminSitePreviewPage() {
     );
   }
 
+  const route = resolveSiteRoute(path);
+
   return (
     <>
       <div
@@ -143,16 +146,18 @@ export default function AdminSitePreviewPage() {
         }}
       >
         <span>{status === "draft" ? "Draft preview" : `${status} preview`}</span>
-        <Link href="/admin" style={{ color: "white", fontWeight: 700 }}>
-          Back to editor ↗
+        <Link href="/admin/sites" style={{ color: "white", fontWeight: 700 }}>
+          Back to Website Monitor ↗
         </Link>
       </div>
-      <SiteShell
-        site={site}
-        route={resolveSiteRoute(path)}
-        basePath={`/admin/preview/${site.slug}`}
-        previewMode
-      />
+      <VisualOverridesHost site={site} route={route}>
+        <SiteShell
+          site={site}
+          route={route}
+          basePath={`/admin/preview/${site.slug}`}
+          previewMode
+        />
+      </VisualOverridesHost>
     </>
   );
 }
