@@ -12,6 +12,9 @@ const ALLOWED_SOURCE_HOSTS = [
   "dana-farber.org",
   "westlake.edu.cn",
   "ucsf.edu",
+  "unige.ch",
+  "ox.ac.uk",
+  "ed.ac.uk",
 ];
 
 function sourceHostAllowed(hostname: string) {
