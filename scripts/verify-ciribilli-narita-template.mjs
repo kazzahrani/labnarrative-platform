@@ -83,8 +83,8 @@ requireText(
 );
 requireText(
   shell,
-  'if (designVariant === "ciribilli-narita-v1")',
-  "the canonical variant routing is missing",
+  'if (designVariant === "ciribilli-narita-v1" || designVariant === "narita-2-v1")',
+  "the canonical Narita and Narita 2 variant routing is missing",
 );
 requireText(
   shell,
@@ -129,7 +129,7 @@ requireText(
 requireText(
   ciribilliMotion,
   "object-position: center center !important;",
-  "the homepage microscopy image must remain centered within the viewport-fit hero",
+  "the canonical Narita homepage microscopy image must remain centered within the viewport-fit hero",
 );
 
 requireText(
