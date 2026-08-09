@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 import styles from "../payment.module.css";
 
@@ -75,7 +75,7 @@ export default function PrivatePaymentPage() {
     setError("");
     const [{ data: payment, error: rpcError }, providerResult] = await Promise.all([
       supabase.rpc("sales_payment_public_get", { p_token: token }),
-      callProvider("status").catch(() => ({ configured: false })),
+      callProvider("status").catch((): Record<string, unknown> => ({ configured: false })),
     ]);
     if (rpcError) setError(rpcError.message);
     else if (payment && typeof payment === "object" && "error" in payment) setError(String((payment as { error?: string }).error || "Payment request unavailable."));
