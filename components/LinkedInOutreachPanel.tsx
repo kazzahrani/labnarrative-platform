@@ -54,6 +54,11 @@ function connectionNote(piName: string): string {
   return `Dear Professor ${surname}, I recently sent you a website concept I prepared for your laboratory. I’m also a molecular oncology researcher working in p53 and cell-cycle biology, so I wanted to connect here as well. Best wishes, Khaled`;
 }
 
+function postAcceptMessage(piName: string): string {
+  const surname = familyName(piName);
+  return `Thank you for connecting, Professor ${surname}. I hope you had a chance to see the laboratory website concept I sent. I’d be very interested to hear what you think of the direction.`;
+}
+
 function linkedinSearchUrl(piName: string, institution: string): string {
   const query = [piName, institution].filter(Boolean).join(" ");
   return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(query)}`;
@@ -70,7 +75,7 @@ export default function LinkedInOutreachPanel() {
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [draftUrls, setDraftUrls] = useState<Record<string, string>>({});
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -169,12 +174,12 @@ export default function LinkedInOutreachPanel() {
     setSavingId(null);
   }, [draftUrls]);
 
-  const copyNote = useCallback(async (row: OutreachRow) => {
-    const note = row.connection_note.trim() || connectionNote(row.prospect.pi_name);
+  const copyMessage = useCallback(async (prospectId: string, kind: "connection" | "post_accept", message: string) => {
+    const key = `${prospectId}:${kind}`;
     try {
-      await navigator.clipboard.writeText(note);
-      setCopiedId(row.prospect_id);
-      window.setTimeout(() => setCopiedId((current) => current === row.prospect_id ? null : current), 1600);
+      await navigator.clipboard.writeText(message);
+      setCopiedKey(key);
+      window.setTimeout(() => setCopiedKey((current) => current === key ? null : current), 1600);
     } catch {
       setNotice("Clipboard access was unavailable. Select and copy the message manually.");
     }
@@ -220,7 +225,7 @@ export default function LinkedInOutreachPanel() {
             <p className={styles.kicker}>Second-touch channel</p>
             <h2>LinkedIn Outreach</h2>
             <p className={styles.description}>
-              Prepare the personal touch here, then send it yourself on LinkedIn. No automated connection requests or messages are sent by LabNarrative.
+              Use the connection note when you send the request. After the PI accepts, the dashboard reveals a lighter follow-up message. You still send everything yourself on LinkedIn.
             </p>
           </div>
           <div className={styles.headerActions}>
@@ -253,15 +258,20 @@ export default function LinkedInOutreachPanel() {
               <tr>
                 <th>Principal investigator</th>
                 <th>LinkedIn profile</th>
-                <th>Prepared connection note</th>
+                <th>Prepared messages</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {visibleRows.map((row) => {
                 const note = row.connection_note.trim() || connectionNote(row.prospect.pi_name);
+                const followUp = postAcceptMessage(row.prospect.pi_name);
                 const profileUrl = draftUrls[row.prospect_id] ?? row.profile_url;
                 const busy = savingId === row.prospect_id;
+                const showPostAccept = row.status === "connected" || row.status === "message_sent" || row.status === "replied";
+                const connectionCopyKey = `${row.prospect_id}:connection`;
+                const postAcceptCopyKey = `${row.prospect_id}:post_accept`;
+
                 return (
                   <tr key={row.prospect_id}>
                     <td className={styles.piCell}>
@@ -295,11 +305,24 @@ export default function LinkedInOutreachPanel() {
                       </div>
                     </td>
                     <td>
-                      <div className={styles.noteBox}>
-                        <p>{note}</p>
-                        <button type="button" onClick={() => void copyNote(row)}>
-                          {copiedId === row.prospect_id ? "✓ Copied" : "Copy note"}
-                        </button>
+                      <div className={styles.messageStack}>
+                        <div className={styles.noteBox}>
+                          <small className={styles.noteLabel}>Connection request note</small>
+                          <p>{note}</p>
+                          <button type="button" onClick={() => void copyMessage(row.prospect_id, "connection", note)}>
+                            {copiedKey === connectionCopyKey ? "✓ Copied" : "Copy connection note"}
+                          </button>
+                        </div>
+
+                        {showPostAccept && (
+                          <div className={`${styles.noteBox} ${styles.followUpBox}`}>
+                            <small className={styles.noteLabel}>After they accept</small>
+                            <p>{followUp}</p>
+                            <button type="button" onClick={() => void copyMessage(row.prospect_id, "post_accept", followUp)}>
+                              {copiedKey === postAcceptCopyKey ? "✓ Copied" : "Copy follow-up"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td>
