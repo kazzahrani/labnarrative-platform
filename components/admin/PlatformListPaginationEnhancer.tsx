@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 const PAGE_SIZES = [5, 10, 25, 100] as const;
-const DEFAULT_PAGE_SIZE = 5;
+const DEFAULT_PAGE_SIZE = 100;
 
 type PaginationState = {
   page: number;
@@ -85,9 +85,33 @@ export default function PlatformListPaginationEnhancer() {
     const states = new Map<string, PaginationState>();
     const controls = new Map<string, HTMLDivElement>();
 
+    const observe = () => {
+      if (!disposed && observer) {
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    };
+
+    const runWithoutObserver = (task: () => void) => {
+      observer?.disconnect();
+      try {
+        task();
+      } finally {
+        observe();
+      }
+    };
+
     const schedule = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(applyAll);
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        applyAll();
+      });
+    };
+
+    const scheduleFromEvent = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest(".platformListPagination")) return;
+      schedule();
     };
 
     const ensureState = (id: string, signature: string, itemCount: number): PaginationState => {
@@ -125,6 +149,7 @@ export default function PlatformListPaginationEnhancer() {
       anchor: Element,
       itemCount: number,
       state: PaginationState,
+      refreshCurrent: () => void,
     ) => {
       const control = getControl(id, anchor);
       const totalPages = Math.max(1, Math.ceil(itemCount / state.pageSize));
@@ -157,7 +182,7 @@ export default function PlatformListPaginationEnhancer() {
         const value = Number(select.value);
         state.pageSize = PAGE_SIZES.includes(value as (typeof PAGE_SIZES)[number]) ? value : DEFAULT_PAGE_SIZE;
         state.page = 1;
-        applyAll();
+        refreshCurrent();
       });
       sizeLabel.append(select);
       right.append(sizeLabel);
@@ -173,7 +198,7 @@ export default function PlatformListPaginationEnhancer() {
         if (current) button.setAttribute("aria-current", "page");
         button.addEventListener("click", () => {
           state.page = targetPage;
-          applyAll();
+          refreshCurrent();
         });
         buttons.append(button);
       };
@@ -218,7 +243,10 @@ export default function PlatformListPaginationEnhancer() {
         else hideItem(item);
       });
 
-      renderControl(id, anchor, availableItems.length, state);
+      const refreshCurrent = () => {
+        runWithoutObserver(() => paginate(id, items, anchor, keyFor));
+      };
+      renderControl(id, anchor, availableItems.length, state, refreshCurrent);
     };
 
     const tableKey = (row: HTMLElement, index: number): string => {
@@ -365,8 +393,7 @@ export default function PlatformListPaginationEnhancer() {
 
     function applyAll() {
       if (disposed) return;
-      observer?.disconnect();
-      try {
+      runWithoutObserver(() => {
         document.querySelectorAll<HTMLElement>(".discoveryPagination,.productionPagination").forEach((node) => node.remove());
         paginateTables();
         if (pathname === "/admin/automation") {
@@ -375,9 +402,7 @@ export default function PlatformListPaginationEnhancer() {
           paginateAutomationQueue();
           paginateAutomationBlocked();
         }
-      } finally {
-        observer?.observe(document.body, { childList: true, subtree: true });
-      }
+      });
     }
 
     const refreshQueue = async () => {
@@ -390,9 +415,9 @@ export default function PlatformListPaginationEnhancer() {
     };
 
     observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true });
-    document.addEventListener("input", schedule, true);
-    document.addEventListener("change", schedule, true);
+    observe();
+    document.addEventListener("input", scheduleFromEvent, true);
+    document.addEventListener("change", scheduleFromEvent, true);
     applyAll();
 
     if (pathname === "/admin/automation") {
@@ -404,11 +429,11 @@ export default function PlatformListPaginationEnhancer() {
     return () => {
       disposed = true;
       observer?.disconnect();
-      window.cancelAnimationFrame(frame);
+      if (frame) window.cancelAnimationFrame(frame);
       if (queueTimer) window.clearInterval(queueTimer);
       window.removeEventListener("focus", refreshQueue);
-      document.removeEventListener("input", schedule, true);
-      document.removeEventListener("change", schedule, true);
+      document.removeEventListener("input", scheduleFromEvent, true);
+      document.removeEventListener("change", scheduleFromEvent, true);
       controls.forEach((control) => control.remove());
       document.querySelectorAll<HTMLElement>("[data-platform-pagination-hidden='true']").forEach(restoreDisplay);
       document.querySelectorAll<HTMLElement>("[data-platform-queue-extra]").forEach((node) => node.remove());
