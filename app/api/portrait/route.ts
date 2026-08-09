@@ -35,6 +35,8 @@ const ALLOWED_SOURCE_HOSTS = [
   "dartmouth.edu",
   "upenn.edu",
   "fredhutch.org",
+  "crg.eu",
+  "i3s.up.pt",
 ];
 
 function sourceHostAllowed(hostname: string) {
