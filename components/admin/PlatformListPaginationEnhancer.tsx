@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 const PAGE_SIZES = [5, 10, 25, 100] as const;
-const DEFAULT_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 10;
 
 type PaginationState = {
   page: number;
@@ -75,7 +75,12 @@ function pageNumbers(page: number, total: number): Array<number | "…"> {
 export default function PlatformListPaginationEnhancer() {
   useEffect(() => {
     const pathname = window.location.pathname;
-    if (!pathname.startsWith("/admin") || pathname.startsWith("/admin/preview")) return;
+    if (
+      !pathname.startsWith("/admin") ||
+      pathname.startsWith("/admin/preview") ||
+      pathname === "/admin/sites" ||
+      pathname === "/admin/sites-v3"
+    ) return;
 
     let disposed = false;
     let observer: MutationObserver | null = null;
