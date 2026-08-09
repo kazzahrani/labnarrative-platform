@@ -133,7 +133,7 @@ export default function OutreachSetupPage() {
       </p>
       <h1 style={{ margin: "8px 0 10px", fontSize: "clamp(30px,4vw,46px)", lineHeight: 1.05 }}>Automatic reply setup</h1>
       <p style={{ margin: "0 0 28px", maxWidth: 720, opacity: .72, lineHeight: 1.65 }}>
-        LabNarrative uses Resend&apos;s managed receiving domain for PI replies. New outreach uses a unique PI-specific reply address; one SpaceMail forwarding rule below also covers older emails that were sent before that change.
+        LabNarrative uses Resend&apos;s managed receiving domain for PI replies. New outreach uses a unique PI-specific reply address; one iCloud Mail forwarding rule below also covers older emails that were sent before that change.
       </p>
 
       <section style={card}>
@@ -178,22 +178,22 @@ export default function OutreachSetupPage() {
       </section>
 
       <section style={{ ...card, marginTop: 18 }}>
-        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>3. Cover older emails from SpaceMail</h2>
+        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>3. Cover older emails from iCloud Mail</h2>
         {connected ? (
           <>
             <p style={{ color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
-              Add one automatic forwarding address to the <strong>khaled@labnarrative.com</strong> mailbox. Keep a copy in SpaceMail so your normal inbox remains unchanged.
+              Add one automatic forwarding address to the <strong>khaled@labnarrative.com</strong> mailbox. Keep the original messages in iCloud so your normal inbox remains unchanged.
             </p>
             <div style={{ margin: "16px 0", padding: "14px 16px", borderRadius: 12, background: "#0b1722", border: "1px solid rgba(148,163,184,.18)" }}>
               <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: ".08em", color: "rgba(237,243,246,.55)", marginBottom: 6 }}>Forwarding address</div>
               <code style={{ color: "#9ee5c8", fontSize: 15, wordBreak: "break-all" }}>{legacyForwardingAddress}</code>
             </div>
             <p style={{ marginBottom: 0, color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
-              SpaceMail path: <strong>Settings → Forwarding → Add a forwarding address</strong>. Paste the address above, save, and enable <strong>Keep an email copy</strong>. Forwarded PI replies are matched by sender or thread headers; unmatched personal mail is ignored by LabNarrative.
+              Go to <strong>iCloud.com/mail → Settings → Mail Forwarding</strong>. Enable <strong>Forward my email to</strong>, paste the address above, and leave <strong>Delete messages after forwarding</strong> turned off. Forwarded PI replies are matched by sender or thread headers; unmatched personal mail is ignored by LabNarrative.
             </p>
           </>
         ) : (
-          <p style={{ margin: 0, color: "rgba(237,243,246,.72)" }}>Connect Resend first; the exact SpaceMail forwarding address will appear here automatically.</p>
+          <p style={{ margin: 0, color: "rgba(237,243,246,.72)" }}>Connect Resend first; the exact iCloud Mail forwarding address will appear here automatically.</p>
         )}
       </section>
 
