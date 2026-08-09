@@ -20,6 +20,10 @@ const ALLOWED_SOURCE_HOSTS = [
   "viennabiocenter.org",
   "nyu.edu",
   "nyulangone.org",
+  "colostate.edu",
+  "mskcc.org",
+  "warwick.ac.uk",
+  "mit.edu",
 ];
 
 function sourceHostAllowed(hostname: string) {
