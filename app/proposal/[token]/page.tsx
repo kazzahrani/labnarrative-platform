@@ -31,6 +31,7 @@ type PublicData = {
   proposal: Proposal;
   prospect: { pi_name: string; institution: string; department?: string | null; email?: string | null };
   site: { slug?: string; domain_url?: string | null; content?: { labName?: string | null; headline?: string | null } | null } | null;
+  payment?: { token: string; status: string; amount: number | string; currency: string; paid_at?: string | null } | null;
   error?: string;
 };
 
@@ -93,7 +94,7 @@ export default function PublicProposalPage() {
     if (rpcError) setError(rpcError.message);
     else if (response && typeof response === "object" && "error" in response) setError(String((response as { error?: string }).error || "The decision could not be recorded."));
     else {
-      setResult(decision === "accept" ? "Proposal approved. Thank you." : "Your response has been recorded.");
+      setResult(decision === "accept" ? "Proposal approved. Your secure deposit request is ready below." : "Your response has been recorded.");
       setDecision(null);
       await load();
     }
@@ -147,7 +148,12 @@ export default function PublicProposalPage() {
 
         <section className={styles.decisionSection}>
           {proposal.status === "accepted" ? (
-            <div className={styles.accepted}><span>Approved</span><h3>Thank you — the proposal has been approved.</h3><p>Approval was recorded {proposal.accepted_at ? `on ${formatDate(proposal.accepted_at)}` : ""}{proposal.accepted_by_name ? ` by ${proposal.accepted_by_name}` : ""}. LabNarrative will provide the deposit payment step separately.</p></div>
+            <div className={styles.accepted}>
+              <span>Approved</span>
+              <h3>Thank you — the proposal has been approved.</h3>
+              <p>Approval was recorded {proposal.accepted_at ? `on ${formatDate(proposal.accepted_at)}` : ""}{proposal.accepted_by_name ? ` by ${proposal.accepted_by_name}` : ""}. The project begins after the stated deposit is received.</p>
+              {data.payment?.token ? <a className={styles.paymentLink} href={`/pay/${data.payment.token}`}>{data.payment.status === "paid" ? "View payment receipt" : `Continue to secure deposit payment · ${money(Number(data.payment.amount || depositAmount), data.payment.currency || proposal.currency)}`} →</a> : null}
+            </div>
           ) : proposal.status === "declined" ? (
             <div className={styles.closed}><span>Response recorded</span><h3>This proposal was declined.</h3><p>Thank you for letting us know.</p></div>
           ) : proposal.status === "expired" ? (
@@ -171,7 +177,7 @@ export default function PublicProposalPage() {
             <h2>{decision === "accept" ? "Confirm that you would like to proceed." : "Confirm your response."}</h2>
             <label><span>Your name</span><input value={name} onChange={(event)=>setName(event.target.value)} autoFocus /></label>
             <label><span>Email (optional)</span><input type="email" value={email} onChange={(event)=>setEmail(event.target.value)} /></label>
-            {decision === "accept" ? <p className={styles.modalNote}>This records approval of the proposal; it does not charge your card or initiate payment.</p> : null}
+            {decision === "accept" ? <p className={styles.modalNote}>This records approval of the proposal and prepares the exact deposit request. It does not charge your card or initiate payment.</p> : null}
             {error ? <p className={styles.error}>{error}</p> : null}
             <div className={styles.modalActions}><button type="button" onClick={()=>setDecision(null)}>Cancel</button><button type="button" className={decision === "accept" ? styles.acceptButton : styles.declineButton} onClick={()=>void submitDecision()} disabled={submitting || name.trim().length < 2}>{submitting ? "Recording…" : decision === "accept" ? "Confirm approval" : "Confirm decline"}</button></div>
           </section>
