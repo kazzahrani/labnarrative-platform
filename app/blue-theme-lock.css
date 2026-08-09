@@ -76,25 +76,6 @@ html[data-platform-theme="ocean"] body.platform-sales-page h1 {
   max-width: 850px !important;
 }
 
-/* Website Monitor uses dark surfaces throughout; teal is only a restrained accent. */
-body.platform-monitor-page button {
-  border-color: #2d4650 !important;
-  background: #10242d !important;
-  color: #dce7e4 !important;
-  box-shadow: none !important;
-}
-
-body.platform-monitor-page button:hover:not(:disabled) {
-  border-color: #3b5963 !important;
-  background: #162c35 !important;
-}
-
-body.platform-monitor-page [data-admin-workspace-tabs="true"] a[aria-current="page"] {
-  border-color: rgba(86, 132, 137, 0.4) !important;
-  background: #142a33 !important;
-  color: #f0f5f3 !important;
-}
-
 @media (max-width: 680px) {
   .platform-theme-toggle-locked {
     width: auto !important;
