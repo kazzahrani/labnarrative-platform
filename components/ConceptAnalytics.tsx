@@ -9,7 +9,8 @@ const MEDIUM_KEY = "labnarrative:concept-medium";
 const CAMPAIGN_KEY = "labnarrative:concept-campaign";
 const ENGAGED_KEY = "labnarrative:concept-engaged";
 const INTERNAL_DEVICE_COOKIE = "labnarrative_internal_device";
-const ENGAGEMENT_DWELL_MS = 10_000;
+const MIN_INTERACTION_DWELL_MS = 8_000;
+const AUTO_ENGAGEMENT_DWELL_MS = 15_000;
 const ENGAGEMENT_SCROLL_PX = 120;
 
 function safeSessionGet(key: string): string {
@@ -109,28 +110,44 @@ export default function ConceptAnalytics({ slug }: { slug: string }) {
 
     // Raw page loads remain available as diagnostic data. They do not count as
     // qualified sales visits unless this browser session later demonstrates
-    // human engagement.
+    // sustained human-like engagement.
     void sendEvent("page_view").catch(() => {
       // Analytics is intentionally best-effort and invisible to the visitor.
     });
 
-    // One qualified engagement event per browser-tab session. A session is
-    // qualified after either explicit human interaction or 10 seconds of
-    // accumulated visible, focused dwell time.
+    // One qualified engagement event per browser-tab session. Immediate clicks,
+    // taps, key presses, and scrolls are ignored. Interaction can qualify only
+    // after at least 8 seconds of visible, focused dwell time; otherwise the
+    // session must remain visibly focused for 15 seconds to qualify automatically.
     if (safeSessionGet(ENGAGED_KEY)) return;
 
     let disposed = false;
-    let timerId: ReturnType<typeof setTimeout> | null = null;
+    let autoTimerId: ReturnType<typeof setTimeout> | null = null;
     let visibleStartedAt = 0;
-    let remainingVisibleMs = ENGAGEMENT_DWELL_MS;
+    let accumulatedVisibleMs = 0;
     const initialScrollY = window.scrollY;
 
-    const stopVisibleTimer = () => {
-      if (timerId === null) return;
-      clearTimeout(timerId);
-      timerId = null;
+    const clearAutoTimer = () => {
+      if (autoTimerId === null) return;
+      clearTimeout(autoTimerId);
+      autoTimerId = null;
+    };
+
+    const currentVisibleMs = () => {
+      if (
+        visibleStartedAt > 0
+        && document.visibilityState === "visible"
+        && document.hasFocus()
+      ) {
+        return accumulatedVisibleMs + (Date.now() - visibleStartedAt);
+      }
+      return accumulatedVisibleMs;
+    };
+
+    const stopVisibleClock = () => {
+      clearAutoTimer();
       if (visibleStartedAt > 0) {
-        remainingVisibleMs = Math.max(0, remainingVisibleMs - (Date.now() - visibleStartedAt));
+        accumulatedVisibleMs += Date.now() - visibleStartedAt;
         visibleStartedAt = 0;
       }
     };
@@ -138,7 +155,7 @@ export default function ConceptAnalytics({ slug }: { slug: string }) {
     const markEngaged = () => {
       if (disposed || safeSessionGet(ENGAGED_KEY)) return;
 
-      stopVisibleTimer();
+      stopVisibleClock();
       safeSessionSet(ENGAGED_KEY, "pending");
 
       void sendEvent("engaged_visit")
@@ -151,34 +168,49 @@ export default function ConceptAnalytics({ slug }: { slug: string }) {
         });
     };
 
-    const startVisibleTimer = () => {
+    const startVisibleClock = () => {
       if (
-        timerId !== null
-        || remainingVisibleMs <= 0
-        || document.visibilityState !== "visible"
+        document.visibilityState !== "visible"
         || !document.hasFocus()
         || safeSessionGet(ENGAGED_KEY)
       ) {
         return;
       }
 
-      visibleStartedAt = Date.now();
-      timerId = setTimeout(markEngaged, remainingVisibleMs);
+      if (visibleStartedAt === 0) visibleStartedAt = Date.now();
+      clearAutoTimer();
+
+      const remainingAutoMs = Math.max(0, AUTO_ENGAGEMENT_DWELL_MS - currentVisibleMs());
+      if (remainingAutoMs === 0) {
+        markEngaged();
+        return;
+      }
+
+      autoTimerId = setTimeout(markEngaged, remainingAutoMs);
     };
+
+    const canInteractionQualify = () => currentVisibleMs() >= MIN_INTERACTION_DWELL_MS;
 
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible" && document.hasFocus()) {
-        startVisibleTimer();
+        startVisibleClock();
       } else {
-        stopVisibleTimer();
+        stopVisibleClock();
       }
     };
 
     const handleScroll = () => {
-      if (Math.abs(window.scrollY - initialScrollY) >= ENGAGEMENT_SCROLL_PX) markEngaged();
+      if (
+        canInteractionQualify()
+        && Math.abs(window.scrollY - initialScrollY) >= ENGAGEMENT_SCROLL_PX
+      ) {
+        markEngaged();
+      }
     };
 
-    const handleInteraction = () => markEngaged();
+    const handleInteraction = () => {
+      if (canInteractionQualify()) markEngaged();
+    };
 
     document.addEventListener("visibilitychange", handleVisibilityOrFocus);
     window.addEventListener("focus", handleVisibilityOrFocus);
@@ -187,11 +219,11 @@ export default function ConceptAnalytics({ slug }: { slug: string }) {
     window.addEventListener("touchstart", handleInteraction, { passive: true });
     window.addEventListener("keydown", handleInteraction);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    startVisibleTimer();
+    startVisibleClock();
 
     return () => {
       disposed = true;
-      stopVisibleTimer();
+      stopVisibleClock();
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       window.removeEventListener("focus", handleVisibilityOrFocus);
       window.removeEventListener("blur", handleVisibilityOrFocus);
