@@ -1,4 +1,5 @@
-/* Engine v3 Final Review: keep human-gate cards inside the locked blue/dark platform palette. */
+/* Engine v3 work/review/recent cards: keep operational cards inside the locked blue/dark platform palette. */
+body main article:has([data-status="in_production"]) div[class*="event"],
 body main article:has([data-status="awaiting_final_review"]) div[class*="event"],
 body main div[class*="stack"]:last-child > article:last-child div[class*="event"] {
   border-color: #2b4655 !important;
@@ -10,16 +11,25 @@ body main div[class*="stack"]:last-child > article:last-child div[class*="event"
     0 8px 20px rgba(3, 13, 20, 0.14) !important;
 }
 
+body main article:has([data-status="in_production"]) div[class*="event"] > strong,
 body main article:has([data-status="awaiting_final_review"]) div[class*="event"] > strong,
 body main div[class*="stack"]:last-child > article:last-child div[class*="event"] > strong {
   color: #f3f7f9 !important;
 }
 
+body main article:has([data-status="in_production"]) div[class*="event"] > span,
 body main article:has([data-status="awaiting_final_review"]) div[class*="event"] > span,
 body main div[class*="stack"]:last-child > article:last-child div[class*="event"] > span {
   color: #aebbc4 !important;
 }
 
+body main article:has([data-status="in_production"]) div[class*="event"] > time,
+body main article:has([data-status="awaiting_final_review"]) div[class*="event"] > time,
+body main div[class*="stack"]:last-child > article:last-child div[class*="event"] > time {
+  color: #90a3af !important;
+}
+
+body main article:has([data-status="in_production"]) div[class*="event"]:hover,
 body main article:has([data-status="awaiting_final_review"]) div[class*="event"]:hover,
 body main div[class*="stack"]:last-child > article:last-child div[class*="event"]:hover {
   border-color: #355666 !important;
