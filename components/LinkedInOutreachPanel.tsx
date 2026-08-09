@@ -1,0 +1,334 @@
+"use client";
+
+import { createClient } from "@supabase/supabase-js";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import styles from "./linkedin-outreach.module.css";
+
+type LinkedInStatus = "not_contacted" | "connected" | "message_sent" | "replied";
+
+type TrackingRow = {
+  prospect_id: string;
+  profile_url: string;
+  status: LinkedInStatus;
+  connection_note: string;
+  last_action_at: string | null;
+  updated_at: string;
+};
+
+type ProspectRow = {
+  id: string;
+  pi_name: string;
+  institution: string;
+  research_area: string;
+  email: string;
+};
+
+type OutreachRow = TrackingRow & {
+  prospect: ProspectRow;
+};
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+);
+
+const STATUS_OPTIONS: Array<{ value: LinkedInStatus; label: string }> = [
+  { value: "not_contacted", label: "Not contacted" },
+  { value: "connected", label: "Connected" },
+  { value: "message_sent", label: "Message sent" },
+  { value: "replied", label: "Replied" },
+];
+
+function familyName(piName: string): string {
+  const cleaned = piName
+    .replace(/\b(Professor|Prof\.?|Doctor|Dr\.?|Ph\.?D\.?|DPhil|M\.?D\.?|MD|FRS|FMedSci|MBA|MSc|MS)\b/gi, " ")
+    .replace(/[,.()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const parts = cleaned.split(" ").filter(Boolean);
+  return parts.at(-1) || "Professor";
+}
+
+function connectionNote(piName: string): string {
+  const surname = familyName(piName);
+  return `Dear Professor ${surname}, I recently sent you a website concept I prepared for your laboratory. I’m also a molecular oncology researcher working in p53 and cell-cycle biology, so I wanted to connect here as well. Best wishes, Khaled`;
+}
+
+function linkedinSearchUrl(piName: string, institution: string): string {
+  const query = [piName, institution].filter(Boolean).join(" ");
+  return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(query)}`;
+}
+
+function statusLabel(status: LinkedInStatus): string {
+  return STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+}
+
+export default function LinkedInOutreachPanel() {
+  const [rows, setRows] = useState<OutreachRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [draftUrls, setDraftUrls] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const loadRows = useCallback(async () => {
+    setLoading(true);
+    setNotice("");
+
+    const { data: trackingData, error: trackingError } = await supabase
+      .from("linkedin_outreach")
+      .select("prospect_id,profile_url,status,connection_note,last_action_at,updated_at")
+      .order("updated_at", { ascending: false });
+
+    if (trackingError) {
+      setNotice(trackingError.message);
+      setLoading(false);
+      return;
+    }
+
+    const trackingRows = (trackingData ?? []) as TrackingRow[];
+    const ids = trackingRows.map((row) => row.prospect_id);
+
+    if (ids.length === 0) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data: prospectData, error: prospectError } = await supabase
+      .from("prospects")
+      .select("id,pi_name,institution,research_area,email")
+      .in("id", ids);
+
+    if (prospectError) {
+      setNotice(prospectError.message);
+      setLoading(false);
+      return;
+    }
+
+    const prospectMap = new Map(
+      ((prospectData ?? []) as ProspectRow[]).map((prospect) => [prospect.id, prospect]),
+    );
+
+    const merged = trackingRows.flatMap((tracking) => {
+      const prospect = prospectMap.get(tracking.prospect_id);
+      return prospect ? [{ ...tracking, prospect }] : [];
+    });
+
+    setRows(merged);
+    setDraftUrls(Object.fromEntries(merged.map((row) => [row.prospect_id, row.profile_url || ""])));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadRows();
+  }, [loadRows]);
+
+  const updateStatus = useCallback(async (prospectId: string, status: LinkedInStatus) => {
+    setSavingId(prospectId);
+    setNotice("");
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("linkedin_outreach")
+      .update({ status, last_action_at: now, updated_at: now })
+      .eq("prospect_id", prospectId);
+
+    if (error) {
+      setNotice(error.message);
+    } else {
+      setRows((current) => current.map((row) => row.prospect_id === prospectId
+        ? { ...row, status, last_action_at: now, updated_at: now }
+        : row));
+    }
+    setSavingId(null);
+  }, []);
+
+  const saveProfile = useCallback(async (prospectId: string) => {
+    const profileUrl = (draftUrls[prospectId] ?? "").trim();
+    if (profileUrl && !/^https:\/\/(www\.)?linkedin\.com\//i.test(profileUrl)) {
+      setNotice("Please use a LinkedIn profile URL beginning with https://linkedin.com/ or https://www.linkedin.com/.");
+      return;
+    }
+
+    setSavingId(prospectId);
+    setNotice("");
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("linkedin_outreach")
+      .update({ profile_url: profileUrl, updated_at: now })
+      .eq("prospect_id", prospectId);
+
+    if (error) {
+      setNotice(error.message);
+    } else {
+      setRows((current) => current.map((row) => row.prospect_id === prospectId
+        ? { ...row, profile_url: profileUrl, updated_at: now }
+        : row));
+    }
+    setSavingId(null);
+  }, [draftUrls]);
+
+  const copyNote = useCallback(async (row: OutreachRow) => {
+    const note = row.connection_note.trim() || connectionNote(row.prospect.pi_name);
+    try {
+      await navigator.clipboard.writeText(note);
+      setCopiedId(row.prospect_id);
+      window.setTimeout(() => setCopiedId((current) => current === row.prospect_id ? null : current), 1600);
+    } catch {
+      setNotice("Clipboard access was unavailable. Select and copy the message manually.");
+    }
+  }, []);
+
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filtered = rows.filter((row) => {
+      if (!query) return true;
+      return [row.prospect.pi_name, row.prospect.institution, row.prospect.email, row.status]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+
+    const priority: Record<LinkedInStatus, number> = {
+      replied: 4,
+      message_sent: 3,
+      connected: 2,
+      not_contacted: 1,
+    };
+
+    return [...filtered].sort((a, b) => {
+      const statusDifference = priority[b.status] - priority[a.status];
+      if (statusDifference !== 0) return statusDifference;
+      return a.prospect.pi_name.localeCompare(b.prospect.pi_name);
+    });
+  }, [rows, search]);
+
+  const counts = useMemo(() => ({
+    total: rows.length,
+    notContacted: rows.filter((row) => row.status === "not_contacted").length,
+    connected: rows.filter((row) => row.status === "connected").length,
+    messageSent: rows.filter((row) => row.status === "message_sent").length,
+    replied: rows.filter((row) => row.status === "replied").length,
+  }), [rows]);
+
+  return (
+    <section className={styles.section} aria-label="LinkedIn outreach">
+      <div className={styles.panel}>
+        <div className={styles.header}>
+          <div>
+            <p className={styles.kicker}>Second-touch channel</p>
+            <h2>LinkedIn Outreach</h2>
+            <p className={styles.description}>
+              Prepare the personal touch here, then send it yourself on LinkedIn. No automated connection requests or messages are sent by LabNarrative.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search emailed PIs…"
+              aria-label="Search LinkedIn outreach"
+            />
+            <button type="button" onClick={() => void loadRows()} disabled={loading}>
+              {loading ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.summary}>
+          <span><strong>{counts.total}</strong> eligible</span>
+          <span><strong>{counts.notContacted}</strong> not contacted</span>
+          <span><strong>{counts.connected}</strong> connected</span>
+          <span><strong>{counts.messageSent}</strong> messaged</span>
+          <span><strong>{counts.replied}</strong> replied</span>
+        </div>
+
+        {notice && <p className={styles.notice}>{notice}</p>}
+
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Principal investigator</th>
+                <th>LinkedIn profile</th>
+                <th>Prepared connection note</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleRows.map((row) => {
+                const note = row.connection_note.trim() || connectionNote(row.prospect.pi_name);
+                const profileUrl = draftUrls[row.prospect_id] ?? row.profile_url;
+                const busy = savingId === row.prospect_id;
+                return (
+                  <tr key={row.prospect_id}>
+                    <td className={styles.piCell}>
+                      <strong>{row.prospect.pi_name}</strong>
+                      <small>{row.prospect.institution || "—"}</small>
+                      <small>{row.prospect.email || "—"}</small>
+                    </td>
+                    <td>
+                      <div className={styles.profileEditor}>
+                        <input
+                          value={profileUrl}
+                          onChange={(event) => setDraftUrls((current) => ({
+                            ...current,
+                            [row.prospect_id]: event.target.value,
+                          }))}
+                          placeholder="Paste LinkedIn profile URL"
+                          aria-label={`LinkedIn profile for ${row.prospect.pi_name}`}
+                        />
+                        <div className={styles.profileActions}>
+                          <button type="button" onClick={() => void saveProfile(row.prospect_id)} disabled={busy}>
+                            Save
+                          </button>
+                          <a
+                            href={row.profile_url || linkedinSearchUrl(row.prospect.pi_name, row.prospect.institution)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {row.profile_url ? "Open profile ↗" : "Find on LinkedIn ↗"}
+                          </a>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className={styles.noteBox}>
+                        <p>{note}</p>
+                        <button type="button" onClick={() => void copyNote(row)}>
+                          {copiedId === row.prospect_id ? "✓ Copied" : "Copy note"}
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <select
+                        className={`${styles.status} ${styles[`status_${row.status}`]}`}
+                        value={row.status}
+                        onChange={(event) => void updateStatus(row.prospect_id, event.target.value as LinkedInStatus)}
+                        disabled={busy}
+                        aria-label={`LinkedIn status for ${row.prospect.pi_name}`}
+                      >
+                        {STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                      <small className={styles.statusHint}>{statusLabel(row.status)}</small>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {!loading && visibleRows.length === 0 && (
+            <div className={styles.empty}>
+              {search ? "No LinkedIn outreach records match this search." : "No emailed PIs are ready for LinkedIn outreach yet."}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
