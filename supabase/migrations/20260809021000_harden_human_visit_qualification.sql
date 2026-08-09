@@ -3,7 +3,7 @@
 --
 -- A sales visit now requires:
 --   1. a real, non-test outreach send at least five minutes earlier;
---   2. an engaged_visit emitted by the browser tracker;
+--   2. at least eight seconds between the session's first page load and engagement;
 --   3. no nearby multi-session burst on the same concept, even if every load is
 --      on the same page; and
 --   4. no nearby cross-concept burst across LabNarrative.
@@ -48,9 +48,21 @@ engaged_sessions_after_cooldown as (
   where e.event_type = 'engaged_visit'
   group by e.site_id, e.session_id
 ),
+human_timed_engaged_sessions as (
+  select
+    e.site_id,
+    e.session_id,
+    e.engaged_at,
+    e.engaged_path
+  from engaged_sessions_after_cooldown e
+  join raw_sessions_after_cooldown r
+    on r.site_id = e.site_id
+   and r.session_id = e.session_id
+  where e.engaged_at >= r.first_seen_at + interval '8 seconds'
+),
 same_site_scanner_sessions as (
   select distinct candidate.site_id, candidate.session_id
-  from engaged_sessions_after_cooldown candidate
+  from human_timed_engaged_sessions candidate
   join lateral (
     select count(distinct nearby.session_id) as nearby_sessions
     from raw_sessions_after_cooldown nearby
@@ -62,7 +74,7 @@ same_site_scanner_sessions as (
 ),
 cross_site_scanner_sessions as (
   select distinct candidate.site_id, candidate.session_id
-  from engaged_sessions_after_cooldown candidate
+  from human_timed_engaged_sessions candidate
   join lateral (
     select
       count(distinct nearby.site_id) as nearby_sites,
@@ -79,7 +91,7 @@ qualified_sessions as (
     e.site_id,
     e.session_id,
     e.engaged_at
-  from engaged_sessions_after_cooldown e
+  from human_timed_engaged_sessions e
   left join same_site_scanner_sessions same_site
     on same_site.site_id = e.site_id
    and same_site.session_id = e.session_id
@@ -120,7 +132,7 @@ where s.status in ('concept', 'live')
 group by s.id, s.slug, s.status, s.outreach_status, s.content, o.first_outreach_at;
 
 comment on view public.sales_concept_summary is
-  'High-confidence Sales analytics. Visits require browser engagement after the five-minute outreach cooldown and exclude nearby same-concept multi-session bursts plus cross-concept LabNarrative crawling. Raw page loads remain diagnostic only.';
+  'High-confidence Sales analytics. Visits require at least eight seconds before engagement, the five-minute outreach cooldown, and no nearby same-concept multi-session or cross-concept crawler burst. Raw page loads remain diagnostic only.';
 
 revoke all on public.sales_concept_summary from anon, authenticated;
 grant select on public.sales_concept_summary to authenticated;
