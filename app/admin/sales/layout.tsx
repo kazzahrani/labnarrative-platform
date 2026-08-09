@@ -10,6 +10,7 @@ import SalesProposalLauncher from "../../../components/SalesProposalLauncher";
 import SalesPaymentLauncher from "../../../components/SalesPaymentLauncher";
 import SalesOnboardingLauncher from "../../../components/SalesOnboardingLauncher";
 import SalesFinalReviewLauncher from "../../../components/SalesFinalReviewLauncher";
+import SalesLaunchLauncher from "../../../components/SalesLaunchLauncher";
 import LinkedInOutreachPanel from "../../../components/LinkedInOutreachPanel";
 
 export default function SalesLayout({ children }: { children: ReactNode }) {
@@ -34,6 +35,7 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
           <SalesPaymentLauncher prospectId={prospectId} />
           <SalesOnboardingLauncher prospectId={prospectId} />
           <SalesFinalReviewLauncher prospectId={prospectId} />
+          <SalesLaunchLauncher prospectId={prospectId} />
           <SalesReplyAssistant prospectId={prospectId} />
         </>
       ) : null}
