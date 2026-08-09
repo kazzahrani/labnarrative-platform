@@ -31,6 +31,10 @@ const ALLOWED_SOURCE_HOSTS = [
   "berkeley.edu",
   "lbl.gov",
   "duke.edu",
+  "mrclmb.ac.uk",
+  "dartmouth.edu",
+  "upenn.edu",
+  "fredhutch.org",
 ];
 
 function sourceHostAllowed(hostname: string) {
