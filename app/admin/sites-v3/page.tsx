@@ -52,6 +52,19 @@ type Filter = "all" | "problems" | "v3" | "live" | "private" | "legacy";
 const REQUIRED_KEYS = ["slug","piName","labName","title","institution","eyebrow","headline","introduction","focusAreas","projects","team","members","publications","research","pages","theme","design"];
 const ARRAY_KEYS = ["focusAreas","projects","team","members","publications","research"];
 const THEME_KEYS = ["background","surface","foreground","muted","accent"];
+const PAGE_SIZES = [5,10,25,100] as const;
+
+function pageNumbers(page:number,total:number):Array<number|"…"> {
+  if (total<=7) return Array.from({length:total},(_,index)=>index+1);
+  const values:Array<number|"…">=[1];
+  const start=Math.max(2,page-1);
+  const end=Math.min(total-1,page+1);
+  if (start>2) values.push("…");
+  for (let value=start;value<=end;value+=1) values.push(value);
+  if (end<total-1) values.push("…");
+  values.push(total);
+  return values;
+}
 
 function portraitUrl(content: Record<string, any> | null): string {
   return String(content?.pages?.home?.piImage || content?.pages?.contact?.piImage || "").trim();
@@ -139,6 +152,8 @@ export default function SiteMonitorV3Page() {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("updated");
+  const [pageSize,setPageSize] = useState<(typeof PAGE_SIZES)[number]>(100);
+  const [page,setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,6 +178,7 @@ export default function SiteMonitorV3Page() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setPage(1); }, [filter,search,sort,pageSize]);
 
   const runBySite = useMemo(() => {
     const map = new Map<string,V3Run>();
@@ -204,6 +220,13 @@ export default function SiteMonitorV3Page() {
     });
     return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):sort==="problems"?b.issues.length-a.issues.length||Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at):Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at));
   }, [enriched,search,filter,sort]);
+
+  const totalPages=Math.max(1,Math.ceil(visible.length/pageSize));
+  const currentPage=Math.min(page,totalPages);
+  const pageStart=(currentPage-1)*pageSize;
+  const pagedVisible=visible.slice(pageStart,pageStart+pageSize);
+  const rangeStart=visible.length?pageStart+1:0;
+  const rangeEnd=Math.min(visible.length,pageStart+pageSize);
 
   async function checkPortrait(id:string,url:string) {
     if (!url) return;
@@ -258,9 +281,21 @@ export default function SiteMonitorV3Page() {
 
       {problemRows.length?<section className={styles.problemPanel}><div className={styles.problemHeader}><h2>Problems requiring attention</h2><span>{metrics.problems} active site{metrics.problems===1?"":"s"}</span></div><div className={styles.problemGrid}>{problemRows.map(({site,run,prospect,issues})=><article className={styles.problemItem} key={site.id}><div><strong>{piName(site,prospect,run)}</strong><p>{issues.slice(0,3).join(" · ")}</p></div><Link href={`/admin/sites/${site.slug}/edit`}>Fix</Link></article>)}</div></section>:null}
 
+      <div className="platformListPagination" data-platform-native-pagination="sites">
+        <span className="platformListPaginationSummary">{rangeStart}–{rangeEnd} of {visible.length}</span>
+        <div className="platformListPaginationControls">
+          <label className="platformListPageSize">Show <select aria-label="Items per page" value={pageSize} onChange={(event)=>setPageSize(Number(event.target.value) as (typeof PAGE_SIZES)[number])}>{PAGE_SIZES.map((size)=><option value={size} key={size}>{size}</option>)}</select></label>
+          <div className="platformListPageButtons">
+            <button type="button" disabled={currentPage<=1} onClick={()=>setPage(Math.max(1,currentPage-1))}>‹</button>
+            {pageNumbers(currentPage,totalPages).map((value,index)=>value==="…"?<span className="platformListPageEllipsis" key={`ellipsis-${index}`}>…</span>:<button type="button" key={value} aria-current={value===currentPage?"page":undefined} onClick={()=>setPage(value)}>{value}</button>)}
+            <button type="button" disabled={currentPage>=totalPages} onClick={()=>setPage(Math.min(totalPages,currentPage+1))}>›</button>
+          </div>
+        </div>
+      </div>
+
       <div className={styles.tableWrap}><table className={styles.table}>
         <thead><tr><th>Website</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Outreach</th><th>Problems</th><th>Updated</th><th>Actions</th></tr></thead>
-        <tbody>{visible.map(({site,run,prospect,issues})=>{
+        <tbody>{pagedVisible.map(({site,run,prospect,issues})=>{
           const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site,run);
           return <tr id={`site-${site.id}`} key={site.id}>
             <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong><span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
