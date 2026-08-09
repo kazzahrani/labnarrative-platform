@@ -99,13 +99,10 @@ function formatDate(value: string): string {
 function dataIssues(site: SiteRow, run?: V3Run): string[] {
   const issues: string[] = [];
   const content = site.content || {};
-
   if (run) {
     for (const key of REQUIRED_KEYS) {
       const value = content[key];
-      if (value == null || value === "" || (ARRAY_KEYS.includes(key) && !Array.isArray(value)) || (["pages","theme","design"].includes(key) && (typeof value !== "object" || Array.isArray(value)))) {
-        issues.push(`Missing ${key}`);
-      }
+      if (value == null || value === "" || (ARRAY_KEYS.includes(key) && !Array.isArray(value)) || (["pages","theme","design"].includes(key) && (typeof value !== "object" || Array.isArray(value)))) issues.push(`Missing ${key}`);
     }
     if (content.slug && content.slug !== site.slug) issues.push("Slug mismatch");
     for (const key of THEME_KEYS) if (!String(content?.theme?.[key] || "").trim()) issues.push(`Theme ${key}`);
@@ -113,7 +110,6 @@ function dataIssues(site: SiteRow, run?: V3Run): string[] {
     if (run.state === "final_review" && site.status !== "draft") issues.push("Final Review not private");
     if (["published","completed"].includes(run.state) && !["concept","live"].includes(site.status)) issues.push("Published state mismatch");
   }
-
   if (isPublic(site, run)) {
     if (!site.domain_url) issues.push("Public URL missing");
     if (!["live","wildcard_live"].includes(site.domain_status)) issues.push("Domain not live");
@@ -153,13 +149,11 @@ export default function SiteMonitorV3Page() {
     const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle();
     if (role?.role !== "admin") { setAuthState("forbidden"); setLoading(false); return; }
     setAuthState("ready");
-
     const [siteResult, prospectResult, dashboardResult] = await Promise.all([
       supabase.from("sites").select("id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,outreach_status,design_key,design_settings,design_version").order("updated_at", { ascending: false }),
       supabase.from("prospects").select("id,site_id,slug,pi_name,institution,status").not("site_id", "is", null),
       supabase.rpc("engine_v3_admin_dashboard"),
     ]);
-
     const error = siteResult.error || prospectResult.error || dashboardResult.error;
     if (error) setNotice(error.message);
     setSites((siteResult.data || []) as SiteRow[]);
@@ -171,145 +165,117 @@ export default function SiteMonitorV3Page() {
   useEffect(() => { void load(); }, [load]);
 
   const runBySite = useMemo(() => {
-    const map = new Map<string, V3Run>();
+    const map = new Map<string,V3Run>();
     for (const run of runs) {
       if (!run.siteId) continue;
       const previous = map.get(run.siteId);
-      if (!previous || Date.parse(run.updatedAt) > Date.parse(previous.updatedAt)) map.set(run.siteId, run);
+      if (!previous || Date.parse(run.updatedAt) > Date.parse(previous.updatedAt)) map.set(run.siteId,run);
     }
     return map;
   }, [runs]);
-
-  const prospectBySite = useMemo(() => new Map(prospects.filter((p) => p.site_id).map((p) => [p.site_id as string, p])), [prospects]);
+  const prospectBySite = useMemo(() => new Map(prospects.filter((p)=>p.site_id).map((p)=>[p.site_id as string,p])), [prospects]);
 
   const enriched = useMemo(() => sites.map((site) => {
-    const run = runBySite.get(site.id);
-    const prospect = prospectBySite.get(site.id);
-    const issues = dataIssues(site, run);
+    const run=runBySite.get(site.id); const prospect=prospectBySite.get(site.id); const issues=dataIssues(site,run);
     if (health[site.id] && !health[site.id].ok) issues.push(`Site ${health[site.id].error || "unreachable"}`);
     if (portraitHealth[site.id] === "error") issues.push("Portrait not rendering");
-    return { site, run, prospect, issues: [...new Set(issues)] };
-  }), [sites, runBySite, prospectBySite, health, portraitHealth]);
+    return { site, run, prospect, issues:[...new Set(issues)] };
+  }), [sites,runBySite,prospectBySite,health,portraitHealth]);
 
   const metrics = useMemo(() => ({
-    total: enriched.filter((x) => x.site.status !== "archived").length,
-    live: enriched.filter((x) => x.site.status !== "archived" && isPublic(x.site, x.run)).length,
-    private: enriched.filter((x) => x.site.status === "draft").length,
-    finalReview: enriched.filter((x) => x.run?.state === "final_review").length,
-    problems: enriched.filter((x) => x.site.status !== "archived" && x.issues.length > 0).length,
+    total: enriched.filter((x)=>x.site.status!=="archived").length,
+    live: enriched.filter((x)=>x.site.status!=="archived"&&isPublic(x.site,x.run)).length,
+    private: enriched.filter((x)=>x.site.status==="draft").length,
+    finalReview: enriched.filter((x)=>x.run?.state==="final_review").length,
+    problems: enriched.filter((x)=>x.site.status!=="archived"&&x.issues.length>0).length,
   }), [enriched]);
 
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const result = enriched.filter((row) => {
-      const { site, run, prospect, issues } = row;
-      if (site.status === "archived" && filter !== "legacy") return false;
-      if (filter === "problems" && !issues.length) return false;
-      if (filter === "v3" && !run) return false;
-      if (filter === "live" && !isPublic(site, run)) return false;
-      if (filter === "private" && site.status !== "draft") return false;
-      if (filter === "legacy" && run) return false;
+    const q=search.trim().toLowerCase();
+    const result=enriched.filter(({site,run,prospect,issues})=>{
+      if (site.status==="archived"&&filter!=="legacy") return false;
+      if (filter==="problems"&&!issues.length) return false;
+      if (filter==="v3"&&!run) return false;
+      if (filter==="live"&&!isPublic(site,run)) return false;
+      if (filter==="private"&&site.status!=="draft") return false;
+      if (filter==="legacy"&&run) return false;
       if (!q) return true;
-      return [piName(site, prospect, run), institution(site, prospect), site.slug, workflowLabel(site, run), site.outreach_status || "", issues.join(" ")].join(" ").toLowerCase().includes(q);
+      return [piName(site,prospect,run),institution(site,prospect),site.slug,workflowLabel(site,run),site.outreach_status||"",issues.join(" ")].join(" ").toLowerCase().includes(q);
     });
-    return result.sort((a,b) => {
-      if (sort === "name") return piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run));
-      if (sort === "problems") return b.issues.length - a.issues.length || Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at);
-      return Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at);
-    });
-  }, [enriched, search, filter, sort]);
+    return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):sort==="problems"?b.issues.length-a.issues.length||Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at):Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at));
+  }, [enriched,search,filter,sort]);
 
-  async function checkPortrait(id: string, url: string) {
+  async function checkPortrait(id:string,url:string) {
     if (!url) return;
-    setPortraitHealth((prev) => ({ ...prev, [id]: "checking" }));
-    await new Promise<void>((resolve) => {
-      const image = new Image();
-      let settled = false;
-      let timer: ReturnType<typeof setTimeout>;
-      const done = (value: "ok"|"error") => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        setPortraitHealth((prev) => ({ ...prev, [id]: value }));
-        resolve();
-      };
-      image.onload = () => done("ok");
-      image.onerror = () => done("error");
-      timer = setTimeout(() => done("error"), 9000);
-      image.src = url;
+    setPortraitHealth((prev)=>({...prev,[id]:"checking"}));
+    await new Promise<void>((resolve)=>{
+      const image=new Image(); let settled=false; let timer:ReturnType<typeof setTimeout>;
+      const done=(value:"ok"|"error")=>{ if(settled)return; settled=true; clearTimeout(timer); setPortraitHealth((prev)=>({...prev,[id]:value})); resolve(); };
+      image.onload=()=>done("ok"); image.onerror=()=>done("error"); timer=setTimeout(()=>done("error"),9000); image.src=url;
     });
   }
 
   async function runHealthChecks() {
     setChecking(true);
-    const targets = enriched.filter((x) => x.site.status !== "archived" && isPublic(x.site, x.run));
-    for (let i = 0; i < targets.length; i += 25) {
-      const batch = targets.slice(i, i + 25);
-      const response = await fetch("/api/admin/site-health", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ targets: batch.map((x) => ({ id: x.site.id, url: publicUrl(x.site, x.run) })) }) });
-      const payload = await response.json().catch(() => ({ results: [] }));
-      const next: Record<string, Health> = {};
-      for (const item of payload.results || []) next[item.id] = item;
-      setHealth((prev) => ({ ...prev, ...next }));
-      await Promise.all(batch.map((x) => checkPortrait(x.site.id, portraitUrl(x.site.content))));
+    const targets=enriched.filter((x)=>x.site.status!=="archived"&&isPublic(x.site,x.run));
+    for (let i=0;i<targets.length;i+=25) {
+      const batch=targets.slice(i,i+25);
+      const response=await fetch("/api/admin/site-health",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({targets:batch.map((x)=>({id:x.site.id,url:publicUrl(x.site,x.run)}))})});
+      const payload=await response.json().catch(()=>({results:[]}));
+      const next:Record<string,Health>={}; for (const item of payload.results||[]) next[item.id]=item;
+      setHealth((prev)=>({...prev,...next}));
+      await Promise.all(batch.map((x)=>checkPortrait(x.site.id,portraitUrl(x.site.content))));
     }
     setChecking(false);
   }
 
-  if (authState === "loading") return <main className={styles.statePage}>Preparing Website Monitor v3…</main>;
-  if (authState === "signed_out") return <main className={styles.statePage}><section className={styles.stateCard}><p className={styles.kicker}>Website Monitor v3</p><h1>Administrator sign-in required.</h1><p>Sign in through the administrator dashboard and return here.</p><Link href="/admin">Open dashboard</Link></section></main>;
-  if (authState === "forbidden") return <main className={styles.statePage}><section className={styles.stateCard}><p className={styles.kicker}>Website Monitor v3</p><h1>Administrator permission required.</h1><Link href="/admin">Return to dashboard</Link></section></main>;
+  if (authState==="loading") return <main className={styles.statePage}>Preparing Website Monitor v3…</main>;
+  if (authState==="signed_out") return <main className={styles.statePage}><section className={styles.stateCard}><p className={styles.kicker}>Website Monitor v3</p><h1>Administrator sign-in required.</h1><p>Sign in through the administrator dashboard and return here.</p><Link href="/admin">Open dashboard</Link></section></main>;
+  if (authState==="forbidden") return <main className={styles.statePage}><section className={styles.stateCard}><p className={styles.kicker}>Website Monitor v3</p><h1>Administrator permission required.</h1><Link href="/admin">Return to dashboard</Link></section></main>;
 
-  const problemRows = enriched.filter((x) => x.site.status !== "archived" && x.issues.length).slice(0, 8);
+  const problemRows=enriched.filter((x)=>x.site.status!=="archived"&&x.issues.length).slice(0,8);
 
-  return (
-    <main className={styles.page}>
-      <header className={styles.topbar}>
-        <div className={styles.topbarLeft}><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Website Monitor v3</span></div>
-        <nav className={styles.nav}><Link href="/admin/review">Final Review</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sales">Sales</Link></nav>
-      </header>
+  return <main className={styles.page}>
+    <header className={styles.topbar}><div className={styles.topbarLeft}><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Website Monitor v3</span></div><nav className={styles.nav}><Link href="/admin/review">Final Review</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sales">Sales</Link></nav></header>
+    <section className={styles.content}>
+      <div className={styles.hero}><div><p className={styles.kicker}>Site operations</p><h1>Every website. One operational truth.</h1><p>Engine v3 workflow state, publication state, renderer-contract integrity, domain health and portrait rendering are monitored separately so real problems surface immediately.</p></div><div className={styles.heroActions}><button className={styles.buttonSecondary} onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh data"}</button><button className={styles.button} onClick={()=>void runHealthChecks()} disabled={checking}>{checking?"Checking sites…":"Run health checks"}</button></div></div>
 
-      <section className={styles.content}>
-        <div className={styles.hero}>
-          <div><p className={styles.kicker}>Site operations</p><h1>Every website. One operational truth.</h1><p>Engine v3 workflow state, publication state, renderer-contract integrity, domain health and portrait rendering are monitored separately so real problems surface immediately.</p></div>
-          <div className={styles.heroActions}><button className={styles.buttonSecondary} onClick={() => void load()} disabled={loading}>{loading ? "Refreshing…" : "Refresh data"}</button><button className={styles.button} onClick={() => void runHealthChecks()} disabled={checking}>{checking ? "Checking sites…" : "Run health checks"}</button></div>
-        </div>
+      <section className={styles.metrics}>{[
+        {k:"all" as Filter,l:"Active sites",v:metrics.total,s:"Non-archived"},
+        {k:"live" as Filter,l:"Public",v:metrics.live,s:"Published concepts"},
+        {k:"private" as Filter,l:"Private",v:metrics.private,s:"Draft concepts"},
+        {k:"v3" as Filter,l:"Engine v3",v:enriched.filter((x)=>x.run).length,s:`${metrics.finalReview} in Final Review`},
+        {k:"problems" as Filter,l:"Problems",v:metrics.problems,s:"Needs attention"},
+      ].map((m)=><button key={m.k} className={`${styles.metric} ${filter===m.k?styles.metricActive:""}`} onClick={()=>setFilter(m.k)}><span>{m.l}</span><strong>{m.v}</strong><small>{m.s}</small></button>)}</section>
 
-        <section className={styles.metrics}>
-          {[{k:"all" as Filter,l:"Active sites",v:metrics.total,s:"Non-archived"},{k:"live" as Filter,l:"Public",v:metrics.live,s:"Published concepts"},{k:"private" as Filter,l:"Private",v:metrics.private,s:"Draft concepts"},{k:"v3" as Filter,l:"Engine v3",v:enriched.filter(x=>x.run).length,s:`${metrics.finalReview} in Final Review`},{k:"problems" as Filter,l:"Problems",v:metrics.problems,s:"Needs attention"}].map((m)=><button key={m.k} className={`${styles.metric} ${filter===m.k?styles.metricActive:""}`} onClick={()=>setFilter(m.k)}><span>{m.l}</span><strong>{m.v}</strong><small>{m.s}</small></button>)}
-        </section>
-
-        <section className={styles.toolbar}>
-          <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, state or problem…" /></label>
-          <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="problems">Problems</option><option value="v3">Engine v3 only</option><option value="live">Public sites</option><option value="private">Private drafts</option><option value="legacy">Legacy / archived</option></select></label>
-          <label className={styles.field}><span>Sort</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="updated">Recently updated</option><option value="problems">Most problems</option><option value="name">PI name</option></select></label>
-        </section>
-
-        {notice ? <p className={styles.notice}>{notice}</p> : null}
-
-        {problemRows.length ? <section className={styles.problemPanel}><div className={styles.problemHeader}><h2>Problems requiring attention</h2><span>{metrics.problems} active site{metrics.problems===1?"":"s"}</span></div><div className={styles.problemGrid}>{problemRows.map(({site,run,prospect,issues})=><article className={styles.problemItem} key={site.id}><div><strong>{piName(site,prospect,run)}</strong><p>{issues.slice(0,3).join(" · ")}</p></div><a href={`#site-${site.id}`}>Inspect</a></article>)}</div></section> : null}
-
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead><tr><th>Website</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Outreach</th><th>Problems</th><th>Updated</th><th>Actions</th></tr></thead>
-            <tbody>{visible.map(({site,run,prospect,issues})=>{
-              const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site,run);
-              return <tr id={`site-${site.id}`} key={site.id}>
-                <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong><span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
-                <td><span className={pillClass(workflowLabel(site,run))}>{workflowLabel(site,run)}</span>{run?<span className={styles.muted}>v3 · {run.evidenceCount||0} evidence · {run.assetCount||0} assets</span>:<span className={styles.muted}>Legacy record</span>}</td>
-                <td><span className={pillClass(pub?"Public":"Private")}>{pub?"Public":"Private"}</span><span className={styles.muted}>{site.status} · {site.domain_status}</span></td>
-                <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${h?(h.ok?styles.dotGood:styles.dotBad):styles.dotWarn}`}></span>{h?(h.ok?`Healthy · ${h.status}`:`Problem · ${h.error||h.status}`):pub?"Not checked":"Private"}</div></div></td>
-                <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${ph==="ok"?styles.dotGood:ph==="error"?styles.dotBad:styles.dotWarn}`}></span>{!portrait?"Missing":ph==="ok"?"Rendering":ph==="error"?"Not rendering":"Not checked"}</div></div></td>
-                <td><span className={styles.pill}>{site.outreach_status||prospect?.status||"not_contacted"}</span></td>
-                <td>{issues.length?<div className={styles.issues}>{issues.slice(0,5).map((issue)=><span className={styles.issue} key={issue}>{issue}</span>)}</div>:<span className={styles.ok}>No data problems</span>}</td>
-                <td>{formatDate(site.updated_at)}</td>
-                <td><div className={styles.actions}>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run&&["published","completed"].includes(run.state)?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}<Link href="/admin/sales">Sales</Link></div></td>
-              </tr>;
-            })}</tbody>
-          </table>
-          {!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}
-        </div>
-        <p className={styles.footerNote}>Health checks are live HTTP checks against LabNarrative public domains plus browser image-load checks for PI portraits. Renderer-contract checks are applied to Engine v3 sites only; legacy sites remain visible without being judged against the v3 contract.</p>
+      <section className={styles.toolbar}>
+        <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, state or problem…" /></label>
+        <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="problems">Problems</option><option value="v3">Engine v3 only</option><option value="live">Public sites</option><option value="private">Private drafts</option><option value="legacy">Legacy / archived</option></select></label>
+        <label className={styles.field}><span>Sort</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="updated">Recently updated</option><option value="problems">Most problems</option><option value="name">PI name</option></select></label>
       </section>
-    </main>
-  );
+
+      {notice?<p className={styles.notice}>{notice}</p>:null}
+
+      {problemRows.length?<section className={styles.problemPanel}><div className={styles.problemHeader}><h2>Problems requiring attention</h2><span>{metrics.problems} active site{metrics.problems===1?"":"s"}</span></div><div className={styles.problemGrid}>{problemRows.map(({site,run,prospect,issues})=><article className={styles.problemItem} key={site.id}><div><strong>{piName(site,prospect,run)}</strong><p>{issues.slice(0,3).join(" · ")}</p></div><Link href={`/admin/sites/${site.slug}/edit`}>Fix</Link></article>)}</div></section>:null}
+
+      <div className={styles.tableWrap}><table className={styles.table}>
+        <thead><tr><th>Website</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Outreach</th><th>Problems</th><th>Updated</th><th>Actions</th></tr></thead>
+        <tbody>{visible.map(({site,run,prospect,issues})=>{
+          const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site,run);
+          return <tr id={`site-${site.id}`} key={site.id}>
+            <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong><span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
+            <td><span className={pillClass(workflowLabel(site,run))}>{workflowLabel(site,run)}</span>{run?<span className={styles.muted}>v3 · {run.evidenceCount||0} evidence · {run.assetCount||0} assets</span>:<span className={styles.muted}>Legacy record</span>}</td>
+            <td><span className={pillClass(pub?"Public":"Private")}>{pub?"Public":"Private"}</span><span className={styles.muted}>{site.status} · {site.domain_status}</span></td>
+            <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${h?(h.ok?styles.dotGood:styles.dotBad):styles.dotWarn}`}></span>{h?(h.ok?`Healthy · ${h.status}`:`Problem · ${h.error||h.status}`):pub?"Not checked":"Private"}</div></div></td>
+            <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${ph==="ok"?styles.dotGood:ph==="error"?styles.dotBad:styles.dotWarn}`}></span>{!portrait?"Missing":ph==="ok"?"Rendering":ph==="error"?"Not rendering":"Not checked"}</div></div></td>
+            <td><span className={styles.pill}>{site.outreach_status||prospect?.status||"not_contacted"}</span></td>
+            <td>{issues.length?<div className={styles.issues}>{issues.slice(0,5).map((issue)=><span className={styles.issue} key={issue}>{issue}</span>)}</div>:<span className={styles.ok}>No data problems</span>}</td>
+            <td>{formatDate(site.updated_at)}</td>
+            <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>{issues.length?"Edit / Fix":"Edit"}</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run&&["published","completed"].includes(run.state)?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}<Link href="/admin/sales">Sales</Link></div></td>
+          </tr>;
+        })}</tbody>
+      </table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
+      <p className={styles.footerNote}>Health checks are live HTTP checks against LabNarrative public domains plus browser image-load checks for PI portraits. Edit / Fix always opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
+    </section>
+  </main>;
 }
