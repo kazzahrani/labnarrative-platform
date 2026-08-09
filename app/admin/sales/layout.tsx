@@ -7,6 +7,7 @@ import SalesConversionInbox from "../../../components/SalesConversionInbox";
 import SalesDailyActionQueue from "../../../components/SalesDailyActionQueue";
 import SalesReplyAssistant from "../../../components/SalesReplyAssistant";
 import SalesProposalLauncher from "../../../components/SalesProposalLauncher";
+import SalesPaymentLauncher from "../../../components/SalesPaymentLauncher";
 import LinkedInOutreachPanel from "../../../components/LinkedInOutreachPanel";
 
 export default function SalesLayout({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
       ) : prospectId ? (
         <>
           <SalesProposalLauncher prospectId={prospectId} />
+          <SalesPaymentLauncher prospectId={prospectId} />
           <SalesReplyAssistant prospectId={prospectId} />
         </>
       ) : null}
