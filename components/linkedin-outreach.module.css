@@ -197,8 +197,27 @@
   margin-top: 8px;
 }
 
-.noteBox {
+.messageStack {
   width: 470px;
+  display: grid;
+  gap: 10px;
+}
+
+.noteBox {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+}
+
+.noteLabel {
+  display: block;
+  margin-bottom: 6px;
+  color: #83a59b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .noteBox p {
@@ -210,6 +229,15 @@
 .noteBox button {
   margin-top: 8px;
   color: #9de3ce;
+}
+
+.followUpBox {
+  padding-top: 10px;
+  border-top-color: #29434c;
+}
+
+.followUpBox .noteLabel {
+  color: #a7c9be;
 }
 
 .status {
