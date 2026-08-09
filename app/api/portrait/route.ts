@@ -15,6 +15,11 @@ const ALLOWED_SOURCE_HOSTS = [
   "unige.ch",
   "ox.ac.uk",
   "ed.ac.uk",
+  "manchester.ac.uk",
+  "imp.ac.at",
+  "viennabiocenter.org",
+  "nyu.edu",
+  "nyulangone.org",
 ];
 
 function sourceHostAllowed(hostname: string) {
