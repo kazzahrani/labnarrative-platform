@@ -74,7 +74,24 @@ Deno.serve(async (req: Request) => {
   const paymentToken = text(body.token, 100);
 
   if (action === "status") {
-    return json({ ok: true, configured: configured(), environment: (Deno.env.get("PAYPAL_ENVIRONMENT") || "live").toLowerCase() === "sandbox" ? "sandbox" : "live" });
+    const isConfigured = configured();
+    let verified = false;
+    let authError = "";
+    if (isConfigured) {
+      try {
+        await accessToken();
+        verified = true;
+      } catch (error) {
+        authError = error instanceof Error ? error.message : "PayPal authentication failed.";
+      }
+    }
+    return json({
+      ok: true,
+      configured: isConfigured,
+      verified,
+      environment: (Deno.env.get("PAYPAL_ENVIRONMENT") || "live").toLowerCase() === "sandbox" ? "sandbox" : "live",
+      ...(authError ? { authError } : {}),
+    });
   }
   if (!paymentToken) return json({ error: "Payment token is required." }, 400);
 
