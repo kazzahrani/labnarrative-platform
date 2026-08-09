@@ -17,6 +17,14 @@ type SiteRow = {
   design_settings?: Record<string, unknown>;
 };
 
+const PREVIEW_FALLBACK_THEME: LabSite["theme"] = {
+  background: "#f4f3ee",
+  surface: "#ffffff",
+  foreground: "#16231f",
+  muted: "#66736e",
+  accent: "#315f50",
+};
+
 export default function AdminSitePreviewPage() {
   const params = useParams<{ slug: string; path?: string[] }>();
   const slug = String(params.slug ?? "").toLowerCase();
@@ -69,6 +77,7 @@ export default function AdminSitePreviewPage() {
           ...row.content,
           slug: row.content.slug || row.slug,
           schemaVersion: row.content.schemaVersion ?? row.content_schema_version ?? 1,
+          theme: row.content.theme ?? PREVIEW_FALLBACK_THEME,
           design: row.content.design ?? {
             key: row.design_key || row.content.template || "scientific-minimal",
             version: row.design_version ?? 1,
