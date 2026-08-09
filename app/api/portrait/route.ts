@@ -98,28 +98,73 @@ function findPortrait(html: string, sourceUrl: URL, personName: string) {
   return "";
 }
 
+function validatedHttpsUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !sourceHostAllowed(url.hostname)) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+async function proxyImage(imageUrl: URL) {
+  const imageResponse = await fetch(imageUrl, {
+    headers: { "user-agent": "LabNarrativePortraitResolver/1.1" },
+    signal: AbortSignal.timeout(8000),
+    cache: "no-store",
+  });
+
+  const contentType = imageResponse.headers.get("content-type") || "";
+  if (!imageResponse.ok || !contentType.toLowerCase().startsWith("image/")) {
+    return NextResponse.json({ error: "portrait_fetch_failed" }, { status: 502 });
+  }
+
+  const contentLength = Number(imageResponse.headers.get("content-length") || 0);
+  if (contentLength > 5_000_000) {
+    return NextResponse.json({ error: "portrait_too_large" }, { status: 413 });
+  }
+
+  const body = await imageResponse.arrayBuffer();
+  if (body.byteLength > 5_000_000) {
+    return NextResponse.json({ error: "portrait_too_large" }, { status: 413 });
+  }
+
+  return new NextResponse(body, {
+    status: 200,
+    headers: {
+      "content-type": contentType,
+      "cache-control": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   const source = request.nextUrl.searchParams.get("source")?.trim() || "";
   const name = request.nextUrl.searchParams.get("name")?.trim() || "";
+  const directImage = request.nextUrl.searchParams.get("image")?.trim() || "";
 
   if (!source || !name) {
     return NextResponse.json({ error: "missing_source_or_name" }, { status: 400 });
   }
 
-  let sourceUrl: URL;
-  try {
-    sourceUrl = new URL(source);
-  } catch {
-    return NextResponse.json({ error: "invalid_source" }, { status: 400 });
-  }
-
-  if (sourceUrl.protocol !== "https:" || !sourceHostAllowed(sourceUrl.hostname)) {
+  const sourceUrl = validatedHttpsUrl(source);
+  if (!sourceUrl) {
     return NextResponse.json({ error: "source_not_allowed" }, { status: 403 });
   }
 
   try {
+    if (directImage) {
+      const directImageUrl = validatedHttpsUrl(directImage);
+      if (!directImageUrl) {
+        return NextResponse.json({ error: "image_not_allowed" }, { status: 403 });
+      }
+      return await proxyImage(directImageUrl);
+    }
+
     const pageResponse = await fetch(sourceUrl, {
-      headers: { "user-agent": "LabNarrativePortraitResolver/1.0" },
+      headers: { "user-agent": "LabNarrativePortraitResolver/1.1" },
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
     });
@@ -134,35 +179,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "portrait_not_found" }, { status: 404 });
     }
 
-    const imageResponse = await fetch(imageUrl, {
-      headers: { "user-agent": "LabNarrativePortraitResolver/1.0" },
-      signal: AbortSignal.timeout(8000),
-      cache: "no-store",
-    });
-
-    const contentType = imageResponse.headers.get("content-type") || "";
-    if (!imageResponse.ok || !contentType.toLowerCase().startsWith("image/")) {
-      return NextResponse.json({ error: "portrait_fetch_failed" }, { status: 502 });
+    const resolvedImageUrl = validatedHttpsUrl(imageUrl);
+    if (!resolvedImageUrl) {
+      return NextResponse.json({ error: "portrait_image_not_allowed" }, { status: 403 });
     }
 
-    const contentLength = Number(imageResponse.headers.get("content-length") || 0);
-    if (contentLength > 5_000_000) {
-      return NextResponse.json({ error: "portrait_too_large" }, { status: 413 });
-    }
-
-    const body = await imageResponse.arrayBuffer();
-    if (body.byteLength > 5_000_000) {
-      return NextResponse.json({ error: "portrait_too_large" }, { status: 413 });
-    }
-
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        "content-type": contentType,
-        "cache-control": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
-        "x-content-type-options": "nosniff",
-      },
-    });
+    return await proxyImage(resolvedImageUrl);
   } catch {
     return NextResponse.json({ error: "portrait_resolution_failed" }, { status: 502 });
   }
