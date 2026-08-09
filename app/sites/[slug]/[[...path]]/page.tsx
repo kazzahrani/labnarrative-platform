@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import ConceptAnalytics from "@/components/ConceptAnalytics";
 import SiteShell from "@/components/SiteShell";
+import VisualOverridesHost from "@/components/VisualOverridesHost";
 import { getSite, resolveSiteRoute } from "@/lib/sites";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +20,14 @@ export default async function LabSitePage({
     notFound();
   }
 
+  const route = resolveSiteRoute(path);
+
   return (
     <>
       <ConceptAnalytics slug={site.slug} />
-      <SiteShell site={site} route={resolveSiteRoute(path)} />
+      <VisualOverridesHost site={site} route={route}>
+        <SiteShell site={site} route={route} />
+      </VisualOverridesHost>
     </>
   );
 }
