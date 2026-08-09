@@ -37,6 +37,7 @@ const ALLOWED_SOURCE_HOSTS = [
   "fredhutch.org",
   "crg.eu",
   "i3s.up.pt",
+  "icrea.cat",
 ];
 
 function sourceHostAllowed(hostname: string) {
