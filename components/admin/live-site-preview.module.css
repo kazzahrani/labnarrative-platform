@@ -19,10 +19,10 @@
   min-width: 0;
   height: calc(100vh - 90px);
   overflow: hidden;
-  border: 1px solid #cbd4cf;
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 10px 26px rgba(19, 45, 58, 0.08);
+  border: 1px solid #2d4b5c;
+  border-radius: 10px;
+  background: #10212d;
+  box-shadow: 0 12px 30px rgba(2, 10, 16, 0.28);
 }
 
 .previewHeader {
@@ -31,8 +31,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid #dde4df;
-  background: #f7f9f6;
+  border-bottom: 1px solid #294354;
+  background: #132532;
 }
 
 .previewHeader > div {
@@ -43,7 +43,7 @@
 
 .previewHeader strong {
   overflow: hidden;
-  color: #153229;
+  color: #f3f7f9;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 0.94rem;
   font-weight: 400;
@@ -52,12 +52,12 @@
 }
 
 .previewHeader small {
-  color: #6c7a73;
+  color: #9eafb9;
   font-size: 0.61rem;
 }
 
 .kicker {
-  color: #52675e;
+  color: #9eb0bb;
   font-size: 0.54rem;
   font-weight: 800;
   letter-spacing: 0.09em;
@@ -77,27 +77,27 @@
 }
 
 .status_draft {
-  border-color: #c4cbc7;
-  background: #eef0ed;
-  color: #53605a;
+  border-color: #4a6472;
+  background: #1a303d;
+  color: #c8d6de;
 }
 
 .status_concept {
-  border-color: #d8a94d;
-  background: #fff0c9;
-  color: #745219;
+  border-color: #8f6d31;
+  background: #3a2d17;
+  color: #e5c273;
 }
 
 .status_live {
-  border-color: #72a189;
-  background: #e1efe7;
-  color: #174936;
+  border-color: #34705f;
+  background: #12372f;
+  color: #9fe2cf;
 }
 
 .status_archived {
-  border-color: #a99bb8;
-  background: #eee9f2;
-  color: #584b65;
+  border-color: #665572;
+  background: #2d2635;
+  color: #c8b9d3;
 }
 
 .previewNavigation {
@@ -105,17 +105,17 @@
   gap: 3px;
   padding: 6px 7px;
   overflow-x: auto;
-  border-bottom: 1px solid #dde4df;
-  background: #ffffff;
+  border-bottom: 1px solid #294354;
+  background: #10212d;
 }
 
 .previewNavigation button {
   flex: 0 0 auto;
   padding: 6px 7px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 5px;
   background: transparent;
-  color: #64736c;
+  color: #aebbc4;
   font: inherit;
   font-size: 0.59rem;
   font-weight: 800;
@@ -123,13 +123,13 @@
 }
 
 .previewNavigation button:hover {
-  background: #edf2ef;
-  color: #153229;
+  background: #17313e;
+  color: #edf4f7;
 }
 
 .previewNavigation .activePage {
-  border-color: #153229;
-  background: #153229;
+  border-color: #24b5b2;
+  background: #20a9a7;
   color: #ffffff;
 }
 
@@ -139,9 +139,9 @@
   justify-content: space-between;
   gap: 10px;
   padding: 5px 9px;
-  border-bottom: 1px solid #e5e9e6;
-  background: #eef2ef;
-  color: #6b7972;
+  border-bottom: 1px solid #294354;
+  background: #162a37;
+  color: #9eafb9;
   font-size: 0.53rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -153,15 +153,16 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: #ffffff;
+  background: #0b1923;
 }
 
+/* The canvas belongs to the laboratory website itself; its own design is preserved. */
 .previewCanvas {
   width: 640px;
   min-height: 100%;
   margin-inline: auto;
   overflow: hidden;
-  background: #ffffff;
+  background: #0b1923;
 }
 
 .previewCanvas > main {
@@ -174,9 +175,9 @@
 
 .previewFooter {
   padding: 6px 9px;
-  border-top: 1px solid #dde4df;
-  background: #f7f9f6;
-  color: #6b7972;
+  border-top: 1px solid #294354;
+  background: #132532;
+  color: #9eafb9;
   font-size: 0.56rem;
   line-height: 1.35;
 }
@@ -272,7 +273,7 @@
   gap: 10px;
   padding: 9px 11px;
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(21, 50, 41, 0.2);
+  box-shadow: 0 10px 30px rgba(2, 10, 16, 0.3);
 }
 
 :global(.admin-save-bar > div:first-child) {
