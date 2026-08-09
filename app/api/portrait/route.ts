@@ -24,6 +24,12 @@ const ALLOWED_SOURCE_HOSTS = [
   "mskcc.org",
   "warwick.ac.uk",
   "mit.edu",
+  "ucsd.edu",
+  "umcutrecht.nl",
+  "hubrecht.eu",
+  "ucsc.edu",
+  "berkeley.edu",
+  "lbl.gov",
 ];
 
 function sourceHostAllowed(hostname: string) {
