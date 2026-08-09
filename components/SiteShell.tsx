@@ -118,7 +118,7 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
     return <EngelandDesignWithFigures site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
-  if (designVariant === "ciribilli-narita-v1") {
+  if (designVariant === "ciribilli-narita-v1" || designVariant === "narita-2-v1") {
     if (route.section === "research") {
       const researchSite = { ...site, heroImage: CIRIBILLI_RESEARCH_HERO };
       return <CiribilliResearchDesign site={researchSite} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
