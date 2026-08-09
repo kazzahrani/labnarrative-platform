@@ -1,0 +1,278 @@
+.section {
+  background: #0c1a23;
+  color: #eef4f1;
+  padding: 0 28px 36px;
+}
+
+.panel {
+  width: min(1500px, 100%);
+  margin: 0 auto;
+  background: #10232d;
+  border: 1px solid #2a404a;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
+  padding: 22px;
+  border-bottom: 1px solid #263b45;
+}
+
+.kicker {
+  margin: 0 0 7px;
+  color: #91a7a0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+}
+
+.header h2 {
+  margin: 0;
+  color: #eef4f1;
+  font-size: 1.35rem;
+}
+
+.description {
+  max-width: 760px;
+  margin: 7px 0 0;
+  color: #99aaa5;
+  line-height: 1.55;
+  font-size: 0.9rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.headerActions input,
+.profileEditor input {
+  border: 1px solid #314a55;
+  border-radius: 10px;
+  background: #0c1b24;
+  color: #edf4f1;
+  font: inherit;
+}
+
+.headerActions input {
+  width: 250px;
+  padding: 9px 12px;
+}
+
+.headerActions button,
+.profileActions button,
+.noteBox button,
+.profileActions a {
+  border: 1px solid #31505a;
+  border-radius: 9px;
+  background: #142b35;
+  color: #e6efec;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.headerActions button:hover,
+.profileActions button:hover,
+.noteBox button:hover,
+.profileActions a:hover {
+  border-color: #5f9b88;
+  background: #19333d;
+}
+
+.headerActions button:disabled,
+.profileActions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 22px;
+  border-bottom: 1px solid #263b45;
+  background: #0e2029;
+}
+
+.summary span {
+  color: #93a8a1;
+  border: 1px solid #29434c;
+  background: #132932;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+}
+
+.summary strong {
+  color: #81dec2;
+}
+
+.notice {
+  margin: 14px 22px;
+  padding: 10px 12px;
+  border: 1px solid #5e5030;
+  border-radius: 10px;
+  background: #2c2617;
+  color: #e6cf91;
+  font-size: 0.84rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 1280px;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 11px 14px;
+  text-align: left;
+  color: #8fa39d;
+  background: #0d1f28;
+  border-bottom: 1px solid #263b45;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.table td {
+  padding: 14px;
+  vertical-align: top;
+  border-bottom: 1px solid #213640;
+  background: #10232d;
+  color: #dce7e3;
+  font-size: 0.86rem;
+}
+
+.table tbody tr:hover td {
+  background: #142b35;
+}
+
+.piCell {
+  width: 240px;
+}
+
+.piCell strong,
+.piCell small {
+  display: block;
+}
+
+.piCell strong {
+  color: #edf4f1;
+  margin-bottom: 5px;
+}
+
+.piCell small {
+  color: #8fa19c;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.profileEditor {
+  width: 310px;
+}
+
+.profileEditor input {
+  width: 100%;
+  padding: 9px 10px;
+}
+
+.profileActions {
+  display: flex;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.noteBox {
+  width: 470px;
+}
+
+.noteBox p {
+  margin: 0;
+  color: #c8d6d1;
+  line-height: 1.5;
+}
+
+.noteBox button {
+  margin-top: 8px;
+  color: #9de3ce;
+}
+
+.status {
+  min-width: 145px;
+  border-radius: 999px;
+  padding: 7px 10px;
+  border: 1px solid #31505a;
+  background: #132630;
+  color: #dfe9e5;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.status_not_contacted {
+  border-color: #3d5058;
+  color: #adbbb6;
+}
+
+.status_connected {
+  border-color: #3b665a;
+  color: #a8ddcc;
+}
+
+.status_message_sent {
+  border-color: #52705c;
+  color: #c6e5b7;
+}
+
+.status_replied {
+  border-color: #4b8f77;
+  background: #16372f;
+  color: #aaf0d8;
+}
+
+.statusHint {
+  display: block;
+  margin-top: 7px;
+  color: #7f938d;
+  font-size: 0.7rem;
+}
+
+.empty {
+  padding: 38px 22px;
+  text-align: center;
+  color: #8fa19c;
+}
+
+@media (max-width: 760px) {
+  .section {
+    padding: 0 18px 28px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions input {
+    width: 100%;
+  }
+}
