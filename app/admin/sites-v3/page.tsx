@@ -224,11 +224,19 @@ export default function SiteMonitorV3Page() {
     setPortraitHealth((prev) => ({ ...prev, [id]: "checking" }));
     await new Promise<void>((resolve) => {
       const image = new Image();
-      const done = (value: "ok"|"error") => { setPortraitHealth((prev) => ({ ...prev, [id]: value })); resolve(); };
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout>;
+      const done = (value: "ok"|"error") => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        setPortraitHealth((prev) => ({ ...prev, [id]: value }));
+        resolve();
+      };
       image.onload = () => done("ok");
       image.onerror = () => done("error");
+      timer = setTimeout(() => done("error"), 9000);
       image.src = url;
-      setTimeout(() => done("error"), 9000);
     });
   }
 
