@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 type IntegrationState = {
@@ -121,6 +121,10 @@ export default function OutreachSetupPage() {
   }
 
   const connected = integration?.status === "connected" && integration?.inbound_status === "managed_ready" && Boolean(integration?.inbound_domain);
+  const legacyForwardingAddress = useMemo(
+    () => integration?.inbound_domain ? `legacy-replies@${integration.inbound_domain}` : "",
+    [integration?.inbound_domain],
+  );
 
   return (
     <main style={shell}>
@@ -129,11 +133,11 @@ export default function OutreachSetupPage() {
       </p>
       <h1 style={{ margin: "8px 0 10px", fontSize: "clamp(30px,4vw,46px)", lineHeight: 1.05 }}>Automatic reply setup</h1>
       <p style={{ margin: "0 0 28px", maxWidth: 720, opacity: .72, lineHeight: 1.65 }}>
-        LabNarrative will use Resend&apos;s free managed receiving domain for PI replies. This avoids a second custom-domain charge and requires no DNS changes.
+        LabNarrative uses Resend&apos;s managed receiving domain for PI replies. New outreach uses a unique PI-specific reply address; one SpaceMail forwarding rule below also covers older emails that were sent before that change.
       </p>
 
       <section style={card}>
-        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>1. Copy your Resend Receiving address</h2>
+        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>1. Resend Receiving connection</h2>
         <p style={{ color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
           In Resend, open <strong>Emails → Receiving</strong>, click the <strong>⋯</strong> menu, then choose <strong>Receiving address</strong>. Copy the address ending in <strong>.resend.app</strong> and paste it below.
         </p>
@@ -165,7 +169,7 @@ export default function OutreachSetupPage() {
           <>
             <p style={{ margin: "0 0 8px", fontWeight: 800, color: "#8bd3b0" }}>✓ Automatic reply detection is connected</p>
             <p style={{ margin: 0, color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
-              Receiving domain: <strong>{integration?.inbound_domain}</strong>. No Spaceship or DNS changes are required.
+              Receiving domain: <strong>{integration?.inbound_domain}</strong>. No DNS changes are required.
             </p>
           </>
         ) : (
@@ -174,9 +178,29 @@ export default function OutreachSetupPage() {
       </section>
 
       <section style={{ ...card, marginTop: 18 }}>
-        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>What happens after connection</h2>
+        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>3. Cover older emails from SpaceMail</h2>
+        {connected ? (
+          <>
+            <p style={{ color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
+              Add one automatic forwarding address to the <strong>khaled@labnarrative.com</strong> mailbox. Keep a copy in SpaceMail so your normal inbox remains unchanged.
+            </p>
+            <div style={{ margin: "16px 0", padding: "14px 16px", borderRadius: 12, background: "#0b1722", border: "1px solid rgba(148,163,184,.18)" }}>
+              <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: ".08em", color: "rgba(237,243,246,.55)", marginBottom: 6 }}>Forwarding address</div>
+              <code style={{ color: "#9ee5c8", fontSize: 15, wordBreak: "break-all" }}>{legacyForwardingAddress}</code>
+            </div>
+            <p style={{ marginBottom: 0, color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
+              SpaceMail path: <strong>Settings → Forwarding → Add a forwarding address</strong>. Paste the address above, save, and enable <strong>Keep an email copy</strong>. Forwarded PI replies are matched by sender or thread headers; unmatched personal mail is ignored by LabNarrative.
+            </p>
+          </>
+        ) : (
+          <p style={{ margin: 0, color: "rgba(237,243,246,.72)" }}>Connect Resend first; the exact SpaceMail forwarding address will appear here automatically.</p>
+        )}
+      </section>
+
+      <section style={{ ...card, marginTop: 18 }}>
+        <h2 style={{ marginTop: 0, color: "#f4f8fa" }}>What happens after setup</h2>
         <p style={{ marginBottom: 0, color: "rgba(237,243,246,.72)", lineHeight: 1.65 }}>
-          Every new outreach thread gets a unique PI-specific Reply-To address on the Resend-managed domain. Replies are matched to the PI and email thread, saved in LabNarrative, forwarded to <strong>khaled@labnarrative.com</strong>, and any remaining follow-ups stop immediately. Follow-ups also reuse Message-ID headers so they remain grouped with Email 1 in major mail clients.
+          New outreach threads use unique PI-specific Reply-To addresses. Replies to older outreach that still arrive at <strong>khaled@labnarrative.com</strong> are copied through the legacy forwarding address above. Human replies are saved in LabNarrative, surfaced in Sales, and remaining follow-ups stop; automatic replies are recorded without stopping the sequence.
         </p>
       </section>
     </main>
