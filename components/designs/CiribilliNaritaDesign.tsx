@@ -17,7 +17,8 @@ type CiribilliNaritaDesignProps = {
 
 export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const heroSite = withNaritaHero(props.site);
+  const isNarita2 = props.site.design?.settings?.variant === "narita-2-v1";
+  const heroSite = isNarita2 ? props.site : withNaritaHero(props.site);
   const naritaSite = props.route.section === "research"
     ? withoutNaritaResearchImages(heroSite)
     : heroSite;
@@ -58,7 +59,7 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
   }, [props.route.section]);
 
   return (
-    <div className="ciribilli-narita-shell" ref={rootRef}>
+    <div className={`ciribilli-narita-shell${isNarita2 ? " narita-2-shell" : ""}`} ref={rootRef}>
       <NaritaOverlapDesign {...props} site={naritaSite} />
       <style jsx global>{`
         .ciribilli-narita-shell {
@@ -119,6 +120,16 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
             scale(1.1) !important;
           transition: none !important;
           will-change: transform;
+        }
+
+        .narita-2-shell .narita-route-home main > section:first-of-type > img {
+          object-position: center 44% !important;
+          transform: translate3d(
+              0,
+              var(--ciribilli-home-image-offset, 0px),
+              0
+            )
+            scale(1.035) !important;
         }
 
         .ciribilli-narita-shell .narita-route-home main > section:first-of-type > div:nth-of-type(2) {
