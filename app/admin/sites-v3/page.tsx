@@ -121,8 +121,8 @@ function productionHistoryLabel(site: SiteRow, run?: V3Run): string {
     if (run.state === "blocked") return "Blocked";
     return run.state.replaceAll("_", " ");
   }
-  if (site.status === "draft") return "Legacy draft";
-  if (site.status === "concept") return "Legacy concept";
+  if (site.status === "draft") return "Pre-v3 draft";
+  if (site.status === "concept") return "Pre-v3 concept";
   if (site.status === "live") return "Legacy client";
   if (site.status === "archived") return "Archived";
   return site.status;
