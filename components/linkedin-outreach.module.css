@@ -5,7 +5,7 @@
 }
 
 .panel {
-  width: min(1500px, 100%);
+  width: min(1480px, 100%);
   margin: 0 auto;
   background: #10232d;
   border: 1px solid #2a404a;
@@ -14,12 +14,16 @@
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 24px;
-  align-items: flex-end;
-  padding: 22px;
+  align-items: end;
+  padding: 24px 26px;
   border-bottom: 1px solid #263b45;
+}
+
+.headerCopy {
+  min-width: 0;
 }
 
 .kicker {
@@ -34,7 +38,7 @@
 .header h2 {
   margin: 0;
   color: #eef4f1;
-  font-size: 1.35rem;
+  font-size: 1.42rem;
 }
 
 .description {
@@ -46,7 +50,8 @@
 }
 
 .headerActions {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) auto;
   gap: 8px;
   align-items: center;
 }
@@ -58,10 +63,12 @@
   background: #0c1b24;
   color: #edf4f1;
   font: inherit;
+  box-sizing: border-box;
 }
 
 .headerActions input {
-  width: 250px;
+  width: 100%;
+  min-width: 0;
   padding: 9px 12px;
 }
 
@@ -100,7 +107,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 12px 22px;
+  padding: 12px 26px;
   border-bottom: 1px solid #263b45;
   background: #0e2029;
 }
@@ -119,7 +126,7 @@
 }
 
 .notice {
-  margin: 14px 22px;
+  margin: 14px 26px;
   padding: 10px 12px;
   border: 1px solid #5e5030;
   border-radius: 10px;
@@ -128,15 +135,102 @@
   font-size: 0.84rem;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 26px;
+  border-bottom: 1px solid #263b45;
+  background: #0f212a;
+  color: #91a59f;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.paginationBottom {
+  border-top: 1px solid #263b45;
+  border-bottom: 0;
+}
+
+.paginationControls,
+.paginationControls label,
+.pageButtons {
+  display: flex;
+  align-items: center;
+}
+
+.paginationControls {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.paginationControls label {
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.paginationControls select,
+.pageButtons button {
+  min-height: 28px;
+  height: 28px;
+  border: 1px solid #38515e;
+  border-radius: 7px;
+  background: #182832;
+  color: #dbe3e8;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.paginationControls select {
+  padding: 0 24px 0 8px;
+}
+
+.pageButtons {
+  gap: 4px;
+}
+
+.pageButtons button {
+  min-width: 28px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.pageButtons button[aria-current="page"] {
+  border-color: #24b5b2;
+  background: #24b5b2;
+  color: #071b22;
+}
+
+.pageButtons button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.pageButtons > span {
+  min-width: 16px;
+  text-align: center;
+  opacity: 0.6;
+}
+
 .tableWrap {
+  width: 100%;
   overflow-x: auto;
 }
 
 .table {
   width: 100%;
-  min-width: 1280px;
+  min-width: 1120px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
+
+.colPi { width: 21%; }
+.colProfile { width: 27%; }
+.colMessage { width: 40%; }
+.colStatus { width: 12%; }
 
 .table th {
   padding: 11px 14px;
@@ -150,20 +244,17 @@
 }
 
 .table td {
-  padding: 14px;
+  padding: 16px 14px;
   vertical-align: top;
   border-bottom: 1px solid #213640;
   background: #10232d;
   color: #dce7e3;
   font-size: 0.86rem;
+  overflow-wrap: anywhere;
 }
 
 .table tbody tr:hover td {
   background: #142b35;
-}
-
-.piCell {
-  width: 240px;
 }
 
 .piCell strong,
@@ -183,7 +274,8 @@
 }
 
 .profileEditor {
-  width: 310px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .profileEditor input {
@@ -195,16 +287,18 @@
   display: flex;
   gap: 7px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .messageStack {
-  width: 470px;
+  width: 100%;
   display: grid;
   gap: 10px;
 }
 
 .noteBox {
   width: 100%;
+  min-width: 0;
   border: 1px solid transparent;
   border-radius: 12px;
   padding: 0;
@@ -223,7 +317,7 @@
 .noteBox p {
   margin: 0;
   color: #c8d6d1;
-  line-height: 1.5;
+  line-height: 1.48;
 }
 
 .noteBox button {
@@ -241,14 +335,16 @@
 }
 
 .status {
-  min-width: 145px;
-  border-radius: 999px;
-  padding: 7px 10px;
+  width: 100%;
+  min-width: 0;
+  max-width: 165px;
+  border-radius: 10px;
+  padding: 8px 9px;
   border: 1px solid #31505a;
   background: #132630;
   color: #dfe9e5;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
 }
 
@@ -286,21 +382,40 @@
   color: #8fa19c;
 }
 
+@media (max-width: 1040px) {
+  .header {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .headerActions {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
 @media (max-width: 760px) {
   .section {
     padding: 0 18px 28px;
   }
 
-  .header {
-    flex-direction: column;
-    align-items: stretch;
+  .header,
+  .summary,
+  .pagination {
+    padding-left: 18px;
+    padding-right: 18px;
   }
 
   .headerActions {
-    width: 100%;
+    grid-template-columns: 1fr;
   }
 
-  .headerActions input {
+  .pagination,
+  .paginationControls {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .paginationControls {
     width: 100%;
   }
 }
