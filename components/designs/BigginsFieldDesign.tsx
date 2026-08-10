@@ -1,0 +1,79 @@
+import Link from "next/link";
+import type { LabSite, SiteRoute } from "@/lib/sites";
+import styles from "./BigginsFieldDesign.module.css";
+
+type ResearchProgram = {
+  slug: string;
+  title: string;
+  introduction: string;
+  sourceUrl?: string;
+  heroImage?: string;
+  heroCaption?: string;
+  projects: { title: string; text: string; image?: string; caption?: string }[];
+};
+type PublicationGroup = { year: string; items: { citation: string; href?: string }[] };
+type FormerGroup = { label: string; items: string[] };
+type BigginsSite = LabSite & {
+  researchOverview?: string[];
+  researchQuestions?: string[];
+  researchPrograms?: ResearchProgram[];
+  publicationGroups?: PublicationGroup[];
+  invitedReviews?: { citation: string; href?: string }[];
+  formerMemberGroups?: FormerGroup[];
+  contactDetails?: { administratorEmail?: string; administratorPhone?: string };
+};
+
+const imageResolver = (source: string, q: string) => `/api/fredhutch-image?source=${encodeURIComponent(source)}&q=${encodeURIComponent(q)}`;
+const HOME = "https://research.fredhutch.org/biggins/en.html";
+const MEMBERS = "https://research.fredhutch.org/biggins/en/lab-members.html";
+
+function Header({ basePath, previewMode }: { basePath: string; previewMode?: boolean }) {
+  const nav = [["Research","research"],["Lab Members","members"],["Publications","publications"],["Join","join"],["Contact","contact"]];
+  return <><div className={styles.banner}>{previewMode ? "Private administrator preview" : "LabNarrative concept · independent redesign"}</div><header className={styles.header}><Link className={styles.brand} href={basePath}>Biggins Lab</Link><nav>{nav.map(([label,path])=><Link key={path} href={`${basePath}/${path}`}>{label}</Link>)}</nav></header></>;
+}
+
+function HomePage({ site, basePath }: { site: BigginsSite; basePath: string }) {
+  const programs = site.researchPrograms ?? [];
+  return <>
+    <section className={styles.hero}>
+      <img src={imageResolver(HOME,"Biggins Lab")} alt="Biggins Lab group" />
+      <div className={styles.heroCopy}><div><p className={styles.eyebrow}>Fred Hutch Cancer Center · Basic Sciences Division</p><h1>How cells get the right chromosomes.</h1></div><p>{site.introduction}</p></div>
+    </section>
+    <div className={styles.marquee}><span>Kinetochore architecture</span><span>Centromeric chromatin</span><span>Tension sensing</span><span>Chromosome segregation</span><span>Genome stability</span></div>
+    <section className={styles.intro}><div><p className={styles.eyebrow}>Research mission</p><h2>Precision at the chromosome–microtubule interface.</h2></div><p>{site.overview}</p></section>
+    <section className={styles.programs}>{programs.map((program,index)=><Link className={styles.program} key={program.slug} href={`${basePath}/research/${program.slug}`}><span>0{index+1}</span><div><h3>{program.title}</h3><p>{program.introduction}</p></div></Link>)}</section>
+    <section className={styles.featured}><p className={styles.eyebrow}>Featured publications</p>{site.publications.slice(0,3).map((p)=><article key={`${p.year}-${p.title}`}><span>{p.year}</span><div><h3>{p.title}</h3><p>{p.journal}</p></div></article>)}<Link href={`${basePath}/publications`}>View complete publication record →</Link></section>
+  </>;
+}
+
+function ResearchPage({ site, route, basePath }: { site: BigginsSite; route: SiteRoute; basePath: string }) {
+  const programs = site.researchPrograms ?? [];
+  const current = route.projectSlug ? programs.find((program)=>program.slug===route.projectSlug) : undefined;
+  if (!current) return <section className={styles.page}><p className={styles.eyebrow}>Research</p><h1>Accurate chromosome segregation.</h1>{(site.researchOverview ?? []).map((paragraph,index)=><p className={styles.lead} key={index}>{paragraph}</p>)}<div className={styles.questions}>{(site.researchQuestions ?? []).map((q)=><div key={q}>{q}</div>)}</div><div className={styles.researchCards}>{programs.map((program)=><Link href={`${basePath}/research/${program.slug}`} key={program.slug}><strong>{program.title}</strong><span>{program.introduction}</span></Link>)}</div></section>;
+
+  const source = current.sourceUrl || `${HOME.replace(/en\.html$/,"")}en/research/${current.slug}.html`;
+  const heroQuery = current.heroCaption || current.title;
+  return <article className={styles.page}><Link className={styles.back} href={`${basePath}/research`}>← Research overview</Link><p className={styles.eyebrow}>Research programme</p><h1>{current.title}</h1><figure className={styles.programHero}><img src={imageResolver(source,heroQuery)} alt={current.heroCaption || current.title}/><figcaption className={styles.caption}>{current.heroCaption}</figcaption></figure><p className={styles.lead}>{current.introduction}</p><div className={styles.projects}>{current.projects.map((project,index)=><section className={styles.project} key={`${current.slug}-${index}`}><div><span className={styles.eyebrow}>Project {String(index+1).padStart(2,"0")}</span><h2>{project.title}</h2><p>{project.text}</p></div>{project.image || project.caption ? <figure><img src={imageResolver(source,project.caption || project.title)} alt={project.caption || project.title}/><figcaption className={styles.caption}>{project.caption}</figcaption></figure>:null}</section>)}</div></article>;
+}
+
+function MembersPage({ site }: { site: BigginsSite }) {
+  return <section className={styles.page}><p className={styles.eyebrow}>People</p><h1>Current Biggins Lab.</h1><div className={styles.members}>{(site.members ?? []).map((member)=><article className={styles.member} key={member.name}><img src={imageResolver(MEMBERS,member.name)} alt={member.name}/><div><h2>{member.name}</h2><p className={styles.role}>{member.role}</p>{member.bio?<p>{member.bio}</p>:null}</div></article>)}</div>{site.formerMemberGroups?.length?<section className={styles.former}><h2>Former lab members</h2>{site.formerMemberGroups.map((group)=><section key={group.label}><h3>{group.label}</h3><p>{group.items.join(" · ")}</p></section>)}</section>:null}</section>;
+}
+
+function PublicationsPage({ site }: { site: BigginsSite }) {
+  const groups = site.publicationGroups ?? [];
+  return <section className={styles.page}><p className={styles.eyebrow}>Publications</p><h1>Original research.</h1><div className={styles.pubNav}>{groups.map((group)=><a key={group.year} href={`#year-${group.year.replace(/\s+/g,"-")}`}>{group.year}</a>)}</div>{groups.map((group)=><section className={styles.year} id={`year-${group.year.replace(/\s+/g,"-")}`} key={group.year}><h2>{group.year}</h2><div>{group.items.map((item,index)=><p key={index}>{item.href?<a href={item.href} target="_blank" rel="noreferrer">{item.citation}</a>:item.citation}</p>)}</div></section>)}{site.invitedReviews?.length?<section className={styles.reviews}><h2>Invited reviews</h2>{site.invitedReviews.map((item,index)=><p key={index}>{item.href?<a href={item.href} target="_blank" rel="noreferrer">{item.citation}</a>:item.citation}</p>)}</section>:null}</section>;
+}
+
+function JoinPage({ site }: { site: BigginsSite }) {
+  return <section className={styles.page}><p className={styles.eyebrow}>Join the Lab</p><h1>Build an independent question.</h1><div className={styles.joinGrid}>{(site.opportunities ?? []).map((opportunity)=><article className={styles.joinCard} key={opportunity.title}><h2>{opportunity.title}</h2><p>{opportunity.description}</p></article>)}</div></section>;
+}
+
+function ContactPage({ site }: { site: BigginsSite }) {
+  return <section className={styles.page}><p className={styles.eyebrow}>Contact</p><h1>Biggins Lab.</h1><div className={styles.contactGrid}><article className={styles.contactCard}><h2>Sue Biggins</h2><p>Principal Investigator & Director</p><p><a href={`mailto:${site.email}`}>{site.email}</a></p><p>{site.phone}</p></article><article className={styles.contactCard}><h2>Robin Evans</h2><p>Research Administrator</p><p><a href={`mailto:${site.contactDetails?.administratorEmail}`}>{site.contactDetails?.administratorEmail}</a></p><p>{site.contactDetails?.administratorPhone}</p></article><article className={styles.contactCard}><h2>Mailing address</h2><p>{site.address}</p></article></div></section>;
+}
+
+export default function BigginsFieldDesign({ site, route, basePath, previewMode }: { site: LabSite; route: SiteRoute; basePath: string; previewMode?: boolean }) {
+  const s = site as BigginsSite;
+  return <div className={styles.root}><Header basePath={basePath} previewMode={previewMode}/>{route.section==="home"&&<HomePage site={s} basePath={basePath}/>} {route.section==="research"&&<ResearchPage site={s} route={route} basePath={basePath}/>} {route.section==="members"&&<MembersPage site={s}/>} {route.section==="publications"&&<PublicationsPage site={s}/>} {route.section==="join"&&<JoinPage site={s}/>} {route.section==="contact"&&<ContactPage site={s}/>}<footer className={styles.footer}><strong>Biggins Lab</strong><span>Fred Hutch Cancer Center</span><span>Independent concept by LabNarrative</span></footer></div>;
+}
