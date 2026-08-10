@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import BigginsNarita2Design from "@/components/designs/BigginsNarita2Design";
+import BigginsNarita2Design from "@/components/designs/BigginsNarita2ClientDesign";
 import BourdonDesign from "@/components/designs/BourdonDesign";
 import CiribilliNaritaDesign from "@/components/designs/CiribilliNaritaDesign";
 import CiribilliResearchDesign from "@/components/designs/CiribilliResearchDesign";
