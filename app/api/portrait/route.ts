@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ALLOWED_SOURCE_HOSTS = [
-  "ucl.ac.uk","sussex.ac.uk","qub.ac.uk","birmingham.ac.uk","massgeneral.org","mgh.harvard.edu","dfhcc.harvard.edu","uni-wuerzburg.de","dana-farber.org","westlake.edu.cn","ucsf.edu","unige.ch","ox.ac.uk","ed.ac.uk","manchester.ac.uk","imp.ac.at","viennabiocenter.org","nyu.edu","nyulangone.org","colostate.edu","mskcc.org","warwick.ac.uk","mit.edu","ucsd.edu","umcutrecht.nl","hubrecht.eu","ucsc.edu","berkeley.edu","lbl.gov","duke.edu","mrclmb.ac.uk","dartmouth.edu","upenn.edu","fredhutch.org","crg.eu","i3s.up.pt","icrea.cat",
+  "ucl.ac.uk","sussex.ac.uk","qub.ac.uk","birmingham.ac.uk","massgeneral.org","mgh.harvard.edu","dfhcc.harvard.edu","uni-wuerzburg.de","dana-farber.org","westlake.edu.cn","ucsf.edu","unige.ch","ox.ac.uk","ed.ac.uk","manchester.ac.uk","imp.ac.at","viennabiocenter.org","nyu.edu","nyulangone.org","colostate.edu","mskcc.org","warwick.ac.uk","mit.edu","ucsd.edu","umcutrecht.nl","hubrecht.eu","ucsc.edu","berkeley.edu","lbl.gov","duke.edu","mrclmb.ac.uk","dartmouth.edu","upenn.edu","fredhutch.org","crg.eu","i3s.up.pt","icrea.cat","vt.edu",
 ];
 
 function sourceHostAllowed(hostname: string) {
