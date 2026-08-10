@@ -45,12 +45,17 @@ export default function PreV3OutreachDraftPage(){
     if(!session||action||!draft||draft.status!=="draft")return;
     if(!recipientEmail.trim()){setNotice("Add the verified recipient email before sending.");return}
     setAction("send");
+    setNotice("");
     try{
       await persistDraft(session,false);
       const result=await sendThroughLabNarrative(session,runId);
+      setDraft(current=>current?{...current,status:"sent",providerMessageId:result.providerMessageId||current.providerMessageId,sentAt:new Date().toISOString()}:current);
       setNotice(result.alreadySent?"This outreach email had already been sent.":`Email sent successfully to ${result.recipient||recipientEmail}.`);
-      await load(session);
-    }catch(error){setNotice(error instanceof Error?error.message:"The email could not be sent.")}finally{setAction("")}
+    }catch(error){
+      setNotice(error instanceof Error?error.message:"The email could not be sent.");
+    }finally{
+      setAction("");
+    }
   }
 
   if(!ready)return <main className={styles.state}>Preparing outreach draft…</main>;
@@ -61,7 +66,7 @@ export default function PreV3OutreachDraftPage(){
     <header className={styles.topbar}><div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Outreach</span></div><nav><Link href="/admin/sites">Websites</Link><Link href="/admin/sales">Sales</Link></nav></header>
     <section className={styles.content}>
       <div className={styles.hero}><div><p className={styles.kicker}>Human-controlled outreach</p><h1>Review, then send E1.</h1><p>This is the compatibility outreach flow for live pre-v3 concepts. Saving never sends. “Send Email Now” sends only after your explicit click and then activates the normal F1 → F2 sequence.</p></div></div>
-      <div className={styles.safety} data-status={draft?.status||"draft"}><strong>{draft?.status==="sent"?"Outreach complete:":"Human gate:"}</strong><span>{draft?.status==="sent"?"E1 is already recorded as sent. The editor is now read-only.":`Outreach status is ${draft?.status||"draft"}. Nothing is sent unless you explicitly click Send Email Now.`}</span></div>
+      <div className={styles.safety} data-status={draft?.status||"draft"}><strong>{draft?.status==="sent"?"Outreach complete:":action==="send"?"Sending E1:":"Human gate:"}</strong><span>{draft?.status==="sent"?"E1 is recorded as sent. The editor is now read-only.":action==="send"?"LabNarrative is sending the reviewed E1 now. Please keep this page open until the send completes.":`Outreach status is ${draft?.status||"draft"}. Nothing is sent unless you explicitly click Send Email Now.`}</span></div>
       {notice?<p className={styles.notice}>{notice}</p>:null}
       {!draft&&!notice?<p>Loading outreach draft…</p>:null}
       {draft?<form className={styles.form} onSubmit={save}>
