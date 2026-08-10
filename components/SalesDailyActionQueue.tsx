@@ -252,8 +252,8 @@ export default function SalesDailyActionQueue() {
   }
 
   return (
-    <section className={styles.section} aria-label="Daily sales action queue">
-      <div className={styles.shell}>
+    <section className={styles.section} aria-label="Daily sales action queue" data-platform-pagination-display="native">
+      <div className={styles.shell} data-platform-pagination-display="native">
         <header className={styles.header}>
           <div>
             <p className={styles.kicker}>Daily operating queue · {todayLabel()} · Riyadh</p>
@@ -292,9 +292,9 @@ export default function SalesDailyActionQueue() {
         {pagination}
 
         {tab === "completed" ? (
-          <div className={styles.list}>
+          <div className={styles.list} data-platform-pagination-display="native">
             {completed.length === 0 ? <p className={styles.empty}>No completed sales actions yet.</p> : pagedCompleted.map((action) => (
-              <article className={`${styles.action} ${styles.completedAction}`} key={action.id}>
+              <article className={`${styles.action} ${styles.completedAction}`} key={action.id} data-platform-pagination-display="native">
                 <div className={`${styles.typeMark} ${actionTone(action.action_type)}`}></div>
                 <div className={styles.actionBody}>
                   <div className={styles.actionTitle}><div><span className={styles.typeLabel}>{label(action.action_type)}</span><h3>{action.title}</h3></div><time>Done {formatDate(action.completed_at)}</time></div>
@@ -308,11 +308,11 @@ export default function SalesDailyActionQueue() {
             ))}
           </div>
         ) : (
-          <div className={styles.list}>
+          <div className={styles.list} data-platform-pagination-display="native">
             {loading && visible.length === 0 ? <p className={styles.empty}>Loading the live sales queue…</p> : null}
             {!loading && visible.length === 0 ? <p className={styles.empty}>Nothing in {tab} right now.</p> : null}
             {pagedVisible.map((action) => (
-              <article className={styles.action} key={action.action_key}>
+              <article className={styles.action} key={action.action_key} data-platform-pagination-display="native">
                 <div className={`${styles.typeMark} ${actionTone(action.action_type)}`}></div>
                 <div className={styles.actionBody}>
                   <div className={styles.actionTitle}>
