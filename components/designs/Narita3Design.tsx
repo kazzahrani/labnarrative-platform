@@ -29,11 +29,12 @@ export default function Narita3Design(props: Narita3DesignProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [heroTarget, setHeroTarget] = useState<HTMLElement | null>(null);
   const pages = getBourdonPages(props.site);
+  const homeOverview = (pages.home as typeof pages.home & { overview?: string }).overview;
   const pi = props.site.members?.[0];
   const portrait = safeAsset(pages.home.piImage || pages.home.topPortrait || pi?.image);
   const piName = pages.home.piName || props.site.piName;
   const piRole = pages.home.piRole || pi?.role || props.site.title;
-  const overview = pages.home.piBiography || pages.home.overview || pi?.bio || props.site.introduction;
+  const overview = pages.home.piBiography || homeOverview || pi?.bio || props.site.introduction;
 
   useEffect(() => {
     if (props.route.section !== "home") {
