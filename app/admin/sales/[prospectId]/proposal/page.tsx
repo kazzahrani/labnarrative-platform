@@ -23,6 +23,7 @@ type Proposal = {
   price_amount: number | string;
   currency: string;
   deposit_percent: number | string;
+  deposit_base_amount: number | string | null;
   valid_until: string;
   terms_text: string;
   private_notes: string;
@@ -84,6 +85,7 @@ type FormState = {
   price: string;
   currency: string;
   depositPercent: string;
+  depositBaseAmount: string;
   validUntil: string;
   terms: string;
   privateNotes: string;
@@ -108,6 +110,7 @@ function proposalToForm(proposal: Proposal): FormState {
     price: String(proposal.price_amount ?? ""),
     currency: proposal.currency || "USD",
     depositPercent: String(proposal.deposit_percent ?? 25),
+    depositBaseAmount: proposal.deposit_base_amount == null ? "" : String(proposal.deposit_base_amount),
     validUntil: proposal.valid_until || "",
     terms: proposal.terms_text || "",
     privateNotes: proposal.private_notes || "",
@@ -170,8 +173,11 @@ export default function ProposalBuilderPage() {
 
   const amount = Number(form?.price || 0) || 0;
   const depositPercent = Number(form?.depositPercent || 0) || 0;
-  const depositAmount = useMemo(() => Math.round(amount * depositPercent) / 100, [amount, depositPercent]);
+  const requestedDepositBase = form?.depositBaseAmount.trim() ? Number(form.depositBaseAmount) : amount;
+  const depositBaseAmount = Number.isFinite(requestedDepositBase) ? requestedDepositBase : amount;
+  const depositAmount = useMemo(() => Math.round(depositBaseAmount * depositPercent) / 100, [depositBaseAmount, depositPercent]);
   const balanceAmount = Math.max(0, amount - depositAmount);
+  const customDepositBase = form?.depositBaseAmount.trim() !== "" && depositBaseAmount !== amount;
   const websiteUrl = data?.site?.domain_url || (data?.site?.slug ? `https://${data.site.slug}.labnarrative.com` : "");
   const shareUrl = data?.proposal.share_enabled ? `https://labnarrative.com/proposal/${data.proposal.share_token}` : "";
   const locked = data?.proposal.status === "accepted" || data?.proposal.status === "declined";
@@ -188,7 +194,7 @@ export default function ProposalBuilderPage() {
       return;
     }
     const preset = presets[key];
-    setForm({ ...form, packageKey: key, packageName: preset.name, price: preset.price, timeline: preset.timeline });
+    setForm({ ...form, packageKey: key, packageName: preset.name, price: preset.price, timeline: preset.timeline, depositBaseAmount: "" });
   }
 
   function updateList(key: "scope" | "deliverables" | "process", index: number, value: string) {
@@ -212,7 +218,7 @@ export default function ProposalBuilderPage() {
     if (!data || !form || locked) return false;
     setSaving(true);
     setError("");
-    const { data: result, error: rpcError } = await supabase.rpc("sales_proposal_admin_save", {
+    const { data: result, error: rpcError } = await supabase.rpc("sales_proposal_admin_save_v2", {
       p_proposal_id: data.proposal.id,
       p_package_key: form.packageKey,
       p_package_name: form.packageName,
@@ -225,6 +231,7 @@ export default function ProposalBuilderPage() {
       p_price_amount: amount,
       p_currency: form.currency,
       p_deposit_percent: depositPercent,
+      p_deposit_base_amount: form.depositBaseAmount.trim() === "" ? null : depositBaseAmount,
       p_valid_until: form.validUntil,
       p_terms_text: form.terms,
       p_private_notes: form.privateNotes,
@@ -409,14 +416,20 @@ export default function ProposalBuilderPage() {
           <div>
             <p className={styles.eyebrow}>Payment structure</p>
             <h3>{depositPercent}% deposit to begin</h3>
-            <p>The remaining balance is due before final handover.</p>
+            <p>{customDepositBase ? `The deposit is calculated on ${money(depositBaseAmount, form.currency)} of the project total. The excluded portion is payable with the remaining balance.` : "The remaining balance is due before final handover."}</p>
           </div>
           <dl>
             <div><dt>Project total</dt><dd>{money(amount, form.currency)}</dd></div>
+            {customDepositBase ? <div><dt>Deposit base</dt><dd>{money(depositBaseAmount, form.currency)}</dd></div> : null}
             <div><dt>Deposit</dt><dd>{money(depositAmount, form.currency)}</dd></div>
             <div><dt>Remaining balance</dt><dd>{money(balanceAmount, form.currency)}</dd></div>
           </dl>
-          {mode === "edit" && !locked ? <label className={styles.depositEditor}><span>Deposit %</span><input inputMode="decimal" value={form.depositPercent} onChange={(event) => update("depositPercent", event.target.value)} /></label> : null}
+          {mode === "edit" && !locked ? (
+            <div>
+              <label className={styles.depositEditor}><span>Deposit %</span><input inputMode="decimal" value={form.depositPercent} onChange={(event) => update("depositPercent", event.target.value)} /></label>
+              <label className={styles.depositEditor}><span>Deposit base amount</span><input inputMode="decimal" value={form.depositBaseAmount} placeholder={`Full total (${amount || 0})`} onChange={(event) => update("depositBaseAmount", event.target.value)} /></label>
+            </div>
+          ) : null}
         </section>
 
         <section className={styles.sectionBlock}>
