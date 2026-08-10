@@ -118,6 +118,13 @@ body.platform-discovery-page .automaticQueueTable td:nth-child(3) {
   overflow-wrap: anywhere;
 }
 
+/* Keep emphasized table text readable in both the light source theme and
+   the dark production Discovery shell. The table cell already carries the
+   correct foreground color; do not force a dark color on nested <strong>. */
+body.platform-discovery-page table td strong {
+  color: inherit !important;
+}
+
 @media (max-width: 760px) {
   .discoveryPagination,
   .discoveryPaginationControls {
