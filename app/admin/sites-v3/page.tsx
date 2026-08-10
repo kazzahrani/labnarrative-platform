@@ -82,6 +82,32 @@ function publicUrl(site: SiteRow, run?: V3Run): string {
   return String(site.domain_url || run?.publicUrl || `https://${site.slug}.labnarrative.com`);
 }
 
+function designLabel(site: SiteRow): string {
+  const variant = String(site.design_settings?.variant || site.content?.design?.variant || "").trim();
+  const known: Record<string,string> = {
+    "ciribilli-narita-v1": "Narita",
+    "dobbelstein-editorial-v1": "Dobbelstein Editorial",
+    "portrait-first-v1": "Portrait First",
+    "goyette-evolution-v1": "Goyette Evolution",
+    "prives-photo-lab-v1": "Prives Photo Lab",
+    "zhang-transcription-v1": "Zhang Transcription",
+    "gao-ecosystem-v1": "Gao Ecosystem",
+    "biggins-field-v1": "Biggins Field",
+    "editorial-image-v1": "Editorial Image",
+  };
+  if (known[variant]) return known[variant];
+  if (variant) return variant.replace(/-v\d+$/i, "").split("-").map((part)=>part.charAt(0).toUpperCase()+part.slice(1)).join(" ");
+  return String(site.design_key || site.content?.design?.key || "Unspecified");
+}
+
+function followUpStage(site: SiteRow): number {
+  const status=String(site.outreach_status||"").toLowerCase();
+  if (["email_3_sent","followup_2_sent"].includes(status)) return 3;
+  if (["email_2_sent","followup_1_sent"].includes(status)) return 2;
+  if (["email_1_sent","initial_sent","no_response_yet","interested","replied"].includes(status)) return 1;
+  return 0;
+}
+
 function isPublic(site: SiteRow, run?: V3Run): boolean {
   if (run && ["published","completed"].includes(run.state)) return true;
   return ["concept","live"].includes(site.status);
@@ -216,7 +242,7 @@ export default function SiteMonitorV3Page() {
       if (filter==="private"&&site.status!=="draft") return false;
       if (filter==="legacy"&&run) return false;
       if (!q) return true;
-      return [piName(site,prospect,run),institution(site,prospect),site.slug,workflowLabel(site,run),site.outreach_status||"",issues.join(" ")].join(" ").toLowerCase().includes(q);
+      return [piName(site,prospect,run),institution(site,prospect),site.slug,workflowLabel(site,run),designLabel(site),site.outreach_status||"",issues.join(" ")].join(" ").toLowerCase().includes(q);
     });
     return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):sort==="problems"?b.issues.length-a.issues.length||Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at):Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at));
   }, [enriched,search,filter,sort]);
@@ -272,7 +298,7 @@ export default function SiteMonitorV3Page() {
       ].map((m)=><button key={m.k} className={`${styles.metric} ${filter===m.k?styles.metricActive:""}`} onClick={()=>setFilter(m.k)}><span>{m.l}</span><strong>{m.v}</strong><small>{m.s}</small></button>)}</section>
 
       <section className={styles.toolbar}>
-        <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, state or problem…" /></label>
+        <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, design, state or problem…" /></label>
         <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="problems">Problems</option><option value="v3">Engine v3 only</option><option value="live">Public sites</option><option value="private">Private drafts</option><option value="legacy">Legacy / archived</option></select></label>
         <label className={styles.field}><span>Sort</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="updated">Recently updated</option><option value="problems">Most problems</option><option value="name">PI name</option></select></label>
       </section>
@@ -294,23 +320,24 @@ export default function SiteMonitorV3Page() {
       </div>
 
       <div className={styles.tableWrap}><table className={styles.table}>
-        <thead><tr><th>Website</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Outreach</th><th>Problems</th><th>Updated</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Website</th><th>Design</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Follow-up</th><th>Problems</th><th>Updated</th><th>Actions</th></tr></thead>
         <tbody>{pagedVisible.map(({site,run,prospect,issues})=>{
-          const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site,run);
+          const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site,run); const followUp=followUpStage(site);
           return <tr id={`site-${site.id}`} key={site.id}>
             <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong><span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
+            <td><span className={styles.pill}>{designLabel(site)}</span><span className={styles.muted}>{site.design_key||"design"}{site.design_version?` · v${site.design_version}`:""}</span></td>
             <td><span className={pillClass(workflowLabel(site,run))}>{workflowLabel(site,run)}</span>{run?<span className={styles.muted}>v3 · {run.evidenceCount||0} evidence · {run.assetCount||0} assets</span>:<span className={styles.muted}>Legacy record</span>}</td>
             <td><span className={pillClass(pub?"Public":"Private")}>{pub?"Public":"Private"}</span><span className={styles.muted}>{site.status} · {site.domain_status}</span></td>
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${h?(h.ok?styles.dotGood:styles.dotBad):styles.dotWarn}`}></span>{h?(h.ok?`Healthy · ${h.status}`:`Problem · ${h.error||h.status}`):pub?"Not checked":"Private"}</div></div></td>
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${ph==="ok"?styles.dotGood:ph==="error"?styles.dotBad:styles.dotWarn}`}></span>{!portrait?"Missing":ph==="ok"?"Rendering":ph==="error"?"Not rendering":"Not checked"}</div></div></td>
-            <td><span className={styles.pill}>{site.outreach_status||prospect?.status||"not_contacted"}</span></td>
+            <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={followUp>=1?`${styles.pill} ${styles.pillGood}`:styles.pill}>E1</span><span>›</span><span className={followUp>=2?`${styles.pill} ${styles.pillGood}`:styles.pill}>F1</span><span>›</span><span className={followUp>=3?`${styles.pill} ${styles.pillGood}`:styles.pill}>F2</span></div><span className={styles.muted}>{site.outreach_status||prospect?.status||"not_contacted"}</span></div></td>
             <td>{issues.length?<div className={styles.issues}>{issues.slice(0,5).map((issue)=><span className={styles.issue} key={issue}>{issue}</span>)}</div>:<span className={styles.ok}>No data problems</span>}</td>
             <td>{formatDate(site.updated_at)}</td>
             <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>{issues.length?"Edit / Fix":"Edit"}</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run&&["published","completed"].includes(run.state)?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}<Link href="/admin/sales">Sales</Link></div></td>
           </tr>;
         })}</tbody>
       </table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
-      <p className={styles.footerNote}>Health checks are live HTTP checks against LabNarrative public domains plus browser image-load checks for PI portraits. Edit / Fix always opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
+      <p className={styles.footerNote}>Health checks are live HTTP checks against LabNarrative public domains plus browser image-load checks for PI portraits. Follow-up shows the outreach sequence E1 → F1 → F2 from each site’s outreach status. Edit / Fix always opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
     </section>
   </main>;
 }
