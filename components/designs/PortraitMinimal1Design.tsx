@@ -48,10 +48,10 @@ export default function PortraitMinimal1Design(props: PortraitMinimal1DesignProp
         <nav aria-label={`${props.site.labName} navigation`}>
           <Link className="active" href={props.basePath}>Home</Link>
           <Link href={`${props.basePath}/research`}>Research</Link>
-          <Link href={`${props.basePath}/members`}>People</Link>
+          <Link href={`${props.basePath}/members`}>Lab Members</Link>
           <Link href={`${props.basePath}/publications`}>Publications</Link>
-          <Link href={`${props.basePath}/join`}>Join</Link>
-          <Link href={`${props.basePath}/contact`}>Contact</Link>
+          <Link href={`${props.basePath}/join`}>Join Our Lab</Link>
+          <Link href={`${props.basePath}/contact`}>Contact Us</Link>
         </nav>
       </header>
 
@@ -67,20 +67,11 @@ export default function PortraitMinimal1Design(props: PortraitMinimal1DesignProp
           </div>
 
           <div className="portrait-minimal-info">
-            <div className="portrait-minimal-info-top">
-              <p>Principal Investigator</p>
-              <span>{props.site.department}</span>
-            </div>
-            <div className="portrait-minimal-info-main">
-              <h1>{piName}</h1>
-              {piRole && <h2>{piRole}</h2>}
-              <p className="portrait-minimal-institution">{props.site.institution}</p>
-              {overview && <p className="portrait-minimal-overview">{overview}</p>}
-            </div>
-            <div className="portrait-minimal-info-bottom">
-              {props.site.email && <a href={`mailto:${props.site.email}`}>{props.site.email}</a>}
-              <Link href={`${props.basePath}/research`}>View research →</Link>
-            </div>
+            <p className="portrait-minimal-eyebrow">Principal Investigator</p>
+            <h1>{piName}</h1>
+            {piRole && <h2>{piRole}</h2>}
+            {overview && <p className="portrait-minimal-overview">{overview}</p>}
+            <Link className="portrait-minimal-cta" href={`${props.basePath}/members`}>Meet the lab →</Link>
           </div>
         </section>
       </main>
@@ -88,22 +79,26 @@ export default function PortraitMinimal1Design(props: PortraitMinimal1DesignProp
       <footer className="portrait-minimal-footer">
         <div>
           <strong>{props.site.labName}</strong>
+          <span>{props.site.department}</span>
           <span>{props.site.institution}</span>
         </div>
         <div>
           <Link href={`${props.basePath}/research`}>Research</Link>
-          <Link href={`${props.basePath}/members`}>People</Link>
+          <Link href={`${props.basePath}/members`}>Lab Members</Link>
           <Link href={`${props.basePath}/publications`}>Publications</Link>
-          <Link href={`${props.basePath}/contact`}>Contact</Link>
+          <Link href={`${props.basePath}/contact`}>Contact Us</Link>
         </div>
-        <span>Independent concept by LabNarrative</span>
+        <div>
+          {props.site.email && <a href={`mailto:${props.site.email}`}>{props.site.email}</a>}
+          <span>Independent concept by LabNarrative</span>
+        </div>
       </footer>
 
       <style jsx global>{`
         .portrait-minimal-1 {
           min-height: 100vh;
-          background: #f4f2ed;
-          color: #000;
+          background: #000;
+          color: #101a17;
           font-family: Arial, Helvetica, sans-serif;
         }
         .portrait-minimal-1 * { box-sizing: border-box; }
@@ -121,188 +116,194 @@ export default function PortraitMinimal1Design(props: PortraitMinimal1DesignProp
         }
 
         .portrait-minimal-header {
-          min-height: 118px;
-          padding: 24px clamp(24px, 4vw, 64px) 20px;
-          display: grid;
-          grid-template-columns: 1fr auto;
-          align-items: end;
-          gap: 36px;
+          min-height: 158px;
+          padding: 34px clamp(32px, 5vw, 78px) 30px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 20px;
           background: #000;
           color: #fff;
         }
 
         .portrait-minimal-brand {
-          font-family: Georgia, "Times New Roman", serif;
-          font-size: clamp(28px, 2.4vw, 40px);
+          width: fit-content;
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: clamp(25px, 2vw, 34px);
+          font-weight: 500;
           line-height: 1;
-          letter-spacing: -.03em;
+          letter-spacing: -.025em;
+          text-transform: uppercase;
         }
 
         .portrait-minimal-header nav {
           display: flex;
           flex-wrap: wrap;
-          justify-content: flex-end;
-          gap: 18px 26px;
+          gap: 18px 29px;
         }
 
         .portrait-minimal-header nav a {
-          padding-bottom: 5px;
+          position: relative;
+          padding: 4px 0 9px;
           font-size: 10px;
           font-weight: 700;
-          letter-spacing: .15em;
+          letter-spacing: .17em;
           text-transform: uppercase;
-          opacity: .62;
-          border-bottom: 1px solid transparent;
+          color: rgba(255,255,255,.62);
         }
         .portrait-minimal-header nav a:hover,
-        .portrait-minimal-header nav a.active { opacity: 1; }
-        .portrait-minimal-header nav a.active { border-bottom-color: #fff; }
+        .portrait-minimal-header nav a.active { color: #fff; }
+        .portrait-minimal-header nav a.active::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 1px;
+          background: #fff;
+        }
 
         .portrait-minimal-main {
-          padding: clamp(22px, 2.5vw, 40px);
-          background: #f4f2ed;
+          margin: 0;
+          padding: 0;
+          background: #ecebea;
         }
 
         .portrait-minimal-hero {
-          min-height: calc(100svh - 118px - clamp(44px, 5vw, 80px));
+          width: 100%;
+          min-height: calc(100svh - 158px);
           display: grid;
-          grid-template-columns: minmax(0, 1.55fr) minmax(320px, .75fr);
-          background: #fff;
-          overflow: hidden;
+          grid-template-columns: 52.5% 47.5%;
+          background: #ecebea;
         }
 
         .portrait-minimal-photo {
-          min-height: 680px;
+          min-height: calc(100svh - 158px);
           overflow: hidden;
-          background: #d7d7d7;
+          background: #d5d3cf;
         }
 
         .portrait-minimal-photo img,
         .portrait-minimal-placeholder {
           width: 100%;
           height: 100%;
+          min-height: calc(100svh - 158px);
           display: block;
           object-fit: cover;
-          object-position: center 23%;
+          object-position: center 20%;
         }
 
         .portrait-minimal-info {
-          min-height: 680px;
-          padding: clamp(34px, 4.2vw, 72px);
+          min-height: calc(100svh - 158px);
+          padding: clamp(56px, 7vw, 108px) clamp(48px, 7vw, 108px);
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          border-left: 1px solid #d9d9d9;
-          background: #fff;
-          color: #000;
+          justify-content: center;
+          align-items: flex-start;
+          background: #ecebea;
+          color: #111b18;
         }
 
-        .portrait-minimal-info-top,
-        .portrait-minimal-info-bottom {
-          display: flex;
-          justify-content: space-between;
-          gap: 24px;
-          font-size: 10px;
-          font-weight: 700;
-          line-height: 1.5;
-          letter-spacing: .14em;
+        .portrait-minimal-eyebrow {
+          margin: 0 0 30px;
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1.2;
+          letter-spacing: .18em;
           text-transform: uppercase;
-        }
-        .portrait-minimal-info-top p { margin: 0; }
-        .portrait-minimal-info-top span { text-align: right; }
-        .portrait-minimal-info-bottom { align-items: flex-end; }
-
-        .portrait-minimal-info-main {
-          padding: clamp(56px, 8vh, 120px) 0;
+          color: #17231f;
         }
 
         .portrait-minimal-info h1 {
           margin: 0;
-          max-width: 7.5ch;
+          max-width: 8.5ch;
           font-family: Georgia, "Times New Roman", serif;
-          font-size: clamp(60px, 6.6vw, 112px);
+          font-size: clamp(66px, 6.7vw, 112px);
           font-weight: 400;
-          line-height: .9;
-          letter-spacing: -.055em;
-          color: #000;
+          line-height: .93;
+          letter-spacing: -.05em;
+          color: #10201b;
         }
 
         .portrait-minimal-info h2 {
-          margin: 28px 0 0;
-          max-width: 520px;
-          font-size: clamp(14px, 1.25vw, 18px);
+          margin: 26px 0 0;
+          max-width: 650px;
+          font-size: clamp(14px, 1.25vw, 19px);
           font-weight: 700;
-          line-height: 1.4;
-          letter-spacing: .05em;
+          line-height: 1.25;
+          letter-spacing: .08em;
           text-transform: uppercase;
-          color: #000;
-        }
-
-        .portrait-minimal-institution {
-          margin: 8px 0 0;
-          max-width: 520px;
-          font-size: 13px;
-          line-height: 1.55;
-          color: #474747;
+          color: #6c7773;
         }
 
         .portrait-minimal-overview {
-          margin: clamp(30px, 5vh, 54px) 0 0;
-          max-width: 560px;
+          margin: clamp(34px, 5vh, 58px) 0 0;
+          max-width: 610px;
           font-family: Georgia, "Times New Roman", serif;
-          font-size: clamp(17px, 1.45vw, 22px);
-          line-height: 1.58;
-          color: #111;
+          font-size: clamp(18px, 1.55vw, 24px);
+          line-height: 1.65;
+          color: #17231f;
+        }
+
+        .portrait-minimal-cta {
+          margin-top: 42px;
+          padding-bottom: 5px;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: .14em;
+          text-transform: uppercase;
+          border-bottom: 1px solid #17231f;
         }
 
         .portrait-minimal-footer {
           min-height: 230px;
-          padding: 54px clamp(24px, 4vw, 64px);
+          padding: 54px clamp(32px, 5vw, 78px);
           display: grid;
-          grid-template-columns: 1.2fr 1fr 1fr;
+          grid-template-columns: 1.2fr .9fr 1fr;
           align-items: start;
           gap: 48px;
           background: #000;
           color: #fff;
         }
-        .portrait-minimal-footer > div { display: flex; flex-direction: column; gap: 10px; }
-        .portrait-minimal-footer > div:nth-child(2) a,
-        .portrait-minimal-footer > span,
-        .portrait-minimal-footer > div:first-child span {
-          font-size: 11px;
-          line-height: 1.6;
-          letter-spacing: .08em;
+        .portrait-minimal-footer > div {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
         }
         .portrait-minimal-footer strong {
-          font-family: Georgia, "Times New Roman", serif;
-          font-size: 26px;
-          font-weight: 400;
+          margin-bottom: 5px;
+          font-size: 22px;
+          font-weight: 500;
+          text-transform: uppercase;
         }
-        .portrait-minimal-footer > span { justify-self: end; text-align: right; opacity: .62; }
+        .portrait-minimal-footer a,
+        .portrait-minimal-footer span {
+          font-size: 11px;
+          line-height: 1.6;
+          letter-spacing: .07em;
+          color: rgba(255,255,255,.7);
+        }
+        .portrait-minimal-footer a:hover { color: #fff; }
 
         @media (max-width: 960px) {
-          .portrait-minimal-hero { grid-template-columns: 1.15fr .85fr; }
-          .portrait-minimal-info { padding: 36px; }
+          .portrait-minimal-hero { grid-template-columns: 50% 50%; }
+          .portrait-minimal-info { padding: 48px; }
           .portrait-minimal-footer { grid-template-columns: 1fr 1fr; }
-          .portrait-minimal-footer > span { justify-self: start; text-align: left; }
         }
 
         @media (max-width: 720px) {
           .portrait-minimal-header {
             min-height: auto;
-            padding: 22px 20px 18px;
-            grid-template-columns: 1fr;
-            align-items: start;
+            padding: 24px 20px 20px;
           }
-          .portrait-minimal-header nav { justify-content: flex-start; gap: 12px 18px; }
-          .portrait-minimal-main { padding: 14px; }
+          .portrait-minimal-header nav { gap: 12px 18px; }
           .portrait-minimal-hero { grid-template-columns: 1fr; min-height: 0; }
-          .portrait-minimal-photo { min-height: 62svh; }
-          .portrait-minimal-info { min-height: auto; border-left: 0; border-top: 1px solid #d9d9d9; padding: 30px 24px 38px; }
-          .portrait-minimal-info-main { padding: 54px 0 60px; }
+          .portrait-minimal-photo,
+          .portrait-minimal-photo img,
+          .portrait-minimal-placeholder { min-height: 62svh; }
+          .portrait-minimal-info { min-height: auto; padding: 48px 24px 58px; }
           .portrait-minimal-info h1 { max-width: none; font-size: clamp(50px, 15vw, 76px); }
-          .portrait-minimal-info-bottom { flex-direction: column; align-items: flex-start; }
-          .portrait-minimal-footer { grid-template-columns: 1fr; padding: 44px 24px; }
+          .portrait-minimal-footer { grid-template-columns: 1fr; padding: 44px 24px; gap: 34px; }
         }
       `}</style>
     </div>
