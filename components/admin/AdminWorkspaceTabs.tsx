@@ -6,11 +6,18 @@ import { createPortal } from "react-dom";
 const TABS = [
   { label: "Discovery", href: "/admin/discovery" },
   { label: "Production", href: "/admin/automation" },
+  { label: "Review", href: "/admin/review" },
   { label: "Websites", href: "/admin/sites" },
   { label: "Sales", href: "/admin/sales" },
 ] as const;
 
-const PATHS = new Set(TABS.map((tab) => tab.href));
+function isActivePath(path: string, href: (typeof TABS)[number]["href"]) {
+  if (href === "/admin/sites") {
+    return path === href || path.startsWith(`${href}/`) || path === "/admin/sites-v3" || path.startsWith("/admin/sites-v3/");
+  }
+
+  return path === href || path.startsWith(`${href}/`);
+}
 
 export default function AdminWorkspaceTabs() {
   const [mount, setMount] = useState<HTMLElement | null>(null);
@@ -18,7 +25,7 @@ export default function AdminWorkspaceTabs() {
 
   useEffect(() => {
     const currentPath = window.location.pathname;
-    if (!PATHS.has(currentPath as (typeof TABS)[number]["href"])) return;
+    if (!currentPath.startsWith("/admin")) return;
     setPath(currentPath);
 
     let disposed = false;
@@ -80,7 +87,7 @@ export default function AdminWorkspaceTabs() {
         }}
       >
         {TABS.map((tab) => {
-          const active = path === tab.href;
+          const active = isActivePath(path, tab.href);
           return (
             <a
               key={tab.href}
