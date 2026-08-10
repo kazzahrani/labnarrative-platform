@@ -1,0 +1,125 @@
+create or replace function labnarrative_engine.ensure_outreach_draft(p_run_id uuid)
+returns labnarrative_engine.outreach_drafts
+language plpgsql
+security definer
+set search_path to 'pg_catalog', 'public', 'labnarrative_engine'
+as $function$
+declare
+  v_run labnarrative_engine.runs%rowtype;
+  v_p public.prospects%rowtype;
+  v_s public.sites%rowtype;
+  v_existing labnarrative_engine.outreach_drafts%rowtype;
+  v_site_id uuid;
+  v_surname text;
+  v_point text;
+  v_subject text;
+  v_body text;
+  v_url text;
+  v_recipient text;
+begin
+  select * into v_run from labnarrative_engine.runs r where r.id=p_run_id;
+  if not found then raise exception 'run_not_found'; end if;
+  if v_run.state <> 'published' then raise exception 'outreach_requires_published_run'; end if;
+
+  select * into v_p from public.prospects p where p.id=v_run.prospect_id;
+  if not found then raise exception 'prospect_not_found'; end if;
+
+  begin
+    v_site_id := nullif(v_run.stage_data->>'site_id','')::uuid;
+  exception when others then
+    raise exception 'published_run_has_invalid_site_id';
+  end;
+  if v_site_id is null then raise exception 'published_run_has_no_site'; end if;
+
+  select * into v_s from public.sites s where s.id=v_site_id;
+  if not found then raise exception 'published_site_not_found'; end if;
+
+  select * into v_existing from labnarrative_engine.outreach_drafts d where d.run_id=p_run_id;
+  if found and not (
+    v_existing.status='draft'
+    and v_existing.body_text like '%I came across your work on%'
+  ) then
+    return v_existing;
+  end if;
+
+  v_surname := public.labnarrative_family_name(v_p.pi_name);
+  if trim(coalesce(v_surname,''))='' then
+    v_surname := regexp_replace(trim(v_p.pi_name),'^.*\s+','');
+  end if;
+
+  v_point := trim(coalesce(
+    nullif(v_s.content#>>'{focusAreas,0}',''),
+    nullif(v_s.content#>>'{research,0,title}',''),
+    nullif(v_s.content#>>'{projects,0,title}',''),
+    'your laboratory research'
+  ));
+  v_point := regexp_replace(v_point,'(?i)^the\s+','','');
+  v_point := regexp_replace(v_point,'[.?!]+$','','g');
+
+  v_subject := format('Website concept for the %s Laboratory',v_surname);
+  v_url := coalesce(nullif(v_s.domain_url,''), 'https://' || v_s.slug || '.labnarrative.com');
+
+  v_recipient := lower(trim(coalesce(
+    nullif(v_p.email,''),
+    nullif(v_s.content->>'email',''),
+    nullif(v_s.content#>>'{pages,contact,email}',''),
+    ''
+  )));
+  if v_recipient <> '' and not public.is_valid_contact_email(v_recipient) then
+    v_recipient := '';
+  end if;
+
+  v_body := format($fmt$Dear Professor %1$s,
+
+My name is Dr Khaled Azzahrani. I am a molecular oncology researcher, and I completed my doctoral work in Professor Kurt Engeland’s group, where I studied p53, RB/E2F signalling, and cell-cycle transcription.
+
+I have followed your research on the %2$s for years, although unfortunately we have never had the opportunity to connect. Given the significance and breadth of your work, I felt that it could benefit from a dedicated website presenting the laboratory’s research, publications, and scientific direction in one place.
+
+I am currently developing LabNarrative, a specialized service that creates professional, scientifically accurate websites for research laboratories. I prepared a personalized website concept for your group using publicly available information about your research and publications:
+
+View the %1$s Laboratory concept:
+%3$s
+
+The concept includes dedicated pages for your research programmes, publications, laboratory members, opportunities, and contact information. Every aspect—including the text, images, projects, publications, and team profiles—can be revised or expanded.
+
+This is an independently prepared concept and does not imply any affiliation. If you find the direction useful, I would be pleased to customize it with your current team members, photographs, ongoing projects, and preferred content, and then prepare the completed website for publication on a domain of your choice.
+
+Would you be open to a brief conversation about it?
+
+Kind regards,
+Dr Khaled Azzahrani
+Founder, LabNarrative
+https://labnarrative.com$fmt$, v_surname, v_point, v_url);
+
+  if found then
+    update labnarrative_engine.outreach_drafts d
+    set recipient_email=case when trim(coalesce(d.recipient_email,''))='' then v_recipient else d.recipient_email end,
+        subject=v_subject,
+        body_text=v_body,
+        updated_at=now()
+    where d.run_id=p_run_id
+    returning * into v_existing;
+    return v_existing;
+  end if;
+
+  insert into labnarrative_engine.outreach_drafts(
+    run_id, prospect_id, site_id, recipient_email, sender_email, subject, body_text
+  ) values (
+    p_run_id, v_p.id, v_s.id, v_recipient,
+    'Khaled Azzahrani <khaled@labnarrative.com>', v_subject, v_body
+  )
+  returning * into v_existing;
+
+  return v_existing;
+end;
+$function$;
+
+-- Refresh only untouched drafts generated by the retired short template.
+-- Customized drafts are intentionally preserved.
+with targets as (
+  select d.run_id
+  from labnarrative_engine.outreach_drafts d
+  where d.status='draft'
+    and d.body_text like '%I came across your work on%'
+)
+select labnarrative_engine.ensure_outreach_draft(run_id) from targets;
