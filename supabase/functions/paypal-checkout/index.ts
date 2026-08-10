@@ -16,6 +16,7 @@ function text(v: unknown, max = 2000) { return typeof v === "string" ? v.trim().
 function asObject(v: unknown): J { return v && typeof v === "object" && !Array.isArray(v) ? v as J : {}; }
 function moneyValue(v: unknown) { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n.toFixed(2) : ""; }
 function paypalBase() { return (Deno.env.get("PAYPAL_ENVIRONMENT") || "live").toLowerCase() === "sandbox" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com"; }
+function paypalEnvironment() { return (Deno.env.get("PAYPAL_ENVIRONMENT") || "live").toLowerCase() === "sandbox" ? "sandbox" : "live"; }
 function configured() { return Boolean(Deno.env.get("PAYPAL_CLIENT_ID") && Deno.env.get("PAYPAL_CLIENT_SECRET")); }
 
 async function accessToken() {
@@ -61,6 +62,44 @@ function payerMeta(payload: J) {
   return { payer: { name: fullName, email: text(payer.email_address, 320) } };
 }
 
+async function bindOrder(admin: any, payment: any, orderId: string, method: "paypal" | "apple_pay", createStatus: string) {
+  const metadata = {
+    ...asObject(payment.provider_metadata),
+    checkout_method: method,
+    paypal_create_status: createStatus,
+    paypal_environment: paypalEnvironment(),
+  };
+  if (!payment.provider_order_id || payment.provider_order_id === orderId) {
+    const { error } = await admin.rpc("sales_payment_provider_bind", { p_payment_id: payment.id, p_order_id: orderId, p_metadata: metadata });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const oldOrder = await paypal(`/v2/checkout/orders/${encodeURIComponent(payment.provider_order_id)}`, { method: "GET" });
+  if (oldOrder.response.ok && text(oldOrder.payload.status, 50) === "COMPLETED") {
+    throw new Error("The existing PayPal order has already completed and cannot be replaced.");
+  }
+
+  const now = new Date().toISOString();
+  const { data: changed, error } = await admin
+    .from("sales_payment_requests")
+    .update({
+      provider_order_id: orderId,
+      status: "processing",
+      processing_at: payment.processing_at || now,
+      provider_metadata: metadata,
+      failure_message: null,
+      failed_at: null,
+      updated_at: now,
+    })
+    .eq("id", payment.id)
+    .eq("provider_order_id", payment.provider_order_id)
+    .neq("status", "paid")
+    .select("id")
+    .maybeSingle();
+  if (error || !changed) throw new Error(error?.message || "Payment method could not be switched safely.");
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -89,7 +128,8 @@ Deno.serve(async (req: Request) => {
       ok: true,
       configured: isConfigured,
       verified,
-      environment: (Deno.env.get("PAYPAL_ENVIRONMENT") || "live").toLowerCase() === "sandbox" ? "sandbox" : "live",
+      clientId: isConfigured ? (Deno.env.get("PAYPAL_CLIENT_ID") || "") : "",
+      environment: paypalEnvironment(),
       ...(authError ? { authError } : {}),
     });
   }
@@ -103,30 +143,32 @@ Deno.serve(async (req: Request) => {
   if (!configured()) return json({ error: "PayPal checkout is not connected yet. Please contact LabNarrative for payment assistance.", code: "paypal_not_configured" }, 503);
 
   try {
+    const amount = moneyValue(payment.amount);
+    if (!amount) return json({ error: "The stored payment amount is invalid." }, 500);
+    const { data: prospect } = await admin.from("prospects").select("pi_name").eq("id", payment.prospect_id).maybeSingle();
+    const description = `LabNarrative ${payment.kind} payment${prospect?.pi_name ? ` – ${prospect.pi_name}` : ""}`.slice(0, 127);
+    const purchaseUnits = [{ reference_id: payment.id, custom_id: payment.id, description, amount: { currency_code: String(payment.currency).toUpperCase(), value: amount } }];
+
     if (action === "create_order") {
-      if (payment.provider_order_id) {
+      const existingMethod = text(asObject(payment.provider_metadata).checkout_method, 50);
+      if (payment.provider_order_id && (!existingMethod || existingMethod === "paypal")) {
         const existing = await paypal(`/v2/checkout/orders/${encodeURIComponent(payment.provider_order_id)}`, { method: "GET" });
         if (existing.response.ok) {
           if (text(existing.payload.status, 50) === "COMPLETED") return json({ ok: true, orderId: payment.provider_order_id, completed: true });
           const existingApproval = approvalLink(existing.payload);
           if (existingApproval) return json({ ok: true, orderId: payment.provider_order_id, approvalUrl: existingApproval, reused: true });
         }
-        return json({ error: "The existing PayPal checkout could not be resumed. Please contact LabNarrative.", code: "paypal_order_unavailable" }, 409);
       }
 
-      const amount = moneyValue(payment.amount);
-      if (!amount) return json({ error: "The stored payment amount is invalid." }, 500);
       const origin = (Deno.env.get("PAYPAL_RETURN_BASE_URL") || "https://labnarrative.com").replace(/\/$/, "");
       const returnUrl = `${origin}/pay/${encodeURIComponent(paymentToken)}?paypal=return`;
       const cancelUrl = `${origin}/pay/${encodeURIComponent(paymentToken)}?paypal=cancelled`;
-      const { data: prospect } = await admin.from("prospects").select("pi_name").eq("id", payment.prospect_id).maybeSingle();
-      const description = `LabNarrative ${payment.kind} payment${prospect?.pi_name ? ` – ${prospect.pi_name}` : ""}`.slice(0, 127);
       const requestBody = {
         intent: "CAPTURE",
-        purchase_units: [{ reference_id: payment.id, custom_id: payment.id, description, amount: { currency_code: String(payment.currency).toUpperCase(), value: amount } }],
+        purchase_units: purchaseUnits,
         payment_source: { paypal: { payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED", experience_context: { brand_name: "LabNarrative", landing_page: "NO_PREFERENCE", user_action: "PAY_NOW", shipping_preference: "NO_SHIPPING", return_url: returnUrl, cancel_url: cancelUrl } } },
       };
-      const created = await paypal("/v2/checkout/orders", { method: "POST", headers: { "PayPal-Request-Id": payment.id }, body: JSON.stringify(requestBody) });
+      const created = await paypal("/v2/checkout/orders", { method: "POST", headers: { "PayPal-Request-Id": `${payment.id}-paypal-v2` }, body: JSON.stringify(requestBody) });
       const orderId = text(created.payload.id, 300);
       const approve = approvalLink(created.payload);
       if (!created.response.ok || !orderId || !approve) {
@@ -134,9 +176,35 @@ Deno.serve(async (req: Request) => {
         await admin.rpc("sales_payment_provider_fail", { p_payment_id: payment.id, p_message: message, p_metadata: { paypal_create_status: created.response.status } });
         return json({ error: message, code: "paypal_create_failed" }, 502);
       }
-      const { error: bindError } = await admin.rpc("sales_payment_provider_bind", { p_payment_id: payment.id, p_order_id: orderId, p_metadata: { paypal_create_status: text(created.payload.status, 50), paypal_environment: (Deno.env.get("PAYPAL_ENVIRONMENT") || "live").toLowerCase() } });
-      if (bindError) return json({ error: bindError.message }, 500);
+      await bindOrder(admin, payment, orderId, "paypal", text(created.payload.status, 50));
       return json({ ok: true, orderId, approvalUrl: approve });
+    }
+
+    if (action === "create_apple_order") {
+      const existingMethod = text(asObject(payment.provider_metadata).checkout_method, 50);
+      if (payment.provider_order_id && existingMethod === "apple_pay") {
+        const existing = await paypal(`/v2/checkout/orders/${encodeURIComponent(payment.provider_order_id)}`, { method: "GET" });
+        if (existing.response.ok) {
+          if (text(existing.payload.status, 50) === "COMPLETED") return json({ ok: true, orderId: payment.provider_order_id, completed: true });
+          if (["CREATED", "PAYER_ACTION_REQUIRED", "APPROVED"].includes(text(existing.payload.status, 50))) {
+            return json({ ok: true, orderId: payment.provider_order_id, reused: true });
+          }
+        }
+      }
+
+      const created = await paypal("/v2/checkout/orders", {
+        method: "POST",
+        headers: { "PayPal-Request-Id": `${payment.id}-applepay-v1` },
+        body: JSON.stringify({ intent: "CAPTURE", purchase_units: purchaseUnits }),
+      });
+      const orderId = text(created.payload.id, 300);
+      if (!created.response.ok || !orderId) {
+        const message = text(created.payload.message, 1000) || `PayPal returned HTTP ${created.response.status}.`;
+        await admin.rpc("sales_payment_provider_fail", { p_payment_id: payment.id, p_message: message, p_metadata: { apple_pay_create_status: created.response.status } });
+        return json({ error: message, code: "apple_pay_create_failed" }, 502);
+      }
+      await bindOrder(admin, payment, orderId, "apple_pay", text(created.payload.status, 50));
+      return json({ ok: true, orderId });
     }
 
     if (action === "capture") {
@@ -163,7 +231,7 @@ Deno.serve(async (req: Request) => {
         await admin.rpc("sales_payment_provider_fail", { p_payment_id: payment.id, p_message: message, p_metadata: { captured_value: capturedValue, captured_currency: capturedCurrency } });
         return json({ error: message, code: "paypal_amount_mismatch" }, 409);
       }
-      const meta = { ...payerMeta(order.payload), paypal_order_status: text(order.payload.status, 50), paypal_capture_status: captureStatus };
+      const meta = { ...payerMeta(order.payload), paypal_order_status: text(order.payload.status, 50), paypal_capture_status: captureStatus, checkout_method: text(asObject(payment.provider_metadata).checkout_method, 50) || "paypal" };
       const { data: completed, error: completeError } = await admin.rpc("sales_payment_provider_complete", { p_payment_id: payment.id, p_order_id: orderId, p_capture_id: captureId, p_capture_status: captureStatus, p_capture_amount: capturedValue, p_capture_currency: capturedCurrency, p_metadata: meta });
       if (completeError) return json({ error: completeError.message }, 500);
       return json({ ok: true, paid: true, status: "paid", captureId, payment: completed });
