@@ -122,7 +122,7 @@ function productionHistoryLabel(site: SiteRow, run?: V3Run): string {
     return run.state.replaceAll("_", " ");
   }
   if (site.status === "draft") return "Legacy draft";
-  if (site.status === "concept") return "Legacy published";
+  if (site.status === "concept") return "Legacy concept";
   if (site.status === "live") return "Legacy client";
   if (site.status === "archived") return "Archived";
   return site.status;
@@ -333,11 +333,11 @@ export default function SiteMonitorV3Page() {
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${ph==="ok"?styles.dotGood:ph==="error"?styles.dotBad:styles.dotWarn}`}></span>{!portrait?"Missing":ph==="ok"?"Rendering":ph==="error"?"Not rendering":"Not checked"}</div></div></td>
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={followUp>=1?`${styles.pill} ${styles.pillGood}`:styles.pill}>E1</span><span>›</span><span className={followUp>=2?`${styles.pill} ${styles.pillGood}`:styles.pill}>F1</span><span>›</span><span className={followUp>=3?`${styles.pill} ${styles.pillGood}`:styles.pill}>F2</span></div><span className={styles.muted}>{site.outreach_status||prospect?.status||"not_contacted"}</span></div></td>
             <td>{issues.length?<div className={styles.issues}>{issues.slice(0,5).map((issue)=><span className={styles.issue} key={issue}>{issue}</span>)}</div>:<span className={styles.ok}>No data problems</span>}</td>
-            <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>{issues.length?"Edit / Fix":"Edit"}</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run&&["published","completed"].includes(run.state)?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}</div></td>
+            <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>{issues.length?"Edit / Fix":"Edit"}</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run&&["published","completed"].includes(run.state)&&followUp===0?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}</div></td>
           </tr>;
         })}</tbody>
       </table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
-      <p className={styles.footerNote}>Production history records what the Engine v3 run reached; Site visibility reflects the website’s current public/private state. A site can therefore show “Published before” and “Private” after it is intentionally unpublished. Health checks run only against currently live sites. Follow-up shows E1 → F1 → F2. Edit / Fix opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
+      <p className={styles.footerNote}>Production history records what the Engine v3 run reached; Site visibility reflects the website’s current public/private state. A site can therefore show “Published before” and “Private” after it is intentionally unpublished. Health checks run only against currently live sites. Follow-up shows E1 → F1 → F2. Outreach is offered only before the outreach sequence has started. Edit / Fix opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
     </section>
   </main>;
 }
