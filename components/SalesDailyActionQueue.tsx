@@ -165,7 +165,7 @@ export default function SalesDailyActionQueue() {
   const rangeEnd = Math.min(activeItems.length, pageStart + pageSize);
 
   const pagination = (
-    <div className="platformListPagination" data-platform-native-pagination="daily-sales-actions">
+    <div className="platformListPagination">
       <span className="platformListPaginationSummary">{rangeStart}–{rangeEnd} of {activeItems.length}</span>
       <div className="platformListPaginationControls">
         <label className="platformListPageSize">Show <select aria-label="Daily sales actions per page" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value) as (typeof PAGE_SIZES)[number])}>{PAGE_SIZES.map((size) => <option value={size} key={size}>{size}</option>)}</select></label>
