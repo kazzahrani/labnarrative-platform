@@ -58,6 +58,7 @@ type OutreachMessage = {
 type Dashboard = { counts?: Record<string, number>; runs?: V3Run[] };
 type Filter = "all" | "v3" | "live" | "private" | "legacy";
 type TimelineItem = { key: "E1" | "F1" | "F2"; state: string; date: string | null; tone: "sent" | "future" | "stopped" | "idle" };
+type PreparedPreV3Outreach = { runId?: string };
 
 const PAGE_SIZES = [5,10,25,100] as const;
 const STOPPED_PROSPECT_STATES = new Set(["replied","interested","rejected","paused"]);
@@ -189,6 +190,7 @@ export default function SiteMonitorV3Page() {
   const [runs, setRuns] = useState<V3Run[]>([]);
   const [outreachMessages, setOutreachMessages] = useState<OutreachMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [preparingOutreach, setPreparingOutreach] = useState<string | null>(null);
   const [authState, setAuthState] = useState<"loading"|"signed_out"|"forbidden"|"ready">("loading");
   const [notice, setNotice] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -292,6 +294,25 @@ export default function SiteMonitorV3Page() {
   const rangeStart=visible.length?pageStart+1:0;
   const rangeEnd=Math.min(visible.length,pageStart+pageSize);
 
+  async function openOutreach(site: SiteRow, run?: V3Run) {
+    if (run?.runId) {
+      window.location.href=`/admin/outreach/${run.runId}`;
+      return;
+    }
+    setPreparingOutreach(site.id);
+    setNotice("");
+    try {
+      const { data, error } = await supabase.rpc("engine_v2_admin_prepare_site_outreach", { p_site_id: site.id });
+      if (error) throw error;
+      const prepared=(data || {}) as PreparedPreV3Outreach;
+      if (!prepared.runId) throw new Error("The outreach draft was prepared without a run ID.");
+      window.location.href=`/admin/outreach-v2/${prepared.runId}`;
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The outreach draft could not be prepared.");
+      setPreparingOutreach(null);
+    }
+  }
+
   if (authState==="loading") return <main className={styles.statePage}>Preparing Website Monitor v3…</main>;
   if (authState==="signed_out") return <main className={styles.statePage}><section className={styles.stateCard}><p className={styles.kicker}>Website Monitor v3</p><h1>Administrator sign-in required.</h1><p>Sign in through the administrator dashboard and return here.</p><Link href="/admin">Open dashboard</Link></section></main>;
   if (authState==="forbidden") return <main className={styles.statePage}><section className={styles.stateCard}><p className={styles.kicker}>Website Monitor v3</p><h1>Administrator permission required.</h1><Link href="/admin">Return to dashboard</Link></section></main>;
@@ -331,17 +352,17 @@ export default function SiteMonitorV3Page() {
       <div className={styles.tableWrap}><table className={styles.table}>
         <thead><tr><th>Website</th><th>Design</th><th>Site visibility</th><th>Outreach timeline</th><th>Actions</th></tr></thead>
         <tbody>{pagedVisible.map(({site,run,prospect,messages})=>{
-          const pub=isPublic(site); const visibility=visibilityLabel(site); const timeline=outreachTimeline(site,prospect,messages); const started=outreachStarted(site,messages);
+          const pub=isPublic(site); const visibility=visibilityLabel(site); const timeline=outreachTimeline(site,prospect,messages); const started=outreachStarted(site,messages); const canStartOutreach=pub&&!started;
           return <tr id={`site-${site.id}`} key={site.id}>
             <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong><span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
             <td><span className={styles.pill}>{designLabel(site)}</span><span className={styles.muted}>{site.design_key||"design"}{site.design_version?` · v${site.design_version}`:""}</span></td>
             <td><span className={pillClass(visibility)}>{visibility}</span><span className={styles.muted}>site {site.status} · {domainLabel(site)}</span></td>
             <td><div className={styles.outreachTimeline}>{timeline.map((item)=><div className={`${styles.outreachStage} ${styles[`outreach_${item.tone}`]}`} key={item.key}><strong>{item.key}</strong><div><span>{item.state}</span>{item.date?<time>{item.date}</time>:null}</div></div>)}</div><span className={styles.outreachRaw}>{site.outreach_status||prospect?.status||"not_contacted"}</span></td>
-            <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>Edit</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run&&["published","completed"].includes(run.state)&&!started?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}</div></td>
+            <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>Edit</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{canStartOutreach?<button type="button" onClick={()=>void openOutreach(site,run)} disabled={preparingOutreach===site.id}>{preparingOutreach===site.id?"Preparing…":"Outreach"}</button>:null}</div></td>
           </tr>;
         })}</tbody>
       </table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
-      <p className={styles.footerNote}>Outreach dates use Riyadh time. E1 and completed follow-ups show their actual sent dates. F1 uses the stored next-send date. F2 uses the stored date after F1 is sent; before then it is explicitly marked Expected based on the current 5-day then 8-day sequence. Reply/interested/paused sequences show remaining stages as Stopped. Edit opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
+      <p className={styles.footerNote}>Outreach dates use Riyadh time. E1 and completed follow-ups show their actual sent dates. F1 uses the stored next-send date. F2 uses the stored date after F1 is sent; before then it is explicitly marked Expected based on the current 5-day then 8-day sequence. Reply/interested/paused sequences show remaining stages as Stopped. The Outreach action appears on every live site until E1 is actually sent. Edit opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
     </section>
   </main>;
 }
