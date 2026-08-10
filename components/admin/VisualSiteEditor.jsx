@@ -20,6 +20,24 @@ const PAGES = [
 ];
 
 const COLLECTIONS = ["research", "members", "publications", "opportunities"];
+const DESIGN_TEMPLATES = [
+  { id: "bourdon-full", label: "Bourdon", key: "bourdon-full", template: "bourdon-full", description: "Full multi-page laboratory design." },
+  { id: "scientific-minimal", label: "Scientific Minimal", key: "scientific-minimal", template: "scientific-minimal", description: "Minimal scientific presentation." },
+  { id: "editorial", label: "Editorial", key: "editorial", template: "editorial", description: "Typography-led editorial layout." },
+  { id: "image-led", label: "Image-led", key: "image-led", template: "image-led", description: "Image-forward laboratory layout." },
+  { id: "institutional", label: "Institutional", key: "institutional", template: "institutional", description: "Formal academic presentation." },
+  { id: "dobbelstein-editorial-v1", label: "Dobbelstein Editorial", key: "bourdon-full", template: "bourdon-full", variant: "dobbelstein-editorial-v1", description: "Editorial Bourdon-derived design." },
+  { id: "dobbelstein-scroll-v1", label: "Dobbelstein Scroll", key: "bourdon-full", template: "bourdon-full", variant: "dobbelstein-scroll-v1", description: "Long-form scrolling laboratory story." },
+  { id: "portrait-first-v1", label: "Portrait First", key: "bourdon-full", template: "bourdon-full", variant: "portrait-first-v1", description: "PI portrait-led homepage." },
+  { id: "engeland-modern-v1", label: "Engeland Modern", key: "bourdon-full", template: "bourdon-full", variant: "engeland-modern-v1", description: "Modern research-led laboratory design." },
+  { id: "biggins-field-v1", label: "Biggins Field", key: "bourdon-full", template: "bourdon-full", variant: "biggins-field-v1", description: "Field-style group and research presentation." },
+  { id: "ciribilli-narita-v1", label: "Narita", key: "bourdon-full", template: "bourdon-full", variant: "ciribilli-narita-v1", description: "Current Narita laboratory design." },
+  { id: "prives-photo-lab-v1", label: "Photo Lab", key: "bourdon-full", template: "bourdon-full", variant: "prives-photo-lab-v1", description: "Photography-led kinetic laboratory design." },
+  { id: "zhang-transcription-v1", label: "Zhang Transcription", key: "bourdon-full", template: "bourdon-full", variant: "zhang-transcription-v1", description: "Signature academic transcription layout." },
+  { id: "gao-ecosystem-v1", label: "Gao Ecosystem", key: "bourdon-full", template: "bourdon-full", variant: "gao-ecosystem-v1", description: "Signature ecosystem-style academic layout." },
+  { id: "goyette-evolution-v1", label: "Goyette Evolution", key: "bourdon-full", template: "bourdon-full", variant: "goyette-evolution-v1", description: "Signature evolution-style academic layout." },
+  { id: "editorial-image-v1", label: "Editorial Image", key: "bourdon-full", template: "bourdon-full", variant: "editorial-image-v1", description: "Editorial layout with sourced research imagery." },
+];
 
 function formatDate(value) {
   if (!value) return "—";
@@ -232,6 +250,7 @@ export default function VisualSiteEditor({ slug }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
   const [restoring, setRestoring] = useState(null);
   const [dirty, setDirty] = useState(false);
   const [notice, setNotice] = useState("");
@@ -290,6 +309,26 @@ export default function VisualSiteEditor({ slug }) {
     markDirty(withOverride(contentRef.current, override));
   }
 
+  function changeDesign(template) {
+    if (!contentRef.current) return;
+    const next = structuredClone(contentRef.current);
+    const currentDesign = next.design && typeof next.design === "object" ? next.design : {};
+    const settings = { ...(currentDesign.settings || {}) };
+    if (template.variant) settings.variant = template.variant;
+    else delete settings.variant;
+    next.design = {
+      ...currentDesign,
+      key: template.key,
+      version: Number(currentDesign.version) || 3,
+      settings,
+    };
+    next.template = template.template;
+    next.visualOverrides = [];
+    markDirty(next);
+    setRoute({ section: "home" });
+    setNotice(`${template.label} loaded into this draft. Design-only overrides from the previous renderer were cleared for safety.`);
+  }
+
   async function saveDraft(showNotice = true) {
     if (!workspace || !contentRef.current) return false;
     setSaving(true);
@@ -311,7 +350,7 @@ export default function VisualSiteEditor({ slug }) {
   }
 
   async function publishChanges() {
-    if (!workspace || publishing) return;
+    if (!workspace || publishing || unpublishing) return;
     setPublishing(true);
     setError("");
     const saved = await saveDraft(false);
@@ -327,6 +366,25 @@ export default function VisualSiteEditor({ slug }) {
     }
     setNotice("Published. The previous live version was saved automatically in Revision History.");
     setPublishing(false);
+    await load();
+  }
+
+  async function unpublishSite() {
+    if (!workspace || unpublishing || publishing || !["concept","live"].includes(workspace.site.status)) return;
+    setUnpublishing(true);
+    setError("");
+    const saved = await saveDraft(false);
+    if (!saved) { setUnpublishing(false); return; }
+    const { data, error: rpcError } = await supabase.rpc("site_editor_unpublish", { p_revision_id: workspace.revision.id });
+    if (rpcError) { setError(rpcError.message); setUnpublishing(false); return; }
+    if (!data?.ok) {
+      setError(data?.alreadyPrivate ? "This website is already private." : "The website could not be unpublished.");
+      setUnpublishing(false);
+      await load();
+      return;
+    }
+    setNotice("Website unpublished. Its public version was preserved in Revision History and the draft remains editable.");
+    setUnpublishing(false);
     await load();
   }
 
@@ -361,7 +419,7 @@ export default function VisualSiteEditor({ slug }) {
     setModal(null);
   }
 
-  function beginTextEdit(element) {
+  function beginTextEdit(element, pointerEvent) {
     const root = canvasRef.current?.querySelector("[data-ln-visual-root]");
     if (!root || !materialized || !contentRef.current) return;
     const selector = selectorFor(element, root);
@@ -378,8 +436,24 @@ export default function VisualSiteEditor({ slug }) {
     element.focus();
     const selection = window.getSelection();
     if (selection) {
-      const range = document.createRange();
-      range.selectNodeContents(element);
+      let range = null;
+      if (pointerEvent && typeof document.caretPositionFromPoint === "function") {
+        const position = document.caretPositionFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+        if (position && element.contains(position.offsetNode)) {
+          range = document.createRange();
+          range.setStart(position.offsetNode, position.offset);
+          range.collapse(true);
+        }
+      }
+      if (!range && pointerEvent && typeof document.caretRangeFromPoint === "function") {
+        const candidate = document.caretRangeFromPoint(pointerEvent.clientX, pointerEvent.clientY);
+        if (candidate && element.contains(candidate.startContainer)) range = candidate;
+      }
+      if (!range) {
+        range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+      }
       selection.removeAllRanges();
       selection.addRange(range);
     }
@@ -445,7 +519,7 @@ export default function VisualSiteEditor({ slug }) {
       if (editable) {
         event.preventDefault();
         event.stopPropagation();
-        beginTextEdit(editable);
+        beginTextEdit(editable, event);
         return;
       }
     }
@@ -581,6 +655,9 @@ export default function VisualSiteEditor({ slug }) {
 
   const allOverrides = overrides(content);
   const publicUrl = workspace.site.domainUrl || `https://${workspace.site.slug}.labnarrative.com`;
+  const isPublished = ["concept","live"].includes(workspace.site.status);
+  const activeDesignId = String(content.design?.settings?.variant || content.design?.key || content.template || "scientific-minimal");
+  const busy = saving || publishing || unpublishing;
 
   return (
     <main className={styles.page}>
@@ -606,16 +683,17 @@ export default function VisualSiteEditor({ slug }) {
         <button type="button" onClick={() => setModal("manage")}>Manage</button>
         <button type="button" onClick={() => setModal("settings")}>Settings</button>
         <button type="button" onClick={() => setModal("history")}>History</button>
-        <span className={`${styles.saveState} ${dirty ? styles.unsaved : ""}`}>{dirty ? "Unsaved" : issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : "Saved"}</span>
-        <button type="button" onClick={() => void saveDraft()} disabled={saving || publishing}>{saving ? "Saving…" : "Save draft"}</button>
-        <button className={styles.publishButton} type="button" onClick={() => void publishChanges()} disabled={saving || publishing}>{publishing ? "Publishing…" : "Publish"}</button>
+        <span className={`${styles.saveState} ${dirty ? styles.unsaved : ""}`}>{dirty ? "Unsaved" : issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : isPublished ? "Published" : "Private draft"}</span>
+        <button type="button" onClick={() => void saveDraft()} disabled={busy}>{saving ? "Saving…" : "Save draft"}</button>
+        {isPublished ? <button className={styles.dangerButton} type="button" onClick={() => void unpublishSite()} disabled={busy}>{unpublishing ? "Unpublishing…" : "Unpublish"}</button> : null}
+        <button className={styles.publishButton} type="button" onClick={() => void publishChanges()} disabled={busy}>{publishing ? "Publishing…" : isPublished ? "Publish changes" : "Publish draft"}</button>
       </nav>
 
       {modal === "add" ? <Modal title="Add to this website" subtitle="New content appears in the draft first." onClose={() => setModal(null)}><div className={styles.addGrid}><button onClick={() => addItem("research")}><strong>Research programme</strong><span>Add another programme or research line.</span></button><button onClick={() => addItem("members")}><strong>Lab member</strong><span>Add a person and optional photo.</span></button><button onClick={() => addItem("publications")}><strong>Publication</strong><span>Add a publication row.</span></button><button onClick={() => addItem("opportunities")}><strong>Opportunity</strong><span>Add a position or collaboration opportunity.</span></button><button onClick={() => chooseUpload({ path: "pages.home.piImage" })}><strong>PI portrait</strong><span>Add or replace the principal investigator portrait.</span></button><button onClick={() => chooseUpload({ path: "heroImage" })}><strong>Website image</strong><span>Upload a general site image. Visible images can also be clicked directly.</span></button></div></Modal> : null}
 
       {modal === "manage" ? <Modal title="Manage website content" subtitle="Reorder, remove, or add content. All changes remain in the draft." onClose={() => setModal(null)}><div className={styles.manageGroups}>{COLLECTIONS.map((kind) => <section className={styles.manageGroup} key={kind}><header><h3>{kind === "research" ? "Research programmes" : kind === "members" ? "Lab members" : kind === "publications" ? "Publications" : "Opportunities"}</h3><button type="button" onClick={() => addItem(kind)}>+ Add</button></header>{items(kind).length ? <div className={styles.manageList}>{items(kind).map((item,index) => { const path = imagePath(kind,index); return <article key={`${kind}-${index}`}><span>{itemTitle(kind,item,index)}</span><div>{path ? <button type="button" onClick={() => chooseUpload({ path })}>{String(getAtPath(content,path) || "").trim() ? "Replace image" : "Add image"}</button> : null}<button type="button" disabled={index === 0} onClick={() => moveItem(kind,index,-1)}>↑</button><button type="button" disabled={index === items(kind).length - 1} onClick={() => moveItem(kind,index,1)}>↓</button><button type="button" className={styles.dangerText} onClick={() => removeItem(kind,index)}>Remove</button></div></article>; })}</div> : <p className={styles.emptyText}>Nothing here yet.</p>}</section>)}</div></Modal> : null}
 
-      {modal === "settings" ? <Modal title="Website settings" subtitle="Use direct editing for visible copy. These controls cover global details, navigation, style, revision notes and design-only overrides." onClose={() => setModal(null)}><div className={styles.settingsSections}><section><h3>Laboratory details</h3><div className={styles.settingsGrid}><Field label="Laboratory name" value={String(content.labName || "")} onChange={(v) => updatePath("labName",v)} /><Field label="Principal investigator" value={String(content.piName || "")} onChange={(v) => updatePath("piName",v)} /><Field label="Academic title" value={String(content.title || "")} onChange={(v) => updatePath("title",v)} /><Field label="Institution" value={String(content.institution || "")} onChange={(v) => updatePath("institution",v)} /><Field label="Department" value={String(content.department || "")} onChange={(v) => updatePath("department",v)} /><Field label="Email" type="email" value={String(content.email || "")} onChange={(v) => updatePath("email",v)} /><Field label="Phone" value={String(content.phone || "")} onChange={(v) => updatePath("phone",v)} /><Field label="Official profile" type="url" value={String(content.profileUrl || "")} onChange={(v) => updatePath("profileUrl",v)} /><Field label="PubMed URL" type="url" value={String(content.pubmedUrl || "")} onChange={(v) => updatePath("pubmedUrl",v)} /><Field label="Address" value={String(content.address || "")} onChange={(v) => updatePath("address",v)} wide /></div></section><section><h3>Navigation</h3><div className={styles.settingsGrid}>{Object.entries(getBourdonPages(content).navigation).map(([key,value]) => <Field key={key} label={key[0].toUpperCase()+key.slice(1)} value={String(value)} onChange={(v) => updatePath(`pages.navigation.${key}`,v)} />)}</div></section><section><h3>Theme</h3><div className={styles.colorGrid}>{["background","surface","foreground","muted","accent"].map((key) => <Field key={key} label={key[0].toUpperCase()+key.slice(1)} type="color" value={content.theme?.[key] || "#ffffff"} onChange={(v) => updatePath(`theme.${key}`,v)} />)}</div></section><section><h3>Revision note</h3><textarea className={styles.noteArea} rows={4} value={note} onChange={(e) => { setNote(e.target.value); setDirty(true); }} placeholder="What changed and why?" /></section><section><h3>Design-only edits</h3><p className={styles.helperText}>These are direct edits to labels or images that are built into the current design rather than stored as ordinary site content.</p>{allOverrides.length ? <div className={styles.overrideList}>{allOverrides.map((item,index) => <article key={`${item.route}-${item.selector}-${item.kind}-${index}`}><div><strong>{item.kind === "image" ? "Image override" : item.kind === "hidden" ? "Hidden element" : "Text override"}</strong><span>{item.route === "*" ? "All pages" : item.route}</span><p>{item.kind === "text" ? item.value : item.value ? "Custom image" : "Image removed"}</p></div><button type="button" onClick={() => { const current = contentRef.current; if (current) markDirty({ ...current, visualOverrides: overrides(current).filter((_,i) => i !== index) }); }}>Restore original</button></article>)}</div> : <p className={styles.emptyText}>No design-only edits.</p>}</section><section className={styles.safetySection}><h3>Draft safety</h3><div><button type="button" onClick={() => void resetToLive()}>Reset draft to current live site</button>{["concept","live"].includes(workspace.site.status) ? <a href={publicUrl} target="_blank" rel="noreferrer">Open published site ↗</a> : null}</div></section></div></Modal> : null}
+      {modal === "settings" ? <Modal title="Website settings" subtitle="Use direct editing for visible copy. These controls cover global details, design, navigation, style, revision notes and design-only overrides." onClose={() => setModal(null)}><div className={styles.settingsSections}><section><h3>Design template</h3><p className={styles.helperText}>Choose a current renderer template. The choice changes this draft immediately; the public website changes only when you publish.</p><div className={styles.addGrid}>{DESIGN_TEMPLATES.map((template) => <button key={template.id} type="button" className={activeDesignId === template.id ? styles.editOn : ""} onClick={() => changeDesign(template)}><strong>{template.label}{activeDesignId === template.id ? " · Current" : ""}</strong><span>{template.description}</span></button>)}</div></section><section><h3>Laboratory details</h3><div className={styles.settingsGrid}><Field label="Laboratory name" value={String(content.labName || "")} onChange={(v) => updatePath("labName",v)} /><Field label="Principal investigator" value={String(content.piName || "")} onChange={(v) => updatePath("piName",v)} /><Field label="Academic title" value={String(content.title || "")} onChange={(v) => updatePath("title",v)} /><Field label="Institution" value={String(content.institution || "")} onChange={(v) => updatePath("institution",v)} /><Field label="Department" value={String(content.department || "")} onChange={(v) => updatePath("department",v)} /><Field label="Email" type="email" value={String(content.email || "")} onChange={(v) => updatePath("email",v)} /><Field label="Phone" value={String(content.phone || "")} onChange={(v) => updatePath("phone",v)} /><Field label="Official profile" type="url" value={String(content.profileUrl || "")} onChange={(v) => updatePath("profileUrl",v)} /><Field label="PubMed URL" type="url" value={String(content.pubmedUrl || "")} onChange={(v) => updatePath("pubmedUrl",v)} /><Field label="Address" value={String(content.address || "")} onChange={(v) => updatePath("address",v)} wide /></div></section><section><h3>Navigation</h3><div className={styles.settingsGrid}>{Object.entries(getBourdonPages(content).navigation).map(([key,value]) => <Field key={key} label={key[0].toUpperCase()+key.slice(1)} value={String(value)} onChange={(v) => updatePath(`pages.navigation.${key}`,v)} />)}</div></section><section><h3>Theme</h3><div className={styles.colorGrid}>{["background","surface","foreground","muted","accent"].map((key) => <Field key={key} label={key[0].toUpperCase()+key.slice(1)} type="color" value={content.theme?.[key] || "#ffffff"} onChange={(v) => updatePath(`theme.${key}`,v)} />)}</div></section><section><h3>Revision note</h3><textarea className={styles.noteArea} rows={4} value={note} onChange={(e) => { setNote(e.target.value); setDirty(true); }} placeholder="What changed and why?" /></section><section><h3>Design-only edits</h3><p className={styles.helperText}>These are direct edits to labels or images that are built into the current design rather than stored as ordinary site content.</p>{allOverrides.length ? <div className={styles.overrideList}>{allOverrides.map((item,index) => <article key={`${item.route}-${item.selector}-${item.kind}-${index}`}><div><strong>{item.kind === "image" ? "Image override" : item.kind === "hidden" ? "Hidden element" : "Text override"}</strong><span>{item.route === "*" ? "All pages" : item.route}</span><p>{item.kind === "text" ? item.value : item.value ? "Custom image" : "Image removed"}</p></div><button type="button" onClick={() => { const current = contentRef.current; if (current) markDirty({ ...current, visualOverrides: overrides(current).filter((_,i) => i !== index) }); }}>Restore original</button></article>)}</div> : <p className={styles.emptyText}>No design-only edits.</p>}</section><section className={styles.safetySection}><h3>Draft safety</h3><div><button type="button" onClick={() => void resetToLive()}>Reset draft to current live site</button>{isPublished ? <a href={publicUrl} target="_blank" rel="noreferrer">Open published site ↗</a> : null}</div></section></div></Modal> : null}
 
       {modal === "history" ? <Modal title="Revision history" subtitle="Loading a previous version only changes this draft until you publish it." onClose={() => setModal(null)}>{workspace.history.length ? <div className={styles.historyList}>{workspace.history.map((item) => <article key={item.id}><div><strong>{item.status === "snapshot" ? "Previous live version" : "Published revision"}</strong><span>{formatDate(item.publishedAt || item.createdAt)}</span>{item.note ? <p>{item.note}</p> : null}</div><button type="button" onClick={() => void restore(item)} disabled={Boolean(restoring)}>{restoring === item.id ? "Loading…" : "Use as draft"}</button></article>)}</div> : <p className={styles.emptyText}>No published revisions yet. The first publish from this editor will create the first rollback snapshot automatically.</p>}</Modal> : null}
 
