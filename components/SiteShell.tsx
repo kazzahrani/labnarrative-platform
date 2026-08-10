@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import BigginsNarita2Design from "@/components/designs/BigginsNarita2ClientDesign";
+import BigginsFieldDesign from "@/components/designs/BigginsFieldDesign";
 import BourdonDesign from "@/components/designs/BourdonDesign";
 import CiribilliNaritaDesign from "@/components/designs/CiribilliNaritaDesign";
 import CiribilliResearchDesign from "@/components/designs/CiribilliResearchDesign";
@@ -119,8 +119,8 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
     return <EngelandDesignWithFigures site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
-  if (designVariant === "narita-2-v1") {
-    return <BigginsNarita2Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  if (designVariant === "biggins-field-v1") {
+    return <BigginsFieldDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === "ciribilli-narita-v1") {
