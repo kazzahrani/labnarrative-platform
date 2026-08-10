@@ -19,6 +19,7 @@ type Proposal = {
   price_amount: number | string;
   currency: string;
   deposit_percent: number | string;
+  deposit_base_amount?: number | string | null;
   valid_until: string;
   terms_text: string;
   sent_at?: string | null;
@@ -77,8 +78,11 @@ export default function PublicProposalPage() {
 
   const amount = Number(data?.proposal.price_amount || 0) || 0;
   const depositPercent = Number(data?.proposal.deposit_percent || 0) || 0;
-  const depositAmount = useMemo(() => Math.round(amount * depositPercent) / 100, [amount, depositPercent]);
+  const rawDepositBase = data?.proposal.deposit_base_amount == null ? amount : Number(data.proposal.deposit_base_amount);
+  const depositBaseAmount = Number.isFinite(rawDepositBase) ? rawDepositBase : amount;
+  const depositAmount = useMemo(() => Math.round(depositBaseAmount * depositPercent) / 100, [depositBaseAmount, depositPercent]);
   const balanceAmount = Math.max(0, amount - depositAmount);
+  const customDepositBase = data?.proposal.deposit_base_amount != null && depositBaseAmount !== amount;
   const websiteUrl = data?.site?.domain_url || (data?.site?.slug ? `https://${data.site.slug}.labnarrative.com` : "");
 
   async function submitDecision() {
@@ -140,8 +144,17 @@ export default function PublicProposalPage() {
         <section className={styles.block}><div className={styles.heading}><span>03</span><h3>Project process</h3></div><ol>{proposal.process_items.map((item,index)=><li key={index}>{item}</li>)}</ol></section>
 
         <section className={styles.payment}>
-          <div><p className={styles.eyebrow}>Payment structure</p><h3>{depositPercent}% deposit to begin</h3><p>The remaining balance is due before final handover.</p></div>
-          <dl><div><dt>Project total</dt><dd>{money(amount,proposal.currency)}</dd></div><div><dt>Deposit</dt><dd>{money(depositAmount,proposal.currency)}</dd></div><div><dt>Remaining balance</dt><dd>{money(balanceAmount,proposal.currency)}</dd></div></dl>
+          <div>
+            <p className={styles.eyebrow}>Payment structure</p>
+            <h3>{depositPercent}% deposit to begin</h3>
+            <p>{customDepositBase ? `The deposit is calculated on ${money(depositBaseAmount, proposal.currency)} of the project total. The excluded portion is payable with the remaining balance.` : "The remaining balance is due before final handover."}</p>
+          </div>
+          <dl>
+            <div><dt>Project total</dt><dd>{money(amount,proposal.currency)}</dd></div>
+            {customDepositBase ? <div><dt>Deposit base</dt><dd>{money(depositBaseAmount,proposal.currency)}</dd></div> : null}
+            <div><dt>Deposit</dt><dd>{money(depositAmount,proposal.currency)}</dd></div>
+            <div><dt>Remaining balance</dt><dd>{money(balanceAmount,proposal.currency)}</dd></div>
+          </dl>
         </section>
 
         <section className={styles.block}><div className={styles.heading}><span>04</span><h3>Terms & validity</h3></div><p className={styles.terms}>{proposal.terms_text}</p></section>
