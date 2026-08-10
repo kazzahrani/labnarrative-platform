@@ -16,7 +16,20 @@ declare global {
   }
 }
 
-function loadPayPalSdk(clientId: string, currency: string) {
+async function fetchCardFieldsClientToken(functionUrl: string, paymentToken: string) {
+  const clientTokenUrl = functionUrl.replace(/\/paypal-checkout$/, "/paypal-client-token");
+  if (clientTokenUrl === functionUrl) return "";
+  const response = await fetch(clientTokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: paymentToken }),
+  });
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  if (!response.ok) return "";
+  return String(payload.clientToken || "");
+}
+
+function loadPayPalSdk(clientId: string, currency: string, clientToken: string) {
   return new Promise<void>((resolve, reject) => {
     const id = "labnarrative-paypal-sdk";
     const existing = document.getElementById(id) as HTMLScriptElement | null;
@@ -29,6 +42,7 @@ function loadPayPalSdk(clientId: string, currency: string) {
     const script = document.createElement("script");
     script.id = id;
     script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&intent=capture&components=buttons,funding-eligibility,card-fields,applepay`;
+    if (clientToken) script.setAttribute("data-client-token", clientToken);
     script.async = true;
     script.onload = () => { script.dataset.loaded = "true"; resolve(); };
     script.onerror = () => reject(new Error("Secure checkout could not load."));
@@ -37,12 +51,10 @@ function loadPayPalSdk(clientId: string, currency: string) {
 }
 
 export default function PayPalStandardButtons({ token, clientId, currency, functionUrl }: Props) {
-  const fallbackCardRef = useRef<HTMLDivElement | null>(null);
   const paypalRef = useRef<HTMLDivElement | null>(null);
   const cardFieldsRef = useRef<any>(null);
   const [error, setError] = useState("");
   const [advancedCardEligible, setAdvancedCardEligible] = useState(false);
-  const [fallbackCardEligible, setFallbackCardEligible] = useState(false);
   const [eligibilityChecked, setEligibilityChecked] = useState(false);
   const [submittingCard, setSubmittingCard] = useState(false);
 
@@ -63,7 +75,8 @@ export default function PayPalStandardButtons({ token, clientId, currency, funct
 
     const setup = async () => {
       try {
-        await loadPayPalSdk(clientId, currency);
+        const clientToken = await fetchCardFieldsClientToken(functionUrl, token);
+        await loadPayPalSdk(clientId, currency, clientToken);
         if (cancelled || !window.paypal) return;
 
         const createOrder = async () => {
@@ -84,8 +97,7 @@ export default function PayPalStandardButtons({ token, clientId, currency, funct
           setError(checkoutError instanceof Error ? checkoutError.message : "Payment could not be completed.");
         };
 
-        let usedAdvancedCardFields = false;
-        if (window.paypal.CardFields) {
+        if (window.paypal.CardFields && clientToken) {
           try {
             const cardFields = window.paypal.CardFields({
               createOrder,
@@ -103,7 +115,6 @@ export default function PayPalStandardButtons({ token, clientId, currency, funct
             if (cardFields?.isEligible?.()) {
               cardFieldsRef.current = cardFields;
               setAdvancedCardEligible(true);
-              usedAdvancedCardFields = true;
               await Promise.all([
                 cardFields.NumberField({ placeholder: "Card number" }).render("#labnarrative-card-number"),
                 cardFields.ExpiryField({ placeholder: "MM/YY" }).render("#labnarrative-card-expiry"),
@@ -111,25 +122,8 @@ export default function PayPalStandardButtons({ token, clientId, currency, funct
               ]);
             }
           } catch {
-            usedAdvancedCardFields = false;
             cardFieldsRef.current = null;
             setAdvancedCardEligible(false);
-          }
-        }
-
-        if (!usedAdvancedCardFields && fallbackCardRef.current && window.paypal.Buttons) {
-          fallbackCardRef.current.innerHTML = "";
-          const cardButton = window.paypal.Buttons({
-            fundingSource: window.paypal.FUNDING.CARD,
-            createOrder,
-            onApprove,
-            onCancel: () => undefined,
-            onError,
-            style: { layout: "vertical", shape: "pill", height: 50, label: "pay" },
-          });
-          if (cardButton.isEligible()) {
-            setFallbackCardEligible(true);
-            await cardButton.render(fallbackCardRef.current);
           }
         }
 
@@ -175,24 +169,20 @@ export default function PayPalStandardButtons({ token, clientId, currency, funct
     }
   }
 
-  const showAdvanced = advancedCardEligible || !eligibilityChecked;
-  const showDirectBlock = showAdvanced || fallbackCardEligible;
-
   return <>
-    {showDirectBlock ? <div className={styles.directPayBlock}>
+    {advancedCardEligible ? <div className={styles.directPayBlock}>
       <p className={styles.directPayLabel}>Pay directly by card</p>
-      <div className={`${styles.advancedCardForm} ${showAdvanced ? styles.advancedCardFormVisible : ""}`} aria-hidden={!showAdvanced}>
+      <div className={`${styles.advancedCardForm} ${styles.advancedCardFormVisible}`}>
         <div id="labnarrative-card-number" className={styles.cardField} />
         <div className={styles.cardFieldRow}>
           <div id="labnarrative-card-expiry" className={styles.cardField} />
           <div id="labnarrative-card-cvv" className={styles.cardField} />
         </div>
-        {advancedCardEligible ? <button type="button" className={styles.advancedCardSubmit} disabled={submittingCard} onClick={() => void submitAdvancedCard()}>{submittingCard ? "Processing…" : "Pay by card"}</button> : null}
+        <button type="button" className={styles.advancedCardSubmit} disabled={submittingCard} onClick={() => void submitAdvancedCard()}>{submittingCard ? "Processing…" : "Pay by card"}</button>
       </div>
-      <div ref={fallbackCardRef} className={styles.smartButtonSlot} />
-      {advancedCardEligible ? <p className={styles.directPayHint}>Only card number, expiry and security code are requested. No PayPal account required.</p> : fallbackCardEligible ? <p className={styles.directPayHint}>No PayPal account required. PayPal may request additional verification for this card.</p> : null}
-    </div> : null}
-    <div className={styles.paymentDivider}><span>or</span></div>
+      <p className={styles.directPayHint}>Card number, expiry and security code only. No PayPal account required.</p>
+    </div> : eligibilityChecked ? <p className={styles.directCardUnavailable}>Direct card checkout is not enabled for this PayPal merchant account. Pay securely with PayPal below.</p> : null}
+    {advancedCardEligible ? <div className={styles.paymentDivider}><span>or</span></div> : null}
     <div ref={paypalRef} className={styles.smartButtonSlot} />
     {error ? <p className={styles.error}>{error}</p> : null}
   </>;
