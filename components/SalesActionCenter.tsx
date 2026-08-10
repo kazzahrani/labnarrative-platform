@@ -30,7 +30,6 @@ type Message = {
   status: string;
   delivery_status: string | null;
   sent_at: string | null;
-  follow_up_at: string | null;
   bounced_at: string | null;
   complained_at: string | null;
 };
@@ -132,7 +131,7 @@ export default function SalesActionCenter() {
       const [prospectResult, siteResult, messageResult, linkedinResult, replyResult, integrationResult] = await Promise.all([
         supabase.from("prospects").select("id,site_id,pi_name,institution,email").order("updated_at", { ascending: false }).limit(1000),
         supabase.from("sites").select("id,slug,status,outreach_status,updated_at,content").order("updated_at", { ascending: false }).limit(1000),
-        supabase.from("outreach_messages").select("id,prospect_id,site_id,recipient_email,message_kind,status,delivery_status,sent_at,follow_up_at,bounced_at,complained_at").eq("is_test", false).order("created_at", { ascending: false }).limit(1000),
+        supabase.from("outreach_messages").select("id,prospect_id,site_id,recipient_email,message_kind,status,delivery_status,sent_at,bounced_at,complained_at").eq("is_test", false).order("created_at", { ascending: false }).limit(1000),
         supabase.from("linkedin_outreach").select("prospect_id,status,profile_url,last_action_at").order("updated_at", { ascending: false }).limit(1000),
         supabase.from("outreach_replies").select("id,prospect_id,from_email,subject,body_text,received_at,reply_kind").order("received_at", { ascending: false }).limit(250),
         supabase.from("resend_integration_state").select("status,inbound_domain,inbound_status,last_event_at").eq("id", "primary").maybeSingle(),
@@ -194,15 +193,13 @@ export default function SalesActionCenter() {
   const automaticReplies = useMemo(() => replies.filter((row) => row.reply_kind === "automatic"), [replies]);
 
   const stats = useMemo(() => {
-    const now = Date.now();
-    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const initialSent = messages.filter((row) => row.message_kind === "initial" && row.status === "sent");
     const sent24h = messages.filter((row) => row.sent_at && Date.parse(row.sent_at) >= oneDayAgo).length;
     const confirmedDelivered = messages.filter((row) => row.message_kind === "initial" && row.delivery_status === "delivered").length;
-    const followupsDue = messages.filter((row) => row.status === "sent" && row.follow_up_at && Date.parse(row.follow_up_at) <= now).length;
     const deliveryIssues = messages.filter((row) => Boolean(row.bounced_at || row.complained_at) || ["bounced", "complained", "failed"].includes(row.delivery_status || "")).length;
     const linkedinBacklog = linkedin.filter((row) => row.status === "not_contacted").length;
-    return { initialSent: initialSent.length, sent24h, confirmedDelivered, followupsDue, deliveryIssues, linkedinBacklog };
+    return { initialSent: initialSent.length, sent24h, confirmedDelivered, deliveryIssues, linkedinBacklog };
   }, [linkedin, messages]);
 
   const engagedLeads = useMemo<Lead[]>(() => sites
@@ -214,14 +211,6 @@ export default function SalesActionCenter() {
   const deliveryProblems = useMemo(() => messages
     .filter((row) => Boolean(row.bounced_at || row.complained_at) || ["bounced", "complained", "failed"].includes(row.delivery_status || ""))
     .slice(0, 6), [messages]);
-
-  const dueFollowups = useMemo(() => {
-    const now = Date.now();
-    return messages
-      .filter((row) => row.status === "sent" && row.follow_up_at && Date.parse(row.follow_up_at) <= now)
-      .sort((a, b) => Date.parse(a.follow_up_at || "") - Date.parse(b.follow_up_at || ""))
-      .slice(0, 6);
-  }, [messages]);
 
   const linkedinBacklog = useMemo(() => linkedin
     .filter((row) => row.status === "not_contacted")
@@ -251,7 +240,6 @@ export default function SalesActionCenter() {
           <article><span>Initial emails sent</span><strong>{stats.initialSent}</strong><small>{stats.sent24h} messages sent in the last 24h</small></article>
           <article><span>Confirmed delivered</span><strong>{stats.confirmedDelivered}</strong><small>Delivery webhook confirmations</small></article>
           <article><span>Human replies</span><strong>{humanReplies.length}</strong><small>{automaticReplies.length} automatic replies detected and ignored</small></article>
-          <article><span>Follow-ups due</span><strong>{stats.followupsDue}</strong><small>Due or waiting for follow-up processing</small></article>
           <article><span>Delivery issues</span><strong>{stats.deliveryIssues}</strong><small>Bounces, complaints or failed delivery</small></article>
           <article><span>LinkedIn backlog</span><strong>{stats.linkedinBacklog}</strong><small>Emailed PIs not yet touched on LinkedIn</small></article>
         </div>
@@ -282,14 +270,6 @@ export default function SalesActionCenter() {
                 <div className={styles.rowRight}><span className={styles.hot}>{label(site.outreach_status)}</span><small>{prospect?.email || "—"}</small></div>
               </div>
             ))}
-          </article>
-
-          <article className={styles.card}>
-            <div className={styles.cardHeader}><div><p className={styles.kicker}>Automated cadence</p><h3>Follow-ups due</h3></div><span>{stats.followupsDue}</span></div>
-            {dueFollowups.length === 0 ? <p className={styles.empty}>No follow-ups are due right now.</p> : dueFollowups.map((message) => {
-              const prospect = message.prospect_id ? prospectById.get(message.prospect_id) : undefined;
-              return <div className={styles.row} key={message.id}><div><strong>{prospect?.pi_name || message.recipient_email}</strong><small>{label(message.message_kind)}</small></div><div className={styles.rowRight}><span>{formatDate(message.follow_up_at)}</span><small>{message.recipient_email}</small></div></div>;
-            })}
           </article>
 
           <article className={styles.card}>
