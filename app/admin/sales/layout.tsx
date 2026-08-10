@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import SalesActionCenter from "../../../components/SalesActionCenter";
 import SalesConversionInbox from "../../../components/SalesConversionInbox";
-import SalesDailyActionQueue from "../../../components/SalesDailyActionQueue";
 import SalesReplyAssistant from "../../../components/SalesReplyAssistant";
 import SalesProposalLauncher from "../../../components/SalesProposalLauncher";
 import SalesPaymentLauncher from "../../../components/SalesPaymentLauncher";
@@ -22,7 +21,6 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {isSalesHome ? <SalesDailyActionQueue /> : null}
       {children}
       {isSalesHome ? (
         <>
