@@ -10,6 +10,13 @@
   color: inherit;
 }
 
+.platformListPaginationBottom {
+  margin: 10px 0 2px;
+  padding: 7px 0 0;
+  border-top: 1px solid rgba(125, 145, 158, 0.18);
+  border-bottom: 0;
+}
+
 .platformListPaginationSummary {
   font-size: 0.68rem;
   font-weight: 700;
