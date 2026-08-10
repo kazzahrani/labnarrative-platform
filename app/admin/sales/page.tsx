@@ -3,6 +3,7 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import SalesDailyActionQueue from "../../../components/SalesDailyActionQueue";
 import styles from "./sales-dashboard.module.css";
 
 type SummaryRow = {
@@ -400,6 +401,8 @@ export default function SalesDashboardPage() {
             <Link href="/admin/sites">Websites</Link>
           </div>
         </header>
+
+        <SalesDailyActionQueue />
 
         {notice && <p className={styles.notice}>{notice}</p>}
 
