@@ -178,7 +178,7 @@ export default function SiteMonitorV3Page() {
   const [notice, setNotice] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("updated");
+  const [sort, setSort] = useState("created");
   const [pageSize,setPageSize] = useState<(typeof PAGE_SIZES)[number]>(100);
   const [page,setPage] = useState(1);
 
@@ -192,7 +192,7 @@ export default function SiteMonitorV3Page() {
     if (role?.role !== "admin") { setAuthState("forbidden"); setLoading(false); return; }
     setAuthState("ready");
     const [siteResult, prospectResult, dashboardResult] = await Promise.all([
-      supabase.from("sites").select("id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,outreach_status,design_key,design_settings,design_version").order("updated_at", { ascending: false }),
+      supabase.from("sites").select("id,slug,status,content,created_at,updated_at,domain_status,domain_url,domain_error,outreach_status,design_key,design_settings,design_version").order("created_at", { ascending: false }),
       supabase.from("prospects").select("id,site_id,slug,pi_name,institution,status").not("site_id", "is", null),
       supabase.rpc("engine_v3_admin_dashboard"),
     ]);
@@ -245,7 +245,7 @@ export default function SiteMonitorV3Page() {
       if (!q) return true;
       return [piName(site,prospect,run),institution(site,prospect),site.slug,productionHistoryLabel(site,run),visibilityLabel(site),designLabel(site),site.outreach_status||"",issues.join(" ")].join(" ").toLowerCase().includes(q);
     });
-    return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):sort==="problems"?b.issues.length-a.issues.length||Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at):Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at));
+    return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):sort==="problems"?b.issues.length-a.issues.length||Date.parse(b.site.created_at)-Date.parse(a.site.created_at):Date.parse(b.site.created_at)-Date.parse(a.site.created_at));
   }, [enriched,search,filter,sort]);
 
   const totalPages=Math.max(1,Math.ceil(visible.length/pageSize));
@@ -301,7 +301,7 @@ export default function SiteMonitorV3Page() {
       <section className={styles.toolbar}>
         <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, design, visibility, production state or problem…" /></label>
         <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="problems">Problems</option><option value="v3">Engine v3 only</option><option value="live">Live sites</option><option value="private">Private sites</option><option value="legacy">Legacy / archived</option></select></label>
-        <label className={styles.field}><span>Sort</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="updated">Recently updated</option><option value="problems">Most problems</option><option value="name">PI name</option></select></label>
+        <label className={styles.field}><span>Sort</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="created">Newest websites</option><option value="problems">Most problems</option><option value="name">PI name</option></select></label>
       </section>
 
       {notice?<p className={styles.notice}>{notice}</p>:null}
