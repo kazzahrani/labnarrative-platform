@@ -11,29 +11,40 @@ export default function SiteEditorPage() {
     <>
       <VisualSiteEditor slug={slug} />
       <style jsx global>{`
-        /* Research has a dark introductory hero followed by light programme
-           rows. Keep the editor faithful to the renderer on both surfaces. */
-        [data-ln-visual-root] .narita-route-research main > section:first-of-type > div:last-of-type,
-        [data-ln-visual-root] .narita-route-research main > section:first-of-type > div:last-of-type * {
+        /* Research uses a dark page hero and light programme cards. Target the
+           renderer's semantic CSS-module class names instead of DOM positions,
+           because Narita's overlap wrapper changes section structure. */
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"],
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] h1,
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] h2,
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] h3,
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] p,
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] > div,
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] span,
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] strong {
           color: #ffffff !important;
         }
 
-        [data-ln-visual-root] .narita-route-research main > section:nth-of-type(2) > a,
-        [data-ln-visual-root] .narita-route-research main > section:nth-of-type(2) > a h1,
-        [data-ln-visual-root] .narita-route-research main > section:nth-of-type(2) > a h2,
-        [data-ln-visual-root] .narita-route-research main > section:nth-of-type(2) > a h3,
-        [data-ln-visual-root] .narita-route-research main > section:nth-of-type(2) > a p,
-        [data-ln-visual-root] .narita-route-research main > section:nth-of-type(2) > a b,
-        [data-ln-visual-root] .narita-route-research main > section:nth-of-type(2) > a span {
+        [data-ln-visual-root] .narita-route-research [class*="researchList"],
+        [data-ln-visual-root] .narita-route-research [class*="researchList"] > a,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"],
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] h1,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] h2,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] h3,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] p,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] b,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] span,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] strong {
           color: #111111 !important;
         }
 
-        [data-ln-visual-root] .narita-route-research main > article > section:not(:first-of-type),
-        [data-ln-visual-root] .narita-route-research main > article > section:not(:first-of-type) h1,
-        [data-ln-visual-root] .narita-route-research main > article > section:not(:first-of-type) h2,
-        [data-ln-visual-root] .narita-route-research main > article > section:not(:first-of-type) h3,
-        [data-ln-visual-root] .narita-route-research main > article > section:not(:first-of-type) p,
-        [data-ln-visual-root] .narita-route-research main > article > section:not(:first-of-type) span {
+        [data-ln-visual-root] .narita-route-research [class*="projectQuestion"],
+        [data-ln-visual-root] .narita-route-research [class*="projectQuestion"] *,
+        [data-ln-visual-root] .narita-route-research [class*="projectNarrative"],
+        [data-ln-visual-root] .narita-route-research [class*="projectNarrative"] *,
+        [data-ln-visual-root] .narita-route-research [class*="detailList"],
+        [data-ln-visual-root] .narita-route-research [class*="detailList"] *,
+        [data-ln-visual-root] .narita-route-research [class*="returnLink"] {
           color: #111111 !important;
         }
 
