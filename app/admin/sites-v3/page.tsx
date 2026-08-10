@@ -129,12 +129,6 @@ function workflowLabel(site: SiteRow, run?: V3Run): string {
   return site.status;
 }
 
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Riyadh", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
-}
-
 function dataIssues(site: SiteRow, run?: V3Run): string[] {
   const issues: string[] = [];
   const content = site.content || {};
@@ -320,7 +314,7 @@ export default function SiteMonitorV3Page() {
       </div>
 
       <div className={styles.tableWrap}><table className={styles.table}>
-        <thead><tr><th>Website</th><th>Design</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Follow-up</th><th>Problems</th><th>Updated</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Website</th><th>Design</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Follow-up</th><th>Problems</th><th>Actions</th></tr></thead>
         <tbody>{pagedVisible.map(({site,run,prospect,issues})=>{
           const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site,run); const followUp=followUpStage(site);
           return <tr id={`site-${site.id}`} key={site.id}>
@@ -332,7 +326,6 @@ export default function SiteMonitorV3Page() {
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${ph==="ok"?styles.dotGood:ph==="error"?styles.dotBad:styles.dotWarn}`}></span>{!portrait?"Missing":ph==="ok"?"Rendering":ph==="error"?"Not rendering":"Not checked"}</div></div></td>
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={followUp>=1?`${styles.pill} ${styles.pillGood}`:styles.pill}>E1</span><span>›</span><span className={followUp>=2?`${styles.pill} ${styles.pillGood}`:styles.pill}>F1</span><span>›</span><span className={followUp>=3?`${styles.pill} ${styles.pillGood}`:styles.pill}>F2</span></div><span className={styles.muted}>{site.outreach_status||prospect?.status||"not_contacted"}</span></div></td>
             <td>{issues.length?<div className={styles.issues}>{issues.slice(0,5).map((issue)=><span className={styles.issue} key={issue}>{issue}</span>)}</div>:<span className={styles.ok}>No data problems</span>}</td>
-            <td>{formatDate(site.updated_at)}</td>
             <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>{issues.length?"Edit / Fix":"Edit"}</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run&&["published","completed"].includes(run.state)?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}</div></td>
           </tr>;
         })}</tbody>
