@@ -44,6 +44,20 @@ type ScheduleDraft = {
   due: string;
 };
 
+const PAGE_SIZES = [5, 10, 25, 50, 100] as const;
+
+function pageNumbers(page: number, total: number): Array<number | "…"> {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+  const values: Array<number | "…"> = [1];
+  const start = Math.max(2, page - 1);
+  const end = Math.min(total - 1, page + 1);
+  if (start > 2) values.push("…");
+  for (let value = start; value <= end; value += 1) values.push(value);
+  if (end < total - 1) values.push("…");
+  values.push(total);
+  return values;
+}
+
 function label(value?: string | null) {
   if (!value) return "—";
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -98,6 +112,8 @@ export default function SalesDailyActionQueue() {
   const [notice, setNotice] = useState("");
   const [scheduleKey, setScheduleKey] = useState("");
   const [scheduleDraft, setScheduleDraft] = useState<ScheduleDraft>({ action: "", due: "" });
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(10);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async (preserveTab = true) => {
     setLoading(true);
@@ -120,6 +136,7 @@ export default function SalesDailyActionQueue() {
   }, []);
 
   useEffect(() => { void load(false); }, [load]);
+  useEffect(() => { setPage(1); }, [tab, pageSize]);
 
   useEffect(() => {
     const channel = supabase
@@ -138,6 +155,30 @@ export default function SalesDailyActionQueue() {
   }), [actions, completed]);
 
   const visible = useMemo(() => tab === "completed" ? [] : actions.filter((row) => row.bucket === tab), [actions, tab]);
+  const activeItems = tab === "completed" ? completed : visible;
+  const totalPages = Math.max(1, Math.ceil(activeItems.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pagedCompleted = completed.slice(pageStart, pageStart + pageSize);
+  const pagedVisible = visible.slice(pageStart, pageStart + pageSize);
+  const rangeStart = activeItems.length ? pageStart + 1 : 0;
+  const rangeEnd = Math.min(activeItems.length, pageStart + pageSize);
+
+  const pagination = (
+    <div className="platformListPagination" data-platform-native-pagination="daily-sales-actions">
+      <span className="platformListPaginationSummary">{rangeStart}–{rangeEnd} of {activeItems.length}</span>
+      <div className="platformListPaginationControls">
+        <label className="platformListPageSize">Show <select aria-label="Daily sales actions per page" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value) as (typeof PAGE_SIZES)[number])}>{PAGE_SIZES.map((size) => <option value={size} key={size}>{size}</option>)}</select></label>
+        <div className="platformListPageButtons">
+          <button type="button" disabled={currentPage <= 1} onClick={() => setPage(Math.max(1, currentPage - 1))}>‹</button>
+          {pageNumbers(currentPage, totalPages).map((value, index) => value === "…"
+            ? <span className="platformListPageEllipsis" key={`ellipsis-${index}`}>…</span>
+            : <button type="button" key={value} aria-current={value === currentPage ? "page" : undefined} onClick={() => setPage(value)}>{value}</button>)}
+          <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage(Math.min(totalPages, currentPage + 1))}>›</button>
+        </div>
+      </div>
+    </div>
+  );
 
   async function markDone(action: QueueAction) {
     setBusyKey(action.action_key);
@@ -248,9 +289,11 @@ export default function SalesDailyActionQueue() {
           ))}
         </div>
 
+        {pagination}
+
         {tab === "completed" ? (
           <div className={styles.list}>
-            {completed.length === 0 ? <p className={styles.empty}>No completed sales actions yet.</p> : completed.map((action) => (
+            {completed.length === 0 ? <p className={styles.empty}>No completed sales actions yet.</p> : pagedCompleted.map((action) => (
               <article className={`${styles.action} ${styles.completedAction}`} key={action.id}>
                 <div className={`${styles.typeMark} ${actionTone(action.action_type)}`}></div>
                 <div className={styles.actionBody}>
@@ -268,7 +311,7 @@ export default function SalesDailyActionQueue() {
           <div className={styles.list}>
             {loading && visible.length === 0 ? <p className={styles.empty}>Loading the live sales queue…</p> : null}
             {!loading && visible.length === 0 ? <p className={styles.empty}>Nothing in {tab} right now.</p> : null}
-            {visible.map((action) => (
+            {pagedVisible.map((action) => (
               <article className={styles.action} key={action.action_key}>
                 <div className={`${styles.typeMark} ${actionTone(action.action_type)}`}></div>
                 <div className={styles.actionBody}>
@@ -296,6 +339,8 @@ export default function SalesDailyActionQueue() {
             ))}
           </div>
         )}
+
+        {pagination}
 
         <footer className={styles.footerNote}>The queue never sends email, changes a PI to a later sales stage, or schedules meetings by itself. It only surfaces work and records the actions you explicitly complete or schedule.</footer>
       </div>
