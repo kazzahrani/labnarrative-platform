@@ -64,7 +64,7 @@ function SiteNav({ site, basePath }: { site: LabSite; basePath: string }) {
 
 function Home({ site }: { site: LabSite }) {
   const heroImage = safeImageUrl(site.heroImage);
-  const portraitImage = safeImageUrl(site.members?.[0]?.image);
+  const portraitImage = safeImageUrl(site.pages?.home?.piImage || site.members?.[0]?.image);
   return (
     <>
       <section className="hero">
