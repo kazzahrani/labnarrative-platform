@@ -91,9 +91,10 @@ export default function Narita3Design(props: Narita3DesignProps) {
 
       <style jsx global>{`
         .narita-3-shell .narita-route-home main > section:first-of-type {
-          background: #f1eee7 !important;
+          background: #ece9e4 !important;
           color: #102e2d !important;
           overflow: hidden !important;
+          padding: 0 !important;
         }
 
         .narita-3-shell .narita-route-home main > section:first-of-type > *:not(.narita-3-pi-hero) {
@@ -101,27 +102,27 @@ export default function Narita3Design(props: Narita3DesignProps) {
         }
 
         .narita-3-shell .narita-route-home main > section:first-of-type::before {
-          background: #f1eee7 !important;
+          background: #ece9e4 !important;
           box-shadow: none !important;
         }
 
         .narita-3-pi-hero {
-          box-sizing: border-box;
-          width: min(1320px, calc(100% - 2 * var(--ciribilli-gutter, 48px)));
+          width: 100%;
+          max-width: none;
           height: 100%;
           min-height: inherit;
-          margin: 0 auto;
+          margin: 0;
           display: grid;
-          grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr);
-          gap: clamp(48px, 7vw, 112px);
-          align-items: center;
-          padding: clamp(42px, 6svh, 74px) 0;
+          grid-template-columns: minmax(0, 54%) minmax(0, 46%);
+          gap: 0;
+          align-items: stretch;
         }
 
         .narita-3-pi-portrait {
-          width: min(100%, 520px);
-          justify-self: start;
-          aspect-ratio: 4 / 5;
+          width: 100%;
+          height: 100%;
+          max-width: none;
+          aspect-ratio: auto;
           overflow: hidden;
           background: #d7d5cf;
         }
@@ -136,8 +137,13 @@ export default function Narita3Design(props: Narita3DesignProps) {
         }
 
         .narita-3-pi-copy {
-          max-width: 760px;
-          align-self: center;
+          height: 100%;
+          max-width: none;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: clamp(52px, 6vw, 110px);
+          background: #ece9e4;
         }
 
         .narita-3-eyebrow {
@@ -147,58 +153,60 @@ export default function Narita3Design(props: Narita3DesignProps) {
           font-weight: 700;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: #6d7d78;
+          color: #243c3a;
         }
 
         .narita-3-pi-copy h1 {
           margin: 0;
-          max-width: 760px;
+          max-width: 8.5ch;
           font-family: Georgia, "Times New Roman", serif;
-          font-size: clamp(54px, min(7vw, 9svh), 102px);
+          font-size: clamp(64px, min(7.5vw, 10svh), 112px);
           font-weight: 400;
-          line-height: 0.94;
+          line-height: 0.92;
           letter-spacing: -0.045em;
           color: #103b3a;
         }
 
         .narita-3-pi-copy h2 {
-          margin: 24px 0 0;
+          margin: 26px 0 0;
           font-family: Arial, Helvetica, sans-serif;
-          font-size: clamp(14px, 1.4vw, 19px);
-          font-weight: 600;
+          font-size: clamp(16px, 1.55vw, 22px);
+          font-weight: 700;
           line-height: 1.35;
           letter-spacing: 0.04em;
-          color: #244c49;
+          color: #5c6f6b;
+          text-transform: uppercase;
         }
 
         .narita-3-institution {
-          margin: 8px 0 0;
+          margin: 10px 0 0;
           font-family: Arial, Helvetica, sans-serif;
-          font-size: 13px;
-          line-height: 1.5;
-          color: #687773;
+          font-size: 14px;
+          line-height: 1.55;
+          color: #6b7975;
         }
 
         .narita-3-overview {
-          max-width: 680px;
-          margin-top: clamp(28px, 4svh, 46px);
-          padding-top: 24px;
-          border-top: 1px solid rgba(16, 59, 58, 0.22);
+          max-width: 760px;
+          margin-top: 34px;
           font-family: Georgia, "Times New Roman", serif;
-          font-size: clamp(18px, 1.8vw, 25px);
+          font-size: clamp(19px, 2vw, 27px);
           line-height: 1.55;
-          color: #24413f;
+          color: #223f3d;
         }
 
-        @media (max-width: 880px) {
+        @media (max-width: 980px) {
           .narita-3-pi-hero {
-            grid-template-columns: minmax(210px, 0.72fr) minmax(0, 1.28fr);
-            gap: 36px;
-            width: calc(100% - 48px);
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .narita-3-pi-copy {
+            padding: 42px;
           }
 
           .narita-3-pi-copy h1 {
-            font-size: clamp(45px, 7.8vw, 74px);
+            font-size: clamp(52px, 7vw, 84px);
+            max-width: 9ch;
           }
         }
 
@@ -209,21 +217,21 @@ export default function Narita3Design(props: Narita3DesignProps) {
           }
 
           .narita-3-pi-hero {
-            width: calc(100% - 40px);
             min-height: calc(100svh - var(--narita-header-height));
             grid-template-columns: 1fr;
-            gap: 28px;
-            align-content: center;
-            padding: 34px 0 44px;
           }
 
           .narita-3-pi-portrait {
-            width: min(58vw, 280px);
-            aspect-ratio: 4 / 4.7;
+            min-height: 44svh;
+          }
+
+          .narita-3-pi-copy {
+            padding: 32px 24px 40px;
           }
 
           .narita-3-pi-copy h1 {
-            font-size: clamp(42px, 13vw, 64px);
+            max-width: none;
+            font-size: clamp(42px, 12vw, 64px);
           }
 
           .narita-3-pi-copy h2 {
@@ -231,8 +239,7 @@ export default function Narita3Design(props: Narita3DesignProps) {
           }
 
           .narita-3-overview {
-            margin-top: 22px;
-            padding-top: 18px;
+            margin-top: 24px;
             font-size: 18px;
           }
         }
