@@ -106,6 +106,10 @@ export default function Narita3Design(props: Narita3DesignProps) {
           box-shadow: none !important;
         }
 
+        .narita-3-shell .narita-route-home main > section:nth-of-type(3) {
+          display: none !important;
+        }
+
         .narita-3-pi-hero {
           width: 100%;
           max-width: none;
@@ -188,10 +192,10 @@ export default function Narita3Design(props: Narita3DesignProps) {
 
         .narita-3-overview {
           max-width: 760px;
-          margin-top: 34px;
+          margin-top: 28px;
           font-family: Georgia, "Times New Roman", serif;
-          font-size: clamp(19px, 2vw, 27px);
-          line-height: 1.55;
+          font-size: clamp(16px, 1.45vw, 21px);
+          line-height: 1.5;
           color: #223f3d;
         }
 
@@ -239,8 +243,9 @@ export default function Narita3Design(props: Narita3DesignProps) {
           }
 
           .narita-3-overview {
-            margin-top: 24px;
-            font-size: 18px;
+            margin-top: 20px;
+            font-size: 16px;
+            line-height: 1.5;
           }
         }
       `}</style>
