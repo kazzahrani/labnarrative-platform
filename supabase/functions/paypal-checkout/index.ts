@@ -62,7 +62,7 @@ function payerMeta(payload: J) {
   return { payer: { name: fullName, email: text(payer.email_address, 320) } };
 }
 
-async function bindOrder(admin: any, payment: any, orderId: string, method: "paypal" | "apple_pay", createStatus: string) {
+async function bindOrder(admin: any, payment: any, orderId: string, method: "paypal" | "apple_pay" | "standard", createStatus: string) {
   const metadata = {
     ...asObject(payment.provider_metadata),
     checkout_method: method,
@@ -148,6 +148,31 @@ Deno.serve(async (req: Request) => {
     const { data: prospect } = await admin.from("prospects").select("pi_name").eq("id", payment.prospect_id).maybeSingle();
     const description = `LabNarrative ${payment.kind} payment${prospect?.pi_name ? ` – ${prospect.pi_name}` : ""}`.slice(0, 127);
     const purchaseUnits = [{ reference_id: payment.id, custom_id: payment.id, description, amount: { currency_code: String(payment.currency).toUpperCase(), value: amount } }];
+
+    if (action === "create_standard_order") {
+      const existingMethod = text(asObject(payment.provider_metadata).checkout_method, 50);
+      if (payment.provider_order_id && existingMethod === "standard") {
+        const existing = await paypal(`/v2/checkout/orders/${encodeURIComponent(payment.provider_order_id)}`, { method: "GET" });
+        if (existing.response.ok) {
+          const status = text(existing.payload.status, 50);
+          if (status === "COMPLETED") return json({ ok: true, orderId: payment.provider_order_id, completed: true });
+          if (["CREATED", "PAYER_ACTION_REQUIRED", "APPROVED"].includes(status)) return json({ ok: true, orderId: payment.provider_order_id, reused: true });
+        }
+      }
+      const created = await paypal("/v2/checkout/orders", {
+        method: "POST",
+        headers: { "PayPal-Request-Id": `${payment.id}-standard-v1` },
+        body: JSON.stringify({ intent: "CAPTURE", purchase_units: purchaseUnits, application_context: { brand_name: "LabNarrative", shipping_preference: "NO_SHIPPING", user_action: "PAY_NOW" } }),
+      });
+      const orderId = text(created.payload.id, 300);
+      if (!created.response.ok || !orderId) {
+        const message = text(created.payload.message, 1000) || `PayPal returned HTTP ${created.response.status}.`;
+        await admin.rpc("sales_payment_provider_fail", { p_payment_id: payment.id, p_message: message, p_metadata: { standard_create_status: created.response.status } });
+        return json({ error: message, code: "standard_create_failed" }, 502);
+      }
+      await bindOrder(admin, payment, orderId, "standard", text(created.payload.status, 50));
+      return json({ ok: true, orderId });
+    }
 
     if (action === "create_order") {
       const existingMethod = text(asObject(payment.provider_metadata).checkout_method, 50);
