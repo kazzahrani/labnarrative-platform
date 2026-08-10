@@ -9,25 +9,44 @@
   background: #fff;
 }
 
-/* Keep the visual editor faithful to the live Narita renderer. The overlap
-   shell can otherwise leave light-panel copy inheriting the white hero color
-   while editor interaction classes are active. These rules only restore the
-   renderer's own foreground/muted colors on light panels; dark hero/header,
-   cards and footer keep their native white text. */
-.canvas :global(.narita-route-home main > section:nth-of-type(2)),
-.canvas :global(.narita-route-home main > section:nth-of-type(3)),
-.canvas :global(.narita-overlap-design main > section:nth-of-type(n+2):not([class*="joinBanner"])),
+/* Keep the visual editor faithful to the live Narita renderer. Narita uses
+   white copy on photographic heroes, but ordinary content panels are dark.
+   In the editor those content headings can inherit the hero white. Restore
+   the live foreground on every route while leaving the actual hero copy,
+   dark cards and footer untouched. */
+.canvas :global(.narita-overlap-design main > section:not(:first-of-type)),
 .canvas :global(.narita-overlap-design main > aside),
-.canvas :global(.narita-overlap-design main > article > section) {
+.canvas :global(.narita-overlap-design main > article > section:not(:first-of-type)) {
   color: #111111 !important;
 }
 
 .canvas :global(.narita-route-home main > section:nth-of-type(2) h2),
-.canvas :global(.narita-route-home main > section:nth-of-type(3) h2) {
+.canvas :global(.narita-route-home main > section:nth-of-type(3) h2),
+.canvas :global(.narita-route-research main > section:not(:has(> img)) h1),
+.canvas :global(.narita-route-research main > section:not(:has(> img)) h2),
+.canvas :global(.narita-route-research main > section:not(:has(> img)) h3),
+.canvas :global(.narita-route-research main > article > section:not(:has(> img)) h1),
+.canvas :global(.narita-route-research main > article > section:not(:has(> img)) h2),
+.canvas :global(.narita-route-research main > article > section:not(:has(> img)) h3),
+.canvas :global(.narita-route-members main > section:not(:first-of-type) h1),
+.canvas :global(.narita-route-members main > section:not(:first-of-type) h2),
+.canvas :global(.narita-route-members main > section:not(:first-of-type) h3),
+.canvas :global(.narita-route-publications main > section:not(:first-of-type) h1),
+.canvas :global(.narita-route-publications main > section:not(:first-of-type) h2),
+.canvas :global(.narita-route-publications main > section:not(:first-of-type) h3),
+.canvas :global(.narita-route-join main > section:not(:first-of-type) h1),
+.canvas :global(.narita-route-join main > section:not(:first-of-type) h2),
+.canvas :global(.narita-route-join main > section:not(:first-of-type) h3),
+.canvas :global(.narita-route-contact main > section:not(:first-of-type) h1),
+.canvas :global(.narita-route-contact main > section:not(:first-of-type) h2),
+.canvas :global(.narita-route-contact main > section:not(:first-of-type) h3) {
   color: #111111 !important;
 }
 
-.canvas :global(.narita-route-home main > section:nth-of-type(3) h3) {
+.canvas :global(.narita-route-home main > section:nth-of-type(3) h3),
+.canvas :global(.narita-route-members main > section:not(:first-of-type) [class*="role"]),
+.canvas :global(.narita-route-publications main > section:not(:first-of-type) p),
+.canvas :global(.narita-route-contact main > section:not(:first-of-type) > p) {
   color: #6f6f6f !important;
 }
 
