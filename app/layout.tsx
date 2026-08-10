@@ -8,6 +8,7 @@ import PlatformListPaginationEnhancer from "@/components/admin/PlatformListPagin
 import PlatformListPaginationExtensionV2 from "@/components/admin/PlatformListPaginationExtensionV2";
 import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
+import ClientOnboardingEnhancer from "@/components/ClientOnboardingEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
 import "./platform-overrides.css";
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <WebsiteDesignSwitcher />
         <PlatformListPaginationEnhancer />
         <PlatformListPaginationExtensionV2 />
+        <ClientOnboardingEnhancer />
         {children}
       </body>
     </html>
