@@ -54,7 +54,7 @@ function initials(name: string) {
 function SiteNav({ site, basePath }: { site: LabSite; basePath: string }) {
   return (
     <nav className="site-nav" aria-label={`${site.labName} navigation`}>
-      <Link href={basePath}>Home</Link>
+      <Link href={basePath || "/"}>Home</Link>
       <Link href={`${basePath}/research`}>Research</Link>
       <Link href={`${basePath}/members`}>Team</Link>
       <Link href={`${basePath}/publications`}>Publications</Link>
@@ -98,7 +98,7 @@ function Publications({ site }: { site: LabSite }) {
   return <section className="inner-page"><p className="eyebrow">Selected work</p><h1>Publications and research outputs.</h1><div className="publication-list">{site.publications.map((publication, index) => <article key={`${publication.title}-${publication.year}-${index}`}><span>{publication.year}</span><div><h2>{publication.href ? <a href={publication.href} target="_blank" rel="noreferrer">{publication.title}</a> : publication.title}</h2><p>{publication.journal}</p></div></article>)}</div></section>;
 }
 
-export default function SiteShell({ site, route, basePath, previewMode = false }: { site: LabSite; route: SiteRoute; basePath?: string; previewMode?: boolean }) {
+export default function SiteShell({ site, route, basePath, previewMode = false, isLive = false }: { site: LabSite; route: SiteRoute; basePath?: string; previewMode?: boolean; isLive?: boolean }) {
   const resolvedBasePath = basePath ?? `/sites/${site.slug}`;
   const designKey = resolveDesignKey(site);
   const designVariant = site.design?.settings?.variant;
@@ -208,8 +208,8 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
 
   return (
     <main className={`site-theme site-template-${template}`} style={variables}>
-      <div className="prototype-banner">{previewMode ? "Private administrator preview · this draft is not publicly visible" : "LabNarrative concept · prepared as an independent design proposal"}</div>
-      <header className="site-header"><Link className="wordmark" href={resolvedBasePath}>{site.labName}</Link><SiteNav site={site} basePath={resolvedBasePath} /></header>
+      {(previewMode || !isLive) ? <div className="prototype-banner">{previewMode ? "Private administrator preview · this draft is not publicly visible" : "LabNarrative concept · prepared as an independent design proposal"}</div> : null}
+      <header className="site-header"><Link className="wordmark" href={resolvedBasePath || "/"}>{site.labName}</Link><SiteNav site={site} basePath={resolvedBasePath} /></header>
       {route.section === "home" && <Home site={site} />}
       {route.section === "research" && <Research site={site} />}
       {route.section === "members" && <Team site={site} />}
