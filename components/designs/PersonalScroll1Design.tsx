@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
 import CiribilliNaritaDesign from "@/components/designs/CiribilliNaritaDesign";
 import { getBourdonPages, type LabSite, type SiteRoute } from "@/lib/sites";
 
@@ -26,7 +25,6 @@ function safeAsset(value?: string) {
 }
 
 export default function PersonalScroll1Design(props: PersonalScroll1DesignProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
   const pages = getBourdonPages(props.site);
   const homeOverview = (pages.home as typeof pages.home & { overview?: string }).overview;
   const pi = props.site.members?.[0];
@@ -37,44 +35,12 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
   const welcomeTitle = pages.home.mainHeading || props.site.headline || `Welcome to ${props.site.labName}`;
   const welcomeText = pages.home.openingText || props.site.introduction;
 
-  useEffect(() => {
-    if (props.route.section !== "home") return;
-
-    const root = rootRef.current;
-    if (!root) return;
-
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let frame = 0;
-
-    const update = () => {
-      frame = 0;
-      const distance = reducedMotion ? 0 : window.scrollY;
-      root.style.setProperty("--personal-scroll-hero-offset", `${-(distance * 0.28).toFixed(2)}px`);
-      root.style.setProperty("--personal-scroll-portrait-offset", `${-(distance * 0.06).toFixed(2)}px`);
-      root.style.setProperty("--personal-scroll-copy-offset", `${-(distance * 0.09).toFixed(2)}px`);
-    };
-
-    const requestUpdate = () => {
-      if (!frame) frame = window.requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
-
-    return () => {
-      window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, [props.route.section]);
-
   if (props.route.section !== "home") {
     return <CiribilliNaritaDesign {...props} />;
   }
 
   return (
-    <div className="personal-scroll-1" ref={rootRef}>
+    <div className="personal-scroll-1">
       {props.previewMode && (
         <div className="personal-scroll-preview">Private administrator preview · this draft is not publicly visible</div>
       )}
@@ -139,8 +105,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
 
       <style jsx global>{`
         .personal-scroll-1 {
-          --ps-green: #0f4c49;
-          --ps-ink: #173d3a;
+          --ps-ink: #000000;
           --ps-paper: #ece9e4;
           --ps-header-height: 132px;
           min-height: 100vh;
@@ -155,7 +120,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
         .personal-scroll-preview {
           padding: 9px 24px;
           background: #f2d679;
-          color: #1b1b1b;
+          color: #000;
           text-align: center;
           font-size: 11px;
           font-weight: 700;
@@ -164,16 +129,15 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
         }
 
         .personal-scroll-header {
-          position: relative;
-          z-index: 30;
           min-height: var(--ps-header-height);
           padding: 18px clamp(24px, 5vw, 76px) 16px;
           display: flex;
           flex-direction: column;
           justify-content: center;
           gap: 16px;
-          background: var(--ps-green);
-          color: #fff;
+          background: var(--ps-paper);
+          color: #000;
+          border-bottom: 1px solid rgba(0,0,0,.18);
         }
 
         .personal-scroll-wordmark {
@@ -181,6 +145,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           font-family: Georgia, "Times New Roman", serif;
           font-size: clamp(24px, 2.1vw, 34px);
           line-height: 1;
+          color: #000;
         }
 
         .personal-scroll-header nav {
@@ -192,7 +157,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
         .personal-scroll-header nav a {
           position: relative;
           padding: 5px 0 8px;
-          color: rgba(255,255,255,.72);
+          color: rgba(0,0,0,.62);
           font-size: 10px;
           font-weight: 700;
           letter-spacing: .16em;
@@ -200,7 +165,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
         }
 
         .personal-scroll-header nav a:hover,
-        .personal-scroll-header nav a.active { color: #fff; }
+        .personal-scroll-header nav a.active { color: #000; }
         .personal-scroll-header nav a.active::after {
           content: "";
           position: absolute;
@@ -208,30 +173,24 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           right: 0;
           bottom: 0;
           height: 1px;
-          background: #fff;
+          background: #000;
         }
 
         .personal-scroll-1 main {
-          position: relative;
-          isolation: isolate;
           background: var(--ps-paper);
+          color: #000;
         }
 
         .personal-scroll-hero {
-          position: relative;
-          z-index: 1;
           height: calc(100svh - var(--ps-header-height));
           min-height: 620px;
           display: grid;
           grid-template-columns: 1fr 1fr;
           overflow: hidden;
           background: var(--ps-paper);
-          transform: translate3d(0, var(--personal-scroll-hero-offset, 0px), 0);
-          will-change: transform;
         }
 
         .personal-scroll-portrait {
-          position: relative;
           height: 100%;
           overflow: hidden;
           background: #d4d1ca;
@@ -240,12 +199,10 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
         .personal-scroll-portrait img,
         .personal-scroll-placeholder {
           width: 100%;
-          height: 108%;
+          height: 100%;
           display: block;
           object-fit: cover;
           object-position: center 24%;
-          transform: translate3d(0, var(--personal-scroll-portrait-offset, 0px), 0);
-          will-change: transform;
         }
 
         .personal-scroll-pi-copy {
@@ -254,8 +211,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           justify-content: center;
           padding: clamp(50px, 6vw, 104px);
           background: var(--ps-paper);
-          transform: translate3d(0, var(--personal-scroll-copy-offset, 0px), 0);
-          will-change: transform;
+          color: #000;
         }
 
         .personal-scroll-eyebrow {
@@ -264,7 +220,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           font-weight: 700;
           letter-spacing: .18em;
           text-transform: uppercase;
-          color: #506662;
+          color: #000;
         }
 
         .personal-scroll-pi-copy h1 {
@@ -275,7 +231,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           font-weight: 400;
           line-height: .93;
           letter-spacing: -.045em;
-          color: var(--ps-green);
+          color: #000;
         }
 
         .personal-scroll-pi-copy h2 {
@@ -285,14 +241,14 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           font-weight: 700;
           letter-spacing: .05em;
           text-transform: uppercase;
-          color: #5c6f6b;
+          color: #000;
         }
 
         .personal-scroll-institution {
           margin: 9px 0 0;
           font-size: 13px;
           line-height: 1.5;
-          color: #75827e;
+          color: #000;
         }
 
         .personal-scroll-overview {
@@ -301,15 +257,14 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           font-family: Georgia, "Times New Roman", serif;
           font-size: clamp(16px, 1.45vw, 21px);
           line-height: 1.58;
-          color: #294541;
+          color: #000;
         }
 
         .personal-scroll-welcome {
-          position: relative;
-          z-index: 5;
-          margin-top: calc(-1 * min(22svh, 190px));
-          padding: clamp(110px, 15vw, 190px) 24px clamp(100px, 13vw, 170px);
+          padding: clamp(90px, 12vw, 150px) 24px;
           background: #fff;
+          color: #000;
+          border-top: 1px solid rgba(0,0,0,.12);
         }
 
         .personal-scroll-welcome-inner {
@@ -325,7 +280,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           font-weight: 400;
           line-height: 1.04;
           letter-spacing: -.035em;
-          color: var(--ps-green);
+          color: #000;
         }
 
         .personal-scroll-welcome-inner > p:last-child {
@@ -334,7 +289,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           font-family: Georgia, "Times New Roman", serif;
           font-size: clamp(18px, 1.8vw, 24px);
           line-height: 1.7;
-          color: #384d49;
+          color: #000;
         }
 
         .personal-scroll-footer {
@@ -343,19 +298,21 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
           display: grid;
           grid-template-columns: 1.2fr .8fr 1fr;
           gap: 48px;
-          background: var(--ps-green);
-          color: #fff;
+          background: var(--ps-paper);
+          color: #000;
+          border-top: 1px solid rgba(0,0,0,.18);
         }
 
         .personal-scroll-footer strong {
           font-family: Georgia, "Times New Roman", serif;
           font-size: 24px;
           font-weight: 400;
+          color: #000;
         }
 
         .personal-scroll-footer p,
         .personal-scroll-footer-meta {
-          color: rgba(255,255,255,.72);
+          color: #000;
           font-size: 12px;
           line-height: 1.7;
         }
@@ -369,6 +326,7 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
 
         .personal-scroll-footer-links a {
           width: fit-content;
+          color: #000;
           font-size: 11px;
           font-weight: 700;
           letter-spacing: .13em;
@@ -391,33 +349,17 @@ export default function PersonalScroll1Design(props: PersonalScroll1DesignProps)
             height: auto;
             min-height: calc(100svh - var(--ps-header-height));
             grid-template-columns: 1fr;
-            transform: none;
           }
 
           .personal-scroll-portrait { min-height: 48svh; }
-          .personal-scroll-portrait img,
-          .personal-scroll-placeholder { height: 100%; transform: none; }
-          .personal-scroll-pi-copy { padding: 34px 24px 44px; transform: none; }
+          .personal-scroll-pi-copy { padding: 34px 24px 44px; }
           .personal-scroll-pi-copy h1 { max-width: none; font-size: clamp(44px, 13vw, 64px); }
           .personal-scroll-overview { margin-top: 24px; font-size: 17px; }
 
-          .personal-scroll-welcome {
-            margin-top: 0;
-            padding: 82px 22px 94px;
-          }
+          .personal-scroll-welcome { padding: 82px 22px 94px; }
 
           .personal-scroll-footer { grid-template-columns: 1fr; gap: 32px; }
           .personal-scroll-footer-meta { grid-column: auto; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .personal-scroll-hero,
-          .personal-scroll-portrait img,
-          .personal-scroll-placeholder,
-          .personal-scroll-pi-copy {
-            transform: none !important;
-            will-change: auto;
-          }
         }
       `}</style>
     </div>
