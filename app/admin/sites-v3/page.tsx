@@ -108,25 +108,33 @@ function followUpStage(site: SiteRow): number {
   return 0;
 }
 
-function isPublic(site: SiteRow, run?: V3Run): boolean {
-  if (run && ["published","completed"].includes(run.state)) return true;
+function isPublic(site: SiteRow): boolean {
   return ["concept","live"].includes(site.status);
 }
 
-function workflowLabel(site: SiteRow, run?: V3Run): string {
+function productionHistoryLabel(site: SiteRow, run?: V3Run): string {
   if (run) {
     if (run.state === "final_review") return "Final Review";
     if (run.state === "producing") return "Producing";
-    if (run.state === "published") return "Published";
+    if (run.state === "published") return "Published before";
     if (run.state === "completed") return "Completed";
     if (run.state === "blocked") return "Blocked";
     return run.state.replaceAll("_", " ");
   }
-  if (site.status === "draft") return "Legacy Draft";
-  if (site.status === "concept") return "Legacy Concept";
-  if (site.status === "live") return "Legacy Client";
+  if (site.status === "draft") return "Legacy draft";
+  if (site.status === "concept") return "Legacy published";
+  if (site.status === "live") return "Legacy client";
   if (site.status === "archived") return "Archived";
   return site.status;
+}
+
+function visibilityLabel(site: SiteRow): string {
+  return isPublic(site) ? "Live" : "Private";
+}
+
+function domainLabel(site: SiteRow): string {
+  if (["live","wildcard_live"].includes(site.domain_status)) return "domain ready";
+  return `domain ${site.domain_status || "unknown"}`;
 }
 
 function dataIssues(site: SiteRow, run?: V3Run): string[] {
@@ -141,9 +149,8 @@ function dataIssues(site: SiteRow, run?: V3Run): string[] {
     for (const key of THEME_KEYS) if (!String(content?.theme?.[key] || "").trim()) issues.push(`Theme ${key}`);
     if (!portraitUrl(content)) issues.push("Portrait missing");
     if (run.state === "final_review" && site.status !== "draft") issues.push("Final Review not private");
-    if (["published","completed"].includes(run.state) && !["concept","live"].includes(site.status)) issues.push("Published state mismatch");
   }
-  if (isPublic(site, run)) {
+  if (isPublic(site)) {
     if (!site.domain_url) issues.push("Public URL missing");
     if (!["live","wildcard_live"].includes(site.domain_status)) issues.push("Domain not live");
   }
@@ -153,9 +160,9 @@ function dataIssues(site: SiteRow, run?: V3Run): string[] {
 
 function pillClass(label: string) {
   const lower = label.toLowerCase();
-  if (["completed","published","live","verified","healthy"].some((x) => lower.includes(x))) return `${styles.pill} ${styles.pillGood}`;
+  if (["completed","published before","live","verified","healthy"].some((x) => lower.includes(x))) return `${styles.pill} ${styles.pillGood}`;
   if (["blocked","error","problem","missing"].some((x) => lower.includes(x))) return `${styles.pill} ${styles.pillBad}`;
-  if (["producing","final review","draft","checking"].some((x) => lower.includes(x))) return `${styles.pill} ${styles.pillWarn}`;
+  if (["producing","final review","draft","checking","private"].some((x) => lower.includes(x))) return `${styles.pill} ${styles.pillWarn}`;
   return `${styles.pill} ${styles.pillNeutral}`;
 }
 
@@ -220,7 +227,7 @@ export default function SiteMonitorV3Page() {
 
   const metrics = useMemo(() => ({
     total: enriched.filter((x)=>x.site.status!=="archived").length,
-    live: enriched.filter((x)=>x.site.status!=="archived"&&isPublic(x.site,x.run)).length,
+    live: enriched.filter((x)=>x.site.status!=="archived"&&isPublic(x.site)).length,
     private: enriched.filter((x)=>x.site.status==="draft").length,
     finalReview: enriched.filter((x)=>x.run?.state==="final_review").length,
     problems: enriched.filter((x)=>x.site.status!=="archived"&&x.issues.length>0).length,
@@ -232,11 +239,11 @@ export default function SiteMonitorV3Page() {
       if (site.status==="archived"&&filter!=="legacy") return false;
       if (filter==="problems"&&!issues.length) return false;
       if (filter==="v3"&&!run) return false;
-      if (filter==="live"&&!isPublic(site,run)) return false;
+      if (filter==="live"&&!isPublic(site)) return false;
       if (filter==="private"&&site.status!=="draft") return false;
       if (filter==="legacy"&&run) return false;
       if (!q) return true;
-      return [piName(site,prospect,run),institution(site,prospect),site.slug,workflowLabel(site,run),designLabel(site),site.outreach_status||"",issues.join(" ")].join(" ").toLowerCase().includes(q);
+      return [piName(site,prospect,run),institution(site,prospect),site.slug,productionHistoryLabel(site,run),visibilityLabel(site),designLabel(site),site.outreach_status||"",issues.join(" ")].join(" ").toLowerCase().includes(q);
     });
     return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):sort==="problems"?b.issues.length-a.issues.length||Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at):Date.parse(b.site.updated_at)-Date.parse(a.site.updated_at));
   }, [enriched,search,filter,sort]);
@@ -260,7 +267,7 @@ export default function SiteMonitorV3Page() {
 
   async function runHealthChecks() {
     setChecking(true);
-    const targets=enriched.filter((x)=>x.site.status!=="archived"&&isPublic(x.site,x.run));
+    const targets=enriched.filter((x)=>x.site.status!=="archived"&&isPublic(x.site));
     for (let i=0;i<targets.length;i+=25) {
       const batch=targets.slice(i,i+25);
       const response=await fetch("/api/admin/site-health",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({targets:batch.map((x)=>({id:x.site.id,url:publicUrl(x.site,x.run)}))})});
@@ -281,19 +288,19 @@ export default function SiteMonitorV3Page() {
   return <main className={styles.page}>
     <header className={styles.topbar}><div className={styles.topbarLeft}><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Website Monitor v3</span></div><nav className={styles.nav}><Link href="/admin/review">Final Review</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sales">Sales</Link></nav></header>
     <section className={styles.content}>
-      <div className={styles.hero}><div><p className={styles.kicker}>Site operations</p><h1>Every website. One operational truth.</h1><p>Engine v3 workflow state, publication state, renderer-contract integrity, domain health and portrait rendering are monitored separately so real problems surface immediately.</p></div><div className={styles.heroActions}><button className={styles.buttonSecondary} onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh data"}</button><button className={styles.button} onClick={()=>void runHealthChecks()} disabled={checking}>{checking?"Checking sites…":"Run health checks"}</button></div></div>
+      <div className={styles.hero}><div><p className={styles.kicker}>Site operations</p><h1>Every website. One operational truth.</h1><p>Production history and current site visibility are shown separately, alongside renderer integrity, domain health and portrait rendering, so historical workflow state can never be mistaken for whether a website is live now.</p></div><div className={styles.heroActions}><button className={styles.buttonSecondary} onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh data"}</button><button className={styles.button} onClick={()=>void runHealthChecks()} disabled={checking}>{checking?"Checking sites…":"Run health checks"}</button></div></div>
 
       <section className={styles.metrics}>{[
         {k:"all" as Filter,l:"Active sites",v:metrics.total,s:"Non-archived"},
-        {k:"live" as Filter,l:"Public",v:metrics.live,s:"Published concepts"},
-        {k:"private" as Filter,l:"Private",v:metrics.private,s:"Draft concepts"},
+        {k:"live" as Filter,l:"Live sites",v:metrics.live,s:"Currently public"},
+        {k:"private" as Filter,l:"Private sites",v:metrics.private,s:"Currently unpublished"},
         {k:"v3" as Filter,l:"Engine v3",v:enriched.filter((x)=>x.run).length,s:`${metrics.finalReview} in Final Review`},
         {k:"problems" as Filter,l:"Problems",v:metrics.problems,s:"Needs attention"},
       ].map((m)=><button key={m.k} className={`${styles.metric} ${filter===m.k?styles.metricActive:""}`} onClick={()=>setFilter(m.k)}><span>{m.l}</span><strong>{m.v}</strong><small>{m.s}</small></button>)}</section>
 
       <section className={styles.toolbar}>
-        <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, design, state or problem…" /></label>
-        <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="problems">Problems</option><option value="v3">Engine v3 only</option><option value="live">Public sites</option><option value="private">Private drafts</option><option value="legacy">Legacy / archived</option></select></label>
+        <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, design, visibility, production state or problem…" /></label>
+        <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="problems">Problems</option><option value="v3">Engine v3 only</option><option value="live">Live sites</option><option value="private">Private sites</option><option value="legacy">Legacy / archived</option></select></label>
         <label className={styles.field}><span>Sort</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="updated">Recently updated</option><option value="problems">Most problems</option><option value="name">PI name</option></select></label>
       </section>
 
@@ -314,14 +321,14 @@ export default function SiteMonitorV3Page() {
       </div>
 
       <div className={styles.tableWrap}><table className={styles.table}>
-        <thead><tr><th>Website</th><th>Design</th><th>Workflow</th><th>Publication</th><th>Health</th><th>Portrait</th><th>Follow-up</th><th>Problems</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Website</th><th>Design</th><th>Production history</th><th>Site visibility</th><th>Health</th><th>Portrait</th><th>Follow-up</th><th>Problems</th><th>Actions</th></tr></thead>
         <tbody>{pagedVisible.map(({site,run,prospect,issues})=>{
-          const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site,run); const followUp=followUpStage(site);
+          const h=health[site.id]; const ph=portraitHealth[site.id]; const portrait=portraitUrl(site.content); const pub=isPublic(site); const followUp=followUpStage(site); const visibility=visibilityLabel(site); const production=productionHistoryLabel(site,run);
           return <tr id={`site-${site.id}`} key={site.id}>
             <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong><span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
             <td><span className={styles.pill}>{designLabel(site)}</span><span className={styles.muted}>{site.design_key||"design"}{site.design_version?` · v${site.design_version}`:""}</span></td>
-            <td><span className={pillClass(workflowLabel(site,run))}>{workflowLabel(site,run)}</span>{run?<span className={styles.muted}>v3 · {run.evidenceCount||0} evidence · {run.assetCount||0} assets</span>:<span className={styles.muted}>Legacy record</span>}</td>
-            <td><span className={pillClass(pub?"Public":"Private")}>{pub?"Public":"Private"}</span><span className={styles.muted}>{site.status} · {site.domain_status}</span></td>
+            <td><span className={pillClass(production)}>{production}</span>{run?<span className={styles.muted}>Engine v3 · {run.evidenceCount||0} evidence · {run.assetCount||0} assets</span>:<span className={styles.muted}>Historical legacy record</span>}</td>
+            <td><span className={pillClass(visibility)}>{visibility}</span><span className={styles.muted}>site {site.status} · {domainLabel(site)}</span></td>
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${h?(h.ok?styles.dotGood:styles.dotBad):styles.dotWarn}`}></span>{h?(h.ok?`Healthy · ${h.status}`:`Problem · ${h.error||h.status}`):pub?"Not checked":"Private"}</div></div></td>
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={`${styles.dot} ${ph==="ok"?styles.dotGood:ph==="error"?styles.dotBad:styles.dotWarn}`}></span>{!portrait?"Missing":ph==="ok"?"Rendering":ph==="error"?"Not rendering":"Not checked"}</div></div></td>
             <td><div className={styles.healthStack}><div className={styles.healthLine}><span className={followUp>=1?`${styles.pill} ${styles.pillGood}`:styles.pill}>E1</span><span>›</span><span className={followUp>=2?`${styles.pill} ${styles.pillGood}`:styles.pill}>F1</span><span>›</span><span className={followUp>=3?`${styles.pill} ${styles.pillGood}`:styles.pill}>F2</span></div><span className={styles.muted}>{site.outreach_status||prospect?.status||"not_contacted"}</span></div></td>
@@ -330,7 +337,7 @@ export default function SiteMonitorV3Page() {
           </tr>;
         })}</tbody>
       </table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
-      <p className={styles.footerNote}>Health checks are live HTTP checks against LabNarrative public domains plus browser image-load checks for PI portraits. Follow-up shows the outreach sequence E1 → F1 → F2 from each site’s outreach status. Edit / Fix always opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
+      <p className={styles.footerNote}>Production history records what the Engine v3 run reached; Site visibility reflects the website’s current public/private state. A site can therefore show “Published before” and “Private” after it is intentionally unpublished. Health checks run only against currently live sites. Follow-up shows E1 → F1 → F2. Edit / Fix opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
     </section>
   </main>;
 }
