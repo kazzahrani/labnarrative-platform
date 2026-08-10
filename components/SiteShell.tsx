@@ -10,6 +10,7 @@ import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
 import Narita3Design, { NARITA_3_VARIANT } from "@/components/designs/Narita3Design";
+import PersonalScroll1Design, { PERSONAL_SCROLL_1_VARIANT } from "@/components/designs/PersonalScroll1Design";
 import PortraitFirstDesign from "@/components/designs/PortraitFirstDesign";
 import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesign";
 import SourcedBourdonResearchDesign from "@/components/designs/SourcedBourdonResearchDesign";
@@ -122,6 +123,14 @@ export default function SiteShell({ site, route, basePath, previewMode = false }
 
   if (designVariant === "biggins-field-v1") {
     return <BigginsFieldDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
+  if (designVariant === PERSONAL_SCROLL_1_VARIANT) {
+    if (route.section === "research") {
+      const researchSite = { ...site, heroImage: CIRIBILLI_RESEARCH_HERO };
+      return <CiribilliResearchDesign site={researchSite} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+    }
+    return <PersonalScroll1Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === NARITA_3_VARIANT) {
