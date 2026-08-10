@@ -60,7 +60,10 @@ export function proxy(request: NextRequest) {
 
     const suffix = publicPath === "/" ? "" : publicPath;
     url.pathname = `${internalPrefix}${suffix}`;
-    return NextResponse.rewrite(url);
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-labnarrative-public-subdomain", subdomain);
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
   return NextResponse.next();
