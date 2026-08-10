@@ -67,7 +67,7 @@ export default function ApplePayButton({ token, clientId, currency, amount, func
     let cancelled = false;
     const setup = async () => {
       try {
-        const paypalSrc = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&intent=capture&components=buttons,funding-eligibility,applepay`;
+        const paypalSrc = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&intent=capture&components=buttons,funding-eligibility,card-fields,applepay`;
         await Promise.all([
           loadScript("labnarrative-paypal-sdk", paypalSrc),
           loadScript("labnarrative-apple-pay-sdk", "https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js"),
