@@ -18,6 +18,7 @@ export default function SalesLeadLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const prospectId = String(params?.prospectId || "");
   const base = `/admin/sales/${prospectId}`;
+  const darkJourney = pathname.startsWith(`${base}/onboarding`);
 
   return (
     <>
@@ -32,8 +33,12 @@ export default function SalesLeadLayout({ children }: { children: ReactNode }) {
           gap: 8,
           overflowX: "auto",
           padding: "10px 18px",
-          borderBottom: "1px solid rgba(15, 23, 42, 0.12)",
-          background: "rgba(255, 255, 255, 0.96)",
+          borderBottom: darkJourney
+            ? "1px solid rgba(86, 147, 176, 0.22)"
+            : "1px solid rgba(15, 23, 42, 0.12)",
+          background: darkJourney
+            ? "rgba(10, 27, 39, 0.96)"
+            : "rgba(255, 255, 255, 0.96)",
           backdropFilter: "blur(12px)",
         }}
       >
@@ -45,7 +50,7 @@ export default function SalesLeadLayout({ children }: { children: ReactNode }) {
             fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: "#64748b",
+            color: darkJourney ? "#8fa6b2" : "#64748b",
           }}
         >
           Client journey
@@ -64,9 +69,27 @@ export default function SalesLeadLayout({ children }: { children: ReactNode }) {
                 fontSize: 13,
                 fontWeight: 650,
                 textDecoration: "none",
-                border: active ? "1px solid #0f172a" : "1px solid #dbe2ea",
-                background: active ? "#0f172a" : "#ffffff",
-                color: active ? "#ffffff" : "#334155",
+                border: darkJourney
+                  ? active
+                    ? "1px solid #4f9b86"
+                    : "1px solid #2d4a5a"
+                  : active
+                    ? "1px solid #0f172a"
+                    : "1px solid #dbe2ea",
+                background: darkJourney
+                  ? active
+                    ? "#2f715f"
+                    : "#122a37"
+                  : active
+                    ? "#0f172a"
+                    : "#ffffff",
+                color: darkJourney
+                  ? active
+                    ? "#ffffff"
+                    : "#c4d2d9"
+                  : active
+                    ? "#ffffff"
+                    : "#334155",
               }}
             >
               {step.label}
