@@ -27,6 +27,7 @@ type ProspectRow = {
   pi_name: string | null;
   institution: string | null;
   status: string | null;
+  metadata: Record<string, any> | null;
 };
 
 type V3Run = {
@@ -56,7 +57,7 @@ type OutreachMessage = {
 };
 
 type Dashboard = { counts?: Record<string, number>; runs?: V3Run[] };
-type Filter = "all" | "v3" | "live" | "private" | "legacy";
+type Filter = "all" | "v3" | "live" | "private" | "legacy" | "outside";
 type TimelineItem = { key: "E1" | "F1" | "F2"; state: string; date: string | null; tone: "sent" | "future" | "stopped" | "idle" };
 type PreparedPreV3Outreach = { runId?: string };
 
@@ -119,6 +120,10 @@ function domainLabel(site: SiteRow): string {
   return `domain ${site.domain_status || "unknown"}`;
 }
 
+function isOutsideConcept(prospect?: ProspectRow): boolean {
+  return String(prospect?.metadata?.conceptCategory || "").toLowerCase() === "outside_concept";
+}
+
 function pillClass(label: string) {
   const lower = label.toLowerCase();
   if (lower.includes("live")) return `${styles.pill} ${styles.pillGood}`;
@@ -151,6 +156,14 @@ function bestMessage(messages: OutreachMessage[], kind: string): OutreachMessage
 }
 
 function outreachTimeline(site: SiteRow, prospect: ProspectRow | undefined, messages: OutreachMessage[]): TimelineItem[] {
+  if (isOutsideConcept(prospect)) {
+    return [
+      {key:"E1",state:"Outside platform",date:null,tone:"stopped"},
+      {key:"F1",state:"Not applicable",date:null,tone:"idle"},
+      {key:"F2",state:"Not applicable",date:null,tone:"idle"},
+    ];
+  }
+
   const initial=bestMessage(messages,"initial");
   const f1=bestMessage(messages,"followup_1");
   const f2=bestMessage(messages,"followup_2");
@@ -210,7 +223,7 @@ export default function SiteMonitorV3Page() {
     setAuthState("ready");
     const [siteResult, prospectResult, dashboardResult, outreachResult] = await Promise.all([
       supabase.from("sites").select("id,slug,status,content,created_at,updated_at,domain_status,domain_url,outreach_status,design_key,design_settings,design_version").order("created_at", { ascending: false }),
-      supabase.from("prospects").select("id,site_id,slug,pi_name,institution,status").not("site_id", "is", null),
+      supabase.from("prospects").select("id,site_id,slug,pi_name,institution,status,metadata").not("site_id", "is", null),
       supabase.rpc("engine_v3_admin_dashboard"),
       supabase.from("outreach_messages").select("id,prospect_id,site_id,message_kind,status,sent_at,follow_up_at,created_at").eq("is_test",false).in("message_kind",["initial","followup_1","followup_2"]),
     ]);
@@ -280,9 +293,11 @@ export default function SiteMonitorV3Page() {
       if (filter==="live"&&!isPublic(site)) return false;
       if (filter==="private"&&site.status!=="draft") return false;
       if (filter==="legacy"&&run) return false;
+      if (filter==="outside"&&!isOutsideConcept(prospect)) return false;
       if (!q) return true;
       const timeline=outreachTimeline(site,prospect,messages).map((item)=>`${item.key} ${item.state} ${item.date||""}`).join(" ");
-      return [piName(site,prospect,run),institution(site,prospect),site.slug,visibilityLabel(site),designLabel(site),site.outreach_status||"",timeline].join(" ").toLowerCase().includes(q);
+      const category=isOutsideConcept(prospect)?"Outside concept":"";
+      return [piName(site,prospect,run),institution(site,prospect),site.slug,visibilityLabel(site),designLabel(site),site.outreach_status||"",prospect?.status||"",category,timeline].join(" ").toLowerCase().includes(q);
     });
     return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):Date.parse(b.site.created_at)-Date.parse(a.site.created_at));
   }, [enriched,search,filter,sort]);
@@ -330,8 +345,8 @@ export default function SiteMonitorV3Page() {
       ].map((m)=><button key={m.k} className={`${styles.metric} ${filter===m.k?styles.metricActive:""}`} onClick={()=>setFilter(m.k)}><span>{m.l}</span><strong>{m.v}</strong><small>{m.s}</small></button>)}</section>
 
       <section className={styles.toolbar}>
-        <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, design, visibility or outreach date…" /></label>
-        <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="v3">Engine v3 only</option><option value="live">Live sites</option><option value="private">Private sites</option><option value="legacy">Pre-v3 / archived</option></select></label>
+        <label className={styles.field}><span>Search</span><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="PI, institution, slug, design, visibility, category or outreach date…" /></label>
+        <label className={styles.field}><span>View</span><select value={filter} onChange={(e)=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="v3">Engine v3 only</option><option value="live">Live sites</option><option value="private">Private sites</option><option value="outside">Outside concept</option><option value="legacy">Pre-v3 / archived</option></select></label>
         <label className={styles.field}><span>Sort</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="created">Newest websites</option><option value="name">PI name</option></select></label>
       </section>
 
@@ -352,17 +367,17 @@ export default function SiteMonitorV3Page() {
       <div className={styles.tableWrap}><table className={styles.table}>
         <thead><tr><th>Website</th><th>Design</th><th>Site visibility</th><th>Outreach timeline</th><th>Actions</th></tr></thead>
         <tbody>{pagedVisible.map(({site,run,prospect,messages})=>{
-          const pub=isPublic(site); const visibility=visibilityLabel(site); const timeline=outreachTimeline(site,prospect,messages); const started=outreachStarted(site,messages); const canStartOutreach=pub&&!started;
+          const pub=isPublic(site); const visibility=visibilityLabel(site); const timeline=outreachTimeline(site,prospect,messages); const started=outreachStarted(site,messages); const outside=isOutsideConcept(prospect); const canStartOutreach=pub&&!started&&!outside;
           return <tr id={`site-${site.id}`} key={site.id}>
-            <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong><span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
+            <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong>{outside?<small className={`${styles.pill} ${styles.pillWarn}`}>Outside concept</small>:null}<span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
             <td><span className={styles.pill}>{designLabel(site)}</span><span className={styles.muted}>{site.design_key||"design"}{site.design_version?` · v${site.design_version}`:""}</span></td>
             <td><span className={pillClass(visibility)}>{visibility}</span><span className={styles.muted}>site {site.status} · {domainLabel(site)}</span></td>
-            <td><div className={styles.outreachTimeline}>{timeline.map((item)=><div className={`${styles.outreachStage} ${styles[`outreach_${item.tone}`]}`} key={item.key}><strong>{item.key}</strong><div><span>{item.state}</span>{item.date?<time>{item.date}</time>:null}</div></div>)}</div><span className={styles.outreachRaw}>{site.outreach_status||prospect?.status||"not_contacted"}</span></td>
+            <td><div className={styles.outreachTimeline}>{timeline.map((item)=><div className={`${styles.outreachStage} ${styles[`outreach_${item.tone}`]}`} key={item.key}><strong>{item.key}</strong><div><span>{item.state}</span>{item.date?<time>{item.date}</time>:null}</div></div>)}</div><span className={styles.outreachRaw}>{prospect?.status||site.outreach_status||"not_contacted"}</span></td>
             <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>Edit</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{canStartOutreach?<button type="button" onClick={()=>void openOutreach(site,run)} disabled={preparingOutreach===site.id}>{preparingOutreach===site.id?"Preparing…":"Outreach"}</button>:null}</div></td>
           </tr>;
         })}</tbody>
       </table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
-      <p className={styles.footerNote}>Outreach dates use Riyadh time. E1 and completed follow-ups show their actual sent dates. F1 uses the stored next-send date. F2 uses the stored date after F1 is sent; before then it is explicitly marked Expected based on the current 5-day then 8-day sequence. Reply/interested/paused sequences show remaining stages as Stopped. The Outreach action appears on every live site until E1 is actually sent. Edit opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
+      <p className={styles.footerNote}>Outreach dates use Riyadh time. E1 and completed follow-ups show their actual sent dates. F1 uses the stored next-send date. F2 uses the stored date after F1 is sent; before then it is explicitly marked Expected based on the current 5-day then 8-day sequence. Outside concept marks historical leads whose contact happened outside the current platform sequence, so E1/F1/F2 are intentionally not reconstructed. Reply/interested/paused sequences show remaining stages as Stopped. The Outreach action appears on every live site until E1 is actually sent. Edit opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
     </section>
   </main>;
 }
