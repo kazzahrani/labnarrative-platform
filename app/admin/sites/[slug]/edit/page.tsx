@@ -11,33 +11,44 @@ export default function SiteEditorPage() {
     <>
       <VisualSiteEditor slug={slug} />
       <style jsx global>{`
-        /* Research uses a dark page hero and light programme cards. Target the
-           renderer's semantic CSS-module class names instead of DOM positions,
-           because Narita's overlap wrapper changes section structure. */
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"],
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] h1,
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] h2,
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] h3,
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] p,
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] > div,
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] span,
-        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] strong {
-          color: #ffffff !important;
-        }
-
+        /* Research editor accessibility mode: keep the website data and
+           structure unchanged, but render Research on light surfaces with
+           dark copy while editing. The published renderer is unaffected. */
+        [data-ln-visual-root] .narita-route-research main,
+        [data-ln-visual-root] .narita-route-research main > section,
+        [data-ln-visual-root] .narita-route-research main > article,
+        [data-ln-visual-root] .narita-route-research main > article > section,
+        [data-ln-visual-root] .narita-route-research [class*="pageHero"],
         [data-ln-visual-root] .narita-route-research [class*="researchList"],
         [data-ln-visual-root] .narita-route-research [class*="researchList"] > a,
         [data-ln-visual-root] .narita-route-research [class*="researchListCopy"],
-        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] h1,
-        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] h2,
-        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] h3,
-        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] p,
-        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] b,
-        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] span,
-        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] strong {
-          color: #111111 !important;
+        [data-ln-visual-root] .narita-route-research [class*="projectQuestion"],
+        [data-ln-visual-root] .narita-route-research [class*="projectNarrative"],
+        [data-ln-visual-root] .narita-route-research [class*="detailList"] {
+          background: #ffffff !important;
+          background-color: #ffffff !important;
         }
 
+        [data-ln-visual-root] .narita-route-research [class*="researchList"] > a {
+          background: #f5f4f2 !important;
+          background-color: #f5f4f2 !important;
+        }
+
+        [data-ln-visual-root] .narita-route-research [class*="pageHero"]::before,
+        [data-ln-visual-root] .narita-route-research [class*="pageHero"]::after {
+          background: #f5f4f2 !important;
+        }
+
+        [data-ln-visual-root] .narita-route-research [class*="pageHero"] > img {
+          opacity: 0.08 !important;
+        }
+
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"],
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] *,
+        [data-ln-visual-root] .narita-route-research [class*="researchList"],
+        [data-ln-visual-root] .narita-route-research [class*="researchList"] *,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"],
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] *,
         [data-ln-visual-root] .narita-route-research [class*="projectQuestion"],
         [data-ln-visual-root] .narita-route-research [class*="projectQuestion"] *,
         [data-ln-visual-root] .narita-route-research [class*="projectNarrative"],
@@ -46,6 +57,15 @@ export default function SiteEditorPage() {
         [data-ln-visual-root] .narita-route-research [class*="detailList"] *,
         [data-ln-visual-root] .narita-route-research [class*="returnLink"] {
           color: #111111 !important;
+          text-shadow: none !important;
+        }
+
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] p,
+        [data-ln-visual-root] .narita-route-research [class*="pageHeroCopy"] > div,
+        [data-ln-visual-root] .narita-route-research [class*="researchListCopy"] p,
+        [data-ln-visual-root] .narita-route-research [class*="projectNarrative"] p,
+        [data-ln-visual-root] .narita-route-research figcaption {
+          color: #4f5b58 !important;
         }
 
         /* The editor chrome must never inherit the active website renderer's
