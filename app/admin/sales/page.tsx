@@ -45,6 +45,15 @@ type SalesRow = SummaryRow & {
   prospect?: ProspectRow;
 };
 
+type SalesStage =
+  | "contacted"
+  | "replied"
+  | "interested"
+  | "meeting_scheduled"
+  | "proposal_sent"
+  | "client"
+  | "not_pursuing";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -65,6 +74,15 @@ const INTERESTED_STAGES = new Set([
   "proposal_sent",
   "client",
 ]);
+const SALES_STAGE_OPTIONS: Array<{ value: SalesStage; label: string }> = [
+  { value: "contacted", label: "Contacted" },
+  { value: "replied", label: "Replied" },
+  { value: "interested", label: "Interested" },
+  { value: "meeting_scheduled", label: "Meeting scheduled" },
+  { value: "proposal_sent", label: "Proposal sent" },
+  { value: "client", label: "Client" },
+  { value: "not_pursuing", label: "Not pursuing" },
+];
 
 function numberValue(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
@@ -106,6 +124,18 @@ function stagePriority(value: string): number {
   if (value === "interested") return 2;
   if (value === "replied") return 1;
   return 0;
+}
+
+function editableStage(value: string): SalesStage | "" {
+  const normalized = String(value || "").toLowerCase();
+  if (["email_1_sent", "email_2_sent", "email_3_sent", "no_response_yet"].includes(normalized)) return "contacted";
+  if (normalized === "replied") return "replied";
+  if (normalized === "interested") return "interested";
+  if (normalized === "meeting_scheduled") return "meeting_scheduled";
+  if (normalized === "proposal_sent") return "proposal_sent";
+  if (normalized === "client") return "client";
+  if (normalized === "not_pursuing") return "not_pursuing";
+  return "";
 }
 
 function hasInternalDeviceCookie(): boolean {
@@ -161,6 +191,7 @@ export default function SalesDashboardPage() {
   const [search, setSearch] = useState("");
   const [deviceExcluded, setDeviceExcluded] = useState(false);
   const [deviceStatusReady, setDeviceStatusReady] = useState(false);
+  const [updatingStage, setUpdatingStage] = useState<string | null>(null);
 
   const loadSales = useCallback(async (activeSession: Session) => {
     setLoading(true);
@@ -329,6 +360,25 @@ export default function SalesDashboardPage() {
     });
   }, [rows, search]);
 
+  const setLeadStage = useCallback(async (row: SalesRow, stage: SalesStage) => {
+    if (!session || !row.prospect || updatingStage) return;
+    setUpdatingStage(row.prospect.id);
+    setNotice("");
+    try {
+      const { error } = await supabase.rpc("admin_set_sales_lead_stage", {
+        p_prospect_id: row.prospect.id,
+        p_stage: stage,
+      });
+      if (error) throw error;
+      setNotice(`${row.pi_name} is now ${SALES_STAGE_OPTIONS.find((item) => item.value === stage)?.label || stage}.`);
+      await loadSales(session);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to update the lead stage.");
+    } finally {
+      setUpdatingStage(null);
+    }
+  }, [loadSales, session, updatingStage]);
+
   if (!authReady) {
     return (
       <main className={styles.page}>
@@ -443,7 +493,7 @@ export default function SalesDashboardPage() {
           <div className={styles.panelHeader}>
             <div>
               <h2>Concept activity</h2>
-              <p>Engaged leads appear first, followed by the most recently viewed concepts.</p>
+              <p>Engaged leads appear first, followed by the most recently viewed concepts. Lead stage can be changed directly in the Outreach column.</p>
             </div>
             <input
               className={styles.search}
@@ -473,6 +523,8 @@ export default function SalesDashboardPage() {
                   const visits = numberValue(row.visits);
                   const stage = row.outreach_status || "not_contacted";
                   const isDraftLead = row.site_status === "draft";
+                  const currentEditableStage = editableStage(stage);
+                  const isUpdating = Boolean(row.prospect && updatingStage === row.prospect.id);
 
                   return (
                     <tr key={row.site_id}>
@@ -495,9 +547,37 @@ export default function SalesDashboardPage() {
                         )}
                       </td>
                       <td>
-                        <span className={`${styles.stage} ${stageIsHot(stage, visits) ? styles.hot : ""}`}>
-                          {stageLabel(stage)}
-                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
+                          <span className={`${styles.stage} ${stageIsHot(stage, visits) ? styles.hot : ""}`}>
+                            {stageLabel(stage)}
+                          </span>
+                          {row.prospect ? (
+                            <select
+                              aria-label={`Change sales stage for ${row.pi_name}`}
+                              value={currentEditableStage}
+                              disabled={isUpdating}
+                              onChange={(event) => void setLeadStage(row, event.target.value as SalesStage)}
+                              style={{
+                                minWidth: 172,
+                                border: "1px solid #314a55",
+                                borderRadius: 9,
+                                padding: "7px 9px",
+                                background: "#0c1b24",
+                                color: "#edf4f1",
+                                font: "inherit",
+                                fontSize: "0.78rem",
+                              }}
+                            >
+                              {!currentEditableStage ? <option value="">Not contacted</option> : null}
+                              {SALES_STAGE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <small className={styles.muted}>No linked prospect</small>
+                          )}
+                          {isUpdating ? <small className={styles.muted}>Saving…</small> : null}
+                        </div>
                       </td>
                       <td className={styles.number}>{isDraftLead ? "—" : visits}</td>
                       <td className={styles.number}>{isDraftLead ? "—" : numberValue(row.page_views)}</td>
