@@ -34,6 +34,7 @@ const researchDesign = read("components/designs/CiribilliResearchDesign.tsx");
 const researchCss = read("components/designs/CiribilliResearchDesign.module.css");
 const ciribilliMotion = read("components/designs/CiribilliNaritaDesign.tsx");
 const naritaShared = read("components/designs/naritaShared.ts");
+const bigginsNarita2 = read("components/designs/BigginsNarita2Design.tsx");
 
 requireText(
   naritaShared,
@@ -43,88 +44,103 @@ requireText(
 requireText(
   naritaShared,
   "homepageImage: NARITA_HERO_IMAGE",
-  "all Narita home pages must override site-specific homepage hero images",
+  "all canonical Narita home pages must override site-specific homepage hero images",
 );
 requireText(
   naritaShared,
   "topPortrait: NARITA_HERO_IMAGE",
-  "legacy Narita hero fields must also resolve to the canonical red microscopy image",
+  "legacy canonical Narita hero fields must also resolve to the approved microscopy image",
 );
 requireText(
   ciribilliMotion,
   "withNaritaHero(props.site)",
-  "shared Narita routes must normalize their homepage hero through the canonical hero helper",
+  "shared canonical Narita routes must normalize their homepage hero through the canonical hero helper",
 );
 requireText(
   ciribilliMotion,
   "<NaritaOverlapDesign {...props} site={naritaSite} />",
-  "the normalized Narita site must be passed into the shared renderer",
+  "the normalized canonical Narita site must be passed into the shared renderer",
 );
 
 requireText(
   researchDesign,
   "const hero = NARITA_HERO_IMAGE;",
-  "the Research tab must retain the canonical red microscopy hero",
+  "the canonical Narita Research tab must retain the approved microscopy hero",
 );
 requireText(
   researchDesign,
   '<Picture src={hero} alt="Research" fallback="LMCG" />',
-  "the Research hero image must remain visible",
+  "the canonical Narita Research hero image must remain visible",
 );
 if (researchDesign.includes("project.figureImage")) {
   throw new Error(
-    "Ciribilli Narita template lock failed: Research project sections must remain image-free",
+    "Ciribilli Narita template lock failed: canonical Narita Research project sections must remain image-free",
   );
 }
 requireText(
   researchDesign,
   'style={{ gridTemplateColumns: "1fr" }}',
-  "all Research projects must render as full-width text-only sections",
+  "all canonical Narita Research projects must render as full-width text-only sections",
 );
 requireText(
   shell,
-  'if (designVariant === "ciribilli-narita-v1" || designVariant === "narita-2-v1")',
-  "the canonical Narita and Narita 2 variant routing is missing",
+  'if (designVariant === "ciribilli-narita-v1")',
+  "the canonical Narita variant routing is missing",
+);
+requireText(
+  shell,
+  'if (designVariant === "narita-2-v1")',
+  "the independent Narita 2 variant routing is missing",
+);
+requireText(
+  shell,
+  "return <BigginsNarita2Design site={site}",
+  "Narita 2 must use the independent Biggins full-lab renderer",
+);
+requireText(
+  bigginsNarita2,
+  "site.heroImage",
+  "Narita 2 must accept the site-supplied lab hero image",
 );
 requireText(
   shell,
   "return <CiribilliResearchDesign site={researchSite}",
-  "Research must retain the approved Ciribilli editorial research layout",
+  "canonical Narita Research must retain the approved Ciribilli editorial research layout",
 );
 requireText(
   shell,
   "return <CiribilliNaritaDesign site={site}",
-  "Home and the other tabs must retain the shared Narita layout",
+  "canonical Narita Home and the other tabs must retain the shared Narita layout",
 );
 requireText(
   ciribilliMotion,
   "const distance = reducedMotion ? 0 : window.scrollY;",
-  "the homepage hero motion must remain directly tied to scrollY",
+  "the canonical Narita homepage hero motion must remain directly tied to scrollY",
 );
 requireText(
   ciribilliMotion,
   "--ciribilli-home-panel-offset",
-  "the homepage hero must retain its constant linear panel offset",
+  "the canonical Narita homepage hero must retain its constant linear panel offset",
 );
 requireText(
   ciribilliMotion,
   "--ciribilli-gutter: clamp(24px, 5vw, 76px);",
-  "the wordmark, navigation and hero copy must retain a shared responsive gutter",
+  "the canonical Narita wordmark, navigation and hero copy must retain a shared responsive gutter",
 );
 requireText(
   ciribilliMotion,
   "--narita-header-height: 132px;",
-  "the desktop Narita header must retain the approved compact height",
+  "the canonical Narita desktop header must retain the approved compact height",
 );
 requireText(
   ciribilliMotion,
   "height: calc(100svh - var(--narita-header-height)) !important;",
-  "the homepage hero must fit the remaining viewport beneath the header",
+  "the canonical Narita homepage hero must fit the remaining viewport beneath the header",
 );
 requireText(
   ciribilliMotion,
   "font-size: clamp(46px, min(7vw, 10svh), 96px) !important;",
-  "the homepage hero typography must remain constrained by both viewport width and height",
+  "the canonical Narita homepage hero typography must remain constrained by both viewport width and height",
 );
 requireText(
   ciribilliMotion,
@@ -144,15 +160,15 @@ if (/const portrait\s*=\s*[^;]*(heroImage|homepageImage|topPortrait|figureImage)
 }
 
 const heroBlock = blockFor(researchCss, ".hero {");
-requireText(heroBlock, "box-shadow: none !important;", "the Research hero must not have a box shadow");
+requireText(heroBlock, "box-shadow: none !important;", "the canonical Research hero must not have a box shadow");
 
 const overlayBlock = blockFor(researchCss, ".hero > div:first-of-type {");
-requireText(overlayBlock, "background: rgba(0, 0, 0, 0.2) !important;", "the Research hero overlay must stay uniform and subtle");
-requireText(overlayBlock, "box-shadow: none !important;", "the Research hero overlay must not cast a shadow");
+requireText(overlayBlock, "background: rgba(0, 0, 0, 0.2) !important;", "the canonical Research hero overlay must stay uniform and subtle");
+requireText(overlayBlock, "box-shadow: none !important;", "the canonical Research hero overlay must not cast a shadow");
 if (overlayBlock.includes("linear-gradient")) {
   throw new Error(
-    "Ciribilli Narita template lock failed: the Research hero overlay must not contain a bottom-darkening gradient",
+    "Ciribilli Narita template lock failed: the canonical Research hero overlay must not contain a bottom-darkening gradient",
   );
 }
 
-console.log("Ciribilli Narita template lock verified.");
+console.log("Ciribilli Narita template lock verified; Narita 2 remains independently routed.");
