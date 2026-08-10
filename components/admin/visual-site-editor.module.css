@@ -9,6 +9,28 @@
   background: #fff;
 }
 
+/* Keep the visual editor faithful to the live Narita renderer. The overlap
+   shell can otherwise leave light-panel copy inheriting the white hero color
+   while editor interaction classes are active. These rules only restore the
+   renderer's own foreground/muted colors on light panels; dark hero/header,
+   cards and footer keep their native white text. */
+.canvas :global(.narita-route-home main > section:nth-of-type(2)),
+.canvas :global(.narita-route-home main > section:nth-of-type(3)),
+.canvas :global(.narita-overlap-design main > section:nth-of-type(n+2):not([class*="joinBanner"])),
+.canvas :global(.narita-overlap-design main > aside),
+.canvas :global(.narita-overlap-design main > article > section) {
+  color: #111111 !important;
+}
+
+.canvas :global(.narita-route-home main > section:nth-of-type(2) h2),
+.canvas :global(.narita-route-home main > section:nth-of-type(3) h2) {
+  color: #111111 !important;
+}
+
+.canvas :global(.narita-route-home main > section:nth-of-type(3) h3) {
+  color: #6f6f6f !important;
+}
+
 .canvasEditing :global([data-ln-hover-edit="1"]) {
   outline: 2px solid #18a8a2 !important;
   outline-offset: 4px !important;
