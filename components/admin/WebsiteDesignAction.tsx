@@ -15,34 +15,30 @@ type Props = {
 type DesignOption = { value: string; label: string; description: string };
 
 const DESIGNS: DesignOption[] = [
-  { value: "ciribilli-narita-v1", label: "Ciribilli Narita", description: "Bold image-led laboratory design with strong research presentation." },
-  { value: "dobbelstein-editorial-v1", label: "Dobbelstein Editorial", description: "Restrained editorial academic layout." },
-  { value: "dobbelstein-scroll-v1", label: "Dobbelstein Scroll", description: "Editorial design with a more dynamic scrolling rhythm." },
-  { value: "portrait-first-v1", label: "Portrait First", description: "Minimal portrait-led design focused on the PI." },
-  { value: "editorial-image-v1", label: "Editorial Image", description: "Modern editorial structure with stronger image placement." },
-  { value: "prives-photo-lab-v1", label: "Prives Photo Lab", description: "Photography-led research layout." },
-  { value: "zhang-transcription-v1", label: "Zhang Transcription", description: "Structured mechanism-focused academic design." },
-  { value: "gao-ecosystem-v1", label: "Gao Ecosystem", description: "Broad programme and ecosystem-style organization." },
-  { value: "goyette-evolution-v1", label: "Goyette Evolution", description: "Narrative, evolution-oriented academic presentation." },
-  { value: "engeland-modern-v1", label: "Engeland Modern", description: "Modern multi-page academic layout." },
-  { value: "bourdon-classic-v1", label: "Bourdon Classic", description: "Original full LabNarrative laboratory design." },
-  { value: "Lens_1", label: "Lens 1", description: "Portrait-led modern design based on the Susanne Lens concept." },
-  { value: "WALCZAK_1", label: "Walczak 1", description: "Portrait-led design that automatically derives its accent from the PI portrait." },
-  { value: "Kops_1", label: "Kops 1", description: "Independent portrait-led design based on the Kops concept." },
-  { value: "Karpen_1", label: "Karpen 1", description: "Portrait-led design with automatic clothing-derived group color and Narita-style homepage overlap." },
+  { value: "Karpen_1", label: "Karpen_1", description: "Portrait-led design with clothing-derived accent color and Narita-style homepage overlap." },
+  { value: "Kops_1", label: "Kops_1", description: "Portrait-led design with a clean shared header/footer and hero-free inner pages." },
+  { value: "Lens_1", label: "Lens_1", description: "Portrait-led modern design based on the Susanne Lens concept." },
+  { value: "ciribilli-narita-v1", label: "Narita", description: "Bold image-led laboratory design with the established Narita visual system." },
+  { value: "bourdon-full", label: "bourdon-full", description: "Full LabNarrative laboratory design with the Bourdon information architecture." },
+  { value: "dobbelstein-editorial-v1", label: "Dobbelstein Editorial", description: "Restrained editorial academic layout with strong typography and spacing." },
+  { value: "editorial-image-v1", label: "Editorial Image", description: "Modern editorial structure with stronger image placement throughout the site." },
 ];
 
-const AUTO_PORTRAIT_COLOR_DESIGNS = new Set(["WALCZAK_1", "Karpen_1"]);
+const AUTO_PORTRAIT_COLOR_DESIGNS = new Set(["Karpen_1"]);
 
 function normalizedCurrent(value?: string | null) {
-  return value?.trim() || "bourdon-classic-v1";
+  const current = value?.trim();
+  if (!current || current === "bourdon-classic-v1") return "bourdon-full";
+  return current;
 }
 
 export default function WebsiteDesignAction({ siteId, slug, status, currentVariant, onChanged }: Props) {
   const editable = status === "draft" || status === "concept";
   const current = normalizedCurrent(currentVariant);
+  const currentIsReusable = DESIGNS.some((item) => item.value === current);
+  const defaultChoice = currentIsReusable ? current : DESIGNS[0].value;
   const [open, setOpen] = useState(false);
-  const [chosen, setChosen] = useState(current);
+  const [chosen, setChosen] = useState(defaultChoice);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const option = useMemo(() => DESIGNS.find((item) => item.value === chosen) || DESIGNS[0], [chosen]);
@@ -66,7 +62,6 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
     if (!response.ok || result?.ok !== true) {
       throw new Error(result?.error || "The portrait color could not be derived automatically.");
     }
-    return String(result.accent || "");
   }
 
   async function applyDesign() {
@@ -93,6 +88,7 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
       setSaving(false);
       return;
     }
+
     setOpen(false);
     setSaving(false);
     onChanged?.();
@@ -104,13 +100,14 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
         href="#"
         onClick={(event) => {
           event.preventDefault();
-          setChosen(current);
+          setChosen(defaultChoice);
           setError("");
           setOpen(true);
         }}
       >
         Change design
       </a>
+
       {open && typeof document !== "undefined" ? createPortal(
         <div
           role="presentation"
@@ -126,7 +123,15 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
               <button type="button" disabled={saving} onClick={() => setOpen(false)} style={{ border: 0, background: "transparent", color: "inherit", fontSize: "1.35rem", cursor: "pointer" }}>×</button>
             </div>
 
-            <p style={{ margin: "12px 0 18px", fontSize: ".8rem", lineHeight: 1.5, opacity: .72 }}>Scientific content, PI information, slug/domain and outreach history stay unchanged. Portrait-responsive designs also analyze the PI portrait and save a matching clothing-derived accent automatically.</p>
+            <p style={{ margin: "12px 0 18px", fontSize: ".8rem", lineHeight: 1.5, opacity: .72 }}>
+              Scientific content, PI information, slug/domain and outreach history stay unchanged. Only the approved reusable LabNarrative designs are available here.
+            </p>
+
+            {!currentIsReusable ? (
+              <p style={{ margin: "0 0 14px", border: "1px solid rgba(224,181,104,.22)", borderRadius: 11, background: "rgba(224,181,104,.07)", padding: "10px 12px", color: "#c49a4b", fontSize: ".73rem", lineHeight: 1.45 }}>
+                Current legacy design: {current}. It will keep rendering until you switch this site to one of the approved designs below.
+              </p>
+            ) : null}
 
             <label style={{ display: "grid", gap: 8 }}>
               <span style={{ fontSize: ".72rem", fontWeight: 800, opacity: .7 }}>Design</span>
