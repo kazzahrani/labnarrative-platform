@@ -18,8 +18,9 @@ type CiribilliNaritaDesignProps = {
 export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const isNarita2 = props.site.design?.settings?.variant === "narita-2-v1";
-  const isLensPortrait = props.site.design?.settings?.variant === "lens-portrait-v1";
-  const heroSite = isNarita2 || isLensPortrait ? props.site : withNaritaHero(props.site);
+  const isHDPortrait = props.site.design?.settings?.variant === "HDportrait_1"
+    || props.site.design?.settings?.variant === "lens-portrait-v1";
+  const heroSite = isNarita2 || isHDPortrait ? props.site : withNaritaHero(props.site);
   const naritaSite = props.route.section === "research"
     ? withoutNaritaResearchImages(heroSite)
     : heroSite;
@@ -61,7 +62,7 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
   }, [props.route.section]);
 
   return (
-    <div className={`ciribilli-narita-shell${isNarita2 ? " narita-2-shell" : ""}${isLensPortrait ? " lens-flat-hero-shell" : ""}`} ref={rootRef}>
+    <div className={`ciribilli-narita-shell${isNarita2 ? " narita-2-shell" : ""}${isHDPortrait ? " lens-flat-hero-shell" : ""}`} ref={rootRef}>
       <NaritaOverlapDesign {...props} site={naritaSite} />
       <style jsx global>{`
         .ciribilli-narita-shell {
