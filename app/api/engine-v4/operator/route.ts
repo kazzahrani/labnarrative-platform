@@ -55,6 +55,21 @@ function configured() {
   );
 }
 
+function keylessConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.VERCEL_OIDC_TOKEN);
+}
+
+function healthPayload() {
+  return {
+    ok: true,
+    bridge: "labnarrative-engine-v4-operator",
+    previewOnly: true,
+    configured: configured(),
+    keylessConfigured: keylessConfigured(),
+    commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
+  };
+}
+
 function buildSupabase() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -75,13 +90,7 @@ export async function GET() {
     return noStoreJson({ error: "Not found." }, 404);
   }
 
-  return noStoreJson({
-    ok: true,
-    bridge: "labnarrative-engine-v4-operator",
-    previewOnly: true,
-    configured: configured(),
-    commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
-  });
+  return noStoreJson(healthPayload());
 }
 
 export async function POST(request: Request) {
@@ -107,13 +116,7 @@ export async function POST(request: Request) {
   }
 
   if (action === "health") {
-    return noStoreJson({
-      ok: true,
-      bridge: "labnarrative-engine-v4-operator",
-      previewOnly: true,
-      configured: configured(),
-      commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
-    });
+    return noStoreJson(healthPayload());
   }
 
   const supabase = buildSupabase();
