@@ -27,10 +27,12 @@ const DESIGNS: DesignOption[] = [
   { value: "engeland-modern-v1", label: "Engeland Modern", description: "Modern multi-page academic layout." },
   { value: "bourdon-classic-v1", label: "Bourdon Classic", description: "Original full LabNarrative laboratory design." },
   { value: "Lens_1", label: "Lens 1", description: "Portrait-led modern design based on the Susanne Lens concept." },
-  { value: "WALCZAK_1", label: "Walczak 1", description: "Independent portrait-led design based on the Walczak concept." },
+  { value: "WALCZAK_1", label: "Walczak 1", description: "Portrait-led design that automatically derives its accent from the PI portrait." },
   { value: "Kops_1", label: "Kops 1", description: "Independent portrait-led design based on the Kops concept." },
-  { value: "Karpen_1", label: "Karpen 1", description: "Portrait-led design with a portrait-responsive group color and Narita-style homepage overlap." },
+  { value: "Karpen_1", label: "Karpen 1", description: "Portrait-led design with automatic clothing-derived group color and Narita-style homepage overlap." },
 ];
+
+const AUTO_PORTRAIT_COLOR_DESIGNS = new Set(["WALCZAK_1", "Karpen_1"]);
 
 function normalizedCurrent(value?: string | null) {
   return value?.trim() || "bourdon-classic-v1";
@@ -47,10 +49,41 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
 
   if (!editable) return null;
 
+  async function derivePortraitAccent() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("Administrator sign-in is required for portrait color analysis.");
+
+    const response = await fetch("/api/admin/portrait-accent", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ siteId }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result?.ok !== true) {
+      throw new Error(result?.error || "The portrait color could not be derived automatically.");
+    }
+    return String(result.accent || "");
+  }
+
   async function applyDesign() {
     if (saving || chosen === current) return;
     setSaving(true);
     setError("");
+
+    if (AUTO_PORTRAIT_COLOR_DESIGNS.has(chosen)) {
+      try {
+        await derivePortraitAccent();
+      } catch (accentError) {
+        setError(accentError instanceof Error ? accentError.message : "Automatic portrait color analysis failed.");
+        setSaving(false);
+        return;
+      }
+    }
+
     const { data, error: rpcError } = await supabase.rpc("admin_change_site_design", {
       p_site_id: siteId,
       p_design_variant: chosen,
@@ -93,7 +126,7 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
               <button type="button" disabled={saving} onClick={() => setOpen(false)} style={{ border: 0, background: "transparent", color: "inherit", fontSize: "1.35rem", cursor: "pointer" }}>×</button>
             </div>
 
-            <p style={{ margin: "12px 0 18px", fontSize: ".8rem", lineHeight: 1.5, opacity: .72 }}>Scientific content, PI information, slug/domain and outreach history stay unchanged. Only the visual design is switched.</p>
+            <p style={{ margin: "12px 0 18px", fontSize: ".8rem", lineHeight: 1.5, opacity: .72 }}>Scientific content, PI information, slug/domain and outreach history stay unchanged. Portrait-responsive designs also analyze the PI portrait and save a matching clothing-derived accent automatically.</p>
 
             <label style={{ display: "grid", gap: 8 }}>
               <span style={{ fontSize: ".72rem", fontWeight: 800, opacity: .7 }}>Design</span>
