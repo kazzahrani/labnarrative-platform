@@ -75,13 +75,15 @@ const assurances = [
   "Your proposal remains the definitive source for scope, price, deposit and timeline.",
 ];
 
+function Wordmark() {
+  return <><span className={styles.logoLab}>Lab</span><span>Narrative</span></>;
+}
+
 export default function ClientProcessPage() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link href="/" className={styles.wordmark} aria-label="LabNarrative home">
-          <span className={styles.logoLab}>Lab</span><span> Narrative</span>
-        </Link>
+        <Link href="/" className={styles.wordmark} aria-label="LabNarrative home"><Wordmark /></Link>
         <span className={styles.headerLabel}>Your project journey</span>
         <a className={styles.contactLink} href="mailto:hello@labnarrative.com">Questions? Email us ↗</a>
       </header>
@@ -131,14 +133,8 @@ export default function ClientProcessPage() {
               <p>{step.copy}</p>
             </div>
             <div className={styles.responsibility}>
-              <div>
-                <span>You</span>
-                <p>{step.client}</p>
-              </div>
-              <div>
-                <span>LabNarrative</span>
-                <p>{step.lab}</p>
-              </div>
+              <div><span>You</span><p>{step.client}</p></div>
+              <div><span>LabNarrative</span><p>{step.lab}</p></div>
             </div>
           </article>
         ))}
@@ -149,9 +145,7 @@ export default function ClientProcessPage() {
           <p className={styles.sectionLabel}>Built around clear checkpoints</p>
           <h2>No surprises between “yes” and launch.</h2>
         </div>
-        <ul>
-          {assurances.map((item) => <li key={item}>{item}</li>)}
-        </ul>
+        <ul>{assurances.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
 
       <section className={styles.careSection}>
@@ -172,22 +166,10 @@ export default function ClientProcessPage() {
       <section className={styles.faqSection}>
         <p className={styles.sectionLabel}>Common questions</p>
         <div className={styles.faqGrid}>
-          <article>
-            <h3>Do I need to prepare all website text?</h3>
-            <p>No. We begin from the research and material already available. Onboarding is primarily a review-and-correction process.</p>
-          </article>
-          <article>
-            <h3>Can I request changes before launch?</h3>
-            <p>Yes. The final website review lets you approve the finished version or send focused change requests before the final balance and launch.</p>
-          </article>
-          <article>
-            <h3>When does the website go live?</h3>
-            <p>Only after the final website version is approved, the project is paid in full and the launch checks are complete.</p>
-          </article>
-          <article>
-            <h3>What if my institution controls the domain?</h3>
-            <p>We handle the website-side setup and tell you exactly what is needed if your university or institution must make a DNS or domain change.</p>
-          </article>
+          <article><h3>Do I need to prepare all website text?</h3><p>No. We begin from the research and material already available. Onboarding is primarily a review-and-correction process.</p></article>
+          <article><h3>Can I request changes before launch?</h3><p>Yes. The final website review lets you approve the finished version or send focused change requests before the final balance and launch.</p></article>
+          <article><h3>When does the website go live?</h3><p>Only after the final website version is approved, the project is paid in full and the launch checks are complete.</p></article>
+          <article><h3>What if my institution controls the domain?</h3><p>We handle the website-side setup and tell you exactly what is needed if your university or institution must make a DNS or domain change.</p></article>
         </div>
       </section>
 
@@ -198,15 +180,11 @@ export default function ClientProcessPage() {
           Approve it when the scope and terms are right for your laboratory. From there,
           LabNarrative guides you through each stage until your website is live.
         </p>
-        <a href="mailto:hello@labnarrative.com?subject=Question%20about%20the%20LabNarrative%20project%20process">
-          Ask a question <span aria-hidden="true">↗</span>
-        </a>
+        <a href="mailto:hello@labnarrative.com?subject=Question%20about%20the%20LabNarrative%20project%20process">Ask a question <span aria-hidden="true">↗</span></a>
       </section>
 
       <footer className={styles.footer}>
-        <Link href="/" className={styles.wordmark}>
-          <span className={styles.logoLab}>Lab</span><span> Narrative</span>
-        </Link>
+        <Link href="/" className={styles.wordmark}><Wordmark /></Link>
         <span>Scientific websites for research groups</span>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
       </footer>
