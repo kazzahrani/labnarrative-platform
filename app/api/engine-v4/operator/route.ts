@@ -36,8 +36,12 @@ function noStoreJson(body: unknown, status = 200) {
   });
 }
 
-function previewOnly() {
+function isPreview() {
   return process.env.VERCEL_ENV === "preview";
+}
+
+function relayAllowed() {
+  return process.env.VERCEL_ENV === "preview" || process.env.VERCEL_ENV === "production";
 }
 
 function decodeBase64Url(input: string) {
@@ -52,24 +56,14 @@ function objectPayload(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function healthPayload(shareProofPresent = false) {
-  return {
-    ok: true,
-    bridge: "labnarrative-engine-v4-operator",
-    previewOnly: true,
-    keyless: true,
-    shareProofPresent,
-    commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
-  };
-}
-
 export async function GET(request: Request) {
-  if (!previewOnly()) return noStoreJson({ error: "Not found." }, 404);
+  if (!relayAllowed()) return noStoreJson({ error: "Not found." }, 404);
 
   const url = new URL(request.url);
-  const shareProof = url.searchParams.get("_vercel_share") || url.searchParams.get("proof") || "";
+  const shareProof = url.searchParams.get("proof") || url.searchParams.get("_vercel_share") || "";
 
   if (url.searchParams.get("authCheck") === "1") {
+    if (!isPreview()) return noStoreJson({ error: "Not found." }, 404);
     return noStoreJson({
       ok: true,
       marker: AUTH_MARKER,
@@ -79,7 +73,17 @@ export async function GET(request: Request) {
   }
 
   const action = (url.searchParams.get("action") || "").trim().toLowerCase();
-  if (!action) return noStoreJson(healthPayload(Boolean(shareProof)));
+  if (!action) {
+    return noStoreJson({
+      ok: true,
+      bridge: "labnarrative-engine-v4-operator",
+      relay: true,
+      environment: process.env.VERCEL_ENV || "unknown",
+      proofRequiredForActions: true,
+      commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
+    });
+  }
+
   if (!ALLOWED_ACTIONS.has(action)) {
     return noStoreJson({ error: "Unsupported Engine v4 operator action." }, 400);
   }
@@ -89,7 +93,7 @@ export async function GET(request: Request) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   if (!supabaseUrl) {
-    return noStoreJson({ error: "Supabase URL is not configured for this preview." }, 503);
+    return noStoreJson({ error: "Supabase URL is not configured for this deployment." }, 503);
   }
 
   let payload: Record<string, unknown> = {};
