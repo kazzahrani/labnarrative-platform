@@ -24,6 +24,16 @@ function safeAsset(value?: string) {
   }
 }
 
+function settingText(site: LabSite, key: string, fallback: string) {
+  const value = site.design?.settings?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function defaultGroupLabel(labName: string) {
+  const base = labName.replace(/\s+(lab|laboratory|group)$/i, "").trim();
+  return `The ${base || labName} Group`;
+}
+
 export default function LensPortraitDesign(props: Props) {
   if (props.route.section !== "home") {
     return <CiribilliNaritaDesign {...props} />;
@@ -36,6 +46,11 @@ export default function LensPortraitDesign(props: Props) {
   const piRole = pages.home.piRole || props.site.title || pi?.role;
   const overview = (pages.home as typeof pages.home & { overview?: string }).overview || props.site.overview || props.site.introduction;
   const themes = props.site.focusAreas.slice(0, 4);
+  const heroKicker = settingText(props.site, "heroKicker", props.site.labName);
+  const heroStatement = settingText(props.site, "heroStatement", props.site.headline);
+  const groupLabel = settingText(props.site, "groupLabel", defaultGroupLabel(props.site.labName));
+  const groupHeading = settingText(props.site, "groupHeading", props.site.labSubtitle || props.site.headline);
+  const groupHeadingLines = groupHeading.split(/\n+/).map((line) => line.trim()).filter(Boolean);
 
   return (
     <div className="lens-portrait-site">
@@ -44,7 +59,7 @@ export default function LensPortraitDesign(props: Props) {
       )}
 
       <header className="lens-header">
-        <Link className="lens-brand" href={props.basePath}>Lens Lab</Link>
+        <Link className="lens-brand" href={props.basePath}>{props.site.labName}</Link>
         <nav aria-label={`${props.site.labName} navigation`}>
           <Link className="active" href={props.basePath}>Home</Link>
           <Link href={`${props.basePath}/research`}>Research</Link>
@@ -67,15 +82,15 @@ export default function LensPortraitDesign(props: Props) {
 
           <div className="lens-info">
             <div>
-              <p className="lens-kicker">Susanne Lens Lab</p>
+              <p className="lens-kicker">{heroKicker}</p>
               <h1>{piName}</h1>
               {piRole && <p className="lens-role">{piRole}</p>}
             </div>
 
             <div className="lens-info-bottom">
-              <p className="lens-statement">Understanding how chromosome segregation and aneuploidy shape cancer.</p>
+              <p className="lens-statement">{heroStatement}</p>
               <div className="lens-affiliation">
-                <span>{props.site.department}</span>
+                {props.site.department && <span>{props.site.department}</span>}
                 <span>{props.site.institution}</span>
               </div>
               <div className="lens-actions">
@@ -88,9 +103,11 @@ export default function LensPortraitDesign(props: Props) {
         </section>
 
         <section className="lens-group">
-          <div className="lens-group-label">The Lens Group</div>
+          <div className="lens-group-label">{groupLabel}</div>
           <div className="lens-group-copy">
-            <h2>Chromosomes.<br />Cell division.<br />Cancer.</h2>
+            <h2>{groupHeadingLines.map((line, index) => (
+              <span key={`${line}-${index}`}>{line}{index < groupHeadingLines.length - 1 && <br />}</span>
+            ))}</h2>
             <p>{overview}</p>
           </div>
           <div className="lens-themes" aria-label="Research themes">
@@ -110,8 +127,8 @@ export default function LensPortraitDesign(props: Props) {
 
       <footer className="lens-footer">
         <div>
-          <strong>Lens Lab</strong>
-          <span>{props.site.department}</span>
+          <strong>{props.site.labName}</strong>
+          {props.site.department && <span>{props.site.department}</span>}
           <span>{props.site.institution}</span>
         </div>
         <div>
@@ -308,6 +325,7 @@ export default function LensPortraitDesign(props: Props) {
           line-height: .94;
           letter-spacing: -.05em;
         }
+        .lens-group-copy h2 span { display: inline; }
         .lens-group-copy p {
           margin: 38px 0 0;
           max-width: 720px;
