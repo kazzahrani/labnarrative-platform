@@ -8,8 +8,8 @@ import DobbelsteinEditorialDesign, { DOBBELSTEIN_EDITORIAL_VARIANT } from "@/com
 import DobbelsteinScrollDesign, { DOBBELSTEIN_SCROLL_VARIANT } from "@/components/designs/DobbelsteinScrollDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
+import HDPortrait1Design, { HDPORTRAIT_1_VARIANT } from "@/components/designs/HDPortrait1Design";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
-import LensPortraitDesign from "@/components/designs/LensPortraitDesign";
 import Narita3Design, { NARITA_3_VARIANT } from "@/components/designs/Narita3Design";
 import PersonalScroll1Design, { PERSONAL_SCROLL_1_VARIANT } from "@/components/designs/PersonalScroll1Design";
 import PortraitMinimal1Design, { PORTRAIT_MINIMAL_1_VARIANT } from "@/components/designs/PortraitMinimal1Design";
@@ -107,8 +107,8 @@ export default function SiteShell({ site, route, basePath, previewMode = false, 
     && Boolean(route.projectSlug)
     && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
 
-  if (designVariant === "lens-portrait-v1") {
-    return <LensPortraitDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  if (designVariant === HDPORTRAIT_1_VARIANT || designVariant === "lens-portrait-v1") {
+    return <HDPortrait1Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === DOBBELSTEIN_SCROLL_VARIANT) {
