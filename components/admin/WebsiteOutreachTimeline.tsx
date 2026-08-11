@@ -19,6 +19,9 @@ const STOPPED = new Set(["replied", "interested", "rejected", "paused", "meeting
 const SENT_GREEN = "#3f8f71";
 const SENT_GREEN_BG = "rgba(63,143,113,.11)";
 const SENT_GREEN_BORDER = "rgba(63,143,113,.30)";
+const DUE_BLUE = "#416f88";
+const DUE_BLUE_BG = "rgba(65,111,136,.11)";
+const DUE_BLUE_BORDER = "rgba(65,111,136,.30)";
 
 function stamp(value?: string | null) {
   if (!value) return "";
@@ -43,9 +46,9 @@ function latest(messages: OutreachMessage[], kind: string) {
 function Step({ label, message, due }: { label: string; message?: OutreachMessage; due?: string | null }) {
   const sent = message?.status === "sent" && Boolean(message.sent_at);
   const sending = message?.status === "sending";
-  const tone = sent ? SENT_GREEN : sending ? "#e8ba63" : due ? "#79b9dd" : "#718997";
-  const bg = sent ? SENT_GREEN_BG : sending ? "rgba(232,186,99,.10)" : due ? "rgba(121,185,221,.09)" : "rgba(113,137,151,.07)";
-  const border = sent ? SENT_GREEN_BORDER : sending ? "rgba(232,186,99,.28)" : due ? "rgba(121,185,221,.24)" : "rgba(113,137,151,.18)";
+  const tone = sent ? SENT_GREEN : sending ? "#e8ba63" : due ? DUE_BLUE : "#718997";
+  const bg = sent ? SENT_GREEN_BG : sending ? "rgba(232,186,99,.10)" : due ? DUE_BLUE_BG : "rgba(113,137,151,.07)";
+  const border = sent ? SENT_GREEN_BORDER : sending ? "rgba(232,186,99,.28)" : due ? DUE_BLUE_BORDER : "rgba(113,137,151,.18)";
   const detail = sent ? stamp(message?.sent_at) : sending ? "Sending…" : due ? `Due ${stamp(due)}` : "Pending";
 
   return (
