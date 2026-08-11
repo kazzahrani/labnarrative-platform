@@ -74,7 +74,6 @@ export default function SalesConversionInbox() {
   }, [load]);
 
   const active = useMemo(() => rows.filter((row) => conversionStages.has(row.stage) || row.human_replies > 0 || Boolean(row.next_action)), [rows]);
-  const recent = useMemo(() => rows.filter((row) => !active.some((item) => item.prospect_id === row.prospect_id)).slice(0, 10), [active, rows]);
   const due = useMemo(() => active.filter((row) => row.next_action_due_at && Date.parse(row.next_action_due_at) <= Date.now()).length, [active]);
 
   return (
@@ -110,18 +109,6 @@ export default function SalesConversionInbox() {
               ))}
             </div>
           )}
-        </article>
-
-        <article className={styles.card}>
-          <div className={styles.cardHeader}><div><p className={styles.kicker}>Available now</p><h3>Recently contacted</h3></div><span>{recent.length}</span></div>
-          <p className={styles.caption}>These PIs have recent outreach but no conversion-stage activity yet. Open one if you want to add a note or manual next action before they reply.</p>
-          <div className={styles.compactGrid}>
-            {recent.map((row) => (
-              <Link href={`/admin/sales/${row.prospect_id}`} key={row.prospect_id}>
-                <strong>{row.pi_name}</strong><span>{row.institution}</span><small>{label(row.outreach_status)} · {Number(row.visits || 0)} visits</small>
-              </Link>
-            ))}
-          </div>
         </article>
       </div>
     </section>
