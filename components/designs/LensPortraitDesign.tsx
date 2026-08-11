@@ -218,8 +218,8 @@ export default function LensPortraitDesign(props: Props) {
           padding: clamp(54px, 6vw, 96px) clamp(42px, 6vw, 92px) clamp(46px, 5vw, 78px);
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          gap: 72px;
+          justify-content: flex-start;
+          gap: clamp(28px, 2.5vw, 40px);
           background: #f2f0eb;
         }
         .lens-kicker {
@@ -392,7 +392,7 @@ export default function LensPortraitDesign(props: Props) {
           .lens-photo,
           .lens-photo img,
           .lens-photo-placeholder { min-height: 68svh; }
-          .lens-info { min-height: auto; padding: 50px 24px 58px; gap: 62px; }
+          .lens-info { min-height: auto; padding: 50px 24px 58px; gap: 32px; }
           .lens-info h1 { max-width: none; font-size: clamp(56px, 17vw, 84px); }
           .lens-group { grid-template-columns: 1fr; padding: 74px 24px 84px; row-gap: 44px; }
           .lens-group-copy,
