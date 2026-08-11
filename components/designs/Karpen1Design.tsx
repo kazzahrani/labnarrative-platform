@@ -32,6 +32,52 @@ function portraitAccent(site: LabSite) {
     : "#5d5b91";
 }
 
+function groupLabel(labName: string) {
+  const base = labName.replace(/\s+(lab|laboratory|group)$/i, "").trim();
+  return `The ${base || labName} Group`;
+}
+
+function innerTitleForRoute(props: Props) {
+  if (props.route.projectSlug) return undefined;
+
+  const researchIntro = (props.site.pages?.research as { introduction?: string } | undefined)?.introduction;
+
+  switch (props.route.section) {
+    case "research":
+      return {
+        eyebrow: "Research",
+        title: "Research",
+        text: researchIntro || props.site.overview || props.site.introduction,
+      };
+    case "members":
+      return {
+        eyebrow: "Group",
+        title: groupLabel(props.site.labName),
+        text: "The people behind the laboratory's research programme.",
+      };
+    case "publications":
+      return {
+        eyebrow: "Publications",
+        title: "Selected publications",
+        text: "Selected work from the laboratory and its collaborators.",
+      };
+    case "join":
+      return {
+        eyebrow: "Join",
+        title: `Join ${props.site.labName}`,
+        text: "Opportunities to contribute to the laboratory's research programme.",
+      };
+    case "contact":
+      return {
+        eyebrow: "Contact",
+        title: `Contact ${props.site.labName}`,
+        text: "Get in touch with the laboratory.",
+      };
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Karpen_1
  * Kops_1-derived portrait design with a portrait-responsive group panel and
@@ -111,7 +157,7 @@ export default function Karpen1Design(props: Props) {
   }, [props.route.section]);
 
   if (props.route.section !== "home") {
-    return <Kops1Design {...props} />;
+    return <Kops1Design {...props} innerTitle={innerTitleForRoute(props)} />;
   }
 
   return (
