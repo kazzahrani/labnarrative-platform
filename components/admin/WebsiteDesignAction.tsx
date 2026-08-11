@@ -69,7 +69,6 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
       <button
         type="button"
         onClick={() => { setChosen(current); setError(""); setOpen(true); }}
-        style={{ border: "1px solid rgba(91,128,148,.34)", borderRadius: 8, background: "rgba(44,93,111,.11)", color: "inherit", padding: "5px 8px", font: "inherit", fontSize: ".68rem", fontWeight: 800, cursor: "pointer" }}
       >
         Change design
       </button>
