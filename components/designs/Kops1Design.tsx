@@ -17,8 +17,11 @@ type Props = {
 };
 
 function KopsHeader({ site, route, basePath }: Pick<Props, "site" | "route" | "basePath">) {
+  // Use a relative home target on inner pages so the same header works both on
+  // platform.labnarrative.com/sites/<slug>/... and on <slug>.labnarrative.com/....
+  const homeHref = route.projectSlug ? "../../" : "../";
   const links = [
-    { section: "home", label: "Home", href: basePath },
+    { section: "home", label: "Home", href: homeHref },
     { section: "research", label: "Research", href: `${basePath}/research` },
     { section: "members", label: "Group", href: `${basePath}/members` },
     { section: "publications", label: "Publications", href: `${basePath}/publications` },
@@ -27,7 +30,7 @@ function KopsHeader({ site, route, basePath }: Pick<Props, "site" | "route" | "b
 
   return (
     <header className="kops-shared-header">
-      <Link className="kops-shared-brand" href={basePath}>{site.labName}</Link>
+      <Link className="kops-shared-brand" href={homeHref}>{site.labName}</Link>
       <nav aria-label={`${site.labName} navigation`}>
         {links.map((item) => (
           <Link
