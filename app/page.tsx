@@ -104,7 +104,7 @@ export default function HomePage() {
 
         <nav className={styles.nav} aria-label="Primary navigation">
           <a href="#work">Approach</a>
-          <a href="#process">Process</a>
+          <a href="/process">Process</a>
           <a href="#pricing">Pricing</a>
         </nav>
 
