@@ -1,5 +1,3 @@
-"use client";
-
 import Lens1Design from "@/components/designs/Lens1Design";
 import type { LabSite, SiteRoute } from "@/lib/sites";
 
@@ -20,7 +18,7 @@ export default function Kops1Design(props: Props) {
   return (
     <div className="kops-1-design">
       <Lens1Design {...props} />
-      <style jsx global>{`
+      <style>{`
         .kops-1-design
           .lens-flat-hero-shell
           .narita-overlap-design:not(.narita-route-home)
