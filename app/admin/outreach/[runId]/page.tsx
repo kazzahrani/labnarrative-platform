@@ -25,6 +25,21 @@ function applyWebsiteMode(body:string,mode:WebsiteMode){
   return body.replace(/(I have followed your research on[^\n]+for years, although unfortunately we have never had the opportunity to connect\.)[^\n]*/i,`$1 ${target}`);
 }
 
+function returnToSourcePage(){
+  const fallback="/admin/review";
+  try{
+    if(document.referrer){
+      const referrer=new URL(document.referrer);
+      if(referrer.origin===window.location.origin&&referrer.pathname.startsWith("/admin/")&&!referrer.pathname.startsWith("/admin/outreach/")){
+        window.location.href=`${referrer.pathname}${referrer.search}${referrer.hash}`;
+        return;
+      }
+    }
+  }catch{}
+  if(window.history.length>1){window.history.back();return}
+  window.location.href=fallback;
+}
+
 async function rpc<T>(session:Session,name:string,body:Record<string,unknown>={}):Promise<T>{
   const response=await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify(body),cache:"no-store"});
   const text=await response.text();const payload=text?JSON.parse(text):null;
@@ -86,11 +101,9 @@ export default function OutreachDraftPage(){
     try{
       const saved=await persistDraft(session,false);
       await rpc<boolean>(session,"authorize_operator_send",{p_run_id:saved.productionRunId,p_recipient_email:saved.recipientEmail});
-      const result=await sendThroughLabNarrative(session,saved.productionRunId,sendKsuCopy);
-      const copyNote=sendKsuCopy&&!result.alreadySent?` A private copy was also sent to ${KSU_COPY_EMAIL}.`:"";
-      setNotice(result.alreadySent?"This outreach email had already been sent.":`Email sent successfully to ${result.recipient||saved.recipientEmail}.${copyNote}`);
-      await load(session);
-    }catch(error){setNotice(error instanceof Error?error.message:"The email could not be sent.")}finally{setAction("")}
+      await sendThroughLabNarrative(session,saved.productionRunId,sendKsuCopy);
+      returnToSourcePage();
+    }catch(error){setNotice(error instanceof Error?error.message:"The email could not be sent.");setAction("")}
   }
 
   async function confirmPrivateSend(){
@@ -100,9 +113,8 @@ export default function OutreachDraftPage(){
     try{
       const saved=await persistDraft(session,false);
       await rpc(session,"mark_private_outreach_sent",{p_run_id:saved.productionRunId});
-      setNotice(`Recorded as sent privately to ${saved.recipientEmail}. LabNarrative did not send an email.`);
-      await load(session);
-    }catch(error){setNotice(error instanceof Error?error.message:"The private send could not be recorded.")}finally{setAction("")}
+      returnToSourcePage();
+    }catch(error){setNotice(error instanceof Error?error.message:"The private send could not be recorded.");setAction("")}
   }
 
   if(!ready)return <main className={styles.state}>Preparing outreach draft…</main>;
