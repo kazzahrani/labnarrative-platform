@@ -55,6 +55,14 @@
   margin-bottom: 24px;
 }
 
+.heroActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .hero h1 {
   margin: 0.2rem 0 1rem;
   color: #f4f8fa;
@@ -99,6 +107,18 @@
   background: #24b5b2;
   color: #071b22;
   box-shadow: 0 8px 20px rgba(36, 181, 178, 0.12);
+}
+
+.hero .bulkPublish {
+  border-color: #55d4ad;
+  background: #2f715f;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(47, 113, 95, 0.2);
+}
+
+.hero .bulkPublish:hover:not(:disabled) {
+  background: #38856f;
+  border-color: #67e0ba;
 }
 
 .secondary {
@@ -304,6 +324,11 @@
   .hero {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .heroActions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .stats {
