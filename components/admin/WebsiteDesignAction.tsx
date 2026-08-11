@@ -29,6 +29,7 @@ const DESIGNS: DesignOption[] = [
   { value: "Lens_1", label: "Lens 1", description: "Portrait-led modern design based on the Susanne Lens concept." },
   { value: "WALCZAK_1", label: "Walczak 1", description: "Independent portrait-led design based on the Walczak concept." },
   { value: "Kops_1", label: "Kops 1", description: "Independent portrait-led design based on the Kops concept." },
+  { value: "Karpen_1", label: "Karpen 1", description: "Portrait-led design with a portrait-responsive group color and Narita-style homepage overlap." },
 ];
 
 function normalizedCurrent(value?: string | null) {
