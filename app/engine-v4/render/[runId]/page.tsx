@@ -103,9 +103,9 @@ export default async function EngineV4MachineRenderPage({
   const portraitBound = Boolean(expectedPortrait) && (
     homePortrait === expectedPortrait || memberPortrait === expectedPortrait
   );
-  const naritaVariant = site.design?.settings?.variant === "ciribilli-narita-v1";
+  const karpenVariant = site.design?.settings?.variant === "Karpen_1";
 
-  if (!portraitBound || !naritaVariant) notFound();
+  if (!portraitBound || !karpenVariant) notFound();
 
   return (
     <>
