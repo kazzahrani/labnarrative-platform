@@ -9,6 +9,11 @@ type Props = {
   route: SiteRoute;
   basePath: string;
   previewMode?: boolean;
+  innerTitle?: {
+    eyebrow?: string;
+    title: string;
+    text?: string;
+  };
 };
 
 function KopsHeader({ site, route, basePath }: Pick<Props, "site" | "route" | "basePath">) {
@@ -74,6 +79,17 @@ export default function Kops1Design(props: Props) {
   return (
     <div className="kops-1-design kops-1-inner">
       <KopsHeader site={props.site} route={props.route} basePath={props.basePath} />
+
+      {props.innerTitle ? (
+        <section className="kops-inner-title" aria-labelledby="kops-inner-page-title">
+          <div>
+            {props.innerTitle.eyebrow ? <p>{props.innerTitle.eyebrow}</p> : null}
+            <h1 id="kops-inner-page-title">{props.innerTitle.title}</h1>
+          </div>
+          {props.innerTitle.text ? <div className="kops-inner-title-text">{props.innerTitle.text}</div> : null}
+        </section>
+      ) : null}
+
       <Lens1Design {...props} />
       <KopsFooter site={props.site} basePath={props.basePath} />
 
@@ -128,6 +144,42 @@ export default function Kops1Design(props: Props) {
           bottom: 0;
           height: 1px;
           background: #fff;
+        }
+
+        .kops-inner-title {
+          padding: clamp(62px, 7vw, 108px) clamp(24px, 6vw, 96px) clamp(48px, 6vw, 82px);
+          display: grid;
+          grid-template-columns: minmax(0, 1.4fr) minmax(260px, .75fr);
+          gap: clamp(36px, 7vw, 120px);
+          align-items: end;
+          background: #f2f0eb;
+          border-bottom: 1px solid rgba(21,25,24,.12);
+        }
+        .kops-inner-title p {
+          margin: 0 0 18px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: .2em;
+          text-transform: uppercase;
+          color: #68716d;
+        }
+        .kops-inner-title h1 {
+          margin: 0;
+          max-width: 12ch;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: clamp(52px, 6vw, 96px);
+          font-weight: 400;
+          line-height: .92;
+          letter-spacing: -.055em;
+          color: #151918;
+        }
+        .kops-inner-title-text {
+          max-width: 600px;
+          padding-bottom: 5px;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: clamp(17px, 1.5vw, 22px);
+          line-height: 1.55;
+          color: #5e6763;
         }
 
         .kops-1-inner
@@ -195,6 +247,15 @@ export default function Kops1Design(props: Props) {
           .kops-shared-header nav {
             justify-content: flex-start;
             gap: 10px 18px;
+          }
+          .kops-inner-title {
+            grid-template-columns: 1fr;
+            gap: 24px;
+            padding: 52px 22px 42px;
+          }
+          .kops-inner-title h1 {
+            max-width: 100%;
+            font-size: clamp(44px, 15vw, 68px);
           }
           .kops-shared-footer {
             grid-template-columns: 1fr;
