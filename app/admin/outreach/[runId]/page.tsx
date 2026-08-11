@@ -7,11 +7,12 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import styles from "./outreach.module.css";
 
 type OutreachDraft={runId:string;productionRunId:string;messageId:string;recipientEmail:string;senderEmail:string;subject:string;bodyText:string;status:string;publicUrl?:string};
-type SendResult={ok?:boolean;alreadySent?:boolean;providerMessageId?:string;recipient?:string;messageKind?:string;error?:string};
+type SendResult={ok?:boolean;alreadySent?:boolean;providerMessageId?:string;recipient?:string;messageKind?:string;bccIncluded?:boolean;bccAddress?:string;error?:string};
 
 const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase=createClient(supabaseUrl,supabaseKey);
+const KSU_COPY_EMAIL="kazzahrani@ksu.edu.sa";
 
 async function rpc<T>(session:Session,name:string,body:Record<string,unknown>={}):Promise<T>{
   const response=await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify(body),cache:"no-store"});
@@ -20,8 +21,8 @@ async function rpc<T>(session:Session,name:string,body:Record<string,unknown>={}
   return payload as T;
 }
 
-async function sendThroughLabNarrative(session:Session,productionRunId:string):Promise<SendResult>{
-  const response=await fetch(`${supabaseUrl}/functions/v1/operator-send-outreach`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({runId:productionRunId}),cache:"no-store"});
+async function sendThroughLabNarrative(session:Session,productionRunId:string,sendKsuCopy:boolean):Promise<SendResult>{
+  const response=await fetch(`${supabaseUrl}/functions/v1/operator-send-outreach`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({runId:productionRunId,sendKsuCopy}),cache:"no-store"});
   const payload=await response.json().catch(()=>({})) as SendResult;
   if(!response.ok||payload.ok!==true)throw new Error(payload.error||`Email delivery failed (${response.status}).`);
   return payload;
@@ -29,7 +30,7 @@ async function sendThroughLabNarrative(session:Session,productionRunId:string):P
 
 export default function OutreachDraftPage(){
   const params=useParams<{runId:string}>();const runId=String(params.runId??"");
-  const [session,setSession]=useState<Session|null>(null);const [ready,setReady]=useState(false);const [draft,setDraft]=useState<OutreachDraft|null>(null);const [recipientEmail,setRecipientEmail]=useState("");const [subject,setSubject]=useState("");const [bodyText,setBodyText]=useState("");const [notice,setNotice]=useState("");const [action,setAction]=useState<""|"save"|"send"|"private">("");
+  const [session,setSession]=useState<Session|null>(null);const [ready,setReady]=useState(false);const [draft,setDraft]=useState<OutreachDraft|null>(null);const [recipientEmail,setRecipientEmail]=useState("");const [subject,setSubject]=useState("");const [bodyText,setBodyText]=useState("");const [sendKsuCopy,setSendKsuCopy]=useState(false);const [notice,setNotice]=useState("");const [action,setAction]=useState<""|"save"|"send"|"private">("");
 
   const load=useCallback(async(activeSession:Session)=>{if(!runId)return;try{const row=await rpc<OutreachDraft>(activeSession,"engine_admin_outreach_get",{p_run_id:runId});setDraft(row);setRecipientEmail(row.recipientEmail||"");setSubject(row.subject||"");setBodyText(row.bodyText||"");setNotice("")}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
   useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(nextSession)void load(nextSession);else setDraft(null)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
@@ -48,8 +49,9 @@ export default function OutreachDraftPage(){
     try{
       const saved=await persistDraft(session,false);
       await rpc<boolean>(session,"authorize_operator_send",{p_run_id:saved.productionRunId,p_recipient_email:saved.recipientEmail});
-      const result=await sendThroughLabNarrative(session,saved.productionRunId);
-      setNotice(result.alreadySent?"This outreach email had already been sent.":`Email sent successfully to ${result.recipient||saved.recipientEmail}.`);
+      const result=await sendThroughLabNarrative(session,saved.productionRunId,sendKsuCopy);
+      const copyNote=sendKsuCopy&&!result.alreadySent?` A private copy was also sent to ${KSU_COPY_EMAIL}.`:"";
+      setNotice(result.alreadySent?"This outreach email had already been sent.":`Email sent successfully to ${result.recipient||saved.recipientEmail}.${copyNote}`);
       await load(session);
     }catch(error){setNotice(error instanceof Error?error.message:"The email could not be sent.")}finally{setAction("")}
   }
@@ -77,6 +79,7 @@ export default function OutreachDraftPage(){
         {editable&&!recipientEmail.trim()?<p className={styles.warning}>Recipient is still missing. The draft can be saved, but it cannot be sent until a verified email is added.</p>:null}
         <label><span>Subject</span><input disabled={!editable||Boolean(action)} required value={subject} onChange={event=>setSubject(event.target.value)}/></label>
         <label><span>Email body</span><textarea disabled={!editable||Boolean(action)} required rows={24} value={bodyText} onChange={event=>setBodyText(event.target.value)}/></label>
+        {editable?<label style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"1px solid rgba(92,132,151,.28)",borderRadius:12,background:"rgba(11,31,42,.72)",cursor:action?"default":"pointer"}}><input type="checkbox" checked={sendKsuCopy} disabled={Boolean(action)} onChange={event=>setSendKsuCopy(event.target.checked)} style={{width:17,height:17,margin:0,accentColor:"#2f7c68"}}/><span style={{fontSize:".82rem",fontWeight:750}}>Send me a private copy at {KSU_COPY_EMAIL}</span></label>:null}
         <div className={styles.actions}>{editable?<><button className={styles.saveButton} disabled={Boolean(action)} type="submit">{action==="save"?"Saving…":"Save Draft"}</button><button className={styles.sendButton} disabled={Boolean(action)||!recipientEmail.trim()} onClick={()=>void sendNow()} type="button">{action==="send"?"Sending…":"Send Email Now"}</button><button className={styles.privateButton} disabled={Boolean(action)||!recipientEmail.trim()} onClick={()=>void confirmPrivateSend()} type="button">{action==="private"?"Recording…":"Confirm Sent From Personal Email"}</button></>:null}<Link href="/admin/review">Back to Final Review</Link></div>
       </form>:null}
     </section>
