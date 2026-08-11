@@ -157,7 +157,30 @@ export default function Karpen1Design(props: Props) {
   }, [props.route.section]);
 
   if (props.route.section !== "home") {
-    return <Kops1Design {...props} innerTitle={innerTitleForRoute(props)} />;
+    return (
+      <div
+        className="karpen-1-inner-shell"
+        style={{ "--karpen-portrait-accent": accent } as CSSProperties}
+      >
+        <Kops1Design {...props} innerTitle={innerTitleForRoute(props)} />
+        <style jsx global>{`
+          .karpen-1-inner-shell .kops-inner-title {
+            background: var(--karpen-portrait-accent, #5d5b91) !important;
+            color: #fff !important;
+            border-bottom-color: rgba(255,255,255,.16) !important;
+          }
+          .karpen-1-inner-shell .kops-inner-title p {
+            color: rgba(255,255,255,.68) !important;
+          }
+          .karpen-1-inner-shell .kops-inner-title h1 {
+            color: #fff !important;
+          }
+          .karpen-1-inner-shell .kops-inner-title-text {
+            color: rgba(255,255,255,.82) !important;
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
