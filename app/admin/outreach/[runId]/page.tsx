@@ -57,9 +57,15 @@ export default function OutreachDraftPage(){
   }
 
   async function confirmPrivateSend(){
-    if(!session||action||!draft||draft.status!=="draft")return;if(!recipientEmail.trim()){setNotice("Add the recipient email before recording a private send.");return}
+    if(!session||action||!draft||draft.status!=="draft")return;
+    if(!recipientEmail.trim()){setNotice("Add the recipient email before recording a private send.");return}
     setAction("private");
-    try{const saved=await persistDraft(session,false);const confirmed=window.confirm(`Confirm that you ALREADY sent this outreach yourself from a personal email account.\n\nRecipient: ${saved.recipientEmail}\n\nLabNarrative will not send an email. This only records the outreach as sent.`);if(!confirmed){setNotice("Private-send confirmation cancelled. The latest edits were saved as a draft.");return}await rpc(session,"mark_private_outreach_sent",{p_run_id:saved.productionRunId});setNotice(`Recorded as sent privately to ${saved.recipientEmail}. LabNarrative did not send an email.`);await load(session)}catch(error){setNotice(error instanceof Error?error.message:"The private send could not be recorded.")}finally{setAction("")}
+    try{
+      const saved=await persistDraft(session,false);
+      await rpc(session,"mark_private_outreach_sent",{p_run_id:saved.productionRunId});
+      setNotice(`Recorded as sent privately to ${saved.recipientEmail}. LabNarrative did not send an email.`);
+      await load(session);
+    }catch(error){setNotice(error instanceof Error?error.message:"The private send could not be recorded.")}finally{setAction("")}
   }
 
   if(!ready)return <main className={styles.state}>Preparing outreach draft…</main>;
