@@ -35,8 +35,10 @@ type RenderPayload = {
   designKey?: string;
   designVersion?: number;
   designSettings?: Record<string, unknown>;
-  portraitAssetUrl: string;
-  portraitSourceUrl?: string;
+  portraitStatus?: "verified" | "unavailable" | "rejected" | null;
+  portraitAssetUrl?: string | null;
+  portraitSourceUrl?: string | null;
+  portraitMetadata?: Record<string, unknown> | null;
   tokenExpiresAt: string;
 };
 
@@ -44,7 +46,7 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function normalizeAsset(value?: string) {
+function normalizeAsset(value?: string | null) {
   if (!value) return "";
   try {
     return new URL(value).toString();
@@ -103,9 +105,14 @@ export default async function EngineV4MachineRenderPage({
   const portraitBound = Boolean(expectedPortrait) && (
     homePortrait === expectedPortrait || memberPortrait === expectedPortrait
   );
+  const portraitWarningAccepted =
+    payload.portraitStatus === "unavailable" &&
+    payload.portraitMetadata?.portrait_warning_accepted === true;
   const karpenVariant = site.design?.settings?.variant === "Karpen_1";
 
-  if (!portraitBound || !karpenVariant) notFound();
+  if (!karpenVariant) notFound();
+  if (payload.portraitStatus === "verified" && !portraitBound) notFound();
+  if (payload.portraitStatus !== "verified" && !portraitWarningAccepted) notFound();
 
   return (
     <>
@@ -120,7 +127,8 @@ export default async function EngineV4MachineRenderPage({
         data-site-slug={site.slug}
         data-design-variant={String(site.design?.settings?.variant ?? "")}
         data-portrait-url={expectedPortrait}
-        data-portrait-bound="true"
+        data-portrait-bound={portraitBound ? "true" : "false"}
+        data-portrait-warning={portraitWarningAccepted ? "true" : "false"}
         data-token-expires-at={payload.tokenExpiresAt}
       />
       <SiteShell
