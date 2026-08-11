@@ -112,6 +112,42 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
           background: transparent !important;
         }
 
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > div:last-of-type,
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > div:last-of-type {
+          top: 50% !important;
+          bottom: auto !important;
+          left: clamp(42px, 9vw, 150px) !important;
+          right: clamp(42px, 9vw, 150px) !important;
+          max-width: min(980px, calc(100vw - 84px)) !important;
+          transform: translate3d(0, -50%, 0) !important;
+          will-change: auto !important;
+        }
+
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > div:last-of-type h1,
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > div:last-of-type h1 {
+          max-width: min(780px, 76vw) !important;
+          margin: 0 !important;
+          font-size: clamp(34px, 3.5vw, 56px) !important;
+          line-height: 0.98 !important;
+          letter-spacing: -0.035em !important;
+        }
+
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > div:last-of-type p,
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > div:last-of-type p {
+          margin-bottom: 12px !important;
+          font-size: 10px !important;
+          line-height: 1 !important;
+          letter-spacing: 0.28em !important;
+        }
+
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > div:last-of-type > div,
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > div:last-of-type > div {
+          max-width: 760px !important;
+          margin-top: 16px !important;
+          font-size: clamp(15px, 1.45vw, 19px) !important;
+          line-height: 1.45 !important;
+        }
+
         .ciribilli-narita-shell .narita-route-home main > section:first-of-type {
           width: 100% !important;
           height: calc(100svh - var(--narita-header-height)) !important;
@@ -220,6 +256,21 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
           .ciribilli-narita-shell .narita-route-home main > section:first-of-type > div:nth-of-type(2) h1 {
             max-width: 92vw !important;
             font-size: clamp(42px, 13vw, 68px) !important;
+          }
+
+          .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > div:last-of-type,
+          .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > div:last-of-type {
+            left: 24px !important;
+            right: 24px !important;
+            max-width: calc(100vw - 48px) !important;
+            transform: translateY(-50%) !important;
+          }
+
+          .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > div:last-of-type h1,
+          .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > div:last-of-type h1 {
+            max-width: 88vw !important;
+            font-size: clamp(25px, 7vw, 34px) !important;
+            line-height: 1.02 !important;
           }
         }
 
