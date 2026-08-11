@@ -16,6 +16,9 @@ type Props = {
 };
 
 const STOPPED = new Set(["replied", "interested", "rejected", "paused", "meeting_scheduled", "proposal_sent", "client"]);
+const SENT_GREEN = "#3f8f71";
+const SENT_GREEN_BG = "rgba(63,143,113,.11)";
+const SENT_GREEN_BORDER = "rgba(63,143,113,.30)";
 
 function stamp(value?: string | null) {
   if (!value) return "";
@@ -40,9 +43,9 @@ function latest(messages: OutreachMessage[], kind: string) {
 function Step({ label, message, due }: { label: string; message?: OutreachMessage; due?: string | null }) {
   const sent = message?.status === "sent" && Boolean(message.sent_at);
   const sending = message?.status === "sending";
-  const tone = sent ? "#58d39b" : sending ? "#e8ba63" : due ? "#79b9dd" : "#718997";
-  const bg = sent ? "rgba(88,211,155,.10)" : sending ? "rgba(232,186,99,.10)" : due ? "rgba(121,185,221,.09)" : "rgba(113,137,151,.07)";
-  const border = sent ? "rgba(88,211,155,.28)" : sending ? "rgba(232,186,99,.28)" : due ? "rgba(121,185,221,.24)" : "rgba(113,137,151,.18)";
+  const tone = sent ? SENT_GREEN : sending ? "#e8ba63" : due ? "#79b9dd" : "#718997";
+  const bg = sent ? SENT_GREEN_BG : sending ? "rgba(232,186,99,.10)" : due ? "rgba(121,185,221,.09)" : "rgba(113,137,151,.07)";
+  const border = sent ? SENT_GREEN_BORDER : sending ? "rgba(232,186,99,.28)" : due ? "rgba(121,185,221,.24)" : "rgba(113,137,151,.18)";
   const detail = sent ? stamp(message?.sent_at) : sending ? "Sending…" : due ? `Due ${stamp(due)}` : "Pending";
 
   return (
@@ -89,17 +92,17 @@ export default function WebsiteOutreachTimeline({ messages, outreachStatus, pros
         <span style={{ color: "#506b78", fontWeight: 900 }}>›</span>
         <Step label="Follow-up 2" message={f2} due={stopped ? null : f2Due} />
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 7, minHeight: 15 }}>
-        {stopped ? (
-          <span style={{ color: state === "interested" || state === "replied" || state === "client" ? "#58d39b" : "#9cb0ba", fontSize: ".59rem", fontWeight: 800 }}>
+      {stopped ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minHeight: 15 }}>
+          <span style={{ color: state === "interested" || state === "replied" || state === "client" ? SENT_GREEN : "#9cb0ba", fontSize: ".59rem", fontWeight: 800 }}>
             Sequence stopped · {state.replaceAll("_", " ")}
           </span>
-        ) : f2?.status === "sent" ? (
+        </div>
+      ) : f2?.status === "sent" ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minHeight: 15 }}>
           <span style={{ color: "#8ca1ad", fontSize: ".59rem", fontWeight: 750 }}>Sequence complete</span>
-        ) : (
-          <span style={{ color: "#58d39b", fontSize: ".56rem", fontWeight: 850, letterSpacing: ".05em" }}>AUTOMATIC FOLLOW-UPS ACTIVE</span>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
