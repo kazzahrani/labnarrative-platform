@@ -10,6 +10,7 @@ import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import HDPortrait1Design, { HDPORTRAIT_1_VARIANT } from "@/components/designs/HDPortrait1Design";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
+import Lens1Design, { LENS_1_VARIANT } from "@/components/designs/Lens1Design";
 import Narita3Design, { NARITA_3_VARIANT } from "@/components/designs/Narita3Design";
 import PersonalScroll1Design, { PERSONAL_SCROLL_1_VARIANT } from "@/components/designs/PersonalScroll1Design";
 import PortraitMinimal1Design, { PORTRAIT_MINIMAL_1_VARIANT } from "@/components/designs/PortraitMinimal1Design";
@@ -18,6 +19,7 @@ import SignatureAcademicDesign from "@/components/designs/SignatureAcademicDesig
 import SourcedBourdonResearchDesign from "@/components/designs/SourcedBourdonResearchDesign";
 import SourcedEditorialProjectDesign from "@/components/designs/SourcedEditorialProjectDesign";
 import SourcedSignatureProjectDesign from "@/components/designs/SourcedSignatureProjectDesign";
+import Walczak1Design, { WALCZAK_1_VARIANT } from "@/components/designs/Walczak1Design";
 import {
   resolveDesignKey,
   type LabSite,
@@ -106,6 +108,14 @@ export default function SiteShell({ site, route, basePath, previewMode = false, 
   const isSourcedProjectRoute = route.section === "research"
     && Boolean(route.projectSlug)
     && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
+
+  if (designVariant === LENS_1_VARIANT) {
+    return <Lens1Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
+  if (designVariant === WALCZAK_1_VARIANT) {
+    return <Walczak1Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
 
   if (designVariant === HDPORTRAIT_1_VARIANT || designVariant === "lens-portrait-v1") {
     return <HDPortrait1Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
