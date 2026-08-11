@@ -15,17 +15,19 @@ type Props = {
  * Independent reusable portrait-led design based on the approved Claire Walczak concept.
  */
 export default function Walczak1Design(props: Props) {
-  const site: LabSite = {
-    ...props.site,
-    design: {
-      ...props.site.design,
-      settings: {
-        ...props.site.design?.settings,
-        variant: "HDportrait_1",
-        templatePolicy: "HDportrait_2",
-      },
-    },
-  };
+  const site: LabSite = props.site.design
+    ? {
+        ...props.site,
+        design: {
+          ...props.site.design,
+          settings: {
+            ...props.site.design.settings,
+            variant: "HDportrait_1",
+            templatePolicy: "HDportrait_2",
+          },
+        },
+      }
+    : props.site;
 
   return <HDPortrait2Design {...props} site={site} />;
 }
