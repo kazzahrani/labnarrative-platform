@@ -25,10 +25,6 @@ type ReviewRun = {
   state: string;
 };
 
-type Dashboard = {
-  runs?: ReviewRun[];
-};
-
 type PublishResult = {
   ok?: boolean;
   outreachSent?: boolean;
@@ -80,13 +76,13 @@ export default function AdminSitePreviewPage() {
         return;
       }
 
-      const [{ data, error: queryError }, { data: dashboardData }] = await Promise.all([
+      const [{ data, error: queryError }, { data: targetData, error: targetError }] = await Promise.all([
         supabase
           .from("sites")
           .select("slug,status,content,content_schema_version,design_key,design_version,design_settings")
           .eq("slug", slug)
           .maybeSingle(),
-        supabase.rpc("engine_admin_dashboard"),
+        supabase.rpc("engine_admin_preview_review_target", { p_slug: slug }),
       ]);
 
       if (!active) return;
@@ -109,12 +105,7 @@ export default function AdminSitePreviewPage() {
           },
         });
         setStatus(row.status);
-
-        const dashboard = (dashboardData ?? {}) as Dashboard;
-        const matchingRun = (dashboard.runs ?? []).find(
-          (run) => run.slug === slug && run.state === "final_review",
-        );
-        setReviewRun(matchingRun ?? null);
+        setReviewRun(targetError ? null : ((targetData as ReviewRun | null) ?? null));
       }
 
       setLoading(false);
