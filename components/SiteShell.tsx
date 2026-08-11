@@ -10,6 +10,7 @@ import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import HDPortrait1Design, { HDPORTRAIT_1_VARIANT } from "@/components/designs/HDPortrait1Design";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
+import Kops1Design, { KOPS_1_VARIANT } from "@/components/designs/Kops1Design";
 import Lens1Design, { LENS_1_VARIANT } from "@/components/designs/Lens1Design";
 import Narita3Design, { NARITA_3_VARIANT } from "@/components/designs/Narita3Design";
 import PersonalScroll1Design, { PERSONAL_SCROLL_1_VARIANT } from "@/components/designs/PersonalScroll1Design";
@@ -108,6 +109,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false, 
   const isSourcedProjectRoute = route.section === "research"
     && Boolean(route.projectSlug)
     && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
+
+  if (designVariant === KOPS_1_VARIANT) {
+    return <Kops1Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
 
   if (designVariant === LENS_1_VARIANT) {
     return <Lens1Design site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
