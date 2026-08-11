@@ -1,14 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
-const MAX_BODY_BYTES = 600_000;
-
+const AUTH_MARKER = "labnarrative-engine-v4-worker-auth-v1";
 const ALLOWED_ACTIONS = new Set([
-  "health",
   "get_execution_state",
   "get_run_context",
   "open_execution",
@@ -23,12 +20,9 @@ const ALLOWED_ACTIONS = new Set([
   "record_renderer_check",
   "finalize_for_review",
   "block_run",
+  "stage_chunk",
+  "commit_staged",
 ]);
-
-type OperatorRequest = {
-  action?: unknown;
-  payload?: unknown;
-};
 
 function noStoreJson(body: unknown, status = 200) {
   return NextResponse.json(body, {
@@ -36,115 +30,110 @@ function noStoreJson(body: unknown, status = 200) {
     headers: {
       "cache-control": "private, no-store, max-age=0",
       "x-robots-tag": "noindex, nofollow, noarchive",
+      "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",
     },
   });
 }
 
 function previewOnly() {
-  // This worker bridge must never exist as an active production mutation
-  // surface. Production continues to render normally; only protected Vercel
-  // preview deployments may execute Engine v4 operator commands.
   return process.env.VERCEL_ENV === "preview";
 }
 
-function configured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL
-      && (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY),
-  );
+function decodeBase64Url(input: string) {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  return Buffer.from(padded, "base64").toString("utf8");
 }
 
-function keylessConfigured() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.VERCEL_OIDC_TOKEN);
+function objectPayload(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
 }
 
-function healthPayload() {
+function healthPayload(shareProofPresent = false) {
   return {
     ok: true,
     bridge: "labnarrative-engine-v4-operator",
     previewOnly: true,
-    configured: configured(),
-    keylessConfigured: keylessConfigured(),
+    keyless: true,
+    shareProofPresent,
     commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
   };
 }
 
-function buildSupabase() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+export async function GET(request: Request) {
+  if (!previewOnly()) return noStoreJson({ error: "Not found." }, 404);
 
-  if (!supabaseUrl || !secretKey) return null;
+  const url = new URL(request.url);
+  const shareProof = url.searchParams.get("_vercel_share") || url.searchParams.get("proof") || "";
 
-  return createClient(supabaseUrl, secretKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}
-
-export async function GET() {
-  if (!previewOnly()) {
-    return noStoreJson({ error: "Not found." }, 404);
+  if (url.searchParams.get("authCheck") === "1") {
+    return noStoreJson({
+      ok: true,
+      marker: AUTH_MARKER,
+      previewOnly: true,
+      commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
+    });
   }
 
-  return noStoreJson(healthPayload());
-}
-
-export async function POST(request: Request) {
-  if (!previewOnly()) {
-    return noStoreJson({ error: "Not found." }, 404);
-  }
-
-  const contentLength = Number(request.headers.get("content-length") || "0");
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-    return noStoreJson({ error: "Request body too large." }, 413);
-  }
-
-  let body: OperatorRequest;
-  try {
-    body = (await request.json()) as OperatorRequest;
-  } catch {
-    return noStoreJson({ error: "Invalid JSON body." }, 400);
-  }
-
-  const action = typeof body.action === "string" ? body.action.trim() : "";
+  const action = (url.searchParams.get("action") || "").trim().toLowerCase();
+  if (!action) return noStoreJson(healthPayload(Boolean(shareProof)));
   if (!ALLOWED_ACTIONS.has(action)) {
     return noStoreJson({ error: "Unsupported Engine v4 operator action." }, 400);
   }
-
-  if (action === "health") {
-    return noStoreJson(healthPayload());
+  if (!shareProof) {
+    return noStoreJson({ error: "Temporary protected-preview proof is required." }, 401);
   }
 
-  const supabase = buildSupabase();
-  if (!supabase) {
-    return noStoreJson({ error: "Engine v4 operator database credentials are not configured." }, 503);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  if (!supabaseUrl) {
+    return noStoreJson({ error: "Supabase URL is not configured for this preview." }, 503);
   }
 
-  const payload = body.payload && typeof body.payload === "object" && !Array.isArray(body.payload)
-    ? body.payload as Record<string, unknown>
-    : {};
+  let payload: Record<string, unknown> = {};
+  if (action === "stage_chunk") {
+    payload = {
+      commandId: url.searchParams.get("commandId") || "",
+      chunkIndex: Number(url.searchParams.get("chunkIndex") || "-1"),
+      expectedChunks: Number(url.searchParams.get("expectedChunks") || "0"),
+      targetAction: url.searchParams.get("targetAction") || "",
+      chunk: url.searchParams.get("chunk") || "",
+    };
+  } else if (action === "commit_staged") {
+    payload = { commandId: url.searchParams.get("commandId") || "" };
+  } else {
+    const encoded = url.searchParams.get("payload") || "";
+    if (encoded) {
+      try {
+        payload = objectPayload(JSON.parse(decodeBase64Url(encoded)));
+      } catch {
+        return noStoreJson({ error: "Invalid base64url JSON payload." }, 400);
+      }
+    }
+  }
 
-  const { data, error } = await supabase.rpc("engine_v4_operator_dispatch", {
-    p_action: action,
-    p_payload: payload,
-  });
-
-  if (error) {
-    console.error("Engine v4 operator dispatch failed", {
-      action,
-      code: error.code,
-      message: error.message,
+  const edgeUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/labnarrative-engine-v4-operator`;
+  let edgeResponse: Response;
+  try {
+    edgeResponse = await fetch(edgeUrl, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "content-type": "application/json",
+        "x-vercel-share-proof": shareProof,
+      },
+      body: JSON.stringify({ action, payload }),
     });
-
-    return noStoreJson({
-      error: "Engine v4 operator command failed.",
-      code: error.code || null,
-    }, 502);
+  } catch {
+    return noStoreJson({ error: "Engine v4 operator relay is unavailable." }, 502);
   }
 
-  return noStoreJson({ ok: true, action, result: data });
+  const result = await edgeResponse.json().catch(() => ({ error: "Invalid operator response." }));
+  return noStoreJson(result, edgeResponse.status);
+}
+
+export async function POST() {
+  return noStoreJson({ error: "Method not allowed." }, 405);
 }
