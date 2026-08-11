@@ -12,6 +12,17 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
 
+  // Engine v4 machine renderer capability URLs are short-lived private
+  // verification surfaces. Prevent the token in the query string from being
+  // forwarded as a Referer to remote portrait hosts or indexed/cached.
+  if (request.nextUrl.pathname.startsWith("/engine-v4/render/")) {
+    const response = NextResponse.next();
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    return response;
+  }
+
   // Keep the administrator session on one browser origin. Supabase stores its
   // browser session per origin, so opening an admin page through a Vercel alias
   // creates a separate session from platform.labnarrative.com.
