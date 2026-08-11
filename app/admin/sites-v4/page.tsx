@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
+import WebsiteOutreachTimeline from "@/components/admin/WebsiteOutreachTimeline";
 import styles from "../sites-v3/site-monitor-v3.module.css";
 
 type SiteRow = {
@@ -17,7 +18,6 @@ type Dashboard = { counts?:Record<string,number>; runs?:EngineRun[] };
 type Filter = "all"|"v4"|"final_review"|"live"|"private"|"legacy"|"outside";
 
 const PAGE_SIZES=[10,25,50,100] as const;
-const STOPPED=new Set(["replied","interested","rejected","paused","meeting_scheduled","proposal_sent","client"]);
 
 function isPublic(site:SiteRow){return ["concept","live"].includes(site.status)}
 function isOutside(prospect?:ProspectRow){return String(prospect?.metadata?.conceptCategory||"").toLowerCase()==="outside_concept"}
@@ -25,19 +25,6 @@ function piName(site:SiteRow,prospect?:ProspectRow,run?:EngineRun){return String
 function institution(site:SiteRow,prospect?:ProspectRow){return String(site.content?.institution||prospect?.institution||"—")}
 function publicUrl(site:SiteRow,run?:EngineRun){return String(site.domain_url||run?.publicUrl||`https://${site.slug}.labnarrative.com`)}
 function designLabel(site:SiteRow){const variant=String(site.design_settings?.variant||site.content?.design?.settings?.variant||site.content?.design?.variant||"").trim();if(variant==="ciribilli-narita-v1")return "Narita";if(variant)return variant.replace(/-v\d+$/i,"").split("-").map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(" ");return String(site.design_key||"Unspecified")}
-function formatDate(value?:string|null){if(!value)return null;const d=new Date(value);if(Number.isNaN(d.getTime()))return null;return new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Riyadh"}).format(d)}
-function latest(messages:OutreachMessage[],kind:string){return messages.filter(m=>m.message_kind===kind).sort((a,b)=>Date.parse(b.sent_at||b.created_at)-Date.parse(a.sent_at||a.created_at))[0]}
-function outreachSummary(site:SiteRow,prospect:ProspectRow|undefined,messages:OutreachMessage[]){
-  if(isOutside(prospect))return {label:"Outside platform",detail:"Historical/outside outreach"};
-  const initial=latest(messages,"initial");const f1=latest(messages,"followup_1");const f2=latest(messages,"followup_2");
-  if(f2?.sent_at)return {label:"F2 sent",detail:formatDate(f2.sent_at)||"sent"};
-  if(f1?.sent_at)return {label:"F1 sent",detail:f1.follow_up_at?`F2 due ${formatDate(f1.follow_up_at)}`:"Follow-up active"};
-  if(initial?.sent_at)return {label:"E1 sent",detail:initial.follow_up_at?`F1 due ${formatDate(initial.follow_up_at)}`:"Initial sent"};
-  if(initial)return {label:"Draft ready",detail:"E1 not sent"};
-  const state=String(prospect?.status||site.outreach_status||"").toLowerCase();
-  if(STOPPED.has(state))return {label:"Stopped",detail:state.replaceAll("_"," ")};
-  return {label:"Not started",detail:"No outreach draft"};
-}
 
 export default function SiteMonitorV4Page(){
   const [sites,setSites]=useState<SiteRow[]>([]);const [prospects,setProspects]=useState<ProspectRow[]>([]);const [runs,setRuns]=useState<EngineRun[]>([]);const [messages,setMessages]=useState<OutreachMessage[]>([]);
@@ -94,7 +81,7 @@ export default function SiteMonitorV4Page(){
       ].map(m=><button key={m.k} className={`${styles.metric} ${filter===m.k?styles.metricActive:""}`} onClick={()=>setFilter(m.k)}><span>{m.l}</span><strong>{m.v}</strong><small>{m.s}</small></button>)}</section>
       <section className={styles.toolbar}><label className={styles.field}><span>Search</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="PI, institution, slug, engine, stage or status…"/></label><label className={styles.field}><span>View</span><select value={filter} onChange={e=>setFilter(e.target.value as Filter)}><option value="all">All active</option><option value="v4">Engine v4</option><option value="final_review">Final Review</option><option value="live">Live sites</option><option value="private">Private sites</option><option value="outside">Outside concept</option><option value="legacy">Pre-engine / legacy</option></select></label><label className={styles.field}><span>Show</span><select value={pageSize} onChange={e=>setPageSize(Number(e.target.value) as (typeof PAGE_SIZES)[number])}>{PAGE_SIZES.map(size=><option key={size} value={size}>{size}</option>)}</select></label></section>
       {notice?<p className={styles.notice}>{notice}</p>:null}
-      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Website</th><th>Engine / design</th><th>Visibility</th><th>Outreach</th><th>Actions</th></tr></thead><tbody>{paged.map(({site,prospect,run,messages})=>{const outreach=outreachSummary(site,prospect,messages);return <tr key={site.id} id={`site-${site.id}`}><td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong>{isOutside(prospect)?<small className={`${styles.pill} ${styles.pillWarn}`}>Outside concept</small>:null}<span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td><td><span className={styles.pill}>{run?`Engine ${run.engine.toUpperCase()}`:"Legacy"}</span><span className={styles.muted}>{designLabel(site)}{run?.currentStage?` · ${run.currentStage}`:""}</span></td><td><span className={isPublic(site)?`${styles.pill} ${styles.pillGood}`:`${styles.pill} ${styles.pillWarn}`}>{isPublic(site)?"Live":"Private"}</span><span className={styles.muted}>site {site.status} · domain {site.domain_status||"unknown"}</span></td><td><span className={styles.pill}>{outreach.label}</span><span className={styles.muted}>{outreach.detail}</span></td><td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>Edit</Link><Link href={`/admin/preview/${site.slug}`}>Preview</Link>{isPublic(site)?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run?.state==="published"?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}</div></td></tr>})}</tbody></table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
+      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Website</th><th>Engine / design</th><th>Visibility</th><th>Outreach sequence</th><th>Actions</th></tr></thead><tbody>{paged.map(({site,prospect,run,messages})=><tr key={site.id} id={`site-${site.id}`}><td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong>{isOutside(prospect)?<small className={`${styles.pill} ${styles.pillWarn}`}>Outside concept</small>:null}<span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td><td><span className={styles.pill}>{run?`Engine ${run.engine.toUpperCase()}`:"Legacy"}</span><span className={styles.muted}>{designLabel(site)}{run?.currentStage?` · ${run.currentStage}`:""}</span></td><td><span className={isPublic(site)?`${styles.pill} ${styles.pillGood}`:`${styles.pill} ${styles.pillWarn}`}>{isPublic(site)?"Live":"Private"}</span><span className={styles.muted}>site {site.status} · domain {site.domain_status||"unknown"}</span></td><td><WebsiteOutreachTimeline messages={messages} outreachStatus={site.outreach_status} prospectStatus={prospect?.status} outside={isOutside(prospect)}/></td><td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>Edit</Link><Link href={`/admin/preview/${site.slug}`}>Preview</Link>{isPublic(site)?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{run?.state==="published"?<Link href={`/admin/outreach/${run.runId}`}>Outreach</Link>:null}</div></td></tr>)}</tbody></table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
       <div className="platformListPagination" data-platform-native-pagination="sites-v4"><span className="platformListPaginationSummary">{visible.length?`${(currentPage-1)*pageSize+1}–${Math.min(currentPage*pageSize,visible.length)} of ${visible.length}`:"0 of 0"}</span><div className="platformListPaginationControls"><div className="platformListPageButtons"><button type="button" disabled={currentPage<=1} onClick={()=>setPage(p=>Math.max(1,p-1))}>‹</button><span>{currentPage} / {totalPages}</span><button type="button" disabled={currentPage>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>›</button></div></div></div>
     </section>
   </main>;
