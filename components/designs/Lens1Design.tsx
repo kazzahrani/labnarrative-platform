@@ -16,13 +16,15 @@ type Props = {
  * Independent reusable portrait-led design based on the approved Susanne Lens concept.
  */
 export default function Lens1Design(props: Props) {
-  const site: LabSite = props.site.design
+  const currentDesign = props.site.design;
+  const site: LabSite = currentDesign
     ? {
         ...props.site,
         design: {
-          ...props.site.design,
+          key: currentDesign.key,
+          version: currentDesign.version,
           settings: {
-            ...props.site.design.settings,
+            ...currentDesign.settings,
             variant: "HDportrait_1",
             templatePolicy: "HDportrait_1",
           },
