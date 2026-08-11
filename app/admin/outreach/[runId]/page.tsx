@@ -8,11 +8,18 @@ import styles from "./outreach.module.css";
 
 type OutreachDraft={runId:string;productionRunId:string;messageId:string;recipientEmail:string;senderEmail:string;subject:string;bodyText:string;status:string;publicUrl?:string};
 type SendResult={ok?:boolean;alreadySent?:boolean;providerMessageId?:string;recipient?:string;messageKind?:string;bccIncluded?:boolean;bccAddress?:string;error?:string};
+type WebsiteMode="lab_exists"|"lab_doesnt_exist";
+type WebsiteModeResult={ok?:boolean;mode?:WebsiteMode;bodyText?:string;subject?:string;status?:string};
 
 const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase=createClient(supabaseUrl,supabaseKey);
 const KSU_COPY_EMAIL="kazzahrani@ksu.edu.sa";
+const EXISTING_LAB_PHRASE="I am aware that your laboratory already has an online presence";
+
+function detectWebsiteMode(body:string):WebsiteMode{
+  return body.includes(EXISTING_LAB_PHRASE)?"lab_exists":"lab_doesnt_exist";
+}
 
 async function rpc<T>(session:Session,name:string,body:Record<string,unknown>={}):Promise<T>{
   const response=await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify(body),cache:"no-store"});
@@ -30,9 +37,9 @@ async function sendThroughLabNarrative(session:Session,productionRunId:string,se
 
 export default function OutreachDraftPage(){
   const params=useParams<{runId:string}>();const runId=String(params.runId??"");
-  const [session,setSession]=useState<Session|null>(null);const [ready,setReady]=useState(false);const [draft,setDraft]=useState<OutreachDraft|null>(null);const [recipientEmail,setRecipientEmail]=useState("");const [subject,setSubject]=useState("");const [bodyText,setBodyText]=useState("");const [sendKsuCopy,setSendKsuCopy]=useState(false);const [notice,setNotice]=useState("");const [action,setAction]=useState<""|"save"|"send"|"private">("");
+  const [session,setSession]=useState<Session|null>(null);const [ready,setReady]=useState(false);const [draft,setDraft]=useState<OutreachDraft|null>(null);const [recipientEmail,setRecipientEmail]=useState("");const [subject,setSubject]=useState("");const [bodyText,setBodyText]=useState("");const [websiteMode,setWebsiteMode]=useState<WebsiteMode>("lab_doesnt_exist");const [sendKsuCopy,setSendKsuCopy]=useState(false);const [notice,setNotice]=useState("");const [action,setAction]=useState<""|"save"|"send"|"private"|"template">("");
 
-  const load=useCallback(async(activeSession:Session)=>{if(!runId)return;try{const row=await rpc<OutreachDraft>(activeSession,"engine_admin_outreach_get",{p_run_id:runId});setDraft(row);setRecipientEmail(row.recipientEmail||"");setSubject(row.subject||"");setBodyText(row.bodyText||"");setNotice("")}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
+  const load=useCallback(async(activeSession:Session)=>{if(!runId)return;try{const row=await rpc<OutreachDraft>(activeSession,"engine_admin_outreach_get",{p_run_id:runId});setDraft(row);setRecipientEmail(row.recipientEmail||"");setSubject(row.subject||"");setBodyText(row.bodyText||"");setWebsiteMode(detectWebsiteMode(row.bodyText||""));setNotice("")}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
   useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(nextSession)void load(nextSession);else setDraft(null)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
 
   async function persistDraft(activeSession:Session,showNotice=true):Promise<OutreachDraft>{
@@ -41,6 +48,19 @@ export default function OutreachDraftPage(){
   }
 
   async function save(event:FormEvent){event.preventDefault();if(!session||action||draft?.status!=="draft")return;setAction("save");try{await persistDraft(session,true)}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be saved.")}finally{setAction("")}}
+
+  async function switchWebsiteMode(nextMode:WebsiteMode){
+    if(!session||action||!draft||draft.status!=="draft"||nextMode===websiteMode)return;
+    setAction("template");
+    try{
+      await persistDraft(session,false);
+      const result=await rpc<WebsiteModeResult>(session,"engine_admin_outreach_set_website_awareness",{p_run_id:runId,p_mode:nextMode});
+      setWebsiteMode(nextMode);
+      if(typeof result.subject==="string")setSubject(result.subject);
+      if(typeof result.bodyText==="string")setBodyText(result.bodyText);
+      setNotice(nextMode==="lab_exists"?"Loaded the outreach draft for a lab that already has a website.":"Loaded the outreach draft for a lab without an existing website.");
+    }catch(error){setNotice(error instanceof Error?error.message:"The outreach template could not be changed.")}finally{setAction("")}
+  }
 
   async function sendNow(){
     if(!session||action||!draft||draft.status!=="draft")return;
@@ -72,6 +92,11 @@ export default function OutreachDraftPage(){
   if(!session)return <main className={styles.state}><section><h1>Administrator sign-in required.</h1><Link href="/admin">Open administrator dashboard</Link></section></main>;
   const editable=draft?.status==="draft";
 
+  const templateButton=(mode:WebsiteMode,label:string)=>{
+    const active=websiteMode===mode;
+    return <button type="button" disabled={!editable||Boolean(action)} onClick={()=>void switchWebsiteMode(mode)} style={{border:`1px solid ${active?"rgba(72,154,127,.72)":"rgba(92,132,151,.30)"}`,borderRadius:10,padding:"9px 13px",background:active?"#214f43":"#0d1f2a",color:active?"#effbf6":"#c9d5dc",font:"inherit",fontSize:".78rem",fontWeight:800,cursor:!editable||action?"default":"pointer",opacity:!editable||action?.72:1}}>{action==="template"&&active?"Loading…":label}</button>;
+  };
+
   return <main className={styles.page}>
     <header className={styles.topbar}><div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Outreach</span></div><nav><Link href="/admin/review">Final Review</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sites">Websites</Link><Link href="/admin/sales">Sales</Link></nav></header>
     <section className={styles.content}>
@@ -83,6 +108,7 @@ export default function OutreachDraftPage(){
         <label><span>From</span><input readOnly value={draft.senderEmail||"LabNarrative <khaled@labnarrative.com>"}/></label>
         <label><span>Recipient email</span><input disabled={!editable||Boolean(action)} placeholder="Verified institutional email" type="email" value={recipientEmail} onChange={event=>setRecipientEmail(event.target.value)}/></label>
         {editable&&!recipientEmail.trim()?<p className={styles.warning}>Recipient is still missing. The draft can be saved, but it cannot be sent until a verified email is added.</p>:null}
+        {editable?<div style={{display:"grid",gap:8,padding:"12px 14px",border:"1px solid rgba(92,132,151,.28)",borderRadius:12,background:"rgba(11,31,42,.72)"}}><span style={{fontSize:".72rem",fontWeight:850,letterSpacing:".06em",textTransform:"uppercase",opacity:.68}}>Choose outreach draft</span><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{templateButton("lab_exists","Lab exists")}{templateButton("lab_doesnt_exist","Lab doesn’t exist")}</div></div>:null}
         <label><span>Subject</span><input disabled={!editable||Boolean(action)} required value={subject} onChange={event=>setSubject(event.target.value)}/></label>
         <label><span>Email body</span><textarea disabled={!editable||Boolean(action)} required rows={24} value={bodyText} onChange={event=>setBodyText(event.target.value)}/></label>
         {editable?<label style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"1px solid rgba(92,132,151,.28)",borderRadius:12,background:"rgba(11,31,42,.72)",cursor:action?"default":"pointer"}}><input type="checkbox" checked={sendKsuCopy} disabled={Boolean(action)} onChange={event=>setSendKsuCopy(event.target.checked)} style={{width:17,height:17,margin:0,accentColor:"#2f7c68"}}/><span style={{fontSize:".82rem",fontWeight:750}}>Send me a private copy at {KSU_COPY_EMAIL}</span></label>:null}
