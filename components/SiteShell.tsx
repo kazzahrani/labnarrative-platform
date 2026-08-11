@@ -9,6 +9,7 @@ import DobbelsteinScrollDesign, { DOBBELSTEIN_SCROLL_VARIANT } from "@/component
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
+import LensPortraitDesign, { LENS_PORTRAIT_VARIANT } from "@/components/designs/LensPortraitDesign";
 import Narita3Design, { NARITA_3_VARIANT } from "@/components/designs/Narita3Design";
 import PersonalScroll1Design, { PERSONAL_SCROLL_1_VARIANT } from "@/components/designs/PersonalScroll1Design";
 import PortraitMinimal1Design, { PORTRAIT_MINIMAL_1_VARIANT } from "@/components/designs/PortraitMinimal1Design";
@@ -105,6 +106,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false, 
   const isSourcedProjectRoute = route.section === "research"
     && Boolean(route.projectSlug)
     && Boolean(site.research?.some((project) => project.slug === route.projectSlug && project.figureImage && (project as { figureSource?: string }).figureSource));
+
+  if (designVariant === LENS_PORTRAIT_VARIANT) {
+    return <LensPortraitDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
 
   if (designVariant === DOBBELSTEIN_SCROLL_VARIANT) {
     return <DobbelsteinScrollDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
