@@ -212,6 +212,15 @@ export default function Kops1Design(props: Props) {
           display: none !important;
         }
 
+        /* Project detail pages use HDPortraitProjectDesign underneath Lens_1.
+           Kops_1 and all designs derived from it already provide the canonical
+           site header/footer, so suppress the embedded project chrome to avoid
+           duplicate navigation and duplicate footers. */
+        .kops-1-inner .hdp-project-header,
+        .kops-1-inner .hdp-project-footer {
+          display: none !important;
+        }
+
         .kops-shared-footer {
           padding: 54px clamp(24px, 5vw, 80px);
           display: grid;
