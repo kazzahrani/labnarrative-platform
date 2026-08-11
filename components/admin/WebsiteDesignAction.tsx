@@ -66,12 +66,17 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => { setChosen(current); setError(""); setOpen(true); }}
+      <a
+        href="#"
+        onClick={(event) => {
+          event.preventDefault();
+          setChosen(current);
+          setError("");
+          setOpen(true);
+        }}
       >
         Change design
-      </button>
+      </a>
       {open && typeof document !== "undefined" ? createPortal(
         <div
           role="presentation"
