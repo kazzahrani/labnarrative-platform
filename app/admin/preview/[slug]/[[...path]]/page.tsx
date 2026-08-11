@@ -18,6 +18,22 @@ type SiteRow = {
   design_settings?: Record<string, unknown>;
 };
 
+type ReviewRun = {
+  engine: "v3" | "v4";
+  runId: string;
+  slug: string;
+  state: string;
+};
+
+type Dashboard = {
+  runs?: ReviewRun[];
+};
+
+type PublishResult = {
+  ok?: boolean;
+  outreachSent?: boolean;
+};
+
 const PREVIEW_FALLBACK_THEME: LabSite["theme"] = {
   background: "#f4f3ee",
   surface: "#ffffff",
@@ -41,6 +57,9 @@ export default function AdminSitePreviewPage() {
 
   const [site, setSite] = useState<LabSite | null>(null);
   const [status, setStatus] = useState<SiteRow["status"] | null>(null);
+  const [reviewRun, setReviewRun] = useState<ReviewRun | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -50,6 +69,7 @@ export default function AdminSitePreviewPage() {
     async function loadPreview() {
       setLoading(true);
       setError("");
+      setPublishError("");
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (!active) return;
@@ -60,11 +80,14 @@ export default function AdminSitePreviewPage() {
         return;
       }
 
-      const { data, error: queryError } = await supabase
-        .from("sites")
-        .select("slug,status,content,content_schema_version,design_key,design_version,design_settings")
-        .eq("slug", slug)
-        .maybeSingle();
+      const [{ data, error: queryError }, { data: dashboardData }] = await Promise.all([
+        supabase
+          .from("sites")
+          .select("slug,status,content,content_schema_version,design_key,design_version,design_settings")
+          .eq("slug", slug)
+          .maybeSingle(),
+        supabase.rpc("engine_admin_dashboard"),
+      ]);
 
       if (!active) return;
 
@@ -86,6 +109,12 @@ export default function AdminSitePreviewPage() {
           },
         });
         setStatus(row.status);
+
+        const dashboard = (dashboardData ?? {}) as Dashboard;
+        const matchingRun = (dashboard.runs ?? []).find(
+          (run) => run.slug === slug && run.state === "final_review",
+        );
+        setReviewRun(matchingRun ?? null);
       }
 
       setLoading(false);
@@ -97,6 +126,34 @@ export default function AdminSitePreviewPage() {
       active = false;
     };
   }, [slug, supabase]);
+
+  async function approveAndPublish() {
+    if (!reviewRun || publishing) return;
+
+    setPublishing(true);
+    setPublishError("");
+
+    const { data, error: publishRpcError } = await supabase.rpc("engine_admin_approve_publish", {
+      p_run_id: reviewRun.runId,
+      p_engine: reviewRun.engine,
+      p_note: null,
+    });
+
+    if (publishRpcError) {
+      setPublishError(publishRpcError.message || "Approve & Publish failed.");
+      setPublishing(false);
+      return;
+    }
+
+    const result = data as PublishResult | null;
+    if (!result?.ok || result.outreachSent) {
+      setPublishError("Publication did not return the expected safe outreach-draft state.");
+      setPublishing(false);
+      return;
+    }
+
+    window.location.href = `/admin/outreach/${reviewRun.runId}`;
+  }
 
   if (loading) {
     return (
@@ -146,10 +203,51 @@ export default function AdminSitePreviewPage() {
         }}
       >
         <span>{status === "draft" ? "Draft preview" : `${status} preview`}</span>
+        {reviewRun ? (
+          <button
+            type="button"
+            onClick={() => void approveAndPublish()}
+            disabled={publishing}
+            style={{
+              border: "1px solid rgba(255,255,255,0.24)",
+              borderRadius: 999,
+              background: publishing ? "#24453d" : "#2f8a73",
+              color: "white",
+              padding: "7px 12px",
+              font: "inherit",
+              fontWeight: 800,
+              cursor: publishing ? "wait" : "pointer",
+              opacity: publishing ? 0.78 : 1,
+            }}
+          >
+            {publishing ? "Publishing…" : "Approve & Publish"}
+          </button>
+        ) : null}
         <Link href="/admin/sites" style={{ color: "white", fontWeight: 700 }}>
           Back to Website Monitor ↗
         </Link>
       </div>
+      {publishError ? (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            right: 16,
+            bottom: 76,
+            zIndex: 101,
+            maxWidth: 420,
+            padding: "10px 14px",
+            borderRadius: 12,
+            background: "#4a2323",
+            color: "#ffd8d3",
+            border: "1px solid #7c4440",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.22)",
+            fontSize: 13,
+          }}
+        >
+          {publishError}
+        </div>
+      ) : null}
       <VisualOverridesHost site={site} route={route}>
         <SiteShell
           site={site}
