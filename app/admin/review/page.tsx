@@ -42,6 +42,28 @@ export default function FinalReviewPage(){
     catch(error){setNotice(error instanceof Error?error.message:"Approve & Publish failed.");setBusy("")}
   }
 
+  async function approveAll(){
+    if(!session||busy||finalReview.length===0)return;
+    const runs=[...finalReview];
+    let succeeded=0;
+    const failed:string[]=[];
+    for(let index=0;index<runs.length;index+=1){
+      const run=runs[index];
+      setBusy(`bulk:${index+1}:${runs.length}`);
+      try{
+        const result=await rpc<PublishResult>(session,"engine_admin_approve_publish",{p_run_id:run.runId,p_engine:run.engine,p_note:null});
+        if(!result.ok||result.outreachSent)throw new Error("Unexpected publish result");
+        succeeded+=1;
+      }catch(error){
+        failed.push(`${run.piName}: ${error instanceof Error?error.message:"publish failed"}`);
+      }
+    }
+    setBusy("");
+    await load(session);
+    if(failed.length===0)setNotice(`Published all ${succeeded} Final Review concepts. Outreach drafts were prepared; no emails were sent.`);
+    else setNotice(`Published ${succeeded} of ${runs.length}. ${failed.length} failed: ${failed.join(" · ")}`);
+  }
+
   async function block(run:Run){
     if(!session||busy)return; const reason=window.prompt(`Why should ${run.piName} be blocked?`)?.trim(); if(!reason)return; if(!window.confirm(`Block ${run.piName}? The private draft will remain unpublished.`))return; setBusy(`${run.runId}:block`);
     try{await rpc(session,"engine_admin_block",{p_run_id:run.runId,p_engine:run.engine,p_reason:reason});setNotice(`${run.piName} was blocked: ${reason}`);await load(session)}catch(error){setNotice(error instanceof Error?error.message:"Block failed.")}finally{setBusy("")}
@@ -55,10 +77,13 @@ export default function FinalReviewPage(){
   if(!ready)return <main className={styles.state}>Preparing Final Review…</main>;
   if(!session)return <main className={styles.state}><section><h1>Administrator sign-in required.</h1><Link href="/admin">Open administrator dashboard</Link></section></main>;
 
+  const bulkParts=busy.startsWith("bulk:")?busy.split(":"):null;
+  const bulkLabel=bulkParts?`Publishing ${bulkParts[1]}/${bulkParts[2]}…`:`Approve & Publish All (${finalReview.length})`;
+
   return <main className={styles.page}>
     <header className={styles.topbar}><div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Final Review</span></div><nav><Link href="/admin/discovery">Discovery</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sites">Websites</Link><Link href="/admin/sales">Sales</Link></nav></header>
     <section className={styles.content}>
-      <div className={styles.hero}><div><p className={styles.kicker}>Human publication gate</p><h1>Review. Publish. Prepare outreach.</h1><p>V4 concepts and preserved v3 concepts meet at the same human gate. Nothing is published until you approve it. Approval creates an editable outreach draft, but never sends it.</p></div><button onClick={()=>void load(session)} type="button">Refresh</button></div>
+      <div className={styles.hero}><div><p className={styles.kicker}>Human publication gate</p><h1>Review. Publish. Prepare outreach.</h1><p>V4 concepts and preserved v3 concepts meet at the same human gate. Nothing is published until you approve it. Approval creates an editable outreach draft, but never sends it.</p></div><div className={styles.heroActions}><button className={styles.bulkPublish} disabled={Boolean(busy)||finalReview.length===0} onClick={()=>void approveAll()} type="button">{bulkLabel}</button><button disabled={Boolean(busy)} onClick={()=>void load(session)} type="button">Refresh</button></div></div>
       {notice?<p className={styles.notice}>{notice}</p>:null}
       <section className={styles.stats}><article><span>Awaiting review</span><strong>{finalReview.length}</strong></article><article><span>Published concepts</span><strong>{dashboard?.counts.published??published.length}</strong></article><article><span>Blocked</span><strong>{dashboard?.counts.blocked??0}</strong></article></section>
       <section className={styles.panel}>
