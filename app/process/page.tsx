@@ -14,7 +14,7 @@ const steps = [
     number: "02",
     phase: "Begin",
     title: "Pay the project deposit",
-    copy: "Your secure payment page shows the exact amount before checkout. For standard LabNarrative projects, the deposit is 25% of the approved project fee.",
+    copy: "Your secure payment page shows the exact amount before checkout. For standard LabNarrative projects, the deposit is 25% of the approved project total.",
     client: "You complete the deposit through the secure payment link.",
     lab: "We verify the payment and open your client onboarding workspace.",
   },
@@ -64,7 +64,7 @@ const steps = [
     title: "Receive your completed website",
     copy: "After launch, you receive a private handover page with the live website address, launch record and support information. You can confirm receipt when everything is in place.",
     client: "You open the live website and confirm handover.",
-    lab: "We close the delivery phase and remain available for future support and updates.",
+    lab: "We complete the delivery phase and continue with the agreed website-care coverage where Annual Care is included in your project.",
   },
 ];
 
@@ -72,7 +72,7 @@ const assurances = [
   "No technical knowledge is required from your laboratory.",
   "Nothing is charged merely by approving a proposal or website review.",
   "The website is not launched until the final version is approved and the project is paid in full.",
-  "Your proposal remains the definitive source for scope, price, deposit and timeline.",
+  "Your proposal remains the definitive source for scope, price, deposit, Annual Care and timeline.",
 ];
 
 function Wordmark() {
@@ -106,7 +106,7 @@ export default function ClientProcessPage() {
         <div><span>Standard start</span><strong>25% deposit</strong></div>
         <div><span>Your main contribution</span><strong>Review & verify</strong></div>
         <div><span>Before launch</span><strong>Final approval + balance</strong></div>
-        <div><span>After launch</span><strong>Handover + optional Care</strong></div>
+        <div><span>After launch</span><strong>Handover</strong></div>
       </section>
 
       <section className={styles.intro}>
@@ -118,6 +118,22 @@ export default function ClientProcessPage() {
             final website review, launch and handover. We do not treat a button click as payment,
             and we do not launch a website simply because development is finished.
           </p>
+        </div>
+      </section>
+
+      <section className={styles.careSection}>
+        <div>
+          <p className={styles.sectionLabel}>Recommended with every project</p>
+          <h2>Annual Care is planned from the beginning.</h2>
+        </div>
+        <div>
+          <p>
+            We strongly recommend including LabNarrative Annual Care in the proposal so your
+            laboratory website remains monitored, maintained and easy to keep current after launch.
+            When Annual Care is included in the accepted proposal, its fee is part of the main
+            project total and is included in the same deposit and final-balance calculation.
+          </p>
+          <p className={styles.careNote}>Annual Care coverage begins when the website launches.</p>
         </div>
       </section>
 
@@ -148,28 +164,13 @@ export default function ClientProcessPage() {
         <ul>{assurances.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
 
-      <section className={styles.careSection}>
-        <div>
-          <p className={styles.sectionLabel}>After handover</p>
-          <h2>Keeping the website current is optional.</h2>
-        </div>
-        <div>
-          <p>
-            Your completed website is yours whether or not you continue with a maintenance plan.
-            If you prefer ongoing support, LabNarrative Care can cover managed hosting, monitoring
-            and routine website updates after delivery.
-          </p>
-          <p className={styles.careNote}>Care is a separate, optional post-launch service.</p>
-        </div>
-      </section>
-
       <section className={styles.faqSection}>
         <p className={styles.sectionLabel}>Common questions</p>
         <div className={styles.faqGrid}>
           <article><h3>Do I need to prepare all website text?</h3><p>No. We begin from the research and material already available. Onboarding is primarily a review-and-correction process.</p></article>
           <article><h3>Can I request changes before launch?</h3><p>Yes. The final website review lets you approve the finished version or send focused change requests before the final balance and launch.</p></article>
           <article><h3>When does the website go live?</h3><p>Only after the final website version is approved, the project is paid in full and the launch checks are complete.</p></article>
-          <article><h3>What if my institution controls the domain?</h3><p>We handle the website-side setup and tell you exactly what is needed if your university or institution must make a DNS or domain change.</p></article>
+          <article><h3>How does Annual Care fit into the project?</h3><p>We recommend including it in the proposal from the beginning. When included, its annual fee forms part of the approved project total and coverage starts when the website launches.</p></article>
         </div>
       </section>
 
