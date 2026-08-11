@@ -27,16 +27,16 @@ async function sendThroughLabNarrative(session:Session,productionRunId:string):P
   return payload;
 }
 
-export default function EngineV3OutreachDraftPage(){
+export default function OutreachDraftPage(){
   const params=useParams<{runId:string}>();const runId=String(params.runId??"");
   const [session,setSession]=useState<Session|null>(null);const [ready,setReady]=useState(false);const [draft,setDraft]=useState<OutreachDraft|null>(null);const [recipientEmail,setRecipientEmail]=useState("");const [subject,setSubject]=useState("");const [bodyText,setBodyText]=useState("");const [notice,setNotice]=useState("");const [action,setAction]=useState<""|"save"|"send"|"private">("");
 
-  const load=useCallback(async(activeSession:Session)=>{if(!runId)return;try{const row=await rpc<OutreachDraft>(activeSession,"engine_v3_admin_outreach_get",{p_run_id:runId});setDraft(row);setRecipientEmail(row.recipientEmail||"");setSubject(row.subject||"");setBodyText(row.bodyText||"");setNotice("")}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
+  const load=useCallback(async(activeSession:Session)=>{if(!runId)return;try{const row=await rpc<OutreachDraft>(activeSession,"engine_admin_outreach_get",{p_run_id:runId});setDraft(row);setRecipientEmail(row.recipientEmail||"");setSubject(row.subject||"");setBodyText(row.bodyText||"");setNotice("")}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
   useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(nextSession)void load(nextSession);else setDraft(null)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
 
   async function persistDraft(activeSession:Session,showNotice=true):Promise<OutreachDraft>{
-    const row=await rpc<OutreachDraft>(activeSession,"engine_v3_admin_outreach_save",{p_run_id:runId,p_recipient_email:recipientEmail,p_subject:subject,p_body_text:bodyText});
-    setDraft(current=>({... (current??row),...row}));if(showNotice)setNotice("Draft saved. No email was sent.");return row;
+    const row=await rpc<OutreachDraft>(activeSession,"engine_admin_outreach_save",{p_run_id:runId,p_recipient_email:recipientEmail,p_subject:subject,p_body_text:bodyText});
+    setDraft(current=>({...(current??row),...row}));if(showNotice)setNotice("Draft saved. No email was sent.");return row;
   }
 
   async function save(event:FormEvent){event.preventDefault();if(!session||action||draft?.status!=="draft")return;setAction("save");try{await persistDraft(session,true)}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be saved.")}finally{setAction("")}}
@@ -65,9 +65,9 @@ export default function EngineV3OutreachDraftPage(){
   const editable=draft?.status==="draft";
 
   return <main className={styles.page}>
-    <header className={styles.topbar}><div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Outreach</span></div><nav><Link href="/admin/review">Final Review</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sites">Websites</Link></nav></header>
+    <header className={styles.topbar}><div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Outreach</span></div><nav><Link href="/admin/review">Final Review</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sites">Websites</Link><Link href="/admin/sales">Sales</Link></nav></header>
     <section className={styles.content}>
-      <div className={styles.hero}><div><p className={styles.kicker}>Human-controlled outreach</p><h1>Review, then choose how to send.</h1><p>Saving never sends. “Send Email Now” sends the reviewed draft through the protected LabNarrative delivery flow. “Confirm Sent From Personal Email” only records an email you already sent yourself.</p></div>{draft?.publicUrl?<a href={draft.publicUrl} target="_blank" rel="noreferrer">Open published concept ↗</a>:null}</div>
+      <div className={styles.hero}><div><p className={styles.kicker}>Human-controlled outreach</p><h1>Review, then choose how to send.</h1><p>The same protected outreach workspace supports new Engine v4 concepts and preserved v3 concepts. Saving never sends. “Send Email Now” sends only after your explicit action.</p></div>{draft?.publicUrl?<a href={draft.publicUrl} target="_blank" rel="noreferrer">Open published concept ↗</a>:null}</div>
       <div className={styles.safety} data-status={draft?.status||"draft"}><strong>{draft?.status==="sent"?"Outreach complete:":"Human gate:"}</strong><span>{draft?.status==="sent"?"This outreach is already recorded as sent. The editor is now read-only.":`Outreach status is ${draft?.status||"draft"}. Nothing is sent unless you explicitly choose a send action below.`}</span></div>
       {notice?<p className={styles.notice}>{notice}</p>:null}
       {!draft&&!notice?<p>Loading outreach draft…</p>:null}
