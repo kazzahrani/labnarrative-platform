@@ -18,10 +18,12 @@ type CiribilliNaritaDesignProps = {
 export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const isNarita2 = props.site.design?.settings?.variant === "narita-2-v1";
-  const heroSite = isNarita2 ? props.site : withNaritaHero(props.site);
+  const isLensPortrait = props.site.design?.settings?.variant === "lens-portrait-v1";
+  const heroSite = isNarita2 || isLensPortrait ? props.site : withNaritaHero(props.site);
   const naritaSite = props.route.section === "research"
     ? withoutNaritaResearchImages(heroSite)
     : heroSite;
+  const lensThemeColor = props.site.theme.accent || "#315f50";
 
   useEffect(() => {
     if (props.route.section !== "home") return;
@@ -59,7 +61,7 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
   }, [props.route.section]);
 
   return (
-    <div className={`ciribilli-narita-shell${isNarita2 ? " narita-2-shell" : ""}`} ref={rootRef}>
+    <div className={`ciribilli-narita-shell${isNarita2 ? " narita-2-shell" : ""}${isLensPortrait ? " lens-flat-hero-shell" : ""}`} ref={rootRef}>
       <NaritaOverlapDesign {...props} site={naritaSite} />
       <style jsx global>{`
         .ciribilli-narita-shell {
@@ -93,6 +95,21 @@ export default function CiribilliNaritaDesign(props: CiribilliNaritaDesignProps)
           padding: 6px 0 8px !important;
           font-size: 10px !important;
           line-height: 1.2 !important;
+        }
+
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type,
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type {
+          background: ${lensThemeColor} !important;
+        }
+
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > img,
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > img {
+          display: none !important;
+        }
+
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > section:first-of-type > div:first-of-type,
+        .lens-flat-hero-shell .narita-overlap-design:not(.narita-route-home) main > article > section:first-of-type > div:first-of-type {
+          background: transparent !important;
         }
 
         .ciribilli-narita-shell .narita-route-home main > section:first-of-type {
