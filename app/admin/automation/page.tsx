@@ -5,12 +5,46 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./automation.module.css";
 
-type V3State = "producing" | "final_review" | "published" | "completed" | "blocked" | "cancelled";
+type V4State = "active" | "final_review" | "published" | "completed" | "blocked" | "cancelled";
 type QueueItem = { prospectId: string; piName: string; slug: string; institution: string; score: number | null; queuedAt: string | null };
-type Run = { runId: string; prospectId: string; siteId: string | null; piName: string; slug: string; state: V3State; blockedReason: string | null; startedAt: string; updatedAt: string; previewPath: string | null; publicUrl: string | null; evidenceCount: number; assetCount: number };
+type Run = {
+  engine: "v4";
+  runId: string;
+  prospectId: string;
+  siteId: string | null;
+  executionId: string | null;
+  piName: string;
+  slug: string;
+  state: V4State;
+  currentStage: "research" | "site" | "portrait" | "renderer" | "finalize";
+  stageAttempts: number;
+  blockedReason: string | null;
+  revisionNote: string | null;
+  lastError: string | null;
+  startedAt: string;
+  updatedAt: string;
+  checkpointAt: string;
+  leaseExpiresAt: string | null;
+  previewPath: string | null;
+  publicUrl: string | null;
+  evidenceCount: number;
+  assetCount: number;
+  rendererPassed: boolean;
+};
+type Execution = {
+  executionId: string;
+  executionKey: string;
+  state: "running" | "completed" | "paused" | "cancelled";
+  targetFinalReviews: number;
+  finalReviewsCompleted: number;
+  startedAt: string;
+  lastActivityAt: string;
+  completedAt: string | null;
+};
 type Dashboard = {
-  runtime: { enabled: boolean; version: number; mode: "manual_test" | "scheduled_chatgpt" | "paused"; max_per_run: number; default_design_variant: string; note: string; updated_at: string };
-  counts: { eligibleQueue: number; producing: number; finalReview: number; published: number; blocked: number; completed: number };
+  runtime: { enabled: boolean; version: number; mode: "manual_test" | "scheduled_chatgpt" | "paused"; target_final_reviews: number; max_active_slots: number; lease_minutes: number; default_design_variant: string; note: string; updated_at: string };
+  currentExecution: Execution | null;
+  counts: { eligibleQueue: number; active: number; finalReview: number; published: number; blocked: number; completedExecutions: number };
   queue: QueueItem[];
   runs: Run[];
 };
@@ -42,7 +76,7 @@ async function rpc<T>(session: Session, name: string, body: Record<string, unkno
   return payload as T;
 }
 
-export default function EngineV3ControlCentre() {
+export default function EngineV4ControlCentre() {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -53,11 +87,11 @@ export default function EngineV3ControlCentre() {
   const load = useCallback(async (activeSession: Session) => {
     setLoading(true);
     try {
-      setDashboard(await rpc<Dashboard>(activeSession, "engine_v3_admin_dashboard"));
+      setDashboard(await rpc<Dashboard>(activeSession, "engine_v4_admin_dashboard"));
       setNotice("");
       setError(false);
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Engine v3 dashboard could not be loaded.");
+      setNotice(err instanceof Error ? err.message : "Engine v4 dashboard could not be loaded.");
       setError(true);
     } finally {
       setLoading(false);
@@ -82,27 +116,28 @@ export default function EngineV3ControlCentre() {
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [load]);
 
-  const producing = useMemo(() => dashboard?.runs.filter((run) => run.state === "producing") ?? [], [dashboard]);
+  const active = useMemo(() => dashboard?.runs.filter((run) => run.state === "active") ?? [], [dashboard]);
   const finalReview = useMemo(() => dashboard?.runs.filter((run) => run.state === "final_review") ?? [], [dashboard]);
-  const blocked = useMemo(() => dashboard?.runs.filter((run) => run.state === "blocked") ?? [], [dashboard]);
-  const recentPublished = useMemo(() => dashboard?.runs.filter((run) => run.state === "published" || run.state === "completed").slice(0, 12) ?? [], [dashboard]);
+  const blocked = useMemo(() => dashboard?.runs.filter((run) => run.state === "blocked").slice(0, 12) ?? [], [dashboard]);
+  const execution = dashboard?.currentExecution ?? null;
+  const progress = execution ? Math.min(100, Math.round((execution.finalReviewsCompleted / Math.max(1, execution.targetFinalReviews)) * 100)) : 0;
 
-  if (!authReady) return <main className={styles.page}><div className={styles.login}>Preparing Engine v3…</div></main>;
-  if (!session) return <main className={styles.page}><section className={styles.login}><p className={styles.kicker}>Engine v3</p><h1>Administrator sign-in required.</h1><p className={styles.muted}>Sign in through the LabNarrative administrator dashboard, then return to Production.</p><Link className={styles.button} href="/admin">Open administrator dashboard</Link></section></main>;
+  if (!authReady) return <main className={styles.page}><div className={styles.login}>Preparing Engine v4…</div></main>;
+  if (!session) return <main className={styles.page}><section className={styles.login}><p className={styles.kicker}>Engine v4</p><h1>Administrator sign-in required.</h1><p className={styles.muted}>Sign in through the LabNarrative administrator dashboard, then return to Production.</p><Link className={styles.button} href="/admin">Open administrator dashboard</Link></section></main>;
 
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
-        <div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Engine v3 Production</span></div>
-        <nav><span>{session.user.email}</span><Link href="/admin/review">Final Review</Link><Link href="/admin/sites">Websites</Link><Link href="/admin/discovery">Discovery</Link></nav>
+        <div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Engine v4 Production</span></div>
+        <nav><span>{session.user.email}</span><Link href="/admin/discovery">Discovery</Link><Link href="/admin/review">Final Review</Link><Link href="/admin/sites">Websites</Link><Link href="/admin/sales">Sales</Link></nav>
       </header>
 
       <div className={styles.main}>
         <section className={styles.hero}>
           <div>
-            <p className={styles.kicker}>ChatGPT-native production monitor</p>
-            <h1>Production</h1>
-            <p className={styles.heroCopy}>Scheduled ChatGPT runs research and build queued PI concepts. This page is monitoring-only. All human approval, blocking and revision decisions now happen in the dedicated Final Review workspace.</p>
+            <p className={styles.kicker}>Database-controlled atomic production</p>
+            <h1>Production v4</h1>
+            <p className={styles.heroCopy}>V4 works one PI and one durable stage at a time. The database owns the execution target, lease and checkpoint. A blocked PI is replaced; an interrupted action resumes. The execution closes only after four concepts actually reach Final Review.</p>
           </div>
           <div className={styles.heroActions}>
             <Link className={styles.button} href="/admin/review">Open Final Review</Link>
@@ -115,20 +150,30 @@ export default function EngineV3ControlCentre() {
 
         <section className={styles.stats}>
           <article className={styles.stat}><span>Eligible queue</span><strong>{dashboard?.counts.eligibleQueue ?? "—"}</strong></article>
-          <article className={styles.stat}><span>Producing</span><strong>{dashboard?.counts.producing ?? "—"}</strong></article>
-          <article className={styles.stat}><span>Final Review</span><strong>{dashboard?.counts.finalReview ?? "—"}</strong></article>
+          <article className={styles.stat}><span>Active PI</span><strong>{dashboard?.counts.active ?? "—"}</strong></article>
+          <article className={styles.stat}><span>V4 Final Review</span><strong>{dashboard?.counts.finalReview ?? "—"}</strong></article>
           <article className={styles.stat}><span>Published</span><strong>{dashboard?.counts.published ?? "—"}</strong></article>
-          <article className={styles.stat}><span>Blocked</span><strong>{dashboard?.counts.blocked ?? "—"}</strong></article>
+          <article className={styles.stat}><span>Hard-gate blocks</span><strong>{dashboard?.counts.blocked ?? "—"}</strong></article>
         </section>
 
         <section className={styles.grid}>
           <div className={styles.stack}>
             <article className={styles.card}>
-              <div className={styles.cardHeader}><div><p className={styles.kicker}>Runtime</p><h2>Engine v3</h2></div><span className={styles.status} data-status={dashboard?.runtime.enabled ? "running" : "needs_attention"}>{dashboard?.runtime.enabled ? "Enabled" : "Paused"}</span></div>
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Execution target</p><h2>{execution?.state === "running" ? "Current v4 execution" : "No running execution"}</h2></div><span className={styles.status} data-status={execution?.state === "running" ? "running" : "needs_attention"}>{execution?.state ?? "idle"}</span></div>
+              {execution ? <>
+                <p className={styles.muted}>Final Reviews: <strong>{execution.finalReviewsCompleted} / {execution.targetFinalReviews}</strong> · {progress}%</p>
+                <p className={styles.muted}>Execution key: <strong>{execution.executionKey}</strong></p>
+                <p className={styles.muted}>Last activity: <strong>{dateTime(execution.lastActivityAt)}</strong></p>
+              </> : <p className={styles.muted}>The next scheduled v4 task will open a durable execution with a target of four successful Final Reviews.</p>}
+            </article>
+
+            <article className={styles.card}>
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Runtime</p><h2>Engine v4</h2></div><span className={styles.status} data-status={dashboard?.runtime.enabled ? "running" : "needs_attention"}>{dashboard?.runtime.enabled ? "Enabled" : "Paused"}</span></div>
               <p className={styles.muted}>Mode: <strong>{dashboard?.runtime.mode ?? "—"}</strong></p>
-              <p className={styles.muted}>Maximum per ChatGPT run: <strong>{dashboard?.runtime.max_per_run ?? 4}</strong></p>
+              <p className={styles.muted}>Target per execution: <strong>{dashboard?.runtime.target_final_reviews ?? 4} Final Reviews</strong></p>
+              <p className={styles.muted}>Concurrent active PI slots: <strong>{dashboard?.runtime.max_active_slots ?? 1}</strong></p>
+              <p className={styles.muted}>Atomic-stage lease: <strong>{dashboard?.runtime.lease_minutes ?? 30} minutes</strong></p>
               <p className={styles.muted}>Default design: <strong>{dashboard?.runtime.default_design_variant ?? "ciribilli-narita-v1"}</strong></p>
-              <p className={styles.muted}>{dashboard?.runtime.note}</p>
             </article>
 
             <article className={styles.card}>
@@ -144,20 +189,18 @@ export default function EngineV3ControlCentre() {
 
           <div className={styles.stack}>
             <article className={styles.card}>
-              <div className={styles.cardHeader}><div><p className={styles.kicker}>Current work</p><h2>ChatGPT production</h2></div><span className={styles.status} data-status="in_production">{producing.length}</span></div>
-              {producing.length === 0 ? <p className={styles.muted}>No PI is currently claimed.</p> : producing.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.slug} · evidence {run.evidenceCount} · assets {run.assetCount}</span><time>{dateTime(run.updatedAt)}</time>{run.previewPath ? <div className={styles.formActions}><a className={styles.buttonSecondary} href={run.previewPath} target="_blank" rel="noreferrer">Open draft ↗</a></div> : null}</div>)}
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Atomic work</p><h2>Current PI</h2></div><span className={styles.status} data-status="in_production">{active.length}</span></div>
+              {active.length === 0 ? <p className={styles.muted}>No PI is currently leased. The next v4 execution/action claim will pull the oldest eligible prospect.</p> : active.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.slug} · stage <strong>{run.currentStage}</strong> · attempt {run.stageAttempts} · evidence {run.evidenceCount} · assets {run.assetCount}</span><time>checkpoint {dateTime(run.checkpointAt)}</time>{run.lastError ? <span className={styles.muted}>Last transient error: {run.lastError}</span> : null}{run.previewPath ? <div className={styles.formActions}><a className={styles.buttonSecondary} href={run.previewPath} target="_blank" rel="noreferrer">Open draft ↗</a></div> : null}</div>)}
             </article>
 
             <article className={styles.card}>
-              <div className={styles.cardHeader}><div><p className={styles.kicker}>Human gate</p><h2>Awaiting Final Review</h2></div><span className={styles.status} data-status="awaiting_final_review">{finalReview.length}</span></div>
-              <p className={styles.muted}>Production no longer publishes concepts directly. Use the single authoritative Final Review workspace for Preview, Approve & Publish, Return to ChatGPT and Block.</p>
-              <div className={styles.formActions}><Link className={styles.button} href="/admin/review">Open Final Review ({finalReview.length})</Link></div>
+              <div className={styles.cardHeader}><div><p className={styles.kicker}>Human gate</p><h2>V4 Final Review</h2></div><span className={styles.status} data-status="awaiting_final_review">{finalReview.length}</span></div>
+              <p className={styles.muted}>Successful v4 concepts stop here. Final Review combines v4 with preserved legacy v3 concepts.</p>
+              <div className={styles.formActions}><Link className={styles.button} href="/admin/review">Open Final Review</Link></div>
               {finalReview.slice(0, 8).map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.slug} · verified evidence {run.evidenceCount} · assets {run.assetCount}</span>{run.previewPath ? <div className={styles.formActions}><a className={styles.buttonSecondary} href={run.previewPath} target="_blank" rel="noreferrer">Preview ↗</a></div> : null}</div>)}
             </article>
 
-            {blocked.length ? <article className={styles.card}><div className={styles.cardHeader}><div><p className={styles.kicker}>Fail closed</p><h2>Blocked</h2></div><span className={styles.status} data-status="needs_attention">{blocked.length}</span></div>{blocked.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.blockedReason || "Blocked without a recorded reason."}</span><time>{dateTime(run.updatedAt)}</time></div>)}</article> : null}
-
-            {recentPublished.length ? <article className={styles.card}><div className={styles.cardHeader}><div><p className={styles.kicker}>Recent</p><h2>Published by v3</h2></div></div>{recentPublished.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.state === "completed" ? "Completed" : "Published"}</span><div className={styles.formActions}>{run.publicUrl ? <a className={styles.buttonSecondary} href={run.publicUrl} target="_blank" rel="noreferrer">Open site ↗</a> : null}<Link className={styles.button} href={`/admin/outreach/${run.runId}`}>Review outreach draft</Link></div></div>)}</article> : null}
+            {blocked.length ? <article className={styles.card}><div className={styles.cardHeader}><div><p className={styles.kicker}>Replaced automatically</p><h2>Hard-gate blocks</h2></div><span className={styles.status} data-status="needs_attention">{blocked.length}</span></div><p className={styles.muted}>These PIs did not count toward the execution target. V4 continues with replacement prospects until four successful Final Reviews are reached.</p>{blocked.map((run) => <div className={styles.event} key={run.runId}><strong>{run.piName}</strong><span>{run.blockedReason || "Blocked without a recorded reason."}</span><time>{dateTime(run.updatedAt)}</time></div>)}</article> : null}
           </div>
         </section>
       </div>
