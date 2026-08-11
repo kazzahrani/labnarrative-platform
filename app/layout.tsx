@@ -6,7 +6,6 @@ import AdminWorkspaceTabs from "@/components/admin/AdminWorkspaceTabs";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import PlatformListPaginationEnhancer from "@/components/admin/PlatformListPaginationEnhancer";
 import PlatformListPaginationExtensionV2 from "@/components/admin/PlatformListPaginationExtensionV2";
-import WebsiteDesignSwitcher from "@/components/admin/WebsiteDesignSwitcher";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
 import ClientOnboardingEnhancer from "@/components/ClientOnboardingEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
@@ -67,7 +66,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
         <WebsiteOutreachSequenceEnhancer />
-        <WebsiteDesignSwitcher />
         <PlatformListPaginationEnhancer />
         <PlatformListPaginationExtensionV2 />
         <ClientOnboardingEnhancer />
