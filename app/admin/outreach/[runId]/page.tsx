@@ -15,6 +15,15 @@ const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase=createClient(supabaseUrl,supabaseKey);
 const KSU_COPY_EMAIL="kazzahrani@ksu.edu.sa";
+const LAB_EXISTS_SENTENCE="I am aware that your laboratory already has an online presence, but I felt there may be an opportunity to present the group’s research, publications, and scientific direction in a more focused and contemporary way.";
+const LAB_DOESNT_EXIST_SENTENCE="Given the significance and breadth of your work, I felt that it could benefit from a dedicated website presenting the laboratory’s research, publications, and scientific direction in one place.";
+
+function applyWebsiteMode(body:string,mode:WebsiteMode){
+  const target=mode==="lab_exists"?LAB_EXISTS_SENTENCE:LAB_DOESNT_EXIST_SENTENCE;
+  if(body.includes(LAB_EXISTS_SENTENCE))return body.replace(LAB_EXISTS_SENTENCE,target);
+  if(body.includes(LAB_DOESNT_EXIST_SENTENCE))return body.replace(LAB_DOESNT_EXIST_SENTENCE,target);
+  return body.replace(/(I have followed your research on[^\n]+for years, although unfortunately we have never had the opportunity to connect\.)[^\n]*/i,`$1 ${target}`);
+}
 
 async function rpc<T>(session:Session,name:string,body:Record<string,unknown>={}):Promise<T>{
   const response=await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify(body),cache:"no-store"});
@@ -39,9 +48,9 @@ export default function OutreachDraftPage(){
     let loaded=row;
     if(row.status==="draft"){
       const selected=await rpc<WebsiteModeResult>(activeSession,"engine_admin_outreach_set_website_awareness",{p_run_id:runId,p_mode:"lab_exists"});
-      loaded={...row,subject:typeof selected.subject==="string"?selected.subject:row.subject,bodyText:typeof selected.bodyText==="string"?selected.bodyText:row.bodyText};
+      loaded={...row,subject:typeof selected.subject==="string"?selected.subject:row.subject,bodyText:typeof selected.bodyText==="string"?selected.bodyText:applyWebsiteMode(row.bodyText||"","lab_exists")};
     }
-    setDraft(loaded);setRecipientEmail(loaded.recipientEmail||"");setSubject(loaded.subject||"");setBodyText(loaded.bodyText||"");setWebsiteMode("lab_exists");setNotice("");
+    setDraft(loaded);setRecipientEmail(loaded.recipientEmail||"");setSubject(loaded.subject||"");setBodyText(applyWebsiteMode(loaded.bodyText||"","lab_exists"));setWebsiteMode("lab_exists");setNotice("");
   }catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
   useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(nextSession)void load(nextSession);else setDraft(null)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
 
@@ -53,15 +62,19 @@ export default function OutreachDraftPage(){
   async function save(event:FormEvent){event.preventDefault();if(!session||action||draft?.status!=="draft")return;setAction("save");try{await persistDraft(session,true)}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be saved.")}finally{setAction("")}}
 
   async function switchWebsiteMode(nextMode:WebsiteMode){
-    if(!session||action||!draft||draft.status!=="draft"||nextMode===websiteMode)return;
+    if(!session||action||!draft||draft.status!=="draft")return;
+    const nextBody=applyWebsiteMode(bodyText,nextMode);
+    setWebsiteMode(nextMode);
+    setBodyText(nextBody);
+    setDraft(current=>current?{...current,bodyText:nextBody}:current);
     setAction("template");
     try{
-      await persistDraft(session,false);
+      await rpc<OutreachDraft>(session,"engine_admin_outreach_save",{p_run_id:runId,p_recipient_email:recipientEmail,p_subject:subject,p_body_text:nextBody});
       const result=await rpc<WebsiteModeResult>(session,"engine_admin_outreach_set_website_awareness",{p_run_id:runId,p_mode:nextMode});
-      setWebsiteMode(nextMode);
+      const confirmedBody=typeof result.bodyText==="string"?applyWebsiteMode(result.bodyText,nextMode):nextBody;
+      setBodyText(confirmedBody);
+      setDraft(current=>current?{...current,subject:typeof result.subject==="string"?result.subject:current.subject,bodyText:confirmedBody}:current);
       if(typeof result.subject==="string")setSubject(result.subject);
-      if(typeof result.bodyText==="string")setBodyText(result.bodyText);
-      setDraft(current=>current?{...current,subject:typeof result.subject==="string"?result.subject:current.subject,bodyText:typeof result.bodyText==="string"?result.bodyText:current.bodyText}:current);
       setNotice(nextMode==="lab_exists"?"Loaded the outreach draft for a lab that already has a website.":"Loaded the outreach draft for a lab without an existing website.");
     }catch(error){setNotice(error instanceof Error?error.message:"The outreach template could not be changed.")}finally{setAction("")}
   }
