@@ -15,11 +15,6 @@ const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase=createClient(supabaseUrl,supabaseKey);
 const KSU_COPY_EMAIL="kazzahrani@ksu.edu.sa";
-const EXISTING_LAB_PHRASE="I am aware that your laboratory already has an online presence";
-
-function detectWebsiteMode(body:string):WebsiteMode{
-  return body.includes(EXISTING_LAB_PHRASE)?"lab_exists":"lab_doesnt_exist";
-}
 
 async function rpc<T>(session:Session,name:string,body:Record<string,unknown>={}):Promise<T>{
   const response=await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify(body),cache:"no-store"});
@@ -37,9 +32,17 @@ async function sendThroughLabNarrative(session:Session,productionRunId:string,se
 
 export default function OutreachDraftPage(){
   const params=useParams<{runId:string}>();const runId=String(params.runId??"");
-  const [session,setSession]=useState<Session|null>(null);const [ready,setReady]=useState(false);const [draft,setDraft]=useState<OutreachDraft|null>(null);const [recipientEmail,setRecipientEmail]=useState("");const [subject,setSubject]=useState("");const [bodyText,setBodyText]=useState("");const [websiteMode,setWebsiteMode]=useState<WebsiteMode>("lab_doesnt_exist");const [sendKsuCopy,setSendKsuCopy]=useState(false);const [notice,setNotice]=useState("");const [action,setAction]=useState<""|"save"|"send"|"private"|"template">("");
+  const [session,setSession]=useState<Session|null>(null);const [ready,setReady]=useState(false);const [draft,setDraft]=useState<OutreachDraft|null>(null);const [recipientEmail,setRecipientEmail]=useState("");const [subject,setSubject]=useState("");const [bodyText,setBodyText]=useState("");const [websiteMode,setWebsiteMode]=useState<WebsiteMode>("lab_exists");const [sendKsuCopy,setSendKsuCopy]=useState(false);const [notice,setNotice]=useState("");const [action,setAction]=useState<""|"save"|"send"|"private"|"template">("");
 
-  const load=useCallback(async(activeSession:Session)=>{if(!runId)return;try{const row=await rpc<OutreachDraft>(activeSession,"engine_admin_outreach_get",{p_run_id:runId});setDraft(row);setRecipientEmail(row.recipientEmail||"");setSubject(row.subject||"");setBodyText(row.bodyText||"");setWebsiteMode(detectWebsiteMode(row.bodyText||""));setNotice("")}catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
+  const load=useCallback(async(activeSession:Session)=>{if(!runId)return;try{
+    const row=await rpc<OutreachDraft>(activeSession,"engine_admin_outreach_get",{p_run_id:runId});
+    let loaded=row;
+    if(row.status==="draft"){
+      const selected=await rpc<WebsiteModeResult>(activeSession,"engine_admin_outreach_set_website_awareness",{p_run_id:runId,p_mode:"lab_exists"});
+      loaded={...row,subject:typeof selected.subject==="string"?selected.subject:row.subject,bodyText:typeof selected.bodyText==="string"?selected.bodyText:row.bodyText};
+    }
+    setDraft(loaded);setRecipientEmail(loaded.recipientEmail||"");setSubject(loaded.subject||"");setBodyText(loaded.bodyText||"");setWebsiteMode("lab_exists");setNotice("");
+  }catch(error){setNotice(error instanceof Error?error.message:"The outreach draft could not be loaded.")}},[runId]);
   useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(nextSession)void load(nextSession);else setDraft(null)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
 
   async function persistDraft(activeSession:Session,showNotice=true):Promise<OutreachDraft>{
@@ -58,6 +61,7 @@ export default function OutreachDraftPage(){
       setWebsiteMode(nextMode);
       if(typeof result.subject==="string")setSubject(result.subject);
       if(typeof result.bodyText==="string")setBodyText(result.bodyText);
+      setDraft(current=>current?{...current,subject:typeof result.subject==="string"?result.subject:current.subject,bodyText:typeof result.bodyText==="string"?result.bodyText:current.bodyText}:current);
       setNotice(nextMode==="lab_exists"?"Loaded the outreach draft for a lab that already has a website.":"Loaded the outreach draft for a lab without an existing website.");
     }catch(error){setNotice(error instanceof Error?error.message:"The outreach template could not be changed.")}finally{setAction("")}
   }
