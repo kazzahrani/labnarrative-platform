@@ -15,8 +15,11 @@ function isActivePath(path: string, href: (typeof TABS)[number]["href"]) {
   if (href === "/admin/sites") {
     return path === href || path.startsWith(`${href}/`) || path === "/admin/sites-v3" || path.startsWith("/admin/sites-v3/");
   }
-
   return path === href || path.startsWith(`${href}/`);
+}
+
+function isClientJourneyPath(path: string) {
+  return /^\/admin\/sales\/[^/]+(?:\/.*)?$/.test(path);
 }
 
 export default function AdminWorkspaceTabs() {
@@ -33,10 +36,14 @@ export default function AdminWorkspaceTabs() {
 
     const place = () => {
       if (disposed) return;
+
+      const journeyHeader = isClientJourneyPath(currentPath)
+        ? document.querySelector<HTMLElement>("[data-client-journey-header='true']")
+        : null;
       const main = document.querySelector("main");
-      const clientJourneyHeader = document.querySelector<HTMLElement>("[data-client-journey-header='true']");
-      const header = clientJourneyHeader ?? main?.querySelector("header") ?? document.querySelector("header");
-      if (!header?.parentElement) return;
+      const pageHeader = main?.querySelector("header") ?? document.querySelector("header");
+      const anchor = journeyHeader ?? pageHeader;
+      if (!anchor?.parentElement) return;
 
       if (!node) {
         node = document.createElement("div");
@@ -44,8 +51,8 @@ export default function AdminWorkspaceTabs() {
         setMount(node);
       }
 
-      if (node.previousElementSibling !== header) {
-        header.insertAdjacentElement("afterend", node);
+      if (node.previousElementSibling !== anchor) {
+        anchor.insertAdjacentElement("afterend", node);
       }
     };
 
@@ -110,7 +117,6 @@ export default function AdminWorkspaceTabs() {
                 fontWeight: active ? 800 : 700,
                 letterSpacing: ".01em",
                 whiteSpace: "nowrap",
-                transition: "background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease",
               }}
             >
               {tab.label}
