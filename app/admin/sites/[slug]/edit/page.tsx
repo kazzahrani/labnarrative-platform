@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import VisualSiteEditor from "@/components/admin/VisualSiteEditor";
+import ManualPortraitUrlAction from "@/components/admin/ManualPortraitUrlAction";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 export default function SiteEditorPage() {
@@ -39,6 +40,7 @@ export default function SiteEditorPage() {
   return (
     <>
       <VisualSiteEditor slug={slug} />
+      <ManualPortraitUrlAction slug={slug} />
 
       <button
         type="button"
