@@ -67,7 +67,7 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
       if (rpcError) throw rpcError;
       const runId = String((data as { runId?: string } | null)?.runId || "");
       if (!runId) throw new Error("Outreach draft was not created.");
-      router.push(`/admin/outreach/${runId}`);
+      router.push(`/admin/outreach-v2/${runId}`);
     } catch (outreachError) {
       setError(outreachError instanceof Error ? outreachError.message : "Outreach could not be opened.");
       setOutreachWorking(false);
@@ -126,9 +126,16 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
   return (
     <>
       {status === "concept" && outreachStatus === "not_contacted" ? (
-        <button type="button" disabled={outreachWorking} onClick={() => void openOutreach()} style={{ background: "#2f6f5e", borderColor: "#3f8f71", color: "#f4fbf8" }}>
+        <a
+          href="#"
+          aria-disabled={outreachWorking}
+          onClick={(event) => {
+            event.preventDefault();
+            if (!outreachWorking) void openOutreach();
+          }}
+        >
           {outreachWorking ? "Preparing…" : "Outreach"}
-        </button>
+        </a>
       ) : null}
       <a
         href="#"
