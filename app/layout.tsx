@@ -6,6 +6,7 @@ import AdminWorkspaceTabs from "@/components/admin/AdminWorkspaceTabs";
 import OutreachMonitorEnhancer from "@/components/admin/OutreachMonitorEnhancer";
 import PlatformListPaginationEnhancer from "@/components/admin/PlatformListPaginationEnhancer";
 import PlatformListPaginationExtensionV2 from "@/components/admin/PlatformListPaginationExtensionV2";
+import PlatformPaginationThresholdGuard from "@/components/admin/PlatformPaginationThresholdGuard";
 import SalesDeliveryOutreachEnhancer from "@/components/admin/SalesDeliveryOutreachEnhancer";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
 import WebsiteLinkedInCueEnhancer from "@/components/admin/WebsiteLinkedInCueEnhancer";
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <WebsiteLinkedInCueEnhancer />
         <PlatformListPaginationEnhancer />
         <PlatformListPaginationExtensionV2 />
+        <PlatformPaginationThresholdGuard />
         <SalesDeliveryOutreachEnhancer />
         <ClientOnboardingEnhancer />
         {children}
