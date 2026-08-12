@@ -42,7 +42,6 @@ export default function FinalReviewPage(){
   useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(nextSession)void load(nextSession);else setDashboard(null)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
 
   const finalReview=useMemo(()=>dashboard?.runs.filter(run=>run.state==="final_review")??[],[dashboard]);
-  const published=useMemo(()=>dashboard?.runs.filter(run=>run.state==="published").slice(0,24)??[],[dashboard]);
 
   async function approve(run:Run){
     if(!session||busy)return;
@@ -125,14 +124,10 @@ export default function FinalReviewPage(){
     <section className={styles.content}>
       <div className={styles.hero}><div><p className={styles.kicker}>Human publication gate</p><h1>Review. Publish. Prepare outreach.</h1><p>V4 concepts and preserved v3 concepts meet at the same human gate. Approve & Publish creates editable outreach drafts without sending. Approve, Publish, and Send immediately publishes every waiting concept and sends Email 1 with no extra confirmation.</p></div><div className={styles.heroActions}><button className={styles.bulkPublish} disabled={Boolean(busy)||finalReview.length===0} onClick={()=>void approveAll()} type="button">{bulkLabel}</button><button className={styles.bulkSend} disabled={Boolean(busy)||finalReview.length===0} onClick={()=>void sendAll()} type="button">{sendAllLabel}</button><button disabled={Boolean(busy)} onClick={()=>void load(session)} type="button">Refresh</button></div></div>
       {notice?<p className={styles.notice}>{notice}</p>:null}
-      <section className={styles.stats}><article><span>Awaiting review</span><strong>{finalReview.length}</strong></article><article><span>Published concepts</span><strong>{dashboard?.counts.published??published.length}</strong></article><article><span>Blocked</span><strong>{dashboard?.counts.blocked??0}</strong></article></section>
+      <section className={styles.stats}><article><span>Awaiting review</span><strong>{finalReview.length}</strong></article><article><span>Published concepts</span><strong>{dashboard?.counts.published??0}</strong></article><article><span>Blocked</span><strong>{dashboard?.counts.blocked??0}</strong></article></section>
       <section className={styles.panel}>
         <div className={styles.panelHeader}><div><p className={styles.kicker}>Final Review</p><h2>Ready for your decision</h2></div><span>{finalReview.length}</span></div>
         {finalReview.length===0?<p className={styles.empty}>No concepts are waiting for review.</p>:<div className={styles.list}>{finalReview.map(run=><article className={styles.row} key={`${run.engine}:${run.runId}`}><div className={styles.identity}><strong>{run.piName}</strong><span>{run.engine.toUpperCase()} · {run.slug} · evidence {run.evidenceCount} · assets {run.assetCount}</span><time>{dateTime(run.updatedAt)}</time></div><div className={styles.actions}>{run.previewPath?<a className={styles.secondary} href={run.previewPath} target="_blank" rel="noreferrer">Preview ↗</a>:null}<button className={styles.primary} disabled={Boolean(busy)} onClick={()=>void approve(run)} type="button">{busy===`${run.runId}:approve`?"Publishing…":"Approve & Publish"}</button><button className={styles.secondary} disabled={Boolean(busy)} onClick={()=>void revise(run)} type="button">Return to ChatGPT</button><button className={styles.danger} disabled={Boolean(busy)} onClick={()=>void block(run)} type="button">Block</button></div></article>)}</div>}
-      </section>
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}><div><p className={styles.kicker}>Published</p><h2>Outreach drafts</h2></div></div>
-        {published.length===0?<p className={styles.empty}>Published concepts will appear here.</p>:<div className={styles.list}>{published.map(run=><article className={styles.row} key={`${run.engine}:${run.runId}`}><div className={styles.identity}><strong>{run.piName}</strong><span>{run.engine.toUpperCase()} · {run.publicUrl||run.slug}</span><time>{dateTime(run.updatedAt)}</time></div><div className={styles.actions}>{run.publicUrl?<a className={styles.secondary} href={run.publicUrl} target="_blank" rel="noreferrer">Open live ↗</a>:null}<Link className={styles.primary} href={`/admin/outreach/${run.runId}`}>Review outreach draft</Link></div></article>)}</div>}
       </section>
     </section>
   </main>;
