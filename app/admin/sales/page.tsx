@@ -3,7 +3,9 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import SalesConversionInbox from "../../../components/SalesConversionInbox";
 import SalesDailyActionQueue from "../../../components/SalesDailyActionQueue";
+import SalesActionCenter from "../../../components/SalesActionCenter";
 import styles from "./sales-dashboard.module.css";
 
 type SummaryRow = {
@@ -452,6 +454,8 @@ export default function SalesDashboardPage() {
           </div>
         </header>
 
+        <SalesConversionInbox />
+
         <SalesDailyActionQueue />
 
         {notice && <p className={styles.notice}>{notice}</p>}
@@ -488,6 +492,8 @@ export default function SalesDashboardPage() {
             <small>{metrics.concepts} active concepts currently tracked.</small>
           </article>
         </section>
+
+        <SalesActionCenter />
 
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
