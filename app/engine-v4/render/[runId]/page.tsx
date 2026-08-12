@@ -108,9 +108,9 @@ export default async function EngineV4MachineRenderPage({
   const portraitWarningAccepted =
     payload.portraitStatus === "unavailable" &&
     payload.portraitMetadata?.portrait_warning_accepted === true;
-  const karpenVariant = site.design?.settings?.variant === "Karpen_1";
+  const kopsVariant = site.design?.settings?.variant === "Kops_1";
 
-  if (!karpenVariant) notFound();
+  if (!kopsVariant) notFound();
   if (payload.portraitStatus === "verified" && !portraitBound) notFound();
   if (payload.portraitStatus !== "verified" && !portraitWarningAccepted) notFound();
 
