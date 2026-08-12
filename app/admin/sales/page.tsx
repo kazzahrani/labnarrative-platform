@@ -3,8 +3,7 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import SalesConversionInbox from "../../../components/SalesConversionInbox";
-import SalesDailyActionQueue from "../../../components/SalesDailyActionQueue";
+import SalesOperatingWorkspace from "../../../components/SalesOperatingWorkspace";
 import SalesActionCenter from "../../../components/SalesActionCenter";
 import styles from "./sales-dashboard.module.css";
 
@@ -454,9 +453,7 @@ export default function SalesDashboardPage() {
           </div>
         </header>
 
-        <SalesConversionInbox />
-
-        <SalesDailyActionQueue />
+        <SalesOperatingWorkspace />
 
         {notice && <p className={styles.notice}>{notice}</p>}
 
