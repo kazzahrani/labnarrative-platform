@@ -62,20 +62,14 @@ function ensureAllLinkedInOutreachButton() {
   host.dataset.allLinkedinOutreach = "host";
   host.className = "ln-all-linkedin-outreach-host";
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "ln-all-linkedin-outreach-button";
-  button.textContent = "All LinkedIn outreach";
-  button.addEventListener("click", () => {
-    const popup = window.open(
-      "/admin/linkedin",
-      "ln-linkedin-outreach-queue",
-      "popup=yes,width=1120,height=900,resizable=yes,scrollbars=yes"
-    );
-    popup?.focus();
-  });
+  const link = document.createElement("a");
+  link.href = "/admin/linkedin";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.className = "ln-all-linkedin-outreach-button";
+  link.textContent = "All LinkedIn outreach";
 
-  host.appendChild(button);
+  host.appendChild(link);
   tableWrap.insertAdjacentElement("beforebegin", host);
 }
 
@@ -180,6 +174,8 @@ export default function WebsiteLinkedInCueEnhancer() {
       margin: 0 0 10px !important;
     }
     .ln-all-linkedin-outreach-button {
+      display: inline-flex !important;
+      align-items: center !important;
       border: 1px solid #356f5d !important;
       border-radius: 9px !important;
       background: #214f42 !important;
@@ -191,6 +187,7 @@ export default function WebsiteLinkedInCueEnhancer() {
       line-height: 1.2 !important;
       cursor: pointer !important;
       box-shadow: none !important;
+      text-decoration: none !important;
     }
     .ln-all-linkedin-outreach-button:hover {
       background: #285f50 !important;
