@@ -8,6 +8,7 @@ import DobbelsteinEditorialDesign, { DOBBELSTEIN_EDITORIAL_VARIANT } from "@/com
 import DobbelsteinScrollDesign, { DOBBELSTEIN_SCROLL_VARIANT } from "@/components/designs/DobbelsteinScrollDesign";
 import EditorialImageDesign from "@/components/designs/EditorialImageDesign";
 import EngelandDesignWithFigures from "@/components/designs/EngelandDesignWithFigures";
+import FischerMinimalDesign, { FISCHER_MINIMAL_VARIANT } from "@/components/designs/FischerMinimalDesign";
 import HDPortrait1Design, { HDPORTRAIT_1_VARIANT } from "@/components/designs/HDPortrait1Design";
 import Karpen1Design from "@/components/designs/Karpen1Design";
 import KineticPhotoLabDesign from "@/components/designs/KineticPhotoLabDesign";
@@ -141,6 +142,10 @@ export default function SiteShell({ site, route, basePath, previewMode = false, 
 
   if (designVariant === "portrait-first-v1") {
     return <PortraitFirstDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
+  }
+
+  if (designVariant === FISCHER_MINIMAL_VARIANT) {
+    return <FischerMinimalDesign site={site} route={route} basePath={resolvedBasePath} previewMode={previewMode} />;
   }
 
   if (designVariant === "engeland-modern-v1") {
