@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 type LinkedInStatus = "not_contacted" | "message_sent" | "not_found";
@@ -35,13 +35,18 @@ function familyName(piName: string): string {
 function connectionNote(piName: string): string {
   return `Dear Professor ${familyName(piName)}, I recently sent you a website concept I prepared for your laboratory. I’m also a molecular oncology researcher working in p53 and cell-cycle biology, so I wanted to connect here as well. Best wishes, Khaled`;
 }
+function followUpMessage(piName: string): string {
+  return `Thank you for connecting, Professor ${familyName(piName)}. I hope you had a chance to see the laboratory website concept I sent. I’d be very interested to hear what you think of the direction.`;
+}
 function linkedinSearchUrl(piName: string, institution: string): string {
   return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([piName, institution].filter(Boolean).join(" "))}`;
 }
 
 export default function LinkedInWorkspacePage() {
   const params = useParams<{ siteId: string }>();
+  const searchParams = useSearchParams();
   const siteId = String(params?.siteId || "");
+  const followUpMode = searchParams.get("mode") === "followup";
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [profileUrl, setProfileUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -64,7 +69,9 @@ export default function LinkedInWorkspacePage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const note = useMemo(() => workspace ? (workspace.connectionNote?.trim() || connectionNote(workspace.piName)) : "", [workspace]);
+  const connection = useMemo(() => workspace ? (workspace.connectionNote?.trim() || connectionNote(workspace.piName)) : "", [workspace]);
+  const followUp = useMemo(() => workspace ? followUpMessage(workspace.piName) : "", [workspace]);
+  const preparedMessage = followUpMode ? followUp : connection;
 
   async function saveProfile() {
     if (!workspace || saving) return;
@@ -86,8 +93,8 @@ export default function LinkedInWorkspacePage() {
     setSaving(false);
   }
 
-  async function copyNote() {
-    try { await navigator.clipboard.writeText(note); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }
+  async function copyPreparedMessage() {
+    try { await navigator.clipboard.writeText(preparedMessage); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }
     catch { setError("Clipboard access was unavailable. Select and copy the text manually."); }
   }
 
@@ -98,12 +105,12 @@ export default function LinkedInWorkspacePage() {
   const findHref = workspace.profileUrl || linkedinSearchUrl(workspace.piName, workspace.institution);
 
   return <main className="ln-li-page">
-    <header className="ln-li-topbar"><Link href="/admin/sites">← Website Monitor</Link><span>LinkedIn Outreach</span></header>
+    <header className="ln-li-topbar"><Link href="/admin/sites">← Website Monitor</Link><span>{followUpMode ? "LinkedIn Follow-up" : "LinkedIn Outreach"}</span></header>
     <section className="ln-li-card">
-      <p className="ln-li-kicker">Manual LinkedIn workspace</p>
+      <p className="ln-li-kicker">{followUpMode ? "Manual LinkedIn follow-up" : "Manual LinkedIn workspace"}</p>
       <h1>{workspace.piName}</h1>
       <p className="ln-li-meta">{workspace.institution || "—"}{workspace.email ? ` · ${workspace.email}` : ""}</p>
-      <p className="ln-li-help">Find the PI, copy the prepared connection note, send it yourself on LinkedIn, then update the status here.</p>
+      <p className="ln-li-help">{followUpMode ? "Use the prepared follow-up message below. You still send everything yourself on LinkedIn." : "Find the PI, copy the prepared connection note, send it yourself on LinkedIn, then update the status here."}</p>
 
       {notice ? <p className="ln-li-notice">{notice}</p> : null}
       {error ? <p className="ln-li-error">{error}</p> : null}
@@ -124,9 +131,9 @@ export default function LinkedInWorkspacePage() {
       </div>
 
       <section className="ln-li-message">
-        <span>Connection request note</span>
-        <p>{note}</p>
-        <button onClick={() => void copyNote()}>{copied ? "✓ Copied" : "Copy connection note"}</button>
+        <span>{followUpMode ? "LinkedIn follow-up message" : "Connection request note"}</span>
+        <p>{preparedMessage}</p>
+        <button onClick={() => void copyPreparedMessage()}>{copied ? "✓ Copied" : followUpMode ? "Copy follow-up" : "Copy connection note"}</button>
       </section>
     </section>
     <Styles />
