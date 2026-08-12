@@ -6,19 +6,17 @@ import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 type Props={siteId:string;siteStatus:string;outreachStatus?:string|null;runId?:string|null;runState?:string|null};
 
-export default function WebsiteOutreachAction({siteId,siteStatus,outreachStatus,runId,runState}:Props){
+export default function WebsiteOutreachAction({siteId,siteStatus,outreachStatus}:Props){
   const router=useRouter();
   const [working,setWorking]=useState(false);
   const [error,setError]=useState("");
-  const alreadyReady=runState==="published"&&Boolean(runId);
   const canPrepare=siteStatus==="concept"&&String(outreachStatus||"not_contacted")==="not_contacted";
-  if(!alreadyReady&&!canPrepare)return null;
+  if(!canPrepare)return null;
 
   async function openOutreach(){
     if(working)return;
     setWorking(true);setError("");
     try{
-      if(alreadyReady&&runId){router.push(`/admin/outreach/${runId}`);return;}
       const {data,error:rpcError}=await supabase.rpc("engine_v2_admin_prepare_site_outreach",{p_site_id:siteId});
       if(rpcError)throw rpcError;
       const nextRunId=String((data as {runId?:string}|null)?.runId||"");
