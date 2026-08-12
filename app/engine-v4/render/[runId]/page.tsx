@@ -42,6 +42,13 @@ type RenderPayload = {
   tokenExpiresAt: string;
 };
 
+type LegacyContentDesign = NonNullable<LabSite["design"]> & {
+  variant?: string;
+  designKey?: string;
+  designVersion?: number;
+  templatePolicy?: string;
+};
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -87,16 +94,33 @@ export default async function EngineV4MachineRenderPage({
   const payload = data as RenderPayload | null;
   if (error || !payload || payload.error || payload.siteStatus !== "draft") notFound();
 
+  const contentDesign = payload.content.design as LegacyContentDesign | undefined;
+  const normalizedDesign: NonNullable<LabSite["design"]> = {
+    key:
+      payload.designKey ||
+      contentDesign?.key ||
+      contentDesign?.designKey ||
+      payload.content.template ||
+      "scientific-minimal",
+    version:
+      payload.designVersion ??
+      contentDesign?.version ??
+      contentDesign?.designVersion ??
+      1,
+    settings: {
+      ...(contentDesign?.variant ? { variant: contentDesign.variant } : {}),
+      ...(contentDesign?.templatePolicy ? { templatePolicy: contentDesign.templatePolicy } : {}),
+      ...(contentDesign?.settings ?? {}),
+      ...(payload.designSettings ?? {}),
+    },
+  };
+
   const site: LabSite = {
     ...payload.content,
     slug: payload.content.slug || payload.slug,
     schemaVersion: payload.content.schemaVersion ?? payload.contentSchemaVersion ?? 1,
     theme: payload.content.theme ?? FALLBACK_THEME,
-    design: payload.content.design ?? {
-      key: payload.designKey || payload.content.template || "scientific-minimal",
-      version: payload.designVersion ?? 1,
-      settings: payload.designSettings ?? {},
-    },
+    design: normalizedDesign,
   };
 
   const expectedPortrait = normalizeAsset(payload.portraitAssetUrl);
