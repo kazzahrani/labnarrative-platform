@@ -118,7 +118,7 @@ export default function FinalReviewPage(){
   const bulkParts=busy.startsWith("bulk:")?busy.split(":"):null;
   const sendParts=busy.startsWith("sendall:")?busy.split(":"):null;
   const bulkLabel=bulkParts?`Publishing ${bulkParts[1]}/${bulkParts[2]}…`:`Approve & Publish All (${finalReview.length})`;
-  const sendAllLabel=sendParts?`Sending ${sendParts[1]}/${sendParts[2]}…`:`Approve, Publish, and Send (${finalReview.length})`;
+  const sendAllLabel=sendParts?`Sending ${sendParts[1]}/${sendParts[2]}…`:`Approve, Publish, and Send All (${finalReview.length})`;
 
   return <main className={styles.page}>
     <header className={styles.topbar}><div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Final Review</span></div><nav><Link href="/admin/discovery">Discovery</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sites">Websites</Link><Link href="/admin/sales">Sales</Link></nav></header>
