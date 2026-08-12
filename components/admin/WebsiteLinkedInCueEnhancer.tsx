@@ -7,6 +7,8 @@ type ProspectRow = { id: string; site_id: string | null };
 type LinkedInRow = { prospect_id: string; status: "not_contacted" | "message_sent" | "not_found" };
 type InitialRow = { prospect_id: string; site_id: string | null; status: string; sent_at: string | null };
 
+const LINKEDIN_STATUS_SYNC_KEY = "labnarrative:linkedin-status-updated";
+
 function styleLinkedInAction(anchor: HTMLAnchorElement, ready: boolean) {
   anchor.classList.add("ln-linkedin-monitor-action");
   anchor.classList.toggle("ln-linkedin-monitor-ready", ready);
@@ -80,6 +82,12 @@ export default function WebsiteLinkedInCueEnhancer() {
     let cancelled = false;
     let observer: MutationObserver | null = null;
     let applying = false;
+
+    const handleStatusSync = (event: StorageEvent) => {
+      if (event.key !== LINKEDIN_STATUS_SYNC_KEY) return;
+      window.location.reload();
+    };
+    window.addEventListener("storage", handleStatusSync);
 
     async function apply() {
       if (cancelled || applying) return;
@@ -164,6 +172,7 @@ export default function WebsiteLinkedInCueEnhancer() {
     return () => {
       cancelled = true;
       observer?.disconnect();
+      window.removeEventListener("storage", handleStatusSync);
     };
   }, []);
 
