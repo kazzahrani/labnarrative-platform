@@ -34,7 +34,8 @@ export default function AdminWorkspaceTabs() {
     const place = () => {
       if (disposed) return;
       const main = document.querySelector("main");
-      const header = main?.querySelector("header") ?? document.querySelector("header");
+      const clientJourneyHeader = document.querySelector<HTMLElement>("[data-client-journey-header='true']");
+      const header = clientJourneyHeader ?? main?.querySelector("header") ?? document.querySelector("header");
       if (!header?.parentElement) return;
 
       if (!node) {
