@@ -9,7 +9,9 @@ type Engine = "v3" | "v4";
 type RunState = "active" | "producing" | "final_review" | "published" | "completed" | "blocked" | "cancelled";
 type Run = { engine:Engine; runId:string; prospectId:string; siteId:string|null; piName:string; slug:string; state:RunState; blockedReason:string|null; startedAt:string; updatedAt:string; previewPath:string|null; publicUrl:string|null; evidenceCount:number; assetCount:number };
 type Dashboard = { counts:{ finalReview:number; published:number; blocked:number; v4FinalReview?:number; v4Published?:number }; runs:Run[] };
-type PublishResult = { ok:boolean; engine?:Engine; runId:string; publicUrl:string; outreachSent:boolean; outreachDraft?:{ status?:string; recipientEmail?:string } };
+type OutreachDraftResult = { status?:string; recipientEmail?:string; productionRunId?:string };
+type PublishResult = { ok:boolean; engine?:Engine; runId:string; publicUrl:string; outreachSent:boolean; outreachDraft?:OutreachDraftResult };
+type SendResult = { ok?:boolean; alreadySent?:boolean; providerMessageId?:string; recipient?:string; messageKind?:string; error?:string };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -20,6 +22,13 @@ async function rpc<T>(session:Session,name:string,body:Record<string,unknown>={}
   const text=await response.text(); const payload=text?JSON.parse(text):null;
   if(!response.ok){const row=payload as {message?:string;details?:string;hint?:string}|null;throw new Error(row?.message||row?.details||row?.hint||`${name} failed (${response.status}).`)}
   return payload as T;
+}
+
+async function sendThroughLabNarrative(session:Session,productionRunId:string):Promise<SendResult>{
+  const response=await fetch(`${supabaseUrl}/functions/v1/operator-send-outreach`,{method:"POST",headers:{"Content-Type":"application/json",apikey:supabaseKey,Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({runId:productionRunId,sendKsuCopy:false}),cache:"no-store"});
+  const payload=await response.json().catch(()=>({})) as SendResult;
+  if(!response.ok||payload.ok!==true)throw new Error(payload.error||`Email delivery failed (${response.status}).`);
+  return payload;
 }
 
 function dateTime(value?:string|null){
@@ -64,6 +73,36 @@ export default function FinalReviewPage(){
     else setNotice(`Published ${succeeded} of ${runs.length}. ${failed.length} failed: ${failed.join(" · ")}`);
   }
 
+  async function sendAll(){
+    if(!session||busy||finalReview.length===0)return;
+    const runs=[...finalReview];
+    if(!window.confirm(`Publish and send Email 1 to all ${runs.length} concepts currently awaiting Final Review? This will send real emails immediately.`))return;
+    let sent=0;
+    const failed:string[]=[];
+    for(let index=0;index<runs.length;index+=1){
+      const run=runs[index];
+      setBusy(`sendall:${index+1}:${runs.length}`);
+      try{
+        const publishedResult=await rpc<PublishResult>(session,"engine_admin_approve_publish",{p_run_id:run.runId,p_engine:run.engine,p_note:"Bulk Send to All approved by administrator."});
+        if(!publishedResult.ok||publishedResult.outreachSent)throw new Error("Unexpected publish result");
+        const productionRunId=publishedResult.outreachDraft?.productionRunId?.trim()||"";
+        const recipientEmail=publishedResult.outreachDraft?.recipientEmail?.trim()||"";
+        if(!productionRunId)throw new Error("Outreach compatibility run was not created");
+        if(!recipientEmail)throw new Error("Verified recipient email is missing");
+        await rpc<boolean>(session,"authorize_operator_send",{p_run_id:productionRunId,p_recipient_email:recipientEmail});
+        const sendResult=await sendThroughLabNarrative(session,productionRunId);
+        if(sendResult.ok!==true)throw new Error("Email 1 was not confirmed as sent");
+        sent+=1;
+      }catch(error){
+        failed.push(`${run.piName}: ${error instanceof Error?error.message:"send failed"}`);
+      }
+    }
+    setBusy("");
+    await load(session);
+    if(failed.length===0)setNotice(`Published and sent Email 1 to all ${sent} Final Review concepts.`);
+    else setNotice(`Sent Email 1 to ${sent} of ${runs.length}. ${failed.length} need attention: ${failed.join(" · ")}`);
+  }
+
   async function block(run:Run){
     if(!session||busy)return; const reason=window.prompt(`Why should ${run.piName} be blocked?`)?.trim(); if(!reason)return; if(!window.confirm(`Block ${run.piName}? The private draft will remain unpublished.`))return; setBusy(`${run.runId}:block`);
     try{await rpc(session,"engine_admin_block",{p_run_id:run.runId,p_engine:run.engine,p_reason:reason});setNotice(`${run.piName} was blocked: ${reason}`);await load(session)}catch(error){setNotice(error instanceof Error?error.message:"Block failed.")}finally{setBusy("")}
@@ -78,12 +117,14 @@ export default function FinalReviewPage(){
   if(!session)return <main className={styles.state}><section><h1>Administrator sign-in required.</h1><Link href="/admin">Open administrator dashboard</Link></section></main>;
 
   const bulkParts=busy.startsWith("bulk:")?busy.split(":"):null;
+  const sendParts=busy.startsWith("sendall:")?busy.split(":"):null;
   const bulkLabel=bulkParts?`Publishing ${bulkParts[1]}/${bulkParts[2]}…`:`Approve & Publish All (${finalReview.length})`;
+  const sendAllLabel=sendParts?`Sending ${sendParts[1]}/${sendParts[2]}…`:`Send to All (${finalReview.length})`;
 
   return <main className={styles.page}>
     <header className={styles.topbar}><div><Link className={styles.brand} href="/admin">LabNarrative</Link><span>Final Review</span></div><nav><Link href="/admin/discovery">Discovery</Link><Link href="/admin/automation">Production</Link><Link href="/admin/sites">Websites</Link><Link href="/admin/sales">Sales</Link></nav></header>
     <section className={styles.content}>
-      <div className={styles.hero}><div><p className={styles.kicker}>Human publication gate</p><h1>Review. Publish. Prepare outreach.</h1><p>V4 concepts and preserved v3 concepts meet at the same human gate. Nothing is published until you approve it. Approval creates an editable outreach draft, but never sends it.</p></div><div className={styles.heroActions}><button className={styles.bulkPublish} disabled={Boolean(busy)||finalReview.length===0} onClick={()=>void approveAll()} type="button">{bulkLabel}</button><button disabled={Boolean(busy)} onClick={()=>void load(session)} type="button">Refresh</button></div></div>
+      <div className={styles.hero}><div><p className={styles.kicker}>Human publication gate</p><h1>Review. Publish. Prepare outreach.</h1><p>V4 concepts and preserved v3 concepts meet at the same human gate. Approve & Publish creates editable outreach drafts without sending. Send to All is the explicit administrator action that publishes every waiting concept and immediately sends Email 1.</p></div><div className={styles.heroActions}><button className={styles.bulkPublish} disabled={Boolean(busy)||finalReview.length===0} onClick={()=>void approveAll()} type="button">{bulkLabel}</button><button className={styles.bulkSend} disabled={Boolean(busy)||finalReview.length===0} onClick={()=>void sendAll()} type="button">{sendAllLabel}</button><button disabled={Boolean(busy)} onClick={()=>void load(session)} type="button">Refresh</button></div></div>
       {notice?<p className={styles.notice}>{notice}</p>:null}
       <section className={styles.stats}><article><span>Awaiting review</span><strong>{finalReview.length}</strong></article><article><span>Published concepts</span><strong>{dashboard?.counts.published??published.length}</strong></article><article><span>Blocked</span><strong>{dashboard?.counts.blocked??0}</strong></article></section>
       <section className={styles.panel}>
