@@ -19,6 +19,7 @@ const DESIGNS: DesignOption[] = [
   { value: "Kops_1", label: "Kops_1", description: "Portrait-led design with a clean shared header/footer and hero-free inner pages." },
   { value: "Lens_1", label: "Lens_1", description: "Portrait-led modern design based on the Susanne Lens concept." },
   { value: "ciribilli-narita-v1", label: "Narita", description: "Bold image-led laboratory design with the established Narita visual system." },
+  { value: "fischer-minimal-v1", label: "Fischer Minimal", description: "Spacious white academic design with quiet typography, thin rules, image-led inner pages and a separate PI portrait treatment." },
   { value: "bourdon-full", label: "bourdon-full", description: "Full LabNarrative laboratory design with the Bourdon information architecture." },
   { value: "dobbelstein-editorial-v1", label: "Dobbelstein Editorial", description: "Restrained editorial academic layout with strong typography and spacing." },
   { value: "editorial-image-v1", label: "Editorial Image", description: "Modern editorial structure with stronger image placement throughout the site." },
