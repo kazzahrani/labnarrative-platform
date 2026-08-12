@@ -8,6 +8,7 @@ import PlatformListPaginationEnhancer from "@/components/admin/PlatformListPagin
 import PlatformListPaginationExtensionV2 from "@/components/admin/PlatformListPaginationExtensionV2";
 import SalesDeliveryOutreachEnhancer from "@/components/admin/SalesDeliveryOutreachEnhancer";
 import WebsiteOutreachSequenceEnhancer from "@/components/admin/WebsiteOutreachSequenceEnhancer";
+import WebsiteLinkedInCueEnhancer from "@/components/admin/WebsiteLinkedInCueEnhancer";
 import ClientOnboardingEnhancer from "@/components/ClientOnboardingEnhancer";
 import PlatformThemeToggle from "@/components/PlatformThemeToggle";
 import "./globals.css";
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PlatformThemeToggle />
         <OutreachMonitorEnhancer />
         <WebsiteOutreachSequenceEnhancer />
+        <WebsiteLinkedInCueEnhancer />
         <PlatformListPaginationEnhancer />
         <PlatformListPaginationExtensionV2 />
         <SalesDeliveryOutreachEnhancer />
