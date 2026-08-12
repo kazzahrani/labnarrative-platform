@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
-type LinkedInStatus = "not_contacted" | "connected" | "message_sent" | "replied";
+type LinkedInStatus = "not_contacted" | "message_sent" | "not_found";
 type Workspace = {
   ok: boolean;
   siteId: string;
@@ -23,10 +23,9 @@ type Workspace = {
 };
 
 const STATUS_OPTIONS: Array<{ value: LinkedInStatus; label: string }> = [
-  { value: "not_contacted", label: "Not contacted" },
-  { value: "connected", label: "Connected" },
+  { value: "not_contacted", label: "Not connected" },
   { value: "message_sent", label: "Message sent" },
-  { value: "replied", label: "Replied" },
+  { value: "not_found", label: "Not found" },
 ];
 
 function familyName(piName: string): string {
@@ -35,9 +34,6 @@ function familyName(piName: string): string {
 }
 function connectionNote(piName: string): string {
   return `Dear Professor ${familyName(piName)}, I recently sent you a website concept I prepared for your laboratory. I’m also a molecular oncology researcher working in p53 and cell-cycle biology, so I wanted to connect here as well. Best wishes, Khaled`;
-}
-function postAcceptMessage(piName: string): string {
-  return `Thank you for connecting, Professor ${familyName(piName)}. I hope you had a chance to see the laboratory website concept I sent. I’d be very interested to hear what you think of the direction.`;
 }
 function linkedinSearchUrl(piName: string, institution: string): string {
   return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([piName, institution].filter(Boolean).join(" "))}`;
@@ -52,7 +48,7 @@ export default function LinkedInWorkspacePage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState<"connection" | "followup" | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     if (!siteId) return;
@@ -69,7 +65,6 @@ export default function LinkedInWorkspacePage() {
   useEffect(() => { void load(); }, [load]);
 
   const note = useMemo(() => workspace ? (workspace.connectionNote?.trim() || connectionNote(workspace.piName)) : "", [workspace]);
-  const followUp = useMemo(() => workspace ? postAcceptMessage(workspace.piName) : "", [workspace]);
 
   async function saveProfile() {
     if (!workspace || saving) return;
@@ -91,8 +86,8 @@ export default function LinkedInWorkspacePage() {
     setSaving(false);
   }
 
-  async function copy(kind: "connection" | "followup", text: string) {
-    try { await navigator.clipboard.writeText(text); setCopied(kind); window.setTimeout(() => setCopied(current => current === kind ? null : current), 1500); }
+  async function copyNote() {
+    try { await navigator.clipboard.writeText(note); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }
     catch { setError("Clipboard access was unavailable. Select and copy the text manually."); }
   }
 
@@ -101,7 +96,6 @@ export default function LinkedInWorkspacePage() {
   if (!workspace) return null;
 
   const findHref = workspace.profileUrl || linkedinSearchUrl(workspace.piName, workspace.institution);
-  const showFollowUp = workspace.status !== "not_contacted";
 
   return <main className="ln-li-page">
     <header className="ln-li-topbar"><Link href="/admin/sites">← Website Monitor</Link><span>LinkedIn Outreach</span></header>
@@ -109,7 +103,7 @@ export default function LinkedInWorkspacePage() {
       <p className="ln-li-kicker">Manual LinkedIn workspace</p>
       <h1>{workspace.piName}</h1>
       <p className="ln-li-meta">{workspace.institution || "—"}{workspace.email ? ` · ${workspace.email}` : ""}</p>
-      <p className="ln-li-help">Find the PI, copy the prepared note, send it yourself on LinkedIn, then update the status here.</p>
+      <p className="ln-li-help">Find the PI, copy the prepared connection note, send it yourself on LinkedIn, then update the status here.</p>
 
       {notice ? <p className="ln-li-notice">{notice}</p> : null}
       {error ? <p className="ln-li-error">{error}</p> : null}
@@ -126,26 +120,19 @@ export default function LinkedInWorkspacePage() {
           <select value={workspace.status} onChange={e => void updateStatus(e.target.value as LinkedInStatus)} disabled={saving}>
             {STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
-          <p className="ln-li-small">This is the same LinkedIn status used by LabNarrative everywhere.</p>
         </section>
       </div>
 
       <section className="ln-li-message">
         <span>Connection request note</span>
         <p>{note}</p>
-        <button onClick={() => void copy("connection", note)}>{copied === "connection" ? "✓ Copied" : "Copy connection note"}</button>
+        <button onClick={() => void copyNote()}>{copied ? "✓ Copied" : "Copy connection note"}</button>
       </section>
-
-      {showFollowUp ? <section className="ln-li-message">
-        <span>After they accept</span>
-        <p>{followUp}</p>
-        <button onClick={() => void copy("followup", followUp)}>{copied === "followup" ? "✓ Copied" : "Copy follow-up"}</button>
-      </section> : null}
     </section>
     <Styles />
   </main>;
 }
 
 function Styles() { return <style jsx global>{`
-  .ln-li-page{min-height:100vh;background:#0c1a23;color:#eef4f1;padding:0 24px 48px;font-family:Arial,Helvetica,sans-serif}.ln-li-topbar{height:68px;display:flex;align-items:center;gap:18px;max-width:1050px;margin:0 auto}.ln-li-topbar a,.ln-li-topbar span{color:#dce8e4;text-decoration:none;font-weight:800}.ln-li-card{max-width:1000px;margin:20px auto 0;background:#10232d;border:1px solid #2a404a;border-radius:22px;padding:28px}.ln-li-kicker{margin:0 0 8px;color:#7fcdb7;text-transform:uppercase;letter-spacing:.12em;font-size:.7rem;font-weight:850}.ln-li-card h1{margin:0;font-size:2.25rem}.ln-li-meta,.ln-li-help{color:#9aaca6}.ln-li-help{max-width:760px;line-height:1.55}.ln-li-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:14px;margin-top:24px}.ln-li-panel,.ln-li-message{border:1px solid #29434c;border-radius:15px;background:#0e2029;padding:18px}.ln-li-panel h2{margin:0 0 12px;font-size:1rem}.ln-li-panel input,.ln-li-panel select{width:100%;box-sizing:border-box;border:1px solid #38515e;border-radius:10px;background:#0b1820;color:#edf4f1;padding:11px;font:inherit}.ln-li-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.ln-li-actions button,.ln-li-actions a,.ln-li-message button{border:1px solid #31505a;border-radius:9px;background:#142b35;color:#e6efec;padding:9px 11px;font:inherit;font-size:.78rem;font-weight:800;text-decoration:none;cursor:pointer}.ln-li-actions a{background:#285e50;border-color:#3b806c}.ln-li-message{margin-top:14px}.ln-li-message span{display:block;color:#83a59b;font-size:.7rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}.ln-li-message p{color:#d4e0dc;line-height:1.6}.ln-li-message button{color:#9de3ce}.ln-li-small{color:#829790;font-size:.75rem;line-height:1.4}.ln-li-notice,.ln-li-error{padding:10px 12px;border-radius:10px;font-size:.82rem}.ln-li-notice{background:#14352e;border:1px solid #316a5b;color:#a8e7d3}.ln-li-error{background:#3a2022;border:1px solid #744247;color:#ffc2c5}@media(max-width:760px){.ln-li-grid{grid-template-columns:1fr}.ln-li-card{padding:20px}.ln-li-page{padding:0 14px 34px}}
+  .ln-li-page{min-height:100vh;background:#0c1a23;color:#eef4f1;padding:0 24px 48px;font-family:Arial,Helvetica,sans-serif}.ln-li-topbar{height:68px;display:flex;align-items:center;gap:18px;max-width:1050px;margin:0 auto}.ln-li-topbar a,.ln-li-topbar span{color:#dce8e4;text-decoration:none;font-weight:800}.ln-li-card{max-width:1000px;margin:20px auto 0;background:#10232d;border:1px solid #2a404a;border-radius:22px;padding:28px}.ln-li-kicker{margin:0 0 8px;color:#7fcdb7;text-transform:uppercase;letter-spacing:.12em;font-size:.7rem;font-weight:850}.ln-li-card h1{margin:0;font-size:2.25rem}.ln-li-meta,.ln-li-help{color:#9aaca6}.ln-li-help{max-width:760px;line-height:1.55}.ln-li-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:14px;margin-top:24px}.ln-li-panel,.ln-li-message{border:1px solid #29434c;border-radius:15px;background:#0e2029;padding:18px}.ln-li-panel h2{margin:0 0 12px;font-size:1rem}.ln-li-panel input,.ln-li-panel select{width:100%;box-sizing:border-box;border:1px solid #38515e;border-radius:10px;background:#0b1820;color:#edf4f1;padding:11px;font:inherit}.ln-li-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.ln-li-actions button,.ln-li-actions a,.ln-li-message button{border:1px solid #31505a;border-radius:9px;background:#142b35;color:#e6efec;padding:9px 11px;font:inherit;font-size:.78rem;font-weight:800;text-decoration:none;cursor:pointer}.ln-li-actions a{background:#285e50;border-color:#3b806c}.ln-li-message{margin-top:14px}.ln-li-message span{display:block;color:#83a59b;font-size:.7rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}.ln-li-message p{color:#d4e0dc;line-height:1.6}.ln-li-message button{color:#9de3ce}.ln-li-notice,.ln-li-error{padding:10px 12px;border-radius:10px;font-size:.82rem}.ln-li-notice{background:#14352e;border:1px solid #316a5b;color:#a8e7d3}.ln-li-error{background:#3a2022;border:1px solid #744247;color:#ffc2c5}@media(max-width:760px){.ln-li-grid{grid-template-columns:1fr}.ln-li-card{padding:20px}.ln-li-page{padding:0 14px 34px}}
 `}</style>; }
