@@ -22,6 +22,7 @@ type Workspace = {
   updatedAt: string | null;
 };
 
+const LINKEDIN_STATUS_SYNC_KEY = "labnarrative:linkedin-status-updated";
 const STATUS_OPTIONS: Array<{ value: LinkedInStatus; label: string }> = [
   { value: "not_contacted", label: "Not connected" },
   { value: "message_sent", label: "Message sent" },
@@ -44,6 +45,18 @@ function followUpMessage(piName: string): string {
 }
 function linkedinSearchUrl(piName: string, institution: string): string {
   return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([piName, institution].filter(Boolean).join(" "))}`;
+}
+function broadcastStatus(workspace: Workspace, status: LinkedInStatus) {
+  try {
+    window.localStorage.setItem(LINKEDIN_STATUS_SYNC_KEY, JSON.stringify({
+      siteId: workspace.siteId,
+      prospectId: workspace.prospectId,
+      status,
+      at: Date.now(),
+    }));
+  } catch {
+    // Database state remains authoritative even if browser storage is unavailable.
+  }
 }
 
 export default function LinkedInWorkspacePage() {
@@ -83,8 +96,16 @@ export default function LinkedInWorkspacePage() {
     if (value && !/^https:\/\/(www\.)?linkedin\.com\//i.test(value)) { setError("Please paste a LinkedIn profile URL."); return; }
     setSaving(true); setError(""); setNotice("");
     const now = new Date().toISOString();
-    const { error: updateError } = await supabase.from("linkedin_outreach").update({ profile_url: value, updated_at: now }).eq("prospect_id", workspace.prospectId);
-    if (updateError) setError(updateError.message); else { setWorkspace({ ...workspace, profileUrl: value, updatedAt: now }); setNotice("LinkedIn profile saved."); }
+    const { data, error: updateError } = await supabase.from("linkedin_outreach").update({ profile_url: value, updated_at: now }).eq("prospect_id", workspace.prospectId).select("prospect_id");
+    if (updateError) {
+      setError(updateError.message);
+    } else if (!(data || []).length) {
+      const { error: insertError } = await supabase.from("linkedin_outreach").insert({ prospect_id: workspace.prospectId, status: workspace.status || "not_contacted", profile_url: value, updated_at: now });
+      if (insertError) setError(insertError.message);
+      else { setWorkspace({ ...workspace, profileUrl: value, updatedAt: now }); setNotice("LinkedIn profile saved."); }
+    } else {
+      setWorkspace({ ...workspace, profileUrl: value, updatedAt: now }); setNotice("LinkedIn profile saved.");
+    }
     setSaving(false);
   }
 
@@ -92,8 +113,20 @@ export default function LinkedInWorkspacePage() {
     if (!workspace || saving) return;
     setSaving(true); setError(""); setNotice("");
     const now = new Date().toISOString();
-    const { error: updateError } = await supabase.from("linkedin_outreach").update({ status, last_action_at: now, updated_at: now }).eq("prospect_id", workspace.prospectId);
-    if (updateError) setError(updateError.message); else { setWorkspace({ ...workspace, status, lastActionAt: now, updatedAt: now }); setNotice(`LinkedIn status updated to ${STATUS_OPTIONS.find(x => x.value === status)?.label}.`); }
+    const patch = { status, last_action_at: now, updated_at: now };
+    const { data, error: updateError } = await supabase.from("linkedin_outreach").update(patch).eq("prospect_id", workspace.prospectId).select("prospect_id");
+    let finalError = updateError;
+    if (!finalError && !(data || []).length) {
+      const { error: insertError } = await supabase.from("linkedin_outreach").insert({ prospect_id: workspace.prospectId, ...patch });
+      finalError = insertError;
+    }
+    if (finalError) {
+      setError(finalError.message);
+    } else {
+      setWorkspace({ ...workspace, status, lastActionAt: now, updatedAt: now });
+      broadcastStatus(workspace, status);
+      setNotice(`LinkedIn status updated to ${STATUS_OPTIONS.find(x => x.value === status)?.label}.`);
+    }
     setSaving(false);
   }
 
