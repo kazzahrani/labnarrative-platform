@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
@@ -34,7 +33,6 @@ function normalizedCurrent(value?: string | null) {
 }
 
 export default function WebsiteDesignAction({ siteId, slug, status, currentVariant, onChanged }: Props) {
-  const router = useRouter();
   const editable = status === "draft" || status === "concept";
   const current = normalizedCurrent(currentVariant);
   const currentIsReusable = DESIGNS.some((item) => item.value === current);
@@ -43,36 +41,9 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
   const [chosen, setChosen] = useState(defaultChoice);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [outreachStatus, setOutreachStatus] = useState<string | null>(null);
-  const [outreachWorking, setOutreachWorking] = useState(false);
   const option = useMemo(() => DESIGNS.find((item) => item.value === chosen) || DESIGNS[0], [chosen]);
 
-  useEffect(() => {
-    if (status !== "concept") return;
-    let mounted = true;
-    void supabase.from("sites").select("outreach_status").eq("id", siteId).maybeSingle().then(({ data }) => {
-      if (mounted) setOutreachStatus(String(data?.outreach_status || "not_contacted"));
-    });
-    return () => { mounted = false; };
-  }, [siteId, status]);
-
   if (!editable) return null;
-
-  async function openOutreach() {
-    if (outreachWorking) return;
-    setOutreachWorking(true);
-    setError("");
-    try {
-      const { data, error: rpcError } = await supabase.rpc("engine_v2_admin_prepare_site_outreach", { p_site_id: siteId });
-      if (rpcError) throw rpcError;
-      const runId = String((data as { runId?: string } | null)?.runId || "");
-      if (!runId) throw new Error("Outreach draft was not created.");
-      router.push(`/admin/outreach-v2/${runId}`);
-    } catch (outreachError) {
-      setError(outreachError instanceof Error ? outreachError.message : "Outreach could not be opened.");
-      setOutreachWorking(false);
-    }
-  }
 
   async function derivePortraitAccent() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -125,18 +96,6 @@ export default function WebsiteDesignAction({ siteId, slug, status, currentVaria
 
   return (
     <>
-      {status === "concept" && outreachStatus === "not_contacted" ? (
-        <a
-          href="#"
-          aria-disabled={outreachWorking}
-          onClick={(event) => {
-            event.preventDefault();
-            if (!outreachWorking) void openOutreach();
-          }}
-        >
-          {outreachWorking ? "Preparing…" : "Outreach"}
-        </a>
-      ) : null}
       <a
         href="#"
         onClick={(event) => {
