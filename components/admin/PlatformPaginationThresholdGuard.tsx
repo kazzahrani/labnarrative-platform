@@ -8,11 +8,11 @@ const NORMALIZED_PAGE_SIZE = "10";
 
 function totalFromControl(control: HTMLElement): number | null {
   const summary = control.querySelector<HTMLElement>(".platformListPaginationSummary")?.textContent
-    || control.querySelector<HTMLElement>("span")?.textContent
+    || control.textContent
     || "";
-  const match = summary.match(/\bof\s+(\d+)\b/i);
-  if (!match) return null;
-  const total = Number(match[1]);
+  const matches = Array.from(summary.matchAll(/\bof\s+(\d+)\b/gi));
+  if (!matches.length) return null;
+  const total = Number(matches[0][1]);
   return Number.isFinite(total) ? total : null;
 }
 
@@ -45,6 +45,7 @@ function restoreNearbyRows(control: HTMLElement) {
 
 function normalizeControl(control: HTMLElement, total: number) {
   if (total >= MIN_ITEMS_FOR_PAGINATION) {
+    control.hidden = false;
     control.style.removeProperty("display");
     delete control.dataset.platformThresholdHidden;
     return;
@@ -58,8 +59,15 @@ function normalizeControl(control: HTMLElement, total: number) {
   }
 
   restoreNearbyRows(control);
+  control.hidden = true;
   control.style.setProperty("display", "none", "important");
   control.dataset.platformThresholdHidden = "true";
+}
+
+function looksLikePaginator(node: HTMLElement) {
+  if (node.classList.contains("platformListPagination")) return true;
+  if (!node.querySelector("select") || !node.querySelector("button")) return false;
+  return /\bof\s+\d+\b/i.test(node.textContent || "");
 }
 
 export default function PlatformPaginationThresholdGuard() {
@@ -73,19 +81,16 @@ export default function PlatformPaginationThresholdGuard() {
 
     const apply = () => {
       if (disposed) return;
+
       document.querySelectorAll<HTMLElement>(".platformListPagination").forEach((control) => {
         const total = totalFromControl(control);
         if (total !== null) normalizeControl(control, total);
       });
 
-      // Native paginators use component-specific classes but still expose an "x–y of N" summary.
       document.querySelectorAll<HTMLElement>("main div").forEach((node) => {
-        if (node.classList.contains("platformListPagination")) return;
-        const text = (node.firstElementChild?.textContent || "").trim();
-        const match = text.match(/^\d+\s*[–-]\s*\d+\s+of\s+(\d+)$/i);
-        if (!match) return;
-        if (!node.querySelector("select") || !node.querySelector("button")) return;
-        normalizeControl(node, Number(match[1]));
+        if (!looksLikePaginator(node)) return;
+        const total = totalFromControl(node);
+        if (total !== null) normalizeControl(node, total);
       });
     };
 
@@ -98,18 +103,27 @@ export default function PlatformPaginationThresholdGuard() {
     };
 
     const observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["class", "style", "hidden"],
+    });
     document.addEventListener("change", schedule, true);
     window.addEventListener("focus", schedule);
+    const timer = window.setInterval(apply, 750);
     apply();
 
     return () => {
       disposed = true;
       observer.disconnect();
+      window.clearInterval(timer);
       if (frame) window.cancelAnimationFrame(frame);
       document.removeEventListener("change", schedule, true);
       window.removeEventListener("focus", schedule);
       document.querySelectorAll<HTMLElement>("[data-platform-threshold-hidden='true']").forEach((node) => {
+        node.hidden = false;
         node.style.removeProperty("display");
         delete node.dataset.platformThresholdHidden;
       });
