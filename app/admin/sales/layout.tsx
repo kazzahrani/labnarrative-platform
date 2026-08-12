@@ -2,8 +2,7 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import SalesActionCenter from "../../../components/SalesActionCenter";
-import SalesConversionInbox from "../../../components/SalesConversionInbox";
+import SalesHomeComposition from "../../../components/SalesHomeComposition";
 import SalesReplyAssistant from "../../../components/SalesReplyAssistant";
 import SalesProposalLauncher from "../../../components/SalesProposalLauncher";
 import SalesPaymentLauncher from "../../../components/SalesPaymentLauncher";
@@ -22,10 +21,7 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
     <>
       {children}
       {isSalesHome ? (
-        <>
-          <SalesConversionInbox />
-          <SalesActionCenter />
-        </>
+        <SalesHomeComposition />
       ) : prospectId ? (
         <>
           <SalesProposalLauncher prospectId={prospectId} />
