@@ -38,8 +38,14 @@ function conceptUrl(siteSlug: string): string {
 function connectionNote(piName: string, siteSlug: string, savedNote = ""): string {
   const url = conceptUrl(siteSlug);
   const saved = savedNote.trim();
-  if (saved) return saved.includes(url) ? saved : `${saved}\n\nConcept: ${url}`;
-  return `Dear Professor ${familyName(piName)}, I recently sent you a website concept I prepared for your laboratory. You can view it here: ${url}\n\nI’m also a molecular oncology researcher working in p53 and cell-cycle biology, so I wanted to connect here as well. Best wishes, Khaled`;
+  const text = saved
+    ? (saved.includes(url) ? saved : `${saved}\n\nConcept: ${url}`)
+    : `Dear Professor ${familyName(piName)}, I recently sent you a website concept I prepared for your laboratory. You can view it here: ${url}\n\nI’m also a molecular oncology researcher working in p53 and cell-cycle biology, so I wanted to connect here as well. Best wishes, Khaled`;
+  const urlIndex = text.indexOf(url);
+  if (urlIndex < 0) return text;
+  const before = text.slice(0, urlIndex).replace(/\s+$/, "");
+  const after = text.slice(urlIndex + url.length).replace(/^\s+/, "");
+  return after ? `${before}\n\n${url}\n\n${after}` : `${before}\n\n${url}`;
 }
 function followUpMessage(piName: string): string {
   return `Thank you for connecting, Professor ${familyName(piName)}. I hope you had a chance to see the laboratory website concept I sent. I’d be very interested to hear what you think of the direction.`;
