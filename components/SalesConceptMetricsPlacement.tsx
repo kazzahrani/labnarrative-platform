@@ -14,7 +14,9 @@ export default function SalesConceptMetricsPlacement() {
       const conceptHeading = Array.from(document.querySelectorAll<HTMLHeadingElement>("h2"))
         .find((heading) => heading.textContent?.trim() === "Concept activity");
       const conceptSection = conceptHeading?.closest<HTMLElement>("section");
-      const conceptHeader = conceptHeading?.closest<HTMLElement>("div");
+      const conceptHeader = conceptSection?.firstElementChild instanceof HTMLElement
+        ? conceptSection.firstElementChild
+        : null;
 
       if (!source || !conceptSection || !conceptHeader) return false;
 
