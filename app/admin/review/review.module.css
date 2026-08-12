@@ -121,6 +121,18 @@
   border-color: #67e0ba;
 }
 
+.hero .bulkSend {
+  border-color: #f0b45d;
+  background: #8a5a18;
+  color: #fff8ea;
+  box-shadow: 0 10px 24px rgba(138, 90, 24, 0.22);
+}
+
+.hero .bulkSend:hover:not(:disabled) {
+  border-color: #ffd083;
+  background: #a66c1c;
+}
+
 .secondary {
   border: 1px solid #3c5868;
   background: #142734;
