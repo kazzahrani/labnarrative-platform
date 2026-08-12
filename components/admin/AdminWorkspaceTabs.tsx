@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 
 const TABS = [
   { label: "Discovery", href: "/admin/discovery" },
@@ -23,13 +24,15 @@ function isClientJourneyPath(path: string) {
 }
 
 export default function AdminWorkspaceTabs() {
+  const pathname = usePathname();
   const [mount, setMount] = useState<HTMLElement | null>(null);
-  const [path, setPath] = useState("");
 
   useEffect(() => {
-    const currentPath = window.location.pathname;
-    if (!currentPath.startsWith("/admin")) return;
-    setPath(currentPath);
+    const currentPath = pathname || "";
+    if (!currentPath.startsWith("/admin")) {
+      setMount(null);
+      return;
+    }
 
     let disposed = false;
     let node: HTMLDivElement | null = null;
@@ -48,29 +51,32 @@ export default function AdminWorkspaceTabs() {
       if (!node) {
         node = document.createElement("div");
         node.dataset.adminWorkspaceTabs = "true";
-        setMount(node);
       }
 
       if (node.previousElementSibling !== anchor) {
         anchor.insertAdjacentElement("afterend", node);
       }
+
+      setMount(node);
     };
 
-    place();
-    const observer = new MutationObserver(place);
-    observer.observe(document.body, { childList: true, subtree: true });
-    const timer = window.setInterval(place, 800);
+    // Run after the route's new DOM has committed, then retry briefly if its header
+    // is still mounting. This avoids holding a stale anchor across client navigation.
+    const firstFrame = window.requestAnimationFrame(place);
+    const retry = window.setInterval(place, 250);
+    const stopRetry = window.setTimeout(() => window.clearInterval(retry), 3000);
 
     return () => {
       disposed = true;
-      observer.disconnect();
-      window.clearInterval(timer);
+      window.cancelAnimationFrame(firstFrame);
+      window.clearInterval(retry);
+      window.clearTimeout(stopRetry);
       node?.remove();
       setMount(null);
     };
-  }, []);
+  }, [pathname]);
 
-  if (!mount || !path) return null;
+  if (!mount || !pathname) return null;
 
   return createPortal(
     <div
@@ -95,7 +101,7 @@ export default function AdminWorkspaceTabs() {
         }}
       >
         {TABS.map((tab) => {
-          const active = isActivePath(path, tab.href);
+          const active = isActivePath(pathname, tab.href);
           return (
             <a
               key={tab.href}
