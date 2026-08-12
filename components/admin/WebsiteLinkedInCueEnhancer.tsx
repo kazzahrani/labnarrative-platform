@@ -35,9 +35,9 @@ function styleLinkedInAction(anchor: HTMLAnchorElement, ready: boolean) {
 }
 
 function ensureArrow(parent: HTMLElement, primary: HTMLAnchorElement, siteId: string) {
-  let arrow = parent.querySelector<HTMLElement>(`[data-linkedin-arrow-for="${siteId}"]`);
+  let arrow: HTMLElement | null = parent.querySelector<HTMLElement>(`[data-linkedin-arrow-for="${siteId}"]`);
   if (!arrow) {
-    arrow = Array.from(parent.children).find((node) => node instanceof HTMLElement && node.textContent?.trim() === "›") as HTMLElement | undefined;
+    arrow = (Array.from(parent.children).find((node) => node instanceof HTMLElement && node.textContent?.trim() === "›") as HTMLElement | undefined) ?? null;
   }
   if (!arrow) {
     arrow = document.createElement("span");
