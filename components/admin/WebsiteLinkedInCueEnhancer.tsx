@@ -7,6 +7,51 @@ type ProspectRow = { id: string; site_id: string | null };
 type LinkedInRow = { prospect_id: string; status: "not_contacted" | "message_sent" | "not_found" };
 type InitialRow = { prospect_id: string; site_id: string | null; status: string; sent_at: string | null };
 
+function styleLinkedInAction(anchor: HTMLAnchorElement, ready: boolean) {
+  anchor.classList.add("ln-linkedin-monitor-action");
+  anchor.classList.toggle("ln-linkedin-monitor-ready", ready);
+  anchor.style.setProperty("display", "inline-flex", "important");
+  anchor.style.setProperty("align-items", "center", "important");
+  anchor.style.setProperty("width", "fit-content", "important");
+  anchor.style.setProperty("min-height", "30px", "important");
+  anchor.style.setProperty("padding", "6px 10px", "important");
+  anchor.style.setProperty("border-radius", "8px", "important");
+  anchor.style.setProperty("font-size", "12px", "important");
+  anchor.style.setProperty("font-weight", "800", "important");
+  anchor.style.setProperty("line-height", "1.2", "important");
+  anchor.style.setProperty("text-decoration", "none", "important");
+  anchor.style.setProperty("white-space", "nowrap", "important");
+  if (ready) {
+    anchor.style.setProperty("background", "#16a05f", "important");
+    anchor.style.setProperty("border", "1px solid #4ade80", "important");
+    anchor.style.setProperty("color", "#ffffff", "important");
+    anchor.style.setProperty("box-shadow", "0 0 0 1px rgba(74,222,128,.35), 0 0 16px rgba(22,160,95,.5)", "important");
+  } else {
+    anchor.style.setProperty("background", "transparent", "important");
+    anchor.style.setProperty("border", "1px solid #34505c", "important");
+    anchor.style.setProperty("color", "#c7d3d0", "important");
+    anchor.style.setProperty("box-shadow", "none", "important");
+  }
+}
+
+function ensureArrow(parent: HTMLElement, primary: HTMLAnchorElement, siteId: string) {
+  let arrow = parent.querySelector<HTMLElement>(`[data-linkedin-arrow-for="${siteId}"]`);
+  if (!arrow) {
+    arrow = Array.from(parent.children).find((node) => node instanceof HTMLElement && node.textContent?.trim() === "›") as HTMLElement | undefined;
+  }
+  if (!arrow) {
+    arrow = document.createElement("span");
+    arrow.textContent = "›";
+    primary.insertAdjacentElement("afterend", arrow);
+  }
+  arrow.dataset.linkedinArrowFor = siteId;
+  arrow.style.setProperty("color", "#6f8781", "important");
+  arrow.style.setProperty("font-size", ".78rem", "important");
+  arrow.style.setProperty("font-weight", "900", "important");
+  arrow.style.setProperty("line-height", "1", "important");
+  return arrow;
+}
+
 export default function WebsiteLinkedInCueEnhancer() {
   useEffect(() => {
     if (typeof window === "undefined" || !window.location.pathname.startsWith("/admin/sites")) return;
@@ -41,34 +86,46 @@ export default function WebsiteLinkedInCueEnhancer() {
 
         const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="/admin/linkedin/"]'));
         for (const anchor of anchors) {
-          if (anchor.dataset.linkedinCue === "followup") continue;
-          const match = anchor.getAttribute("href")?.match(/^\/admin\/linkedin\/([0-9a-f-]{36})(?:\?|$)/i);
+          const href = anchor.getAttribute("href") || "";
+          if (href.includes("mode=followup") || anchor.dataset.linkedinCue === "followup") continue;
+          const match = href.match(/^\/admin\/linkedin\/([0-9a-f-]{36})(?:\?|$)/i);
           if (!match) continue;
+
           const siteId = match[1];
           const prospectId = prospectBySite.get(siteId) || "";
           const status = prospectId ? linkedinByProspect.get(prospectId) : undefined;
           const emailSent = sentBySite.has(siteId) || (prospectId ? sentByProspect.has(prospectId) : false);
           const primaryReady = emailSent && (!status || status === "not_contacted");
 
-          anchor.classList.add("ln-linkedin-monitor-action");
-          anchor.classList.toggle("ln-linkedin-monitor-ready", primaryReady);
           anchor.dataset.linkedinCue = "primary";
+          styleLinkedInAction(anchor, primaryReady);
 
           const parent = anchor.parentElement;
           if (!parent) continue;
-          const existing = parent.querySelector<HTMLAnchorElement>(`a[data-linkedin-followup-for="${siteId}"]`);
+
+          const followups = Array.from(parent.querySelectorAll<HTMLAnchorElement>(`a[href="/admin/linkedin/${siteId}?mode=followup"], a[data-linkedin-followup-for="${siteId}"]`));
+          const arrows = Array.from(parent.querySelectorAll<HTMLElement>(`[data-linkedin-arrow-for="${siteId}"]`));
+          for (const child of Array.from(parent.children)) {
+            if (child instanceof HTMLElement && child.textContent?.trim() === "›" && !arrows.includes(child)) arrows.push(child);
+          }
+
           if (status === "message_sent") {
-            if (!existing) {
-              const followup = document.createElement("a");
+            let followup = followups[0];
+            for (const duplicate of followups.slice(1)) duplicate.remove();
+            if (!followup) {
+              followup = document.createElement("a");
               followup.href = `/admin/linkedin/${siteId}?mode=followup`;
-              followup.textContent = "LinkedIn follow-up";
-              followup.dataset.linkedinCue = "followup";
-              followup.dataset.linkedinFollowupFor = siteId;
-              followup.className = "ln-linkedin-monitor-action ln-linkedin-followup-ready";
-              anchor.insertAdjacentElement("afterend", followup);
+              followup.textContent = "LinkedIn follow up";
+              parent.appendChild(followup);
             }
-          } else if (existing) {
-            existing.remove();
+            followup.dataset.linkedinCue = "followup";
+            followup.dataset.linkedinFollowupFor = siteId;
+            styleLinkedInAction(followup, false);
+            const arrow = ensureArrow(parent, anchor, siteId);
+            if (followup.previousElementSibling !== arrow) arrow.insertAdjacentElement("afterend", followup);
+          } else {
+            for (const followup of followups) followup.remove();
+            for (const arrow of arrows) arrow.remove();
           }
         }
       } finally {
@@ -103,11 +160,11 @@ export default function WebsiteLinkedInCueEnhancer() {
       text-decoration: none !important;
       box-shadow: none !important;
     }
-    a.ln-linkedin-monitor-ready,
-    a.ln-linkedin-followup-ready {
-      border-color: rgba(63,143,113,.72) !important;
-      background: #2f6f5e !important;
-      color: #f4fbf8 !important;
+    a.ln-linkedin-monitor-ready {
+      border-color: #4ade80 !important;
+      background: #16a05f !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 0 1px rgba(74,222,128,.35), 0 0 16px rgba(22,160,95,.5) !important;
     }
   `}</style>;
 }
