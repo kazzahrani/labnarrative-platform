@@ -86,6 +86,7 @@ export default function WebsiteLinkedInCueEnhancer() {
 
         const anchors = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="/admin/linkedin/"]'));
         for (const anchor of anchors) {
+          if (anchor.dataset.linkedinNative === "v4") continue;
           const href = anchor.getAttribute("href") || "";
           if (href.includes("mode=followup") || anchor.dataset.linkedinCue === "followup") continue;
           const match = href.match(/^\/admin\/linkedin\/([0-9a-f-]{36})(?:\?|$)/i);
