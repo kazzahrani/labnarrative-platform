@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 import styles from "./sales-conversion-inbox.module.css";
@@ -101,11 +100,11 @@ export default function SalesConversionInbox() {
           {active.length === 0 ? <p className={styles.empty}>No human replies or manually tracked opportunities yet. When a PI replies, they will appear here automatically.</p> : (
             <div className={styles.rows}>
               {active.slice(0, 20).map((row) => (
-                <Link className={styles.row} href={`/admin/sales/${row.prospect_id}`} key={row.prospect_id}>
+                <a className={styles.row} href={`/admin/sales/${row.prospect_id}`} key={row.prospect_id}>
                   <div className={styles.identity}><strong>{row.pi_name}</strong><small>{row.institution}</small><small>{row.next_action || `${Number(row.visits || 0)} visits · ${Number(row.page_views || 0)} page views`}</small></div>
                   <div className={styles.meta}><span className={styles.hot}>{label(row.stage)}</span>{row.human_replies ? <span>{row.human_replies} human repl{row.human_replies === 1 ? "y" : "ies"}</span> : null}<small>{row.next_action_due_at ? `Due ${formatDate(row.next_action_due_at)}` : `Last ${formatDate(row.last_activity_at)}`}</small></div>
                   <b>Open →</b>
-                </Link>
+                </a>
               ))}
             </div>
           )}
