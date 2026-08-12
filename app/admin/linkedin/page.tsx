@@ -32,6 +32,8 @@ type Workspace = {
   updatedAt: string | null;
 };
 
+const LINKEDIN_STATUS_SYNC_KEY = "labnarrative:linkedin-status-updated";
+
 function familyName(piName: string): string {
   const cleaned = piName.replace(/\b(Professor|Prof\.?|Doctor|Dr\.?|Ph\.?D\.?|DPhil|M\.?D\.?|MD|FRS|FMedSci|MBA|MSc|MS)\b/gi, " ").replace(/[,.()]/g, " ").replace(/\s+/g, " ").trim();
   return cleaned.split(" ").filter(Boolean).at(-1) || "Professor";
@@ -48,6 +50,18 @@ function linkedinSearchUrl(piName: string, institution: string): string {
 }
 function isOutside(metadata: Record<string, any> | null): boolean {
   return String(metadata?.conceptCategory || "").toLowerCase() === "outside_concept";
+}
+function broadcastStatus(workspace: Workspace, status: LinkedInStatus) {
+  try {
+    window.localStorage.setItem(LINKEDIN_STATUS_SYNC_KEY, JSON.stringify({
+      siteId: workspace.siteId,
+      prospectId: workspace.prospectId,
+      status,
+      at: Date.now(),
+    }));
+  } catch {
+    // Database state remains authoritative even if browser storage is unavailable.
+  }
 }
 
 export default function LinkedInQueuePage() {
@@ -145,12 +159,14 @@ export default function LinkedInQueuePage() {
     setActing(true); setError(""); setNotice("");
     try {
       if (copyFirst) await navigator.clipboard.writeText(preparedMessage);
+      const completedWorkspace = workspace;
       await persistLinkedIn({
         status,
         last_action_at: new Date().toISOString(),
         ...(status === "message_sent" ? { connection_note: preparedMessage } : {}),
       });
-      const remaining = queue.filter(item => item.prospectId !== workspace.prospectId);
+      broadcastStatus(completedWorkspace, status);
+      const remaining = queue.filter(item => item.prospectId !== completedWorkspace.prospectId);
       setQueue(remaining);
       if (!remaining.length) {
         setWorkspace(null);
