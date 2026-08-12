@@ -56,6 +56,11 @@ type OutreachMessage = {
   created_at: string;
 };
 
+type LinkedInOutreach = {
+  prospect_id: string;
+  status: "not_contacted" | "message_sent" | "not_found" | string;
+};
+
 type Dashboard = { counts?: Record<string, number>; runs?: V3Run[] };
 type Filter = "all" | "v3" | "live" | "private" | "legacy" | "outside";
 type TimelineItem = { key: "E1" | "F1" | "F2"; state: string; date: string | null; tone: "sent" | "future" | "stopped" | "idle" };
@@ -197,11 +202,16 @@ function outreachStarted(site: SiteRow, messages: OutreachMessage[]): boolean {
   return messages.some((message)=>Boolean(message.sent_at)) || ["email_1_sent","email_2_sent","email_3_sent","replied","interested"].includes(String(site.outreach_status||"").toLowerCase());
 }
 
+function initialEmailSent(messages: OutreachMessage[]): boolean {
+  return Boolean(bestMessage(messages,"initial")?.sent_at);
+}
+
 export default function SiteMonitorV3Page() {
   const [sites, setSites] = useState<SiteRow[]>([]);
   const [prospects, setProspects] = useState<ProspectRow[]>([]);
   const [runs, setRuns] = useState<V3Run[]>([]);
   const [outreachMessages, setOutreachMessages] = useState<OutreachMessage[]>([]);
+  const [linkedinOutreach, setLinkedinOutreach] = useState<LinkedInOutreach[]>([]);
   const [loading, setLoading] = useState(true);
   const [preparingOutreach, setPreparingOutreach] = useState<string | null>(null);
   const [authState, setAuthState] = useState<"loading"|"signed_out"|"forbidden"|"ready">("loading");
@@ -221,18 +231,20 @@ export default function SiteMonitorV3Page() {
     const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle();
     if (role?.role !== "admin") { setAuthState("forbidden"); setLoading(false); return; }
     setAuthState("ready");
-    const [siteResult, prospectResult, dashboardResult, outreachResult] = await Promise.all([
+    const [siteResult, prospectResult, dashboardResult, outreachResult, linkedinResult] = await Promise.all([
       supabase.from("sites").select("id,slug,status,content,created_at,updated_at,domain_status,domain_url,outreach_status,design_key,design_settings,design_version").order("created_at", { ascending: false }),
       supabase.from("prospects").select("id,site_id,slug,pi_name,institution,status,metadata").not("site_id", "is", null),
       supabase.rpc("engine_v3_admin_dashboard"),
       supabase.from("outreach_messages").select("id,prospect_id,site_id,message_kind,status,sent_at,follow_up_at,created_at").eq("is_test",false).in("message_kind",["initial","followup_1","followup_2"]),
+      supabase.from("linkedin_outreach").select("prospect_id,status"),
     ]);
-    const error = siteResult.error || prospectResult.error || dashboardResult.error || outreachResult.error;
+    const error = siteResult.error || prospectResult.error || dashboardResult.error || outreachResult.error || linkedinResult.error;
     if (error) setNotice(error.message);
     setSites((siteResult.data || []) as SiteRow[]);
     setProspects((prospectResult.data || []) as ProspectRow[]);
     setRuns((((dashboardResult.data || {}) as Dashboard).runs || []) as V3Run[]);
     setOutreachMessages((outreachResult.data || []) as OutreachMessage[]);
+    setLinkedinOutreach((linkedinResult.data || []) as LinkedInOutreach[]);
     setLoading(false);
   }, []);
 
@@ -250,6 +262,7 @@ export default function SiteMonitorV3Page() {
   }, [runs]);
 
   const prospectBySite = useMemo(() => new Map(prospects.filter((p)=>p.site_id).map((p)=>[p.site_id as string,p])), [prospects]);
+  const linkedinByProspect = useMemo(() => new Map(linkedinOutreach.map((row)=>[row.prospect_id,row])), [linkedinOutreach]);
 
   const outreachBySite = useMemo(() => {
     const map=new Map<string,OutreachMessage[]>();
@@ -275,8 +288,9 @@ export default function SiteMonitorV3Page() {
   const enriched = useMemo(() => sites.map((site) => {
     const prospect=prospectBySite.get(site.id);
     const messages=outreachBySite.get(site.id) || (prospect ? outreachByProspect.get(prospect.id) : undefined) || [];
-    return { site, run:runBySite.get(site.id), prospect, messages };
-  }), [sites,runBySite,prospectBySite,outreachBySite,outreachByProspect]);
+    const linkedin=prospect ? linkedinByProspect.get(prospect.id) : undefined;
+    return { site, run:runBySite.get(site.id), prospect, messages, linkedin };
+  }), [sites,runBySite,prospectBySite,outreachBySite,outreachByProspect,linkedinByProspect]);
 
   const metrics = useMemo(() => ({
     total: enriched.filter((x)=>x.site.status!=="archived").length,
@@ -287,7 +301,7 @@ export default function SiteMonitorV3Page() {
 
   const visible = useMemo(() => {
     const q=search.trim().toLowerCase();
-    const result=enriched.filter(({site,run,prospect,messages})=>{
+    const result=enriched.filter(({site,run,prospect,messages,linkedin})=>{
       if (site.status==="archived"&&filter!=="legacy") return false;
       if (filter==="v3"&&!run) return false;
       if (filter==="live"&&!isPublic(site)) return false;
@@ -297,7 +311,7 @@ export default function SiteMonitorV3Page() {
       if (!q) return true;
       const timeline=outreachTimeline(site,prospect,messages).map((item)=>`${item.key} ${item.state} ${item.date||""}`).join(" ");
       const category=isOutsideConcept(prospect)?"Outside concept":"";
-      return [piName(site,prospect,run),institution(site,prospect),site.slug,visibilityLabel(site),designLabel(site),site.outreach_status||"",prospect?.status||"",category,timeline].join(" ").toLowerCase().includes(q);
+      return [piName(site,prospect,run),institution(site,prospect),site.slug,visibilityLabel(site),designLabel(site),site.outreach_status||"",prospect?.status||"",linkedin?.status||"",category,timeline].join(" ").toLowerCase().includes(q);
     });
     return result.sort((a,b)=>sort==="name"?piName(a.site,a.prospect,a.run).localeCompare(piName(b.site,b.prospect,b.run)):Date.parse(b.site.created_at)-Date.parse(a.site.created_at));
   }, [enriched,search,filter,sort]);
@@ -366,18 +380,19 @@ export default function SiteMonitorV3Page() {
 
       <div className={styles.tableWrap}><table className={styles.table}>
         <thead><tr><th>Website</th><th>Design</th><th>Site visibility</th><th>Outreach timeline</th><th>Actions</th></tr></thead>
-        <tbody>{pagedVisible.map(({site,run,prospect,messages})=>{
+        <tbody>{pagedVisible.map(({site,run,prospect,messages,linkedin})=>{
           const pub=isPublic(site); const visibility=visibilityLabel(site); const timeline=outreachTimeline(site,prospect,messages); const started=outreachStarted(site,messages); const outside=isOutsideConcept(prospect); const canStartOutreach=pub&&!started&&!outside;
+          const linkedinStatus=String(linkedin?.status||"not_contacted").toLowerCase(); const linkedinReady=initialEmailSent(messages)&&linkedinStatus==="not_contacted"&&!outside; const showLinkedin=Boolean(prospect)&&!outside;
           return <tr id={`site-${site.id}`} key={site.id}>
             <td className={styles.siteCell}><strong>{piName(site,prospect,run)}</strong>{outside?<small className={`${styles.pill} ${styles.pillWarn}`}>Outside concept</small>:null}<span>{institution(site,prospect)}</span><span>{site.slug}.labnarrative.com</span></td>
             <td><span className={styles.pill}>{designLabel(site)}</span><span className={styles.muted}>{site.design_key||"design"}{site.design_version?` · v${site.design_version}`:""}</span></td>
             <td><span className={pillClass(visibility)}>{visibility}</span><span className={styles.muted}>site {site.status} · {domainLabel(site)}</span></td>
             <td><div className={styles.outreachTimeline}>{timeline.map((item)=><div className={`${styles.outreachStage} ${styles[`outreach_${item.tone}`]}`} key={item.key}><strong>{item.key}</strong><div><span>{item.state}</span>{item.date?<time>{item.date}</time>:null}</div></div>)}</div><span className={styles.outreachRaw}>{prospect?.status||site.outreach_status||"not_contacted"}</span></td>
-            <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>Edit</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{canStartOutreach?<button type="button" onClick={()=>void openOutreach(site,run)} disabled={preparingOutreach===site.id}>{preparingOutreach===site.id?"Preparing…":"Outreach"}</button>:null}</div></td>
+            <td><div className={styles.actions}><Link href={`/admin/sites/${site.slug}/edit`}>Edit</Link>{pub?<a href={publicUrl(site,run)} target="_blank" rel="noreferrer">Open site</a>:null}<Link href={`/admin/preview/${site.slug}`}>Preview</Link>{run?.state==="final_review"?<Link href="/admin/review">Final Review</Link>:null}{canStartOutreach?<button type="button" onClick={()=>void openOutreach(site,run)} disabled={preparingOutreach===site.id}>{preparingOutreach===site.id?"Preparing…":"Outreach"}</button>:null}{showLinkedin?<span className={styles.linkedinProgress}><Link className={`${styles.linkedinStep} ${linkedinReady?styles.linkedinReady:""}`} href={`/admin/linkedin/${site.id}`}>LinkedIn</Link><span className={styles.linkedinArrow}>›</span><Link className={styles.linkedinStep} href={`/admin/linkedin/${site.id}?mode=followup`}>LinkedIn follow up</Link></span>:null}</div></td>
           </tr>;
         })}</tbody>
       </table>{!visible.length?<div className={styles.empty}>No websites match this view.</div>:null}</div>
-      <p className={styles.footerNote}>Outreach dates use Riyadh time. E1 and completed follow-ups show their actual sent dates. F1 uses the stored next-send date. F2 uses the stored date after F1 is sent; before then it is explicitly marked Expected based on the current 5-day then 8-day sequence. Outside concept marks historical leads whose contact happened outside the current platform sequence, so E1/F1/F2 are intentionally not reconstructed. Reply/interested/paused sequences show remaining stages as Stopped. The Outreach action appears on every live site until E1 is actually sent. Edit opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
+      <p className={styles.footerNote}>Outreach dates use Riyadh time. E1 and completed follow-ups show their actual sent dates. F1 uses the stored next-send date. F2 uses the stored date after F1 is sent; before then it is explicitly marked Expected based on the current 5-day then 8-day sequence. Outside concept marks historical leads whose contact happened outside the current platform sequence, so E1/F1/F2 are intentionally not reconstructed. Reply/interested/paused sequences show remaining stages as Stopped. The Outreach action appears on every live site until E1 is actually sent. LinkedIn turns green after E1 is sent while its LinkedIn status is Not connected; Message sent or Not found returns it to the neutral state. Edit opens a private draft revision; the public website changes only after validation and Publish Changes.</p>
     </section>
   </main>;
 }
