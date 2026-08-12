@@ -10,7 +10,12 @@ export default function SalesHomeComposition() {
   const [actionMount, setActionMount] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const main = document.querySelector<HTMLElement>("main");
+    const mains = Array.from(document.querySelectorAll<HTMLElement>("main"));
+    const main = mains.find((candidate) =>
+      Array.from(candidate.querySelectorAll<HTMLHeadingElement>("h2"))
+        .some((heading) => heading.textContent?.trim() === "Concept activity"),
+    );
+
     const shell = main?.firstElementChild instanceof HTMLElement ? main.firstElementChild : null;
     const topbar = shell?.querySelector<HTMLElement>(":scope > header");
     const conceptHeading = Array.from(shell?.querySelectorAll<HTMLHeadingElement>("h2") ?? [])
@@ -18,6 +23,9 @@ export default function SalesHomeComposition() {
     const conceptSection = conceptHeading?.closest("section");
 
     if (!shell || !topbar || !conceptSection) return;
+
+    const staleSlots = shell.querySelectorAll<HTMLElement>("[data-sales-home-slot]");
+    staleSlots.forEach((slot) => slot.remove());
 
     const conversion = document.createElement("div");
     conversion.dataset.salesHomeSlot = "conversion";
