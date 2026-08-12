@@ -16,11 +16,12 @@ const steps = [
 ] as const;
 
 const titles: Record<string, string> = {
-  proposal: "Proposal",
+  lead: "Sales Conversion Workspace",
+  proposal: "Proposal Builder",
   onboarding: "Client Onboarding",
   "final-review": "Final Review",
-  launch: "Launch",
-  care: "Care",
+  launch: "Launch Workspace",
+  care: "Care Workspace",
 };
 
 export default function SalesLeadLayout({ children }: { children: ReactNode }) {
@@ -37,16 +38,13 @@ export default function SalesLeadLayout({ children }: { children: ReactNode }) {
     return steps.find((step) => step.suffix && pathname.startsWith(`${base}${step.suffix}`))?.key || "lead";
   }, [base, pathname]);
 
-  const useSharedHeader = section !== "lead";
-
   useEffect(() => {
-    if (!useSharedHeader) return;
     let cancelled = false;
     void supabase.auth.getSession().then(({ data }) => {
       if (!cancelled) setAdminEmail(data.session?.user.email || "");
     });
     return () => { cancelled = true; };
-  }, [useSharedHeader]);
+  }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -54,7 +52,6 @@ export default function SalesLeadLayout({ children }: { children: ReactNode }) {
 
     const place = () => {
       if (disposed) return;
-
       const workspaceTabs = document.querySelector<HTMLElement>("[data-admin-workspace-tabs='true']");
       if (!workspaceTabs?.parentElement) return;
 
@@ -90,188 +87,191 @@ export default function SalesLeadLayout({ children }: { children: ReactNode }) {
   }
 
   const journey = (
-    <nav
-      aria-label="Client journey"
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 80,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        overflowX: "auto",
-        padding: "10px 18px",
-        borderBottom: "1px solid rgba(86, 147, 176, 0.22)",
-        background: "rgba(10, 27, 39, 0.96)",
-        backdropFilter: "blur(12px)",
-        boxShadow: "0 10px 26px rgba(3, 12, 20, 0.16)",
-      }}
-    >
-      <span
+    <div style={{ width: "100%", borderBottom: "1px solid rgba(86,147,176,.22)", background: "#0b1d28" }}>
+      <nav
+        aria-label="Client journey"
         style={{
-          marginRight: 6,
-          whiteSpace: "nowrap",
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "#8fa6b2",
+          width: "min(1500px, calc(100% - 48px))",
+          margin: "0 auto",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          overflowX: "auto",
+          padding: "10px 0",
+          scrollbarWidth: "none",
         }}
       >
-        Client journey
-      </span>
-      {steps.map((step) => {
-        const href = `${base}${step.suffix}`;
-        const active = step.suffix === "" ? pathname === base : pathname.startsWith(href);
-        return (
-          <Link
-            key={step.key}
-            href={href}
-            style={{
-              whiteSpace: "nowrap",
-              borderRadius: 999,
-              padding: "7px 12px",
-              fontSize: 13,
-              fontWeight: 650,
-              textDecoration: "none",
-              border: active ? "1px solid #4f9b86" : "1px solid #2d4a5a",
-              background: active ? "#2f715f" : "#122a37",
-              color: active ? "#ffffff" : "#c4d2d9",
-              boxShadow: active ? "inset 0 0 0 1px rgba(125, 226, 179, 0.08)" : "none",
-            }}
-          >
-            {step.label}
-          </Link>
-        );
-      })}
-    </nav>
+        <span style={{ marginRight: 8, whiteSpace: "nowrap", fontSize: 12, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: "#8fa6b2" }}>
+          Client journey
+        </span>
+        {steps.map((step) => {
+          const href = `${base}${step.suffix}`;
+          const active = step.suffix === "" ? pathname === base || pathname === `${base}/` : pathname.startsWith(href);
+          return (
+            <Link
+              key={step.key}
+              href={href}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 36,
+                padding: "0 14px",
+                whiteSpace: "nowrap",
+                borderRadius: 999,
+                fontSize: 13,
+                fontWeight: active ? 800 : 700,
+                textDecoration: "none",
+                border: active ? "1px solid rgba(139,211,176,.42)" : "1px solid #2d4a5a",
+                background: active ? "#2f715f" : "#122a37",
+                color: active ? "#fff" : "#c4d2d9",
+              }}
+            >
+              {step.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 
   return (
     <>
-      {useSharedHeader ? (
-        <header
-          data-client-journey-header="true"
-          style={{
-            width: "100%",
-            height: 84,
-            minHeight: 84,
-            boxSizing: "border-box",
-            padding: "0 30px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 24,
-            borderBottom: "1px solid rgba(148,163,184,.18)",
-            background: "#14232d",
-            color: "#eef4f1",
-            fontFamily: "Arial, Helvetica, sans-serif",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 28, minWidth: 0 }}>
-            <Link href="/admin/sales" style={{ color: "inherit", textDecoration: "none", fontSize: "1.05rem", fontWeight: 800, whiteSpace: "nowrap" }}>
-              LabNarrative
-            </Link>
-            <span style={{ color: "rgba(238,244,241,.68)", fontSize: ".98rem", fontWeight: 600, whiteSpace: "nowrap" }}>
-              {titles[section] || "Sales"}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 24, marginLeft: "auto", flexShrink: 0 }}>
-            {adminEmail ? <span style={{ color: "rgba(238,244,241,.78)", fontSize: ".86rem", fontWeight: 650, whiteSpace: "nowrap" }}>{adminEmail}</span> : null}
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              disabled={signingOut}
-              style={{
-                height: 40,
-                minHeight: 40,
-                padding: "0 16px",
-                border: "1px solid rgba(148,163,184,.28)",
-                borderRadius: 9,
-                background: "#182630",
-                color: "#d9e0e6",
-                font: "inherit",
-                fontSize: ".78rem",
-                fontWeight: 750,
-                cursor: signingOut ? "default" : "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {signingOut ? "Signing out…" : "Sign out"}
-            </button>
-          </div>
-        </header>
-      ) : null}
+      <header
+        data-client-journey-header="true"
+        style={{
+          width: "100%",
+          height: 84,
+          minHeight: 84,
+          boxSizing: "border-box",
+          padding: "0 30px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          borderBottom: "1px solid rgba(148,163,184,.18)",
+          background: "#14232d",
+          color: "#eef4f1",
+          fontFamily: "Arial, Helvetica, sans-serif",
+          position: "relative",
+          zIndex: 100,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 28, minWidth: 0 }}>
+          <Link href="/admin/sales" style={{ color: "inherit", textDecoration: "none", fontSize: "1.05rem", fontWeight: 800, whiteSpace: "nowrap" }}>
+            LabNarrative
+          </Link>
+          <span style={{ color: "rgba(238,244,241,.68)", fontSize: ".98rem", fontWeight: 600, whiteSpace: "nowrap" }}>
+            {titles[section] || "Sales"}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 24, marginLeft: "auto", flexShrink: 0 }}>
+          {adminEmail ? <span style={{ color: "rgba(238,244,241,.78)", fontSize: ".86rem", fontWeight: 650, whiteSpace: "nowrap" }}>{adminEmail}</span> : null}
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            disabled={signingOut}
+            style={{
+              height: 40,
+              minHeight: 40,
+              padding: "0 16px",
+              border: "1px solid rgba(148,163,184,.28)",
+              borderRadius: 9,
+              background: "#182630",
+              color: "#d9e0e6",
+              font: "inherit",
+              fontSize: ".78rem",
+              fontWeight: 750,
+              cursor: signingOut ? "default" : "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {signingOut ? "Signing out…" : "Sign out"}
+          </button>
+        </div>
+      </header>
 
-      <div data-client-journey-section={section}>
-        {children}
-      </div>
+      <div data-client-journey-section={section}>{children}</div>
 
-      {useSharedHeader ? (
-        <style>{`
-          [data-client-journey-section]:not([data-client-journey-section="lead"]) main {
-            padding-top: 24px !important;
-          }
+      <style>{`
+        [data-client-journey-section] main {
+          padding-top: 24px !important;
+        }
 
-          [data-client-journey-section]:not([data-client-journey-section="lead"]) main > div:first-child {
-            width: min(1440px, calc(100% - 48px)) !important;
-            max-width: 1440px !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-          }
+        [data-client-journey-section="lead"] main > header:first-child {
+          display: none !important;
+        }
 
-          [data-client-journey-section]:not([data-client-journey-section="lead"]) a[href="${base}"] {
-            display: none !important;
-          }
+        [data-client-journey-section="lead"] main > div:first-of-type,
+        [data-client-journey-section="onboarding"] main > div:first-of-type,
+        [data-client-journey-section="final-review"] main > div:first-of-type,
+        [data-client-journey-section="launch"] main > div:first-of-type,
+        [data-client-journey-section="care"] main > div:first-of-type {
+          width: min(1440px, calc(100% - 48px)) !important;
+          max-width: 1440px !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
 
+        [data-client-journey-section] a[href="${base}"] {
+          display: none !important;
+        }
+
+        [data-client-journey-section="proposal"] main {
+          padding-top: 24px !important;
+        }
+
+        [data-client-journey-section="proposal"] main > header:first-child {
+          position: static !important;
+          z-index: auto !important;
+          min-height: 0 !important;
+          height: auto !important;
+          padding: 12px 18px !important;
+          margin: 0 auto 16px !important;
+          width: min(1440px, calc(100% - 48px)) !important;
+          box-sizing: border-box !important;
+          justify-content: flex-end !important;
+          border: 1px solid rgba(92,139,164,.22) !important;
+          border-radius: 14px !important;
+          background: #10232f !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+        }
+
+        [data-client-journey-section="proposal"] main > header:first-child > div:first-child {
+          display: none !important;
+        }
+
+        [data-client-journey-section="proposal"] main > header:first-child > div:last-child {
+          margin-left: auto !important;
+        }
+
+        [data-client-journey-section="proposal"] main > div:first-of-type,
+        [data-client-journey-section="proposal"] main > section,
+        [data-client-journey-section="proposal"] main > p {
+          max-width: 1320px !important;
+        }
+
+        [data-client-journey-section="proposal"] main > div:first-of-type {
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+
+        @media (max-width: 760px) {
+          [data-client-journey-header="true"] { padding: 0 16px !important; }
+          [data-client-journey-header="true"] > div:first-child { gap: 14px !important; }
+          [data-client-journey-header="true"] > div:last-child { gap: 10px !important; }
+          [data-client-journey-header="true"] > div:last-child > span { display: none !important; }
+          [data-client-journey-section="lead"] main > div:first-of-type,
+          [data-client-journey-section="onboarding"] main > div:first-of-type,
+          [data-client-journey-section="final-review"] main > div:first-of-type,
+          [data-client-journey-section="launch"] main > div:first-of-type,
+          [data-client-journey-section="care"] main > div:first-of-type,
           [data-client-journey-section="proposal"] main > header:first-child {
-            min-height: 0 !important;
-            height: auto !important;
-            padding: 12px 24px !important;
-            margin: 0 auto 16px !important;
-            width: min(1440px, calc(100% - 48px)) !important;
-            box-sizing: border-box !important;
-            justify-content: flex-end !important;
-            border: 1px solid rgba(92,139,164,.20) !important;
-            border-radius: 14px !important;
-            background: #10232f !important;
+            width: min(100% - 28px, 1440px) !important;
           }
-
-          [data-client-journey-section="proposal"] main > header:first-child > div:first-child {
-            display: none !important;
-          }
-
-          [data-client-journey-section="proposal"] main > header:first-child > div:last-child {
-            margin-left: auto !important;
-          }
-
-          [data-client-journey-section="proposal"] main > div:nth-of-type(1) {
-            width: min(1440px, calc(100% - 48px)) !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-          }
-
-          @media (max-width: 760px) {
-            [data-client-journey-header="true"] {
-              padding: 0 16px !important;
-            }
-            [data-client-journey-header="true"] > div:first-child {
-              gap: 14px !important;
-            }
-            [data-client-journey-header="true"] > div:last-child {
-              gap: 10px !important;
-            }
-            [data-client-journey-header="true"] > div:last-child > span {
-              display: none !important;
-            }
-            [data-client-journey-section]:not([data-client-journey-section="lead"]) main > div:first-child,
-            [data-client-journey-section="proposal"] main > header:first-child,
-            [data-client-journey-section="proposal"] main > div:nth-of-type(1) {
-              width: min(100% - 28px, 1440px) !important;
-            }
-          }
-        `}</style>
-      ) : null}
+        }
+      `}</style>
 
       {mount ? createPortal(journey, mount) : null}
     </>
