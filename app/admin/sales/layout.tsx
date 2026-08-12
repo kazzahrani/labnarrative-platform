@@ -11,7 +11,6 @@ import SalesOnboardingLauncher from "../../../components/SalesOnboardingLauncher
 import SalesFinalReviewLauncher from "../../../components/SalesFinalReviewLauncher";
 import SalesLaunchLauncher from "../../../components/SalesLaunchLauncher";
 import SalesCareLauncher from "../../../components/SalesCareLauncher";
-import LinkedInOutreachPanel from "../../../components/LinkedInOutreachPanel";
 
 export default function SalesLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -26,7 +25,6 @@ export default function SalesLayout({ children }: { children: ReactNode }) {
         <>
           <SalesConversionInbox />
           <SalesActionCenter />
-          <LinkedInOutreachPanel />
         </>
       ) : prospectId ? (
         <>
