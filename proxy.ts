@@ -54,6 +54,23 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // The root LabNarrative brand now acts as an umbrella for Websites and
+  // Intelligence. Keep the established Websites implementation available at
+  // /websites while serving the umbrella homepage at the public root.
+  if (
+    request.nextUrl.pathname === "/" &&
+    (
+      host === rootDomain ||
+      host === `www.${rootDomain}` ||
+      host === "localhost" ||
+      host.endsWith(".vercel.app")
+    )
+  ) {
+    const umbrellaUrl = request.nextUrl.clone();
+    umbrellaUrl.pathname = "/umbrella";
+    return NextResponse.rewrite(umbrellaUrl);
+  }
+
   if (
     !host ||
     host === rootDomain ||
