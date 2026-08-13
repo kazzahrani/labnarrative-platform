@@ -106,12 +106,12 @@ export default function EngineV4ControlCentre() {
       setAuthReady(true);
       if (data.session) void load(data.session);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
       setSession(nextSession);
       setAuthReady(true);
-      if (nextSession) void load(nextSession);
-      else setDashboard(null);
+      if (event === "SIGNED_OUT") setDashboard(null);
+      else if (event === "SIGNED_IN" && nextSession) void load(nextSession);
     });
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [load]);
