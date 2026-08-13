@@ -34,6 +34,20 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 307);
   }
 
+  // The legacy /admin editor still needs query-string routes, but a bare
+  // platform /admin is only a landing route. Redirect it before React mounts so
+  // it cannot download every site's full content before the client-side landing
+  // redirect runs.
+  if (
+    request.nextUrl.pathname === "/admin" &&
+    request.nextUrl.search === "" &&
+    host === CANONICAL_PLATFORM_HOST
+  ) {
+    const monitorUrl = request.nextUrl.clone();
+    monitorUrl.pathname = "/admin/sites";
+    return NextResponse.redirect(monitorUrl, 307);
+  }
+
   // API routes are platform infrastructure and must remain addressable from
   // every custom laboratory subdomain without being rewritten as site pages.
   if (request.nextUrl.pathname === "/api" || request.nextUrl.pathname.startsWith("/api/")) {
