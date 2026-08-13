@@ -39,7 +39,7 @@ function dateTime(value?:string|null){
 export default function FinalReviewPage(){
   const [session,setSession]=useState<Session|null>(null); const [ready,setReady]=useState(false); const [dashboard,setDashboard]=useState<Dashboard|null>(null); const [notice,setNotice]=useState(""); const [busy,setBusy]=useState("");
   const load=useCallback(async(activeSession:Session)=>{try{setDashboard(await rpc<Dashboard>(activeSession,"engine_admin_dashboard"));setNotice("")}catch(error){setNotice(error instanceof Error?error.message:"Final Review could not be loaded.")}},[]);
-  useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(nextSession)void load(nextSession);else setDashboard(null)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
+  useEffect(()=>{let mounted=true;void supabase.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);if(data.session)void load(data.session)});const {data:{subscription}}=supabase.auth.onAuthStateChange((event,nextSession)=>{if(!mounted)return;setSession(nextSession);setReady(true);if(event==="SIGNED_OUT")setDashboard(null);else if(event==="SIGNED_IN"&&nextSession)void load(nextSession)});return()=>{mounted=false;subscription.unsubscribe()}},[load]);
 
   const finalReview=useMemo(()=>dashboard?.runs.filter(run=>run.state==="final_review")??[],[dashboard]);
 
