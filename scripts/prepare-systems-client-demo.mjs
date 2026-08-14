@@ -51,5 +51,11 @@ if (!client.includes("const workflowSteps: Array<{ view: View")) {
   client = client.replaceAll('<button onClick={() => notify(t.generated)}>{t.forecast}</button>', '<button onClick={() => setAiMode("forecast")}>{t.forecast}</button>');
 }
 
+// Use the localized short name in the visible client-facing sidebar copy.
+client = client.replace(
+  '<div className={styles.sidebarFoot}><strong>{t.prepared} {companyName}</strong>',
+  '<div className={styles.sidebarFoot}><strong>{t.prepared} {shortName}</strong>',
+);
+
 fs.writeFileSync(clientPath, client, "utf8");
-console.log("Systems client demo support styles and interactive workflow prepared.");
+console.log("Systems client demo support, interaction and localization prepared.");
