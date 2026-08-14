@@ -1,178 +1,249 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "../../demo/page.module.css";
+import styles from "./v2.module.css";
 
 type Lang = "en" | "ar";
-type Theme = "dark" | "light";
+type Theme = "light" | "dark";
+type View = "overview" | "accounts" | "hub" | "opportunities" | "contacts" | "quotes" | "tenders" | "tasks" | "email" | "automation" | "team" | "documents" | "reports" | "ai";
 type Stage = "New" | "Technical review" | "Quotation" | "Tender" | "Won";
-type View = "Overview" | "Opportunities" | "Automation" | "Reports";
-type BiText = { en: string; ar: string };
+type Bi = { en: string; ar: string };
 
-type Opportunity = {
-  id: number;
-  account: BiText;
-  contact: string;
-  region: "Riyadh" | "Jeddah" | "Dammam";
-  division: BiText;
-  value: number;
-  score: number;
-  stage: Stage;
-  reason: BiText;
-  next: BiText;
-};
+const B = (en: string, ar: string): Bi => ({ en, ar });
 
-const initialOpportunities: Opportunity[] = [
-  { id: 1, account: { en: "University Research Lab", ar: "مختبر أبحاث جامعي" }, contact: "Dr. Sara A.", region: "Riyadh", division: { en: "Molecular Diagnostics & Life Science", ar: "التشخيص الجزيئي وعلوم الحياة" }, value: 128000, score: 94, stage: "Quotation", reason: { en: "Detailed PCR workflow enquiry, clear product category, active purchasing window and strong research-lab fit.", ar: "استفسار مفصل عن سير عمل PCR، وفئة منتج واضحة، وفترة شراء نشطة، وتوافق قوي مع مختبر بحثي." }, next: { en: "Send quotation follow-up with application note", ar: "إرسال متابعة للعرض مع مذكرة تطبيقية" } },
-  { id: 2, account: { en: "Regional Diagnostic Center", ar: "مركز تشخيص إقليمي" }, contact: "Mr. Faisal M.", region: "Jeddah", division: { en: "Hematology & Blood Banks", ar: "أمراض الدم وبنوك الدم" }, value: 215000, score: 89, stage: "Technical review", reason: { en: "High-value analyzer requirement with defined throughput and implementation timeline.", ar: "احتياج مرتفع القيمة لجهاز تحليلي مع سعة تشغيل وجدول تنفيذ محددين." }, next: { en: "Assign application specialist and schedule technical call", ar: "تعيين أخصائي تطبيقات وجدولة مكالمة فنية" } },
-  { id: 3, account: { en: "Specialist Hospital Lab", ar: "مختبر مستشفى تخصصي" }, contact: "Dr. Huda K.", region: "Riyadh", division: { en: "Immunohistochemistry", ar: "الكيمياء النسيجية المناعية" }, value: 176000, score: 86, stage: "Tender", reason: { en: "Institutional opportunity with strong category fit and an active procurement process.", ar: "فرصة مؤسسية ذات توافق قوي مع الفئة ووجود عملية شراء نشطة." }, next: { en: "Track tender deadline and prepare required documents", ar: "متابعة موعد إغلاق المنافسة وتجهيز المستندات المطلوبة" } },
-  { id: 4, account: { en: "Eastern Clinical Laboratory", ar: "مختبر سريري بالمنطقة الشرقية" }, contact: "Mr. Omar N.", region: "Dammam", division: { en: "Microbiology & Parasitology", ar: "الأحياء الدقيقة والطفيليات" }, value: 74000, score: 78, stage: "New", reason: { en: "Relevant product enquiry but specifications and decision timeline still require qualification.", ar: "استفسار مناسب عن المنتج، لكن المواصفات والجدول الزمني للقرار ما زالا بحاجة إلى تأهيل." }, next: { en: "Ask technical qualification questions", ar: "طرح أسئلة التأهيل الفني" } },
-  { id: 5, account: { en: "Forensic Sciences Unit", ar: "وحدة علوم الأدلة الجنائية" }, contact: "Dr. Maha R.", region: "Jeddah", division: { en: "Toxicology & Forensic", ar: "السموم والأدلة الجنائية" }, value: 98000, score: 83, stage: "Quotation", reason: { en: "Strong application fit with a defined analytical use case and multiple requested items.", ar: "توافق قوي مع التطبيق ووجود استخدام تحليلي محدد وعدة أصناف مطلوبة." }, next: { en: "Follow up on quotation and implementation timing", ar: "متابعة العرض وتوقيت التنفيذ" } },
-  { id: 6, account: { en: "Private Medical Group", ar: "مجموعة طبية خاصة" }, contact: "Mr. Khalid S.", region: "Riyadh", division: { en: "Molecular Diagnostics & Life Science", ar: "التشخيص الجزيئي وعلوم الحياة" }, value: 162000, score: 96, stage: "Won", reason: { en: "High-fit account with decision-maker engagement and completed commercial approval.", ar: "حساب عالي التوافق مع مشاركة صاحب القرار واكتمال الموافقة التجارية." }, next: { en: "Coordinate delivery, installation and training", ar: "تنسيق التوريد والتركيب والتدريب" } },
+const nav: Array<{ id: View; icon: string; label: Bi }> = [
+  { id: "overview", icon: "◫", label: B("Overview", "نظرة عامة") },
+  { id: "accounts", icon: "▦", label: B("Accounts", "الحسابات") },
+  { id: "hub", icon: "◎", label: B("Account Hub", "مركز الحساب") },
+  { id: "opportunities", icon: "↗", label: B("Opportunities", "الفرص") },
+  { id: "contacts", icon: "♙", label: B("Contacts", "جهات الاتصال") },
+  { id: "quotes", icon: "▤", label: B("Quotes", "عروض الأسعار") },
+  { id: "tenders", icon: "◇", label: B("Tenders", "المنافسات") },
+  { id: "tasks", icon: "✓", label: B("Tasks", "المهام") },
+  { id: "email", icon: "✉", label: B("Email & Follow-up", "البريد والمتابعة") },
+  { id: "automation", icon: "↯", label: B("Automation", "الأتمتة") },
+  { id: "team", icon: "♧", label: B("Team", "الفريق") },
+  { id: "documents", icon: "▱", label: B("Documents", "المستندات") },
+  { id: "reports", icon: "▥", label: B("Reports", "التقارير") },
+  { id: "ai", icon: "✦", label: B("AI Command Center", "مركز الذكاء الاصطناعي") },
 ];
 
-const stages: Stage[] = ["New", "Technical review", "Quotation", "Tender", "Won"];
-const views: View[] = ["Overview", "Opportunities", "Automation", "Reports"];
+const accounts = [
+  { id: 1, name: B("University Research Lab", "مختبر أبحاث جامعي"), type: B("Academic research", "بحث أكاديمي"), region: B("Riyadh", "الرياض"), division: B("Molecular Diagnostics & Life Science", "التشخيص الجزيئي وعلوم الحياة"), owner: "Riyadh Sales", health: 94, value: 128000, contacts: 3, last: B("Today", "اليوم") },
+  { id: 2, name: B("Regional Diagnostic Center", "مركز تشخيص إقليمي"), type: B("Diagnostic laboratory", "مختبر تشخيصي"), region: B("Jeddah", "جدة"), division: B("Hematology & Blood Banks", "أمراض الدم وبنوك الدم"), owner: "Western Sales", health: 89, value: 215000, contacts: 4, last: B("Yesterday", "أمس") },
+  { id: 3, name: B("Specialist Hospital Lab", "مختبر مستشفى تخصصي"), type: B("Hospital laboratory", "مختبر مستشفى"), region: B("Riyadh", "الرياض"), division: B("Immunohistochemistry", "الكيمياء النسيجية المناعية"), owner: "Riyadh Sales", health: 86, value: 176000, contacts: 3, last: B("2 days ago", "منذ يومين") },
+  { id: 4, name: B("Eastern Clinical Laboratory", "مختبر سريري بالمنطقة الشرقية"), type: B("Private laboratory", "مختبر خاص"), region: B("Dammam", "الدمام"), division: B("Microbiology & Parasitology", "الأحياء الدقيقة والطفيليات"), owner: "Eastern Sales", health: 78, value: 74000, contacts: 2, last: B("3 days ago", "منذ 3 أيام") },
+  { id: 5, name: B("Forensic Sciences Unit", "وحدة علوم الأدلة الجنائية"), type: B("Government laboratory", "مختبر حكومي"), region: B("Jeddah", "جدة"), division: B("Toxicology & Forensic", "السموم والأدلة الجنائية"), owner: "Western Sales", health: 83, value: 98000, contacts: 3, last: B("Today", "اليوم") },
+];
 
-const ui = {
-  en: {
-    overview: "Overview", opportunities: "Opportunities", automation: "Automation", reports: "Reports", workspace: "Private concept · Medical Masar",
-    prepared: "Prepared for Medical Masar Al Shefaa", illustrative: "Illustrative sales & quotation workflow", discuss: "Discuss this concept ↗",
-    concept: "Medical Masar Al Shefaa · concept", live: "Automation live", simulate: "+ Simulate new enquiry", light: "Light", dark: "Dark",
-    openValue: "Open opportunity value", across: "Across", activeOpps: "active opportunities", highFit: "High-fit opportunities", score85: "AI score ≥ 85", wonMonth: "Won this month", converted: "Illustrative converted account", followups: "Follow-ups due", quotationFollowups: "3 quotation follow-ups",
-    commercialPipeline: "Commercial pipeline", priority: "Priority opportunities", viewAll: "View all →", account: "Account", aiFit: "AI fit", stage: "Stage", value: "Value", today: "Today", activity: "Automation activity",
-    routed: "Enquiry routed", routedCopy: "Molecular diagnostics enquiry assigned to Riyadh sales.", qFollow: "Quotation follow-up prepared", qFollowCopy: "University Research Lab follow-up is ready for review.", specialist: "Technical specialist assigned", specialistCopy: "Hematology opportunity routed to application support.", stopped: "Sequence stopped", stoppedCopy: "Private Medical Group replied and moved to Won.", yesterday: "Yesterday",
-    pipeline: "Pipeline", funnel: "Commercial funnel", aiRanked: "AI-ranked", list: "Opportunity list", accounts: "accounts", opportunity: "Opportunity", potential: "Potential value", division: "Division", currentStage: "Current stage", qualification: "AI qualification", why: "Why this opportunity matters", next: "Recommended next action", prepare: "Prepare with AI ↗", move: "Move stage",
-    suggested: "Suggested workflow", workflowTitle: "Enquiry → right team → quotation → follow-up", workflowIntro: "A concept for connecting inbound demand, regional sales, technical specialists, quotations and follow-up in one operating system.", enabled: "Enabled", paused: "Paused",
-    performance: "Commercial performance", managementSummary: "Management summary", generate: "Generate report ↗", newEnquiries: "New enquiries", threeRegions: "Across three regions", qualifiedRate: "Qualified rate", conceptKpi: "Illustrative concept KPI", quotationValue: "Quotation value", openCommercial: "Open commercial value", responseRate: "Response rate", sequences: "Across follow-up sequences",
-    region: "Region", distribution: "Opportunity distribution", aiManagement: "AI management summary", attention: "What deserves attention",
-    summary1: "High-value opportunities are concentrated in molecular diagnostics, hematology and institutional procurement. Several quotations have strong fit scores but need timely follow-up to prevent commercial momentum from being lost.", summaryLabel: "Suggested focus:", summary2: "unify enquiry capture, make ownership visible across regions, automate quotation follow-up and surface tender deadlines in one management view.",
-    newToast: "Enquiry captured, routed and scored automatically", moved: "Moved to", preparedToast: "Context-aware follow-up prepared", reportToast: "Concept report generated",
-  },
-  ar: {
-    overview: "نظرة عامة", opportunities: "الفرص", automation: "الأتمتة", reports: "التقارير", workspace: "تصور خاص · مسار الشفاء الطبية",
-    prepared: "أُعد خصيصاً لشركة مسار الشفاء الطبية", illustrative: "تصور توضيحي لسير المبيعات وعروض الأسعار", discuss: "ناقش هذا التصور ↗",
-    concept: "مسار الشفاء الطبية · تصور مخصص", live: "الأتمتة مفعلة", simulate: "+ محاكاة استفسار جديد", light: "فاتح", dark: "داكن",
-    openValue: "قيمة الفرص المفتوحة", across: "ضمن", activeOpps: "فرص نشطة", highFit: "فرص عالية التوافق", score85: "تقييم الذكاء الاصطناعي ≥ 85", wonMonth: "المبيعات المحققة هذا الشهر", converted: "حساب توضيحي تم تحويله", followups: "المتابعات المستحقة", quotationFollowups: "3 متابعات لعروض أسعار",
-    commercialPipeline: "مسار المبيعات", priority: "الفرص ذات الأولوية", viewAll: "عرض الكل ←", account: "الحساب", aiFit: "توافق AI", stage: "المرحلة", value: "القيمة", today: "اليوم", activity: "نشاط الأتمتة",
-    routed: "تم توجيه الاستفسار", routedCopy: "تم تعيين استفسار التشخيص الجزيئي لفريق مبيعات الرياض.", qFollow: "تم إعداد متابعة العرض", qFollowCopy: "متابعة عرض مختبر الأبحاث الجامعي جاهزة للمراجعة.", specialist: "تم تعيين أخصائي فني", specialistCopy: "تم توجيه فرصة أمراض الدم إلى دعم التطبيقات.", stopped: "تم إيقاف التسلسل", stoppedCopy: "ردت المجموعة الطبية الخاصة وانتقلت إلى مرحلة تم الفوز.", yesterday: "أمس",
-    pipeline: "المسار", funnel: "قمع المبيعات", aiRanked: "مرتبة بالذكاء الاصطناعي", list: "قائمة الفرص", accounts: "حسابات", opportunity: "الفرصة", potential: "القيمة المتوقعة", division: "القسم", currentStage: "المرحلة الحالية", qualification: "تأهيل بالذكاء الاصطناعي", why: "لماذا تستحق هذه الفرصة الاهتمام", next: "الإجراء التالي المقترح", prepare: "إعداد بالذكاء الاصطناعي ↗", move: "نقل المرحلة",
-    suggested: "سير العمل المقترح", workflowTitle: "استفسار ← الفريق المناسب ← عرض السعر ← المتابعة", workflowIntro: "تصور يربط الطلبات الواردة بالمبيعات الإقليمية والمتخصصين الفنيين وعروض الأسعار والمتابعة داخل نظام تشغيلي واحد.", enabled: "مفعّل", paused: "متوقف",
-    performance: "الأداء التجاري", managementSummary: "ملخص الإدارة", generate: "إنشاء التقرير ↗", newEnquiries: "استفسارات جديدة", threeRegions: "عبر ثلاث مناطق", qualifiedRate: "نسبة التأهيل", conceptKpi: "مؤشر توضيحي للتصور", quotationValue: "قيمة عروض الأسعار", openCommercial: "القيمة التجارية المفتوحة", responseRate: "نسبة الرد", sequences: "عبر تسلسلات المتابعة",
-    region: "المنطقة", distribution: "توزيع الفرص", aiManagement: "ملخص الإدارة بالذكاء الاصطناعي", attention: "ما الذي يستحق الاهتمام",
-    summary1: "تتركز الفرص مرتفعة القيمة في التشخيص الجزيئي وأمراض الدم والمشتريات المؤسسية. توجد عدة عروض أسعار بتقييم توافق قوي لكنها تحتاج إلى متابعة سريعة للحفاظ على الزخم التجاري.", summaryLabel: "التركيز المقترح:", summary2: "توحيد استقبال الاستفسارات، وإظهار المسؤول عن كل فرصة بين المناطق، وأتمتة متابعة عروض الأسعار، وإبراز مواعيد المنافسات في شاشة إدارية واحدة.",
-    newToast: "تم تسجيل الاستفسار وتوجيهه وتقييمه تلقائياً", moved: "تم النقل إلى", preparedToast: "تم إعداد متابعة مناسبة للسياق", reportToast: "تم إنشاء تقرير التصور",
-  },
-} as const;
+const seedOpportunities = [
+  { id: 1, accountId: 1, title: B("PCR workflow expansion", "توسعة سير عمل PCR"), value: 128000, score: 94, stage: "Quotation" as Stage, region: B("Riyadh", "الرياض"), division: B("Molecular Diagnostics", "التشخيص الجزيئي") },
+  { id: 2, accountId: 2, title: B("Hematology analyzer project", "مشروع جهاز تحليل أمراض الدم"), value: 215000, score: 89, stage: "Technical review" as Stage, region: B("Jeddah", "جدة"), division: B("Hematology", "أمراض الدم") },
+  { id: 3, accountId: 3, title: B("IHC tender package", "حزمة منافسة IHC"), value: 176000, score: 86, stage: "Tender" as Stage, region: B("Riyadh", "الرياض"), division: B("IHC", "الكيمياء النسيجية المناعية") },
+  { id: 4, accountId: 4, title: B("Microbiology platform enquiry", "استفسار منصة الأحياء الدقيقة"), value: 74000, score: 78, stage: "New" as Stage, region: B("Dammam", "الدمام"), division: B("Microbiology", "الأحياء الدقيقة") },
+  { id: 5, accountId: 5, title: B("Toxicology reagent package", "حزمة كواشف السموم"), value: 98000, score: 83, stage: "Quotation" as Stage, region: B("Jeddah", "جدة"), division: B("Toxicology", "السموم") },
+  { id: 6, accountId: 1, title: B("Training & validation support", "دعم التدريب والتحقق"), value: 42000, score: 91, stage: "Technical review" as Stage, region: B("Riyadh", "الرياض"), division: B("Life Science", "علوم الحياة") },
+];
 
-const stageLabels: Record<Lang, Record<Stage, string>> = {
-  en: { New: "New", "Technical review": "Technical review", Quotation: "Quotation", Tender: "Tender", Won: "Won" },
-  ar: { New: "جديد", "Technical review": "مراجعة فنية", Quotation: "عرض سعر", Tender: "منافسة", Won: "تم الفوز" },
-};
+const contacts = [
+  { id: 1, accountId: 1, name: "Dr. Sara A.", role: B("Laboratory Director", "مديرة المختبر"), email: "sara@university.example", phone: "+966 5X XXX XXXX", decision: B("Decision maker", "صاحبة قرار") },
+  { id: 2, accountId: 1, name: "Dr. Noura H.", role: B("Molecular Core Manager", "مديرة وحدة الجزيئات"), email: "noura@university.example", phone: "+966 5X XXX XXXX", decision: B("Technical influencer", "مؤثرة فنياً") },
+  { id: 3, accountId: 1, name: "Mr. Abdullah R.", role: B("Procurement Specialist", "أخصائي مشتريات"), email: "abdullah@university.example", phone: "+966 5X XXX XXXX", decision: B("Commercial contact", "جهة تجارية") },
+  { id: 4, accountId: 2, name: "Mr. Faisal M.", role: B("Operations Director", "مدير العمليات"), email: "faisal@diagnostic.example", phone: "+966 5X XXX XXXX", decision: B("Decision maker", "صاحب قرار") },
+  { id: 5, accountId: 3, name: "Dr. Huda K.", role: B("Pathology Consultant", "استشارية علم الأمراض"), email: "huda@hospital.example", phone: "+966 5X XXX XXXX", decision: B("Clinical influencer", "مؤثرة سريرياً") },
+  { id: 6, accountId: 5, name: "Dr. Maha R.", role: B("Forensic Toxicology Lead", "رئيسة السموم الجنائية"), email: "maha@forensic.example", phone: "+966 5X XXX XXXX", decision: B("Technical decision maker", "صاحبة قرار فني") },
+];
 
-const regionLabels: Record<Lang, Record<Opportunity["region"], string>> = {
-  en: { Riyadh: "Riyadh", Jeddah: "Jeddah", Dammam: "Dammam" },
-  ar: { Riyadh: "الرياض", Jeddah: "جدة", Dammam: "الدمام" },
-};
+const quotes = [
+  { id: 1, accountId: 1, no: "Q-2026-084", value: 128000, status: B("Viewed", "تمت المشاهدة"), date: B("14 Aug", "14 أغسطس"), owner: "Riyadh Sales" },
+  { id: 2, accountId: 5, no: "Q-2026-079", value: 98000, status: B("Sent", "مرسل"), date: B("12 Aug", "12 أغسطس"), owner: "Western Sales" },
+  { id: 3, accountId: 2, no: "Q-2026-071", value: 215000, status: B("Technical revision", "مراجعة فنية"), date: B("9 Aug", "9 أغسطس"), owner: "Western Sales" },
+  { id: 4, accountId: 1, no: "Q-2026-068", value: 42000, status: B("Draft", "مسودة"), date: B("8 Aug", "8 أغسطس"), owner: "Riyadh Sales" },
+];
 
-const workflow: Array<[string, BiText, BiText, BiText]> = [
-  ["01", { en: "Enquiry captured", ar: "تسجيل الاستفسار" }, { en: "Website, email or rep-created enquiry enters one opportunity record.", ar: "يدخل استفسار الموقع أو البريد أو مندوب المبيعات في سجل فرصة موحد." }, { en: "Instant", ar: "فوري" }],
-  ["02", { en: "Product division detected", ar: "تحديد قسم المنتج" }, { en: "AI classifies the request into molecular diagnostics, microbiology, hematology, IHC or toxicology.", ar: "يصنف الذكاء الاصطناعي الطلب إلى التشخيص الجزيئي أو الأحياء الدقيقة أو أمراض الدم أو IHC أو السموم." }, { en: "Instant", ar: "فوري" }],
-  ["03", { en: "Region & owner assigned", ar: "تعيين المنطقة والمسؤول" }, { en: "The opportunity is routed to Riyadh, Jeddah or Dammam with a responsible sales owner.", ar: "تُوجّه الفرصة إلى الرياض أو جدة أو الدمام مع تحديد مسؤول المبيعات." }, { en: "Automatic", ar: "تلقائي" }],
-  ["04", { en: "Technical review", ar: "المراجعة الفنية" }, { en: "Application support is added when specifications or workflow design are required.", ar: "تتم إضافة دعم التطبيقات عندما تكون المواصفات أو تصميم سير العمل مطلوبة." }, { en: "When needed", ar: "عند الحاجة" }],
-  ["05", { en: "Quotation follow-up", ar: "متابعة عرض السعر" }, { en: "A context-aware follow-up is prepared and scheduled if the customer has not replied.", ar: "يتم إعداد وجدولة متابعة مناسبة للسياق إذا لم يرد العميل." }, { en: "+2–3 days", ar: "+2–3 أيام" }],
-  ["06", { en: "Reply / tender detected", ar: "اكتشاف رد أو منافسة" }, { en: "Human replies stop automation; tender opportunities surface deadlines and required actions.", ar: "الردود البشرية توقف الأتمتة، بينما تُظهر فرص المنافسات المواعيد والإجراءات المطلوبة." }, { en: "Automatic", ar: "تلقائي" }],
+const tenders = [
+  { id: 1, accountId: 3, title: B("IHC reagents & detection systems", "كواشف وأنظمة كشف IHC"), value: 176000, deadline: B("22 Aug 2026", "22 أغسطس 2026"), status: B("Documents in progress", "المستندات قيد التجهيز"), owner: "Riyadh Sales" },
+  { id: 2, accountId: 2, title: B("Hematology analyzer framework", "إطار توريد جهاز أمراض الدم"), value: 310000, deadline: B("31 Aug 2026", "31 أغسطس 2026"), status: B("Technical review", "مراجعة فنية"), owner: "Western Sales" },
+  { id: 3, accountId: 5, title: B("Forensic toxicology consumables", "مستهلكات السموم الجنائية"), value: 142000, deadline: B("7 Sep 2026", "7 سبتمبر 2026"), status: B("Monitoring", "متابعة"), owner: "Western Sales" },
+];
+
+const seedTasks = [
+  { id: 1, accountId: 1, title: B("Follow up on quotation Q-2026-084", "متابعة عرض السعر Q-2026-084"), due: B("Today · 13:00", "اليوم · 13:00"), owner: "Riyadh Sales", priority: "High", done: false },
+  { id: 2, accountId: 3, title: B("Upload tender compliance documents", "رفع مستندات مطابقة المنافسة"), due: B("Today · 16:00", "اليوم · 16:00"), owner: "Applications", priority: "High", done: false },
+  { id: 3, accountId: 2, title: B("Schedule analyzer technical call", "جدولة مكالمة فنية للجهاز"), due: B("Tomorrow", "غداً"), owner: "Applications", priority: "Medium", done: false },
+  { id: 4, accountId: 5, title: B("Confirm toxicology implementation timing", "تأكيد توقيت تنفيذ مشروع السموم"), due: B("Tomorrow", "غداً"), owner: "Western Sales", priority: "Medium", done: false },
+  { id: 5, accountId: 4, title: B("Collect missing technical specifications", "جمع المواصفات الفنية الناقصة"), due: B("18 Aug", "18 أغسطس"), owner: "Eastern Sales", priority: "Normal", done: false },
+];
+
+const emails = [
+  { id: 1, accountId: 1, subject: B("Quotation follow-up · PCR workflow", "متابعة عرض السعر · سير عمل PCR"), status: B("Ready for review", "جاهز للمراجعة"), when: B("Due today", "مستحق اليوم"), sequence: B("Quotation follow-up", "متابعة عرض السعر") },
+  { id: 2, accountId: 2, subject: B("Technical call confirmation", "تأكيد المكالمة الفنية"), status: B("Scheduled", "مجدول"), when: B("Tomorrow 09:00", "غداً 09:00"), sequence: B("Technical review", "المراجعة الفنية") },
+  { id: 3, accountId: 5, subject: B("Implementation timing check-in", "متابعة توقيت التنفيذ"), status: B("Sent", "مرسل"), when: B("Yesterday", "أمس"), sequence: B("Quotation follow-up", "متابعة عرض السعر") },
+  { id: 4, accountId: 3, subject: B("Tender document request", "طلب مستندات المنافسة"), status: B("Reply received · sequence stopped", "تم استلام رد · أوقف التسلسل"), when: B("Today 08:42", "اليوم 08:42"), sequence: B("Tender workflow", "سير المنافسة") },
+];
+
+const team = [
+  { name: "Sales Lead", region: B("National", "وطني"), role: B("Commercial leadership", "القيادة التجارية"), pipeline: 913000, followups: 4, winRate: 41 },
+  { name: "Riyadh Sales", region: B("Riyadh", "الرياض"), role: B("Regional sales", "المبيعات الإقليمية"), pipeline: 346000, followups: 3, winRate: 46 },
+  { name: "Western Sales", region: B("Jeddah", "جدة"), role: B("Regional sales", "المبيعات الإقليمية"), pipeline: 489000, followups: 2, winRate: 39 },
+  { name: "Eastern Sales", region: B("Dammam", "الدمام"), role: B("Regional sales", "المبيعات الإقليمية"), pipeline: 78000, followups: 1, winRate: 35 },
+  { name: "Applications", region: B("Cross-region", "جميع المناطق"), role: B("Technical support", "الدعم الفني"), pipeline: 391000, followups: 3, winRate: 44 },
+];
+
+const documents = [
+  { id: 1, accountId: 1, name: B("PCR application note.pdf", "مذكرة تطبيق PCR.pdf"), type: B("Product document", "مستند منتج"), updated: B("Today", "اليوم"), status: B("Shared", "تمت المشاركة") },
+  { id: 2, accountId: 1, name: "Q-2026-084.pdf", type: B("Quotation", "عرض سعر"), updated: B("Today", "اليوم"), status: B("Viewed", "تمت المشاهدة") },
+  { id: 3, accountId: 3, name: B("IHC compliance matrix.xlsx", "مصفوفة مطابقة IHC.xlsx"), type: B("Tender document", "مستند منافسة"), updated: B("Yesterday", "أمس"), status: B("In progress", "قيد الإعداد") },
+  { id: 4, accountId: 2, name: B("Analyzer specification sheet.pdf", "مواصفات جهاز التحليل.pdf"), type: B("Technical document", "مستند فني"), updated: B("12 Aug", "12 أغسطس"), status: B("Shared", "تمت المشاركة") },
+  { id: 5, accountId: 5, name: B("Toxicology implementation plan.docx", "خطة تنفيذ السموم.docx"), type: B("Project document", "مستند مشروع"), updated: B("11 Aug", "11 أغسطس"), status: B("Internal", "داخلي") },
+];
+
+const automations = [
+  { id: 1, title: B("Inbound enquiry routing", "توجيه الاستفسارات الواردة"), desc: B("Classify product division, region and urgency, then assign the right commercial owner.", "تصنيف القسم والمنطقة ودرجة الاستعجال ثم تعيين المسؤول التجاري المناسب."), flow: [B("Enquiry", "استفسار"), B("AI classify", "تصنيف AI"), B("Assign rep", "تعيين مندوب")], on: true },
+  { id: 2, title: B("Quotation follow-up", "متابعة عروض الأسعار"), desc: B("Prepare context-aware reminders after a quotation is sent and stop when a human reply arrives.", "إعداد متابعات مرتبطة بالسياق بعد إرسال العرض وإيقافها عند وصول رد بشري."), flow: [B("Quote sent", "إرسال العرض"), B("Wait 3 days", "انتظار 3 أيام"), B("Follow up", "متابعة")], on: true },
+  { id: 3, title: B("Tender deadline watch", "مراقبة مواعيد المنافسات"), desc: B("Surface deadlines, missing documents and owner responsibilities before submission dates.", "إظهار المواعيد والمستندات الناقصة ومسؤوليات الفريق قبل موعد التقديم."), flow: [B("Tender", "منافسة"), B("Check docs", "فحص المستندات"), B("Escalate", "تصعيد")], on: true },
+  { id: 4, title: B("Technical specialist routing", "توجيه الأخصائي الفني"), desc: B("Bring applications support into opportunities that need specifications, validation or workflow design.", "إشراك دعم التطبيقات في الفرص التي تتطلب مواصفات أو تحقق أو تصميم سير عمل."), flow: [B("Need detected", "اكتشاف الاحتياج"), B("Assign specialist", "تعيين مختص"), B("Track call", "متابعة الاتصال")], on: true },
+  { id: 5, title: B("Stale opportunity alert", "تنبيه الفرص المتوقفة"), desc: B("Flag high-value opportunities with no commercial activity before momentum is lost.", "تنبيه الفرص مرتفعة القيمة التي لم تشهد نشاطاً تجارياً قبل فقدان الزخم."), flow: [B("No activity", "لا نشاط"), B("Risk score", "تقييم المخاطر"), B("Manager alert", "تنبيه المدير")], on: true },
+  { id: 6, title: B("Won-account handover", "تسليم الحسابات المحققة"), desc: B("Create installation, training and delivery tasks automatically when an opportunity is won.", "إنشاء مهام التوريد والتركيب والتدريب تلقائياً عند الفوز بالفرصة."), flow: [B("Won", "تم الفوز"), B("Create tasks", "إنشاء مهام"), B("Operations", "العمليات")], on: false },
+];
+
+const activities = [
+  { icon: "✓", title: B("Quotation viewed", "تمت مشاهدة عرض السعر"), copy: B("University Research Lab opened Q-2026-084.", "فتح مختبر الأبحاث الجامعي عرض Q-2026-084."), time: B("18 min ago", "منذ 18 دقيقة") },
+  { icon: "↗", title: B("Tender deadline surfaced", "تم إبراز موعد منافسة"), copy: B("IHC tender has 8 days remaining and two documents are outstanding.", "تبقى 8 أيام على منافسة IHC ويوجد مستندان ناقصان."), time: B("42 min ago", "منذ 42 دقيقة") },
+  { icon: "✉", title: B("Reply detected", "تم اكتشاف رد"), copy: B("Specialist Hospital Lab replied; automatic email sequence stopped.", "رد مختبر المستشفى التخصصي؛ وتم إيقاف تسلسل البريد الآلي."), time: B("Today 08:42", "اليوم 08:42") },
+  { icon: "◎", title: B("Technical specialist assigned", "تم تعيين أخصائي فني"), copy: B("Regional Diagnostic Center was routed to applications support.", "تم توجيه مركز التشخيص الإقليمي إلى دعم التطبيقات."), time: B("Yesterday", "أمس") },
 ];
 
 function money(value: number, lang: Lang) {
   return new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }).format(value);
 }
 
-export default function MedicalMasarConceptPage() {
-  const [active, setActive] = useState<View>("Overview");
-  const [items, setItems] = useState(initialOpportunities);
-  const [selectedId, setSelectedId] = useState(1);
-  const [sequenceEnabled, setSequenceEnabled] = useState(true);
-  const [toast, setToast] = useState("");
+export default function MedicalMasarConceptV2() {
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
+  const [active, setActive] = useState<View>("overview");
+  const [selectedAccountId, setSelectedAccountId] = useState(1);
+  const [opportunities, setOpportunities] = useState(seedOpportunities);
+  const [tasks, setTasks] = useState(seedTasks);
+  const [automationState, setAutomationState] = useState<Record<number, boolean>>(() => Object.fromEntries(automations.map(a => [a.id, a.on])));
+  const [toast, setToast] = useState("");
+  const [aiResponse, setAiResponse] = useState(B("Three actions deserve attention: follow up Q-2026-084 today, complete two missing IHC tender documents, and schedule the hematology technical call before tomorrow.", "هناك ثلاثة إجراءات تستحق الاهتمام: متابعة Q-2026-084 اليوم، واستكمال مستندين ناقصين لمنافسة IHC، وجدولة المكالمة الفنية لأمراض الدم قبل الغد."));
 
-  const t = ui[lang];
-  const selected = items.find((item) => item.id === selectedId) ?? items[0];
-  const openValue = items.filter((item) => item.stage !== "Won").reduce((sum, item) => sum + item.value, 0);
-  const highFit = items.filter((item) => item.score >= 85 && item.stage !== "Won").length;
-  const wonValue = items.filter((item) => item.stage === "Won").reduce((sum, item) => sum + item.value, 0);
-  const stageCounts = useMemo(() => Object.fromEntries(stages.map((stage) => [stage, items.filter((item) => item.stage === stage).length])) as Record<Stage, number>, [items]);
+  const L = (text: Bi) => text[lang];
+  const selectedAccount = accounts.find(a => a.id === selectedAccountId) ?? accounts[0];
+  const accountContacts = contacts.filter(c => c.accountId === selectedAccountId);
+  const accountOpps = opportunities.filter(o => o.accountId === selectedAccountId);
+  const accountQuotes = quotes.filter(q => q.accountId === selectedAccountId);
+  const accountTasks = tasks.filter(t => t.accountId === selectedAccountId);
+  const accountDocs = documents.filter(d => d.accountId === selectedAccountId);
+  const openValue = opportunities.filter(o => o.stage !== "Won").reduce((s, o) => s + o.value, 0);
+  const highFit = opportunities.filter(o => o.score >= 85 && o.stage !== "Won").length;
+  const overdue = tasks.filter(t => !t.done && t.priority === "High").length;
+  const tenderValue = tenders.reduce((s, t) => s + t.value, 0);
+  const stageCounts = useMemo(() => ["New", "Technical review", "Quotation", "Tender", "Won"].map(stage => ({ stage: stage as Stage, count: opportunities.filter(o => o.stage === stage).length })), [opportunities]);
 
-  const viewLabel = (view: View) => view === "Overview" ? t.overview : view === "Opportunities" ? t.opportunities : view === "Automation" ? t.automation : t.reports;
+  const currentLabel = nav.find(n => n.id === active)?.label ?? nav[0].label;
+  const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2000); };
+  const openAccount = (id: number) => { setSelectedAccountId(id); setActive("hub"); };
+  const completeTask = (id: number) => { setTasks(v => v.map(t => t.id === id ? { ...t, done: !t.done } : t)); notify(lang === "ar" ? "تم تحديث المهمة" : "Task updated"); };
+  const moveOpp = (id: number, stage: Stage) => { setOpportunities(v => v.map(o => o.id === id ? { ...o, stage } : o)); notify(lang === "ar" ? "تم تحديث مرحلة الفرصة" : "Opportunity stage updated"); };
+  const simulateEnquiry = () => {
+    const id = Math.max(...opportunities.map(o => o.id)) + 1;
+    setOpportunities(v => [{ id, accountId: 4, title: B("New molecular testing enquiry", "استفسار جديد لفحوص جزيئية"), value: 84000, score: 91, stage: "New", region: B("Dammam", "الدمام"), division: B("Molecular Diagnostics", "التشخيص الجزيئي") }, ...v]);
+    setActive("opportunities");
+    notify(lang === "ar" ? "تم تسجيل الاستفسار وتصنيفه وتوجيهه تلقائياً" : "Enquiry captured, classified and routed automatically");
+  };
+  const askAI = (kind: "focus" | "risk" | "followup" | "forecast") => {
+    const replies = {
+      focus: B("Prioritise the PCR quotation follow-up, the IHC tender documents and the hematology technical call. Together they represent the strongest near-term commercial value.", "أعطِ الأولوية لمتابعة عرض PCR ومستندات منافسة IHC والمكالمة الفنية لأمراض الدم. هذه العناصر تمثل أقوى قيمة تجارية قصيرة الأجل."),
+      risk: B("The biggest current risk is the IHC tender because its deadline is near and documents remain incomplete. The microbiology enquiry is also at risk of going cold because qualification is incomplete.", "أكبر مخاطرة حالياً هي منافسة IHC لقرب موعدها وعدم اكتمال المستندات. كما أن استفسار الأحياء الدقيقة معرض للبرود بسبب عدم اكتمال التأهيل."),
+      followup: B("Draft prepared: concise quotation follow-up referencing the PCR workflow, requested implementation timing and the application note already shared. Human review remains required before sending.", "تم إعداد مسودة متابعة موجزة لعرض السعر تشير إلى سير عمل PCR وتوقيت التنفيذ المطلوب والمذكرة التطبيقية التي تمت مشاركتها. تبقى المراجعة البشرية مطلوبة قبل الإرسال."),
+      forecast: B("Illustrative forecast: the strongest weighted pipeline is concentrated in Riyadh and Jeddah, with molecular diagnostics, hematology and IHC contributing most of the near-term value.", "التوقع التوضيحي: أقوى مسار مبيعات موزون يتركز في الرياض وجدة، مع مساهمة التشخيص الجزيئي وأمراض الدم وIHC بأكبر قيمة قصيرة الأجل."),
+    };
+    setAiResponse(replies[kind]);
+    if (active !== "ai") notify(lang === "ar" ? "تم تحديث ملخص الذكاء الاصطناعي" : "AI insight updated");
+  };
 
-  function notify(message: string) {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 1900);
-  }
-
-  function moveOpportunity(id: number, stage: Stage) {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, stage } : item));
-    notify(`${t.moved} ${stageLabels[lang][stage]}`);
-  }
-
-  function simulateEnquiry() {
-    const id = Math.max(...items.map((item) => item.id)) + 1;
-    setItems((current) => [{ id, account: { en: "New Hospital Laboratory", ar: "مختبر مستشفى جديد" }, contact: "Dr. Reem A.", region: "Riyadh", division: { en: "Molecular Diagnostics & Life Science", ar: "التشخيص الجزيئي وعلوم الحياة" }, value: 84000, score: 91, stage: "New", reason: { en: "The system matched the enquiry to molecular diagnostics, detected an institutional buyer and identified clear purchasing intent.", ar: "طابق النظام الاستفسار مع التشخيص الجزيئي، واكتشف مشترياً مؤسسياً، وحدد نية شراء واضحة." }, next: { en: "Assign Riyadh rep and prepare first response", ar: "تعيين مندوب الرياض وإعداد الرد الأول" } }, ...current]);
-    setSelectedId(id);
-    setActive("Opportunities");
-    notify(t.newToast);
-  }
-
-  return (
-    <main className={styles.page} data-theme={theme} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-      {toast ? <div className={styles.toast}>{toast}</div> : null}
-
-      <aside className={styles.sidebar}>
-        <a href="/systems" className={styles.brand}><span>Lab</span>Narrative <b>Systems</b></a>
-        <div className={styles.workspaceLabel}>{t.workspace}</div>
-        <nav>{views.map((item) => <button key={item} className={active === item ? styles.activeNav : ""} onClick={() => setActive(item)}><span>{item === "Overview" ? "◫" : item === "Opportunities" ? "◎" : item === "Automation" ? "↯" : "↗"}</span>{viewLabel(item)}</button>)}</nav>
-        <div className={styles.sidebarBottom}><span>{t.prepared}</span><small>{t.illustrative}</small><a href="mailto:hello@labnarrative.com?subject=Medical%20Masar%20Systems%20concept">{t.discuss}</a></div>
-      </aside>
-
-      <section className={styles.main}>
-        <header className={styles.topbar}>
-          <div><span className={styles.kicker}>{t.concept}</span><h1>{viewLabel(active)}</h1></div>
-          <div className={styles.topActions}>
-            <div className={styles.controlBar} aria-label="Language"><button className={lang === "en" ? styles.controlActive : ""} aria-pressed={lang === "en"} onClick={() => setLang("en")}>EN</button><button className={lang === "ar" ? styles.controlActive : ""} aria-pressed={lang === "ar"} onClick={() => setLang("ar")}>عربي</button></div>
-            <div className={styles.controlBar} aria-label="Theme"><button className={theme === "light" ? styles.controlActive : ""} aria-pressed={theme === "light"} onClick={() => setTheme("light")}>☀ {t.light}</button><button className={theme === "dark" ? styles.controlActive : ""} aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}>☾ {t.dark}</button></div>
-            <span className={styles.live}><i /> {t.live}</span><button className={styles.actionButton} onClick={simulateEnquiry}>{t.simulate}</button>
-          </div>
-        </header>
-
-        {active === "Overview" ? (
-          <div className={styles.content}>
-            <section className={styles.metrics}><article><span>{t.openValue}</span><strong>{money(openValue, lang)}</strong><small>{t.across} {items.filter((x) => x.stage !== "Won").length} {t.activeOpps}</small></article><article><span>{t.highFit}</span><strong>{highFit}</strong><small>{t.score85}</small></article><article><span>{t.wonMonth}</span><strong>{money(wonValue, lang)}</strong><small>{t.converted}</small></article><article><span>{t.followups}</span><strong>6</strong><small>{t.quotationFollowups}</small></article></section>
-
-            <section className={styles.twoCol}>
-              <article className={styles.panel}><div className={styles.panelHead}><div><span>{t.commercialPipeline}</span><h2>{t.priority}</h2></div><button onClick={() => setActive("Opportunities")}>{t.viewAll}</button></div><div className={styles.tableHead}><span>{t.account}</span><span>{t.aiFit}</span><span>{t.stage}</span><span>{t.value}</span></div>{items.slice(0,5).map((item) => <button className={styles.tableRow} key={item.id} onClick={() => { setSelectedId(item.id); setActive("Opportunities"); }}><div><strong>{item.account[lang]}</strong><small>{regionLabels[lang][item.region]} · {item.division[lang]}</small></div><b className={item.score >= 85 ? styles.highScore : ""}>{item.score}</b><em>{stageLabels[lang][item.stage]}</em><span>{money(item.value, lang)}</span></button>)}</article>
-              <article className={styles.panel}><div className={styles.panelHead}><div><span>{t.today}</span><h2>{t.activity}</h2></div></div><div className={styles.activity}><i>✓</i><div><strong>{t.routed}</strong><p>{t.routedCopy}</p><small>09:21</small></div></div><div className={styles.activity}><i>↗</i><div><strong>{t.qFollow}</strong><p>{t.qFollowCopy}</p><small>08:47</small></div></div><div className={styles.activity}><i>◎</i><div><strong>{t.specialist}</strong><p>{t.specialistCopy}</p><small>{t.yesterday}</small></div></div><div className={styles.activity}><i>✓</i><div><strong>{t.stopped}</strong><p>{t.stoppedCopy}</p><small>{t.yesterday}</small></div></div></article>
-            </section>
-
-            <section className={styles.panel} style={{ marginTop: 14 }}><div className={styles.panelHead}><div><span>{t.pipeline}</span><h2>{t.funnel}</h2></div></div><div className={styles.funnel}>{stages.slice(0,4).map((stage,index) => <div key={stage}><span>{stageLabels[lang][stage]}</span><strong>{stageCounts[stage]}</strong><div style={{width:`${100-index*15}%`}} /></div>)}</div></section>
-          </div>
-        ) : null}
-
-        {active === "Opportunities" ? (
-          <div className={styles.content}><section className={styles.leadLayout}>
-            <div className={styles.panel}><div className={styles.panelHead}><div><span>{t.aiRanked}</span><h2>{t.list}</h2></div><small>{items.length} {t.accounts}</small></div><div className={styles.leadList}>{items.map((item) => <button key={item.id} onClick={() => setSelectedId(item.id)} className={selectedId === item.id ? styles.selectedLead : ""}><div><strong>{item.account[lang]}</strong><small>{regionLabels[lang][item.region]} · {item.division[lang]}</small></div><b className={item.score >= 85 ? styles.highScore : ""}>{item.score}</b></button>)}</div></div>
-            <div className={styles.detailPanel}><div className={styles.detailTop}><div><span>{t.opportunity}</span><h2>{selected.account[lang]}</h2><p>{selected.contact} · {regionLabels[lang][selected.region]}</p></div><div className={styles.bigScore}><small>{t.aiFit}</small><strong>{selected.score}</strong></div></div><div className={styles.detailGrid}><div><span>{t.potential}</span><strong>{money(selected.value, lang)}</strong></div><div><span>{t.division}</span><strong>{selected.division[lang]}</strong></div><div><span>{t.currentStage}</span><strong>{stageLabels[lang][selected.stage]}</strong></div></div><div className={styles.aiBox}><span>{t.qualification}</span><h3>{t.why}</h3><p>{selected.reason[lang]}</p></div><div className={styles.nextAction}><span>{t.next}</span><strong>{selected.next[lang]}</strong><button onClick={() => notify(t.preparedToast)}>{t.prepare}</button></div><div className={styles.stageControls}><span>{t.move}</span><div>{stages.map((stage) => <button key={stage} className={selected.stage === stage ? styles.stageActive : ""} onClick={() => moveOpportunity(selected.id, stage)}>{stageLabels[lang][stage]}</button>)}</div></div></div>
-          </section></div>
-        ) : null}
-
-        {active === "Automation" ? (
-          <div className={styles.content}><section className={styles.automationHero}><div><span>{t.suggested}</span><h2>{t.workflowTitle}</h2><p>{t.workflowIntro}</p></div><button className={sequenceEnabled ? styles.toggleOn : styles.toggleOff} onClick={() => setSequenceEnabled(!sequenceEnabled)}><i />{sequenceEnabled ? t.enabled : t.paused}</button></section><section className={styles.workflow}>{workflow.map(([n,title,copy,timing]) => <article key={n}><span>{n}</span><div><h3>{title[lang]}</h3><p>{copy[lang]}</p></div><em>{timing[lang]}</em><i>✓</i></article>)}</section></div>
-        ) : null}
-
-        {active === "Reports" ? (
-          <div className={styles.content}><section className={styles.reportHeader}><div><span>{t.performance}</span><h2>{t.managementSummary}</h2></div><button onClick={() => notify(t.reportToast)}>{t.generate}</button></section><section className={styles.metrics}><article><span>{t.newEnquiries}</span><strong>26</strong><small>{t.threeRegions}</small></article><article><span>{t.qualifiedRate}</span><strong>61%</strong><small>{t.conceptKpi}</small></article><article><span>{t.quotationValue}</span><strong>{lang === "ar" ? "٦٩١ ألف ر.س" : "SAR 691k"}</strong><small>{t.openCommercial}</small></article><article><span>{t.responseRate}</span><strong>47%</strong><small>{t.sequences}</small></article></section><section className={styles.twoCol}><article className={styles.panel}><div className={styles.panelHead}><div><span>{t.region}</span><h2>{t.distribution}</h2></div></div><div className={styles.barList}>{[[regionLabels[lang].Riyadh,92],[regionLabels[lang].Jeddah,74],[regionLabels[lang].Dammam,48]].map(([name,value]) => <div key={name}><span>{name}</span><div><i style={{width:`${value}%`}} /></div><strong>{value}</strong></div>)}</div></article><article className={styles.panel}><div className={styles.panelHead}><div><span>{t.aiManagement}</span><h2>{t.attention}</h2></div></div><div className={styles.summaryBox}><p>{t.summary1}</p><p><strong>{t.summaryLabel}</strong> {t.summary2}</p></div></article></section></div>
-        ) : null}
+  const renderOverview = () => (
+    <>
+      <section className={styles.heroStrip}><div><span>{lang === "ar" ? "مركز القيادة التجارية" : "Commercial command center"}</span><h2>{lang === "ar" ? "المبيعات، المتابعة، المنافسات والفريق في نظام واحد" : "Sales, follow-up, tenders and team execution in one system"}</h2><p>{lang === "ar" ? "تصور توضيحي مخصص لمسار موزع مختبرات وتشخيصات متعدد المناطق والأقسام." : "An illustrative concept tailored to a multi-region laboratory and diagnostics distributor workflow."}</p></div><button className={styles.primary} onClick={() => setActive("ai")}>{lang === "ar" ? "اسأل الذكاء الاصطناعي ✦" : "Ask AI ✦"}</button></section>
+      <section className={styles.metricGrid}>
+        <article className={styles.metric}><span>{lang === "ar" ? "قيمة الفرص المفتوحة" : "Open opportunity value"}</span><strong>{money(openValue, lang)}</strong><small>{lang === "ar" ? `${opportunities.filter(o=>o.stage!=="Won").length} فرص نشطة` : `${opportunities.filter(o=>o.stage!=="Won").length} active opportunities`}</small></article>
+        <article className={styles.metric}><span>{lang === "ar" ? "فرص عالية التوافق" : "High-fit opportunities"}</span><strong>{highFit}</strong><small>{lang === "ar" ? "تقييم AI يساوي أو يتجاوز 85" : "AI score ≥ 85"}</small></article>
+        <article className={styles.metric}><span>{lang === "ar" ? "قيمة المنافسات النشطة" : "Active tender value"}</span><strong>{money(tenderValue, lang)}</strong><small>{lang === "ar" ? `${tenders.length} منافسات قيد المتابعة` : `${tenders.length} tenders being tracked`}</small></article>
+        <article className={styles.metric}><span>{lang === "ar" ? "أولويات عاجلة" : "Urgent priorities"}</span><strong>{overdue}</strong><small>{lang === "ar" ? "مهام عالية الأولوية تحتاج إجراء" : "High-priority tasks needing action"}</small></article>
       </section>
-    </main>
+      <section className={styles.grid2}>
+        <article className={styles.panel}><div className={styles.panelHead}><div><small>{lang === "ar" ? "مسار المبيعات" : "Commercial pipeline"}</small><h2>{lang === "ar" ? "أهم الفرص الآن" : "Highest-priority opportunities"}</h2></div><button onClick={() => setActive("opportunities")}>{lang === "ar" ? "عرض الكل ←" : "View all →"}</button></div><table className={styles.table}><thead><tr><th>{lang === "ar" ? "الحساب" : "Account"}</th><th>AI</th><th>{lang === "ar" ? "المرحلة" : "Stage"}</th><th>{lang === "ar" ? "القيمة" : "Value"}</th></tr></thead><tbody>{opportunities.slice().sort((a,b)=>b.score-a.score).slice(0,5).map(o=>{const a=accounts.find(x=>x.id===o.accountId)!;return <tr key={o.id} onClick={()=>openAccount(a.id)}><td><span className={styles.cellTitle}>{L(a.name)}</span><span className={styles.cellSub}>{L(o.division)} · {L(o.region)}</span></td><td><span className={`${styles.score} ${o.score>=85?styles.scoreHigh:""}`}>{o.score}</span></td><td><span className={styles.pill}><i />{stageLabel(o.stage,lang)}</span></td><td>{money(o.value,lang)}</td></tr>})}</tbody></table></article>
+        <article className={styles.aiCard}><small>{lang === "ar" ? "ملخص الإدارة بالذكاء الاصطناعي" : "AI management brief"}</small><h2>{lang === "ar" ? "ما الذي يستحق الاهتمام اليوم؟" : "What deserves attention today?"}</h2><p>{L(aiResponse)}</p><div className={styles.quickPrompts}><button onClick={()=>askAI("focus")}>{lang === "ar" ? "أولويات اليوم" : "Today’s priorities"}</button><button onClick={()=>askAI("risk")}>{lang === "ar" ? "الفرص المعرضة للخطر" : "At-risk opportunities"}</button><button onClick={()=>askAI("forecast")}>{lang === "ar" ? "توقع المسار" : "Pipeline forecast"}</button></div></article>
+      </section>
+      <section className={styles.gridEqual}>
+        <article className={styles.panel}><div className={styles.panelHead}><div><small>{lang === "ar" ? "النشاط المباشر" : "Live activity"}</small><h2>{lang === "ar" ? "ما حدث مؤخراً" : "What just happened"}</h2></div></div><div className={styles.activity}>{activities.map((a,i)=><div className={styles.activityItem} key={i}><i>{a.icon}</i><div><strong>{L(a.title)}</strong><p>{L(a.copy)}</p><small>{L(a.time)}</small></div></div>)}</div></article>
+        <article className={styles.panel}><div className={styles.panelHead}><div><small>{lang === "ar" ? "المواعيد القادمة" : "Upcoming deadlines"}</small><h2>{lang === "ar" ? "المنافسات والمهام" : "Tenders & tasks"}</h2></div><button onClick={()=>setActive("tasks")}>{lang === "ar" ? "فتح المهام" : "Open tasks"}</button></div>{tenders.slice(0,2).map(t=><div className={styles.activityItem} key={t.id}><i>◇</i><div><strong>{L(t.title)}</strong><p>{L(t.status)} · {L(t.deadline)}</p><small>{money(t.value,lang)}</small></div></div>)}{tasks.filter(t=>!t.done).slice(0,2).map(t=><div className={styles.activityItem} key={t.id}><i>✓</i><div><strong>{L(t.title)}</strong><p>{t.owner}</p><small>{L(t.due)}</small></div></div>)}</article>
+      </section>
+    </>
   );
+
+  const renderAccounts = () => <><SectionHead eyebrow={B("Customer intelligence", "معلومات العملاء")} title={B("Accounts", "الحسابات")} copy={B("Every institution, its commercial value and current relationship health in one view.", "كل مؤسسة وقيمتها التجارية وصحة العلاقة الحالية في شاشة واحدة.")} lang={lang}/><div className={styles.accountGrid}>{accounts.map(a=><button className={styles.accountCard} key={a.id} onClick={()=>openAccount(a.id)}><div className={styles.accountTop}><div><h3>{L(a.name)}</h3><p>{L(a.type)} · {L(a.region)}</p></div><span className={`${styles.score} ${a.health>=85?styles.scoreHigh:""}`}>{a.health}</span></div><p>{L(a.division)}</p><div className={styles.accountMeta}><div><span>{lang==="ar"?"القيمة":"Pipeline"}</span><strong>{money(a.value,lang)}</strong></div><div><span>{lang==="ar"?"جهات الاتصال":"Contacts"}</span><strong>{a.contacts}</strong></div><div><span>{lang==="ar"?"آخر نشاط":"Last activity"}</span><strong>{L(a.last)}</strong></div></div></button>)}</div></>;
+
+  const renderHub = () => <><div className={styles.panel}><div className={styles.hubTop}><div><small>{lang==="ar"?"مركز الحساب":"ACCOUNT HUB"}</small><h2>{L(selectedAccount.name)}</h2><p>{L(selectedAccount.type)} · {L(selectedAccount.region)} · {L(selectedAccount.division)}</p></div><div className={styles.hubStats}><div><span>{lang==="ar"?"قيمة الفرص":"Pipeline"}</span><strong>{money(accountOpps.reduce((s,o)=>s+o.value,0),lang)}</strong></div><div><span>{lang==="ar"?"صحة الحساب":"Account health"}</span><strong>{selectedAccount.health}/100</strong></div><div><span>{lang==="ar"?"جهات الاتصال":"Contacts"}</span><strong>{accountContacts.length}</strong></div><div><span>{lang==="ar"?"المسؤول":"Owner"}</span><strong>{selectedAccount.owner}</strong></div></div></div></div>
+    <section className={styles.grid2}><div>
+      <article className={styles.panel}><div className={styles.panelHead}><div><small>{lang==="ar"?"الأشخاص":"People"}</small><h2>{lang==="ar"?"جهات الاتصال وصناع القرار":"Contacts & decision makers"}</h2></div><button onClick={()=>setActive("contacts")}>{lang==="ar"?"عرض الكل":"View all"}</button></div>{accountContacts.length?accountContacts.map(c=><div className={styles.activityItem} key={c.id}><i>♙</i><div><strong>{c.name} · {L(c.role)}</strong><p>{L(c.decision)} · {c.email}</p><small>{c.phone}</small></div></div>):<div className={styles.empty}>{lang==="ar"?"لا توجد جهات اتصال تجريبية لهذا الحساب":"No illustrative contacts for this account"}</div>}</article>
+      <article className={styles.panel} style={{marginTop:12}}><div className={styles.panelHead}><div><small>{lang==="ar"?"العمل التجاري":"Commercial work"}</small><h2>{lang==="ar"?"الفرص وعروض الأسعار":"Opportunities & quotes"}</h2></div></div>{accountOpps.map(o=><div className={styles.activityItem} key={o.id}><i>↗</i><div><strong>{L(o.title)} · {money(o.value,lang)}</strong><p>{stageLabel(o.stage,lang)} · AI {o.score}</p><small>{L(o.division)}</small></div></div>)}{accountQuotes.map(q=><div className={styles.activityItem} key={q.id}><i>▤</i><div><strong>{q.no} · {money(q.value,lang)}</strong><p>{L(q.status)}</p><small>{L(q.date)}</small></div></div>)}</article>
+      <article className={styles.panel} style={{marginTop:12}}><div className={styles.panelHead}><div><small>{lang==="ar"?"التنفيذ":"Execution"}</small><h2>{lang==="ar"?"المهام والمستندات":"Tasks & documents"}</h2></div></div>{accountTasks.map(t=><div className={styles.activityItem} key={t.id}><i>{t.done?"✓":"○"}</i><div><strong>{L(t.title)}</strong><p>{t.owner} · {L(t.due)}</p></div></div>)}{accountDocs.map(d=><div className={styles.activityItem} key={d.id}><i>▱</i><div><strong>{L(d.name)}</strong><p>{L(d.type)} · {L(d.status)}</p><small>{L(d.updated)}</small></div></div>)}</article>
+    </div><div><article className={styles.aiCard}><small>{lang==="ar"?"ذكاء الحساب":"ACCOUNT AI"}</small><h2>{lang==="ar"?"الخطوة التالية المقترحة":"Recommended next action"}</h2><p>{selectedAccountId===1?(lang==="ar"?"متابعة عرض PCR اليوم، مع الإشارة إلى المذكرة التطبيقية وتوقيت التنفيذ. إذا لم يصل رد، جدولة متابعة ثانية بعد 3 أيام.":"Follow up the PCR quotation today, referencing the application note and implementation timing. If there is no reply, schedule a second touch in 3 days."):(lang==="ar"?"راجع آخر نشاط للحساب، وحدد صاحب القرار التالي والإجراء التجاري الأكثر إلحاحاً قبل إرسال أي تواصل.":"Review the latest account activity, identify the next decision-maker and prioritise the most time-sensitive commercial action before outreach.")}</p><div className={styles.quickPrompts}><button onClick={()=>askAI("followup")}>{lang==="ar"?"إعداد متابعة":"Prepare follow-up"}</button><button onClick={()=>askAI("risk")}>{lang==="ar"?"تحليل المخاطر":"Analyse risk"}</button></div></article><article className={styles.panel} style={{marginTop:12}}><div className={styles.panelHead}><div><small>{lang==="ar"?"السجل":"Timeline"}</small><h2>{lang==="ar"?"تاريخ الحساب":"Account history"}</h2></div></div><div className={styles.timeline}><article><small>{lang==="ar"?"اليوم 09:21":"Today 09:21"}</small><strong>{lang==="ar"?"تم فتح عرض السعر":"Quotation opened"}</strong><p>{lang==="ar"?"سجل النظام مشاهدة المستند وربطها بالفرصة الحالية.":"The system logged document engagement against the active opportunity."}</p></article><article><small>{lang==="ar"?"أمس":"Yesterday"}</small><strong>{lang==="ar"?"تم إرسال مذكرة تطبيقية":"Application note shared"}</strong><p>{lang==="ar"?"تمت إضافة المستند إلى سجل الحساب والمتابعة.":"The document was added to the account and follow-up history."}</p></article><article><small>{lang==="ar"?"12 أغسطس":"12 Aug"}</small><strong>{lang==="ar"?"تم إصدار عرض السعر":"Quotation issued"}</strong><p>{lang==="ar"?"تم إنشاء مهمة متابعة وربطها بالمسؤول التجاري.":"A follow-up task was created and assigned to the commercial owner."}</p></article><article><small>{lang==="ar"?"10 أغسطس":"10 Aug"}</small><strong>{lang==="ar"?"اكتمل التأهيل الفني":"Technical qualification completed"}</strong><p>{lang==="ar"?"تم توثيق متطلبات سير العمل والجدول المتوقع للشراء.":"Workflow requirements and the expected buying window were recorded."}</p></article></div></article></div></section></>;
+
+  const renderOpportunities = () => <><SectionHead eyebrow={B("Commercial pipeline", "مسار المبيعات")} title={B("Opportunities", "الفرص")} copy={B("Move work from first enquiry through technical review, quotation, tender and won stages.", "نقل العمل من أول استفسار إلى المراجعة الفنية وعرض السعر والمنافسة والفوز.")} lang={lang}/><div className={styles.kanban}>{stageCounts.map(col=><div className={styles.kanbanCol} key={col.stage}><div className={styles.kanbanHead}><strong>{stageLabel(col.stage,lang)}</strong><span>{col.count}</span></div>{opportunities.filter(o=>o.stage===col.stage).map(o=>{const a=accounts.find(x=>x.id===o.accountId)!;return <button className={styles.oppCard} key={o.id} onClick={()=>openAccount(o.accountId)}><strong>{L(a.name)}</strong><small>{L(o.title)}</small><small>{L(o.division)} · {L(o.region)}</small><footer><span>{money(o.value,lang)}</span><span className={`${styles.score} ${o.score>=85?styles.scoreHigh:""}`}>{o.score}</span></footer></button>})}</div>)}</div><div className={styles.panel} style={{marginTop:12}}><div className={styles.panelHead}><div><small>{lang==="ar"?"تحديث سريع":"Quick stage update"}</small><h2>{lang==="ar"?"نقل الفرصة المحددة":"Move a sample opportunity"}</h2></div></div><div className={styles.toolbar}>{(["New","Technical review","Quotation","Tender","Won"] as Stage[]).map(s=><button className={styles.secondary} key={s} onClick={()=>moveOpp(1,s)}>{stageLabel(s,lang)}</button>)}</div></div></>;
+
+  const renderContacts = () => <><SectionHead eyebrow={B("Relationship map", "خريطة العلاقات")} title={B("Contacts & decision makers", "جهات الاتصال وصناع القرار")} copy={B("Commercial, technical and procurement contacts linked to the accounts they influence.", "جهات تجارية وفنية ومشتريات مرتبطة بالحسابات التي تؤثر عليها.")} lang={lang}/><div className={styles.contactGrid}>{contacts.map(c=>{const a=accounts.find(x=>x.id===c.accountId)!;return <article className={styles.contactCard} key={c.id}><div className={styles.avatar}>{c.name.split(" ").slice(-1)[0].slice(0,2)}</div><h3>{c.name}</h3><p>{L(c.role)} · {L(a.name)}</p><small><span className={styles.statusDot}/>{L(c.decision)}</small><small>{c.email}</small><small>{c.phone}</small><div className={styles.contactActions}><button onClick={()=>notify(lang==="ar"?"تم فتح مسودة بريد توضيحية":"Illustrative email draft opened")}>✉ {lang==="ar"?"بريد":"Email"}</button><button onClick={()=>openAccount(c.accountId)}>◎ {lang==="ar"?"الحساب":"Account"}</button></div></article>})}</div></>;
+
+  const renderQuotes = () => <><SectionHead eyebrow={B("Commercial documents", "المستندات التجارية")} title={B("Quotes & proposals", "عروض الأسعار والمقترحات")} copy={B("Track draft, sent, viewed and revision states without losing the follow-up context.", "متابعة حالات المسودة والإرسال والمشاهدة والمراجعة دون فقدان سياق المتابعة.")} lang={lang}/><article className={styles.panel}>{quotes.map(q=>{const a=accounts.find(x=>x.id===q.accountId)!;return <div className={styles.quoteRow} key={q.id}><div className={styles.rowTitle}><strong>{q.no}</strong><small>{L(a.name)}</small></div><div className={styles.rowCell}><strong>{money(q.value,lang)}</strong></div><div className={styles.rowCell}>{L(q.status)}</div><div className={styles.rowCell}>{L(q.date)} · {q.owner}</div><button className={styles.secondary} onClick={()=>notify(lang==="ar"?"تم إعداد متابعة مرتبطة بعرض السعر":"Context-aware quotation follow-up prepared")}>{lang==="ar"?"إعداد متابعة":"Prepare follow-up"}</button></div>})}</article></>;
+
+  const renderTenders = () => <><SectionHead eyebrow={B("Deadline intelligence", "ذكاء المواعيد")} title={B("Tenders", "المنافسات")} copy={B("Deadlines, value, missing work and ownership surfaced before submission dates.", "إظهار المواعيد والقيمة والعمل الناقص والمسؤوليات قبل تاريخ التقديم.")} lang={lang}/><article className={styles.panel}>{tenders.map(t=>{const a=accounts.find(x=>x.id===t.accountId)!;return <div className={styles.tenderRow} key={t.id}><div className={styles.rowTitle}><strong>{L(t.title)}</strong><small>{L(a.name)}</small></div><div className={styles.rowCell}><strong>{money(t.value,lang)}</strong></div><div className={styles.rowCell}>{L(t.deadline)}</div><div className={styles.rowCell}>{L(t.status)} · {t.owner}</div><button className={styles.secondary} onClick={()=>notify(lang==="ar"?"تم فتح قائمة مستندات المنافسة":"Tender document checklist opened")}>{lang==="ar"?"قائمة المستندات":"Checklist"}</button></div>})}</article></>;
+
+  const renderTasks = () => <><SectionHead eyebrow={B("Execution layer", "طبقة التنفيذ")} title={B("Tasks & next actions", "المهام والإجراءات التالية")} copy={B("One queue for commercial follow-up, technical work and tender preparation.", "قائمة موحدة للمتابعة التجارية والعمل الفني وتجهيز المنافسات.")} lang={lang}/><article className={styles.panel}>{tasks.map(t=>{const a=accounts.find(x=>x.id===t.accountId)!;return <div className={styles.taskRow} key={t.id}><div className={styles.rowTitle}><strong style={{textDecoration:t.done?"line-through":"none"}}>{L(t.title)}</strong><small>{L(a.name)}</small></div><div className={styles.rowCell}>{t.owner}</div><div className={styles.rowCell}>{L(t.due)}</div><div className={styles.rowCell}><span className={`${styles.pill} ${t.priority==="High"?styles.pillDanger:""}`}><i />{t.priority}</span></div><button className={t.done?styles.ghost:styles.primary} onClick={()=>completeTask(t.id)}>{t.done?(lang==="ar"?"إعادة فتح":"Reopen"):(lang==="ar"?"إكمال":"Complete")}</button></div>})}</article></>;
+
+  const renderEmail = () => <><SectionHead eyebrow={B("Customer communication", "تواصل العملاء")} title={B("Email & automatic follow-up", "البريد والمتابعة الآلية")} copy={B("Drafts, sequences, scheduled touches and reply-stop logic in the same customer history.", "المسودات والتسلسلات والمتابعات المجدولة وإيقاف التسلسل عند الرد ضمن تاريخ العميل نفسه.")} lang={lang}/><section className={styles.grid2}><article className={styles.panel}>{emails.map(e=>{const a=accounts.find(x=>x.id===e.accountId)!;return <div className={styles.mailRow} key={e.id}><div className={styles.rowTitle}><strong>{L(e.subject)}</strong><small>{L(a.name)}</small></div><div className={styles.rowCell}>{L(e.status)}</div><div className={styles.rowCell}>{L(e.when)}</div><div className={styles.rowCell}>{L(e.sequence)}</div></div>})}</article><article className={styles.aiCard}><small>{lang==="ar"?"حماية من الإرسال الخاطئ":"Human control"}</small><h2>{lang==="ar"?"الأتمتة لا تعني فقدان التحكم":"Automation without losing control"}</h2><p>{lang==="ar"?"يمكن للنظام إعداد وجدولة المتابعات، لكن الردود البشرية توقف التسلسل فوراً، ويمكن إبقاء الإرسال تحت بوابة مراجعة بشرية حسب سياسة الشركة.":"The system can prepare and schedule follow-ups, while genuine human replies stop the sequence immediately. Sending can remain behind a human review gate according to company policy."}</p><div className={styles.quickPrompts}><button onClick={()=>askAI("followup")}>{lang==="ar"?"إنشاء مسودة متابعة":"Generate follow-up draft"}</button></div></article></section></>;
+
+  const renderAutomation = () => <><SectionHead eyebrow={B("Workflow engine", "محرك سير العمل")} title={B("Automation", "الأتمتة")} copy={B("Visible business rules rather than hidden scripts: every workflow can be understood and controlled.", "قواعد عمل واضحة بدلاً من سكربتات مخفية: يمكن فهم كل سير عمل والتحكم به.")} lang={lang}/><div className={styles.automationGrid}>{automations.map(a=><article className={styles.automationCard} key={a.id}><header><div><h3>{L(a.title)}</h3><p>{L(a.desc)}</p></div><button className={`${styles.switch} ${automationState[a.id]?styles.switchOn:""}`} onClick={()=>setAutomationState(v=>({...v,[a.id]:!v[a.id]}))}>{automationState[a.id]?(lang==="ar"?"مفعّل":"ON"):(lang==="ar"?"متوقف":"OFF")}</button></header><div className={styles.flow}>{a.flow.map((f,i)=><span key={i}>{L(f)}</span>).reduce<React.ReactNode[]>((acc,node,i)=>{if(i>0)acc.push(<b key={`b${i}`}>→</b>);acc.push(node);return acc;},[])}</div></article>)}</div></>;
+
+  const renderTeam = () => <><SectionHead eyebrow={B("Commercial ownership", "المسؤولية التجارية")} title={B("Team & regional performance", "الفريق وأداء المناطق")} copy={B("See pipeline, follow-up load and conversion by region and support function.", "عرض المسار وحجم المتابعات والتحويل حسب المنطقة ووظيفة الدعم.")} lang={lang}/><div className={styles.teamGrid}>{team.map((m,i)=><article className={styles.teamCard} key={i}><h3>{m.name}</h3><p>{L(m.role)} · {L(m.region)}</p><div className={styles.teamMetric}><span>{lang==="ar"?"المسار":"Pipeline"}</span><strong>{money(m.pipeline,lang)}</strong></div><div className={styles.teamMetric}><span>{lang==="ar"?"متابعات":"Follow-ups"}</span><strong>{m.followups}</strong></div><div className={styles.teamMetric}><span>{lang==="ar"?"معدل الفوز":"Win rate"}</span><strong>{m.winRate}%</strong></div></article>)}</div><article className={styles.panel} style={{marginTop:12}}><div className={styles.panelHead}><div><small>{lang==="ar"?"توزيع المسار":"Regional mix"}</small><h2>{lang==="ar"?"القيمة المفتوحة حسب المنطقة":"Open value by region"}</h2></div></div><div className={styles.barGroup}>{[[B("Riyadh","الرياض"),62],[B("Jeddah","جدة"),78],[B("Dammam","الدمام"),31]].map(([name,value],i)=><div className={styles.barRow} key={i}><span>{L(name as Bi)}</span><div className={styles.barTrack}><i style={{width:`${value}%`}}/></div><strong>{value}%</strong></div>)}</div></article></>;
+
+  const renderDocuments = () => <><SectionHead eyebrow={B("Shared commercial memory", "الذاكرة التجارية المشتركة")} title={B("Documents", "المستندات")} copy={B("Quotes, technical sheets, tender files and implementation plans attached to the right account.", "عروض الأسعار والمواصفات الفنية وملفات المنافسات وخطط التنفيذ مرتبطة بالحساب الصحيح.")} lang={lang}/><article className={styles.panel}>{documents.map(d=>{const a=accounts.find(x=>x.id===d.accountId)!;return <div className={styles.docRow} key={d.id}><div className={styles.rowTitle}><strong>{L(d.name)}</strong><small>{L(a.name)}</small></div><div className={styles.rowCell}>{L(d.type)}</div><div className={styles.rowCell}>{L(d.updated)} · {L(d.status)}</div><button className={styles.secondary} onClick={()=>notify(lang==="ar"?"تم فتح مستند توضيحي":"Illustrative document opened")}>{lang==="ar"?"فتح":"Open"}</button></div>})}</article></>;
+
+  const renderReports = () => <><SectionHead eyebrow={B("Management intelligence", "ذكاء الإدارة")} title={B("Reports", "التقارير")} copy={B("Commercial performance by region, division, source and workflow — with an AI interpretation layer.", "الأداء التجاري حسب المنطقة والقسم والمصدر وسير العمل مع طبقة تفسير بالذكاء الاصطناعي.")} lang={lang}/><div className={styles.reportGrid}><article className={styles.reportCard}><span>{lang==="ar"?"المسار المفتوح":"Open pipeline"}</span><strong>{money(openValue,lang)}</strong><small>{lang==="ar"?"قيمة تجريبية عبر الفرص الحالية":"Illustrative value across active opportunities"}</small></article><article className={styles.reportCard}><span>{lang==="ar"?"معدل التأهيل":"Qualification rate"}</span><strong>61%</strong><small>{lang==="ar"?"فرص تجاوزت بوابة التأهيل":"Opportunities passing qualification gate"}</small></article><article className={styles.reportCard}><span>{lang==="ar"?"نسبة الرد":"Response rate"}</span><strong>47%</strong><small>{lang==="ar"?"عبر تسلسلات المتابعة":"Across follow-up sequences"}</small></article><article className={styles.reportCard}><span>{lang==="ar"?"المتابعة في الوقت":"On-time follow-up"}</span><strong>84%</strong><small>{lang==="ar"?"مقابل 63٪ في سير يدوي توضيحي":"Versus an illustrative 63% manual baseline"}</small></article><article className={styles.reportCard}><span>{lang==="ar"?"المنافسات النشطة":"Active tenders"}</span><strong>{tenders.length}</strong><small>{money(tenderValue,lang)}</small></article><article className={styles.reportCard}><span>{lang==="ar"?"المهام المكتملة":"Tasks completed"}</span><strong>{tasks.filter(t=>t.done).length}/{tasks.length}</strong><small>{lang==="ar"?"تتحدث مباشرة من التنفيذ":"Updated directly from execution"}</small></article></div><section className={styles.gridEqual}><article className={styles.panel}><div className={styles.panelHead}><div><small>{lang==="ar"?"الأقسام":"Divisions"}</small><h2>{lang==="ar"?"القيمة التجارية حسب القسم":"Commercial value by division"}</h2></div></div><div className={styles.barGroup}>{[[B("Molecular diagnostics","التشخيص الجزيئي"),92],[B("Hematology","أمراض الدم"),78],[B("IHC","الكيمياء النسيجية المناعية"),69],[B("Toxicology","السموم"),54],[B("Microbiology","الأحياء الدقيقة"),42]].map(([name,value],i)=><div className={styles.barRow} key={i}><span>{L(name as Bi)}</span><div className={styles.barTrack}><i style={{width:`${value}%`}}/></div><strong>{value}</strong></div>)}</div></article><article className={styles.aiCard}><small>{lang==="ar"?"تفسير الإدارة":"AI interpretation"}</small><h2>{lang==="ar"?"ماذا تعني الأرقام؟":"What do the numbers mean?"}</h2><p>{lang==="ar"?"أعلى قيمة قريبة الأجل تتركز في التشخيص الجزيئي وأمراض الدم وIHC. أفضل فرصة للتحسين التشغيلي هي تقليل الفاصل بين إرسال عرض السعر والمتابعة الأولى، مع إبراز المنافسات القريبة تلقائياً.":"Near-term value is concentrated in molecular diagnostics, hematology and IHC. The clearest operational improvement is shortening the gap between quotation and first follow-up while automatically surfacing near tender deadlines."}</p></article></section></>;
+
+  const renderAI = () => <><SectionHead eyebrow={B("AI operating layer", "طبقة التشغيل بالذكاء الاصطناعي")} title={B("AI Command Center", "مركز الذكاء الاصطناعي")} copy={B("Ask the system what needs attention, what is at risk and what action should happen next.", "اسأل النظام عما يحتاج الاهتمام وما هو معرض للخطر وما الإجراء التالي المطلوب.")} lang={lang}/><div className={styles.aiWorkspace}><article className={styles.aiChat}><h2>{lang==="ar"?"مساعد الإدارة التجارية":"Commercial operations assistant"}</h2><p>{lang==="ar"?"يعتمد هذا العرض على بيانات تجريبية داخل التصور ولا يمثل بيانات حقيقية للشركة.":"This concept uses illustrative demo data and does not represent actual company records."}</p><div className={styles.bubble}>{lang==="ar"?"ما الذي يجب أن أركز عليه اليوم؟":"What should I focus on today?"}</div><div className={`${styles.bubble} ${styles.bubbleAI}`}>{L(aiResponse)}</div><div className={styles.quickPrompts}><button onClick={()=>askAI("focus")}>{lang==="ar"?"أولويات اليوم":"Today’s priorities"}</button><button onClick={()=>askAI("risk")}>{lang==="ar"?"ما المعرض للخطر؟":"What is at risk?"}</button><button onClick={()=>askAI("followup")}>{lang==="ar"?"أعد متابعة":"Prepare follow-up"}</button><button onClick={()=>askAI("forecast")}>{lang==="ar"?"توقع المسار":"Forecast pipeline"}</button></div><div className={styles.aiInput}><div>{lang==="ar"?"اكتب سؤالاً عن الحسابات أو الفرص أو المنافسات...":"Ask about accounts, opportunities, tenders or follow-ups..."}</div><button className={styles.primary} onClick={()=>askAI("focus")}>✦</button></div></article><aside className={styles.panel}><div className={styles.panelHead}><div><small>{lang==="ar"?"تنبيهات تلقائية":"Proactive intelligence"}</small><h2>{lang==="ar"?"استنتاجات مقترحة":"Suggested insights"}</h2></div></div><div className={styles.insightList}><div className={styles.insight}><strong>{lang==="ar"?"منافسة تحتاج تصعيداً":"Tender needs escalation"}</strong><p>{lang==="ar"?"منافسة IHC قريبة ويوجد مستندان ناقصان.":"IHC tender is approaching with two missing documents."}</p></div><div className={styles.insight}><strong>{lang==="ar"?"عرض سعر عالي النية":"High-intent quotation"}</strong><p>{lang==="ar"?"تمت مشاهدة Q-2026-084 اليوم؛ المتابعة في الوقت الحالي ذات أولوية عالية.":"Q-2026-084 was viewed today; timely follow-up is high priority."}</p></div><div className={styles.insight}><strong>{lang==="ar"?"فرصة قد تبرد":"Opportunity may go cold"}</strong><p>{lang==="ar"?"استفسار الأحياء الدقيقة ما زال جديداً ويحتاج مواصفات إضافية.":"Microbiology enquiry remains new and needs missing specifications."}</p></div><div className={styles.insight}><strong>{lang==="ar"?"ضغط على دعم التطبيقات":"Applications workload"}</strong><p>{lang==="ar"?"عدة فرص عالية القيمة تحتاج دعماً فنياً في الوقت نفسه.":"Several high-value opportunities require technical support concurrently."}</p></div></div></aside></div></>;
+
+  const renderView = () => {
+    if (active === "overview") return renderOverview();
+    if (active === "accounts") return renderAccounts();
+    if (active === "hub") return renderHub();
+    if (active === "opportunities") return renderOpportunities();
+    if (active === "contacts") return renderContacts();
+    if (active === "quotes") return renderQuotes();
+    if (active === "tenders") return renderTenders();
+    if (active === "tasks") return renderTasks();
+    if (active === "email") return renderEmail();
+    if (active === "automation") return renderAutomation();
+    if (active === "team") return renderTeam();
+    if (active === "documents") return renderDocuments();
+    if (active === "reports") return renderReports();
+    return renderAI();
+  };
+
+  return <main className={styles.page} data-theme={theme} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+    {toast && <div className={styles.toast}>{toast}</div>}
+    <aside className={styles.sidebar}><a className={styles.brand} href="/systems"><span>Lab</span>Narrative<b>Systems</b></a><div className={styles.conceptTag}>{lang==="ar"?"تصور خاص · مسار الشفاء الطبية":"Private concept · Medical Masar"}</div><nav className={styles.nav}>{nav.map(n=><button className={active===n.id?styles.active:""} key={n.id} onClick={()=>setActive(n.id)}><i>{n.icon}</i>{L(n.label)}</button>)}</nav><div className={styles.sidebarFoot}><strong>{lang==="ar"?"تصور مخصص لمسار الشفاء الطبية":"Prepared for Medical Masar Al Shefaa"}</strong><p>{lang==="ar"?"بيانات الحسابات والأسماء والقيم داخل التصور توضيحية، بينما سير العمل مصمم حول نموذج موزع مختبرات وتشخيصات متعدد المناطق.":"Account names and values are illustrative; the workflow is designed around a multi-region laboratory and diagnostics distributor model."}</p><a href="mailto:hello@labnarrative.com?subject=Medical%20Masar%20Systems%20concept">{lang==="ar"?"ناقش هذا التصور ↗":"Discuss this concept ↗"}</a></div></aside>
+    <section className={styles.main}><header className={styles.topbar}><div className={styles.titleBlock}><small>{lang==="ar"?"مسار الشفاء الطبية · نظام تجاري توضيحي":"Medical Masar · commercial system concept"}</small><h1>{L(currentLabel)}</h1></div><div className={styles.topActions}><div className={styles.seg}><button className={lang==="en"?styles.selected:""} onClick={()=>setLang("en")}>EN</button><button className={lang==="ar"?styles.selected:""} onClick={()=>setLang("ar")}>عربي</button></div><div className={styles.seg} aria-label="Theme"><button className={theme==="light"?styles.selected:""} onClick={()=>setTheme("light")}>☀ {lang==="ar"?"فاتح":"Light"}</button><button className={theme==="dark"?styles.selected:""} onClick={()=>setTheme("dark")}>☾ {lang==="ar"?"داكن":"Dark"}</button></div><span className={styles.live}><i/>{lang==="ar"?"الأتمتة مفعلة":"Automation live"}</span><button className={styles.primary} onClick={simulateEnquiry}>+ {lang==="ar"?"محاكاة استفسار":"Simulate enquiry"}</button></div></header><div className={styles.content}>{renderView()}</div></section>
+  </main>;
+}
+
+function stageLabel(stage: Stage, lang: Lang) {
+  const ar: Record<Stage,string> = { New:"جديد", "Technical review":"مراجعة فنية", Quotation:"عرض سعر", Tender:"منافسة", Won:"تم الفوز" };
+  return lang === "ar" ? ar[stage] : stage;
+}
+
+function SectionHead({ eyebrow, title, copy, lang }: { eyebrow: Bi; title: Bi; copy: Bi; lang: Lang }) {
+  return <div className={styles.sectionHeader}><div><small>{eyebrow[lang]}</small><h2>{title[lang]}</h2><p>{copy[lang]}</p></div></div>;
 }
