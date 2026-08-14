@@ -32,13 +32,13 @@ export default function NumeralPerformanceBridge() {
     (CachedLatinNumberFormat as typeof Intl.NumberFormat).supportedLocalesOf = OriginalNumberFormat.supportedLocalesOf.bind(OriginalNumberFormat);
     (Intl as { NumberFormat: typeof Intl.NumberFormat }).NumberFormat = CachedLatinNumberFormat as typeof Intl.NumberFormat;
 
-    // The demo's localizeId() intentionally used String.replace(/\\d/g, ...) to
-    // convert technical IDs to Arabic-Indic digits. Keep technical references
-    // untouched instead, without observing or rescanning the DOM.
-    String.prototype.replace = function replace(
+    // Keep technical references such as SO-2026-041 unchanged in Arabic.
+    // No DOM observer, walker, mutation scan, timeout, or animation-frame work.
+    const latinIdReplace = function (
+      this: string,
       searchValue: string | RegExp,
       replaceValue: string | ((substring: string, ...args: unknown[]) => string),
-    ) {
+    ): string {
       const value = String(this);
       if (
         searchValue instanceof RegExp &&
@@ -52,7 +52,9 @@ export default function NumeralPerformanceBridge() {
         return value;
       }
       return originalReplace.call(value, searchValue as never, replaceValue as never);
-    } as typeof String.prototype.replace;
+    };
+
+    String.prototype.replace = latinIdReplace as typeof String.prototype.replace;
 
     return () => {
       (Intl as { NumberFormat: typeof Intl.NumberFormat }).NumberFormat = OriginalNumberFormat;
