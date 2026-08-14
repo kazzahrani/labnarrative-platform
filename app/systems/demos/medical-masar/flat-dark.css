@@ -4,9 +4,9 @@ main[data-theme="dark"] {
   --surface: #0f222c;
   --surface2: #0b1b24;
   --surface3: #122a35;
-  --line: #292d31 !important;
-  --line2: #22262a !important;
-  --line-hover: #34383d !important;
+  --line: transparent !important;
+  --line2: transparent !important;
+  --line-hover: transparent !important;
   --text: #f2f5f7;
   --muted: #a9b5bd;
   --muted2: #83939e;
@@ -19,12 +19,12 @@ main[data-theme="dark"] {
 
 main[data-theme="dark"] > aside {
   background: var(--surface2) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
 }
 
 main[data-theme="dark"] > section > header {
   background: var(--bg) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
@@ -42,39 +42,39 @@ main[data-theme="dark"] [class*="sidebarFoot"],
 main[data-theme="dark"] [class*="flowRail"],
 main[data-theme="dark"] [class*="supplyHero"] > div {
   background: var(--surface) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="heroStrip"],
 main[data-theme="dark"] [class*="aiCard"] {
   background: var(--surface) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="exceptionCard"] {
   background: var(--surface2) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="metricDanger"] {
   background: var(--danger-bg) !important;
-  border-color: #353033 !important;
+  border-color: transparent !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="dispatchBlocked"] {
   background: var(--danger-bg) !important;
-  border-color: #353033 !important;
+  border-color: transparent !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="dispatchReady"],
 main[data-theme="dark"] [class*="successPanel"] {
   background: var(--good-bg) !important;
-  border-color: #2b332f !important;
+  border-color: transparent !important;
   box-shadow: none !important;
 }
 
@@ -82,7 +82,7 @@ main[data-theme="dark"] [class*="primary"],
 main[data-theme="dark"] [class*="switchOn"],
 main[data-theme="dark"] [class*="nav"] [class*="active"] {
   background: var(--accent) !important;
-  border-color: var(--accent) !important;
+  border-color: transparent !important;
   color: var(--accent-ink) !important;
   box-shadow: none !important;
 }
@@ -102,13 +102,13 @@ main[data-theme="dark"] [class*="tenderStats"] div,
 main[data-theme="dark"] [class*="bubble"],
 main[data-theme="dark"] [class*="aiInput"] div {
   background: var(--surface2) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="seg"] [class*="selected"] {
   background: var(--surface3) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
   color: var(--text) !important;
   box-shadow: none !important;
 }
@@ -118,7 +118,7 @@ main[data-theme="dark"] [class*="quickPrompts"] button:hover,
 main[data-theme="dark"] [class*="flowStep"]:hover,
 main[data-theme="dark"] [class*="nav"] button:hover {
   background: var(--surface3) !important;
-  border-color: var(--line-hover) !important;
+  border-color: transparent !important;
   color: var(--text) !important;
   box-shadow: none !important;
 }
@@ -137,8 +137,15 @@ main[data-theme="dark"] [class*="live"] i {
 
 main[data-theme="dark"] [class*="toast"] {
   background: var(--surface) !important;
-  border-color: var(--line) !important;
+  border-color: transparent !important;
   box-shadow: none !important;
+}
+
+/* Remove all remaining dark-theme borders while preserving element dimensions. */
+main[data-theme="dark"] *,
+main[data-theme="dark"] *::before,
+main[data-theme="dark"] *::after {
+  border-color: transparent !important;
 }
 
 /* Keep the Management View action visually aligned with the language/theme controls. */
