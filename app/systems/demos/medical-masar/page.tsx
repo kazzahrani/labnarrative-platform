@@ -5,97 +5,392 @@ import styles from "./v2.module.css";
 
 type Lang = "en" | "ar";
 type Theme = "light" | "dark";
-type View = "overview"|"accounts"|"hub"|"opportunities"|"contacts"|"quotes"|"tenders"|"tasks"|"email"|"automation"|"team"|"documents"|"reports"|"ai";
-type Stage = "New"|"Technical review"|"Quotation"|"Tender"|"Won";
-type Bi = {en:string;ar:string};
-const B=(en:string,ar:string):Bi=>({en,ar});
+type View = "overview" | "tenders" | "quotes" | "orders" | "warehouse" | "supply" | "invoices" | "collection" | "management" | "accounts" | "automation" | "ai";
+type Bi = { en: string; ar: string };
+const B = (en: string, ar: string): Bi => ({ en, ar });
 
-const nav:Array<{id:View;icon:string;label:Bi}>=[
-  ["overview","◫",B("Overview","نظرة عامة")],["accounts","▦",B("Accounts","الحسابات")],["hub","◎",B("Account Hub","مركز الحساب")],["opportunities","↗",B("Opportunities","الفرص")],["contacts","♙",B("Contacts","جهات الاتصال")],["quotes","▤",B("Quotes","عروض الأسعار")],["tenders","◇",B("Tenders","المنافسات")],["tasks","✓",B("Tasks","المهام")],["email","✉",B("Email & Follow-up","البريد والمتابعة")],["automation","↯",B("Automation","الأتمتة")],["team","♧",B("Team","الفريق")],["documents","▱",B("Documents","المستندات")],["reports","▥",B("Reports","التقارير")],["ai","✦",B("AI Command Center","مركز الذكاء الاصطناعي")]
-].map(([id,icon,label])=>({id:id as View,icon:icon as string,label:label as Bi}));
-
-const accounts=[
-{id:1,name:B("University Research Lab","مختبر أبحاث جامعي"),type:B("Academic research","بحث أكاديمي"),region:B("Riyadh","الرياض"),division:B("Molecular Diagnostics & Life Science","التشخيص الجزيئي وعلوم الحياة"),owner:"Riyadh Sales",health:94,value:128000,contacts:3},
-{id:2,name:B("Regional Diagnostic Center","مركز تشخيص إقليمي"),type:B("Diagnostic laboratory","مختبر تشخيصي"),region:B("Jeddah","جدة"),division:B("Hematology & Blood Banks","أمراض الدم وبنوك الدم"),owner:"Western Sales",health:89,value:215000,contacts:4},
-{id:3,name:B("Specialist Hospital Lab","مختبر مستشفى تخصصي"),type:B("Hospital laboratory","مختبر مستشفى"),region:B("Riyadh","الرياض"),division:B("Immunohistochemistry","الكيمياء النسيجية المناعية"),owner:"Riyadh Sales",health:86,value:176000,contacts:3},
-{id:4,name:B("Eastern Clinical Laboratory","مختبر سريري بالمنطقة الشرقية"),type:B("Private laboratory","مختبر خاص"),region:B("Dammam","الدمام"),division:B("Microbiology & Parasitology","الأحياء الدقيقة والطفيليات"),owner:"Eastern Sales",health:78,value:74000,contacts:2},
-{id:5,name:B("Forensic Sciences Unit","وحدة علوم الأدلة الجنائية"),type:B("Government laboratory","مختبر حكومي"),region:B("Jeddah","جدة"),division:B("Toxicology & Forensic","السموم والأدلة الجنائية"),owner:"Western Sales",health:83,value:98000,contacts:3}
+const nav: Array<{ id: View; icon: string; label: Bi; core?: boolean }> = [
+  { id: "overview", icon: "◫", label: B("Overview", "نظرة عامة") },
+  { id: "tenders", icon: "◇", label: B("Tenders", "المناقصات"), core: true },
+  { id: "quotes", icon: "▤", label: B("Quotations", "عروض الأسعار"), core: true },
+  { id: "orders", icon: "▦", label: B("Orders", "الطلبات"), core: true },
+  { id: "warehouse", icon: "▧", label: B("Warehouse", "المستودع"), core: true },
+  { id: "supply", icon: "↗", label: B("Supply", "التوريد"), core: true },
+  { id: "invoices", icon: "▱", label: B("Invoices", "الفواتير"), core: true },
+  { id: "collection", icon: "◉", label: B("Collection", "التحصيل"), core: true },
+  { id: "management", icon: "▥", label: B("Management", "لوحة الإدارة") },
+  { id: "accounts", icon: "◎", label: B("Customers", "العملاء") },
+  { id: "automation", icon: "↯", label: B("Automation", "الأتمتة") },
+  { id: "ai", icon: "✦", label: B("AI Command Center", "مركز الذكاء الاصطناعي") },
 ];
-const seedOpps=[
-{id:1,accountId:1,title:B("PCR workflow expansion","توسعة سير عمل PCR"),value:128000,score:94,stage:"Quotation" as Stage,division:B("Molecular Diagnostics","التشخيص الجزيئي")},
-{id:2,accountId:2,title:B("Hematology analyzer project","مشروع جهاز تحليل أمراض الدم"),value:215000,score:89,stage:"Technical review" as Stage,division:B("Hematology","أمراض الدم")},
-{id:3,accountId:3,title:B("IHC tender package","حزمة منافسة IHC"),value:176000,score:86,stage:"Tender" as Stage,division:B("IHC","الكيمياء النسيجية المناعية")},
-{id:4,accountId:4,title:B("Microbiology platform enquiry","استفسار منصة الأحياء الدقيقة"),value:74000,score:78,stage:"New" as Stage,division:B("Microbiology","الأحياء الدقيقة")},
-{id:5,accountId:5,title:B("Toxicology reagent package","حزمة كواشف السموم"),value:98000,score:83,stage:"Quotation" as Stage,division:B("Toxicology","السموم")},
-{id:6,accountId:1,title:B("Training & validation support","دعم التدريب والتحقق"),value:42000,score:91,stage:"Technical review" as Stage,division:B("Life Science","علوم الحياة")}
+
+const customers = [
+  { id: 1, name: B("Specialist Hospital Lab", "مختبر مستشفى تخصصي"), city: B("Riyadh", "الرياض"), segment: B("Hospital laboratory", "مختبر مستشفى"), open: 176000, outstanding: 86000 },
+  { id: 2, name: B("Regional Diagnostic Center", "مركز تشخيص إقليمي"), city: B("Jeddah", "جدة"), segment: B("Diagnostic laboratory", "مختبر تشخيصي"), open: 310000, outstanding: 215000 },
+  { id: 3, name: B("University Research Lab", "مختبر أبحاث جامعي"), city: B("Riyadh", "الرياض"), segment: B("Academic research", "بحث أكاديمي"), open: 128000, outstanding: 128000 },
+  { id: 4, name: B("Forensic Sciences Unit", "وحدة علوم الأدلة الجنائية"), city: B("Jeddah", "جدة"), segment: B("Government laboratory", "مختبر حكومي"), open: 142000, outstanding: 74000 },
 ];
-const contacts=[
-{id:1,accountId:1,name:"Dr. Sara A.",role:B("Laboratory Director","مديرة المختبر"),decision:B("Decision maker","صاحبة قرار"),email:"sara@university.example"},{id:2,accountId:1,name:"Dr. Noura H.",role:B("Molecular Core Manager","مديرة وحدة الجزيئات"),decision:B("Technical influencer","مؤثرة فنياً"),email:"noura@university.example"},{id:3,accountId:1,name:"Mr. Abdullah R.",role:B("Procurement Specialist","أخصائي مشتريات"),decision:B("Commercial contact","جهة تجارية"),email:"abdullah@university.example"},{id:4,accountId:2,name:"Mr. Faisal M.",role:B("Operations Director","مدير العمليات"),decision:B("Decision maker","صاحب قرار"),email:"faisal@diagnostic.example"},{id:5,accountId:3,name:"Dr. Huda K.",role:B("Pathology Consultant","استشارية علم الأمراض"),decision:B("Clinical influencer","مؤثرة سريرياً"),email:"huda@hospital.example"},{id:6,accountId:5,name:"Dr. Maha R.",role:B("Forensic Toxicology Lead","رئيسة السموم الجنائية"),decision:B("Technical decision maker","صاحبة قرار فني"),email:"maha@forensic.example"}
+
+const tenders = [
+  { id: "TND-2608-014", customerId: 1, title: B("IHC reagents & detection systems", "كواشف وأنظمة كشف IHC"), value: 176000, items: 24, deadline: B("22 Aug 2026", "22 أغسطس 2026"), daysLeft: 8, readiness: 83, missing: 2, owner: B("Tender Team", "فريق المناقصات"), status: B("Documents in progress", "المستندات قيد التجهيز") },
+  { id: "TND-2608-019", customerId: 2, title: B("Hematology analyzer framework", "إطار توريد جهاز أمراض الدم"), value: 310000, items: 41, deadline: B("31 Aug 2026", "31 أغسطس 2026"), daysLeft: 17, readiness: 68, missing: 5, owner: B("Applications + Sales", "التطبيقات + المبيعات"), status: B("Technical review", "مراجعة فنية") },
+  { id: "TND-2609-003", customerId: 4, title: B("Forensic toxicology consumables", "مستهلكات السموم الجنائية"), value: 142000, items: 18, deadline: B("7 Sep 2026", "7 سبتمبر 2026"), daysLeft: 24, readiness: 52, missing: 4, owner: B("Western Sales", "مبيعات الغربية"), status: B("Preparing", "قيد التحضير") },
 ];
-const quotes=[
-{id:1,accountId:1,no:"Q-2026-084",value:128000,status:B("Viewed","تمت المشاهدة"),date:B("14 Aug","14 أغسطس")},{id:2,accountId:5,no:"Q-2026-079",value:98000,status:B("Sent","مرسل"),date:B("12 Aug","12 أغسطس")},{id:3,accountId:2,no:"Q-2026-071",value:215000,status:B("Technical revision","مراجعة فنية"),date:B("9 Aug","9 أغسطس")},{id:4,accountId:1,no:"Q-2026-068",value:42000,status:B("Draft","مسودة"),date:B("8 Aug","8 أغسطس")}
+
+const quotes = [
+  { id: "Q-2026-084", customerId: 3, value: 128000, items: 24, verified: 24, errors: 0, status: B("Viewed by customer", "شاهده العميل"), next: B("Follow up today", "متابعة اليوم") },
+  { id: "Q-2026-079", customerId: 4, value: 98000, items: 18, verified: 18, errors: 0, status: B("Sent", "مرسل"), next: B("Follow up in 2 days", "متابعة بعد يومين") },
+  { id: "Q-2026-071", customerId: 2, value: 215000, items: 32, verified: 31, errors: 1, status: B("Technical revision", "مراجعة فنية"), next: B("Resolve one line mismatch", "حل اختلاف في بند واحد") },
 ];
-const tenders=[
-{id:1,accountId:3,title:B("IHC reagents & detection systems","كواشف وأنظمة كشف IHC"),value:176000,deadline:B("22 Aug 2026","22 أغسطس 2026"),status:B("Documents in progress","المستندات قيد التجهيز")},{id:2,accountId:2,title:B("Hematology analyzer framework","إطار توريد جهاز أمراض الدم"),value:310000,deadline:B("31 Aug 2026","31 أغسطس 2026"),status:B("Technical review","مراجعة فنية")},{id:3,accountId:5,title:B("Forensic toxicology consumables","مستهلكات السموم الجنائية"),value:142000,deadline:B("7 Sep 2026","7 سبتمبر 2026"),status:B("Monitoring","متابعة")}
+
+const orders = [
+  { id: "SO-2026-041", customerId: 1, source: "TND-2608-014", value: 176000, items: 24, ready: 21, missing: 3, due: B("19 Aug 2026", "19 أغسطس 2026"), status: B("At risk · incomplete", "معرض للخطر · غير مكتمل") },
+  { id: "SO-2026-038", customerId: 2, source: "Q-2026-071", value: 215000, items: 32, ready: 32, missing: 0, due: B("18 Aug 2026", "18 أغسطس 2026"), status: B("Ready to dispatch", "جاهز للشحن") },
+  { id: "SO-2026-034", customerId: 4, source: "Q-2026-079", value: 98000, items: 18, ready: 18, missing: 0, due: B("Delivered 12 Aug", "تم التسليم 12 أغسطس"), status: B("Delivered", "تم التسليم") },
 ];
-const seedTasks=[
-{id:1,accountId:1,title:B("Follow up quotation Q-2026-084","متابعة عرض السعر Q-2026-084"),due:B("Today 13:00","اليوم 13:00"),owner:"Riyadh Sales",priority:"High",done:false},{id:2,accountId:3,title:B("Upload tender compliance documents","رفع مستندات مطابقة المنافسة"),due:B("Today 16:00","اليوم 16:00"),owner:"Applications",priority:"High",done:false},{id:3,accountId:2,title:B("Schedule analyzer technical call","جدولة مكالمة فنية للجهاز"),due:B("Tomorrow","غداً"),owner:"Applications",priority:"Medium",done:false},{id:4,accountId:5,title:B("Confirm implementation timing","تأكيد توقيت التنفيذ"),due:B("Tomorrow","غداً"),owner:"Western Sales",priority:"Medium",done:false},{id:5,accountId:4,title:B("Collect missing specifications","جمع المواصفات الناقصة"),due:B("18 Aug","18 أغسطس"),owner:"Eastern Sales",priority:"Normal",done:false}
+
+const warehouse = [
+  { sku: "RGT-IHC-112", name: B("IHC Detection Kit", "طقم كشف IHC"), stock: 9, reserved: 8, needed: 8, available: 1, status: B("Ready", "جاهز") },
+  { sku: "BUF-ANT-204", name: B("Antigen Retrieval Buffer", "محلول استرجاع المستضد"), stock: 4, reserved: 4, needed: 4, available: 0, status: B("Ready", "جاهز") },
+  { sku: "AB-PDL1-37", name: B("PD-L1 Primary Antibody", "جسم مضاد أولي PD-L1"), stock: 1, reserved: 1, needed: 2, available: 0, status: B("1 unit missing", "وحدة واحدة ناقصة") },
+  { sku: "SLD-CHR-082", name: B("Charged Slides", "شرائح مشحونة"), stock: 12, reserved: 10, needed: 10, available: 2, status: B("Ready", "جاهز") },
+  { sku: "RGT-DAB-051", name: B("DAB Chromogen", "كروموجين DAB"), stock: 0, reserved: 0, needed: 2, available: 0, status: B("2 units missing", "وحدتان ناقصتان") },
 ];
-const emails=[
-{id:1,accountId:1,subject:B("Quotation follow-up · PCR workflow","متابعة عرض السعر · سير عمل PCR"),status:B("Ready for review","جاهز للمراجعة"),when:B("Due today","مستحق اليوم")},{id:2,accountId:2,subject:B("Technical call confirmation","تأكيد المكالمة الفنية"),status:B("Scheduled","مجدول"),when:B("Tomorrow 09:00","غداً 09:00")},{id:3,accountId:5,subject:B("Implementation timing check-in","متابعة توقيت التنفيذ"),status:B("Sent","مرسل"),when:B("Yesterday","أمس")},{id:4,accountId:3,subject:B("Tender document request","طلب مستندات المنافسة"),status:B("Reply received · sequence stopped","تم استلام رد · أوقف التسلسل"),when:B("Today 08:42","اليوم 08:42")}
+
+const supplyLines = [
+  { no: 1, sku: "RGT-IHC-112", item: B("IHC Detection Kit", "طقم كشف IHC"), qty: 8, allocated: 8, source: B("Riyadh warehouse", "مستودع الرياض"), status: B("Ready", "جاهز") },
+  { no: 2, sku: "BUF-ANT-204", item: B("Antigen Retrieval Buffer", "محلول استرجاع المستضد"), qty: 4, allocated: 4, source: B("Riyadh warehouse", "مستودع الرياض"), status: B("Ready", "جاهز") },
+  { no: 3, sku: "AB-PDL1-37", item: B("PD-L1 Primary Antibody", "جسم مضاد أولي PD-L1"), qty: 2, allocated: 1, source: B("Supplier PO pending", "طلب المورد قيد الانتظار"), status: B("Missing 1", "ناقص 1") },
+  { no: 4, sku: "SLD-CHR-082", item: B("Charged Slides", "شرائح مشحونة"), qty: 10, allocated: 10, source: B("Jeddah warehouse", "مستودع جدة"), status: B("Ready", "جاهز") },
+  { no: 5, sku: "RGT-DAB-051", item: B("DAB Chromogen", "كروموجين DAB"), qty: 2, allocated: 0, source: B("Supplier ETA 17 Aug", "وصول المورد 17 أغسطس"), status: B("Missing 2", "ناقص 2") },
+  { no: 6, sku: "CTR-IHC-008", item: B("IHC Positive Control", "ضابط موجب IHC"), qty: 3, allocated: 3, source: B("Riyadh warehouse", "مستودع الرياض"), status: B("Ready", "جاهز") },
 ];
-const docs=[
-{id:1,accountId:1,name:B("PCR application note.pdf","مذكرة تطبيق PCR.pdf"),type:B("Product document","مستند منتج"),status:B("Shared","تمت المشاركة")},{id:2,accountId:1,name:"Q-2026-084.pdf",type:B("Quotation","عرض سعر"),status:B("Viewed","تمت المشاهدة")},{id:3,accountId:3,name:B("IHC compliance matrix.xlsx","مصفوفة مطابقة IHC.xlsx"),type:B("Tender document","مستند منافسة"),status:B("In progress","قيد الإعداد")},{id:4,accountId:2,name:B("Analyzer specification sheet.pdf","مواصفات جهاز التحليل.pdf"),type:B("Technical document","مستند فني"),status:B("Shared","تمت المشاركة")}
+
+const invoices = [
+  { id: "INV-260811", customerId: 2, order: "SO-2026-038", amount: 215000, issued: B("11 Aug 2026", "11 أغسطس 2026"), due: B("29 Aug 2026", "29 أغسطس 2026"), paid: 0, status: B("Issued", "صادرة") },
+  { id: "INV-260804", customerId: 4, order: "SO-2026-034", amount: 98000, issued: B("4 Aug 2026", "4 أغسطس 2026"), due: B("18 Aug 2026", "18 أغسطس 2026"), paid: 24000, status: B("Partially paid", "مدفوعة جزئيًا") },
+  { id: "INV-260715", customerId: 1, order: "SO-2026-027", amount: 86000, issued: B("15 Jul 2026", "15 يوليو 2026"), due: B("30 Jul 2026", "30 يوليو 2026"), paid: 0, status: B("Overdue", "متأخرة") },
+  { id: "INV-260703", customerId: 3, order: "SO-2026-023", amount: 128000, issued: B("3 Jul 2026", "3 يوليو 2026"), due: B("3 Aug 2026", "3 أغسطس 2026"), paid: 0, status: B("Overdue", "متأخرة") },
 ];
-const team=[
-{name:"Sales Lead",region:B("National","وطني"),pipeline:913000,followups:4,rate:41},{name:"Riyadh Sales",region:B("Riyadh","الرياض"),pipeline:346000,followups:3,rate:46},{name:"Western Sales",region:B("Jeddah","جدة"),pipeline:489000,followups:2,rate:39},{name:"Eastern Sales",region:B("Dammam","الدمام"),pipeline:78000,followups:1,rate:35},{name:"Applications",region:B("Cross-region","جميع المناطق"),pipeline:391000,followups:3,rate:44}
+
+const collectionActions = [
+  { invoice: "INV-260715", customerId: 1, amount: 86000, overdue: 15, owner: B("Riyadh Finance", "مالية الرياض"), action: B("Call procurement + resend statement", "الاتصال بالمشتريات + إعادة إرسال كشف الحساب"), status: B("Escalated", "تم التصعيد") },
+  { invoice: "INV-260703", customerId: 3, amount: 128000, overdue: 11, owner: B("Collection Team", "فريق التحصيل"), action: B("Finance manager follow-up today", "متابعة مدير المالية اليوم"), status: B("Due today", "مستحق اليوم") },
+  { invoice: "INV-260804", customerId: 4, amount: 74000, overdue: 0, owner: B("Western Finance", "مالية الغربية"), action: B("Balance reminder before due date", "تذكير بالرصيد قبل الاستحقاق"), status: B("Scheduled", "مجدول") },
 ];
-const autoDefs=[B("Inbound enquiry routing","توجيه الاستفسارات الواردة"),B("Quotation follow-up","متابعة عروض الأسعار"),B("Tender deadline watch","مراقبة مواعيد المنافسات"),B("Technical specialist routing","توجيه الأخصائي الفني"),B("Stale opportunity alerts","تنبيهات الفرص المتوقفة"),B("Won-account handover","تسليم الحسابات المحققة")];
-const stages:Stage[]=["New","Technical review","Quotation","Tender","Won"];
 
-function stageLabel(s:Stage,l:Lang){const ar:Record<Stage,string>={New:"جديد","Technical review":"مراجعة فنية",Quotation:"عرض سعر",Tender:"منافسة",Won:"تم الفوز"};return l==="ar"?ar[s]:s}
-function money(v:number,l:Lang){return new Intl.NumberFormat(l==="ar"?"ar-SA":"en-SA",{style:"currency",currency:"SAR",maximumFractionDigits:0}).format(v)}
+const automations = [
+  B("Tender deadline countdown & escalation", "العد التنازلي للمناقصات والتصعيد"),
+  B("Quotation line validation before send", "التحقق من بنود عرض السعر قبل الإرسال"),
+  B("Order completeness gate before dispatch", "بوابة اكتمال الطلب قبل الشحن"),
+  B("Warehouse shortage & supplier alert", "تنبيه نقص المستودع والمورد"),
+  B("Invoice due-date reminders", "تذكيرات استحقاق الفواتير"),
+  B("Collection escalation for overdue balances", "تصعيد التحصيل للمبالغ المتأخرة"),
+];
 
-export default function Page(){
- const [lang,setLang]=useState<Lang>("en"),[theme,setTheme]=useState<Theme>("light"),[active,setActive]=useState<View>("overview"),[accountId,setAccountId]=useState(1),[opps,setOpps]=useState(seedOpps),[tasks,setTasks]=useState(seedTasks),[auto,setAuto]=useState<Record<number,boolean>>(()=>Object.fromEntries(autoDefs.map((_,i)=>[i,true]))),[toast,setToast]=useState(""),[ai,setAi]=useState<Bi>(B("Follow up Q-2026-084 today, complete the IHC tender documents and schedule the hematology technical call.","تابع Q-2026-084 اليوم، وأكمل مستندات منافسة IHC، وجدول المكالمة الفنية لأمراض الدم."));
- const L=(x:Bi|string)=>typeof x==="string"?x:x[lang];
- const A=accounts.find(a=>a.id===accountId)??accounts[0];
- const accountOpps=opps.filter(o=>o.accountId===accountId),accountContacts=contacts.filter(c=>c.accountId===accountId),accountQuotes=quotes.filter(q=>q.accountId===accountId),accountTasks=tasks.filter(t=>t.accountId===accountId),accountDocs=docs.filter(d=>d.accountId===accountId);
- const openValue=opps.filter(o=>o.stage!=="Won").reduce((s,o)=>s+o.value,0),highFit=opps.filter(o=>o.score>=85&&o.stage!=="Won").length,tenderValue=tenders.reduce((s,t)=>s+t.value,0);
- const counts=useMemo(()=>Object.fromEntries(stages.map(s=>[s,opps.filter(o=>o.stage===s).length])) as Record<Stage,number>,[opps]);
- const notify=(m:string)=>{setToast(m);window.setTimeout(()=>setToast(""),1800)};
- const openAccount=(id:number)=>{setAccountId(id);setActive("hub")};
- const ask=(k:string)=>{const v:k extends never?never:never=null as never;void v;const r:Record<string,Bi>={focus:B("Prioritise the PCR quotation, IHC tender and hematology technical call. These represent the strongest near-term value.","أعط الأولوية لعرض PCR ومنافسة IHC والمكالمة الفنية لأمراض الدم؛ فهي تمثل أقوى قيمة قصيرة الأجل."),risk:B("The IHC tender is the main current risk because the deadline is near and documents remain incomplete.","منافسة IHC هي الخطر الأكبر حالياً لقرب الموعد وعدم اكتمال المستندات."),follow:B("A concise quotation follow-up has been prepared. Human review remains required before sending.","تم إعداد متابعة موجزة لعرض السعر، وتبقى المراجعة البشرية مطلوبة قبل الإرسال."),forecast:B("The strongest weighted pipeline is concentrated in Riyadh and Jeddah, led by molecular diagnostics, hematology and IHC.","أقوى مسار موزون يتركز في الرياض وجدة بقيادة التشخيص الجزيئي وأمراض الدم وIHC.")};setAi(r[k]);notify(lang==="ar"?"تم تحديث تحليل الذكاء الاصطناعي":"AI insight updated")};
- const title=nav.find(n=>n.id===active)?.label??nav[0].label;
- const Head=({e,t,c}:{e:Bi;t:Bi;c:Bi})=><div className={styles.sectionHeader}><div><small>{L(e)}</small><h2>{L(t)}</h2><p>{L(c)}</p></div></div>;
- const AccountName=({id}:{id:number})=>L(accounts.find(a=>a.id===id)?.name??"");
-
- const overview=<><section className={styles.heroStrip}><div><span>{lang==="ar"?"مركز القيادة التجارية":"Commercial command center"}</span><h2>{lang==="ar"?"المبيعات والمتابعة والمنافسات والفريق في نظام واحد":"Sales, follow-up, tenders and team execution in one system"}</h2><p>{lang==="ar"?"تصور توضيحي مخصص لموزع مختبرات وتشخيصات متعدد المناطق والأقسام.":"An illustrative concept tailored to a multi-region laboratory and diagnostics distributor workflow."}</p></div><button className={styles.primary} onClick={()=>setActive("ai")}>{lang==="ar"?"اسأل الذكاء الاصطناعي ✦":"Ask AI ✦"}</button></section><section className={styles.metricGrid}><Metric a={lang==="ar"?"قيمة الفرص المفتوحة":"Open opportunity value"} b={money(openValue,lang)} c={`${opps.length} ${lang==="ar"?"فرص":"opportunities"}`}/><Metric a={lang==="ar"?"فرص عالية التوافق":"High-fit opportunities"} b={String(highFit)} c="AI ≥ 85"/><Metric a={lang==="ar"?"قيمة المنافسات":"Active tender value"} b={money(tenderValue,lang)} c={`${tenders.length} ${lang==="ar"?"منافسات":"tenders"}`}/><Metric a={lang==="ar"?"أولويات عاجلة":"Urgent priorities"} b={String(tasks.filter(t=>!t.done&&t.priority==="High").length)} c={lang==="ar"?"تحتاج إجراء اليوم":"Need action today"}/></section><section className={styles.grid2}><article className={styles.panel}><div className={styles.panelHead}><div><small>{lang==="ar"?"مسار المبيعات":"Pipeline"}</small><h2>{lang==="ar"?"أهم الفرص الآن":"Highest-priority opportunities"}</h2></div><button onClick={()=>setActive("opportunities")}>{lang==="ar"?"عرض الكل":"View all"}</button></div><table className={styles.table}><thead><tr><th>{lang==="ar"?"الحساب":"Account"}</th><th>AI</th><th>{lang==="ar"?"المرحلة":"Stage"}</th><th>{lang==="ar"?"القيمة":"Value"}</th></tr></thead><tbody>{[...opps].sort((a,b)=>b.score-a.score).slice(0,5).map(o=><tr key={o.id} onClick={()=>openAccount(o.accountId)}><td><span className={styles.cellTitle}><AccountName id={o.accountId}/></span><span className={styles.cellSub}>{L(o.title)}</span></td><td><span className={`${styles.score} ${o.score>=85?styles.scoreHigh:""}`}>{o.score}</span></td><td>{stageLabel(o.stage,lang)}</td><td>{money(o.value,lang)}</td></tr>)}</tbody></table></article><article className={styles.aiCard}><small>{lang==="ar"?"ملخص AI":"AI MANAGEMENT BRIEF"}</small><h2>{lang==="ar"?"ما الذي يستحق الاهتمام اليوم؟":"What deserves attention today?"}</h2><p>{L(ai)}</p><div className={styles.quickPrompts}><button onClick={()=>ask("focus")}>{lang==="ar"?"الأولويات":"Priorities"}</button><button onClick={()=>ask("risk")}>{lang==="ar"?"المخاطر":"Risks"}</button><button onClick={()=>ask("forecast")}>{lang==="ar"?"التوقع":"Forecast"}</button></div></article></section></>;
-
- const accountsView=<><Head e={B("Customer intelligence","معلومات العملاء")} t={B("Accounts","الحسابات")} c={B("Every institution, commercial value and relationship health in one view.","كل مؤسسة وقيمتها التجارية وصحة العلاقة في شاشة واحدة.")}/><div className={styles.accountGrid}>{accounts.map(a=><button className={styles.accountCard} key={a.id} onClick={()=>openAccount(a.id)}><div className={styles.accountTop}><div><h3>{L(a.name)}</h3><p>{L(a.type)} · {L(a.region)}</p></div><span className={`${styles.score} ${a.health>=85?styles.scoreHigh:""}`}>{a.health}</span></div><p>{L(a.division)}</p><div className={styles.accountMeta}><div><span>{lang==="ar"?"القيمة":"Pipeline"}</span><strong>{money(a.value,lang)}</strong></div><div><span>{lang==="ar"?"جهات الاتصال":"Contacts"}</span><strong>{a.contacts}</strong></div><div><span>{lang==="ar"?"المسؤول":"Owner"}</span><strong>{a.owner}</strong></div></div></button>)}</div></>;
-
- const hub=<><article className={styles.panel}><div className={styles.hubTop}><div><small>ACCOUNT HUB</small><h2>{L(A.name)}</h2><p>{L(A.type)} · {L(A.region)} · {L(A.division)}</p></div><div className={styles.hubStats}><div><span>{lang==="ar"?"المسار":"Pipeline"}</span><strong>{money(accountOpps.reduce((s,o)=>s+o.value,0),lang)}</strong></div><div><span>{lang==="ar"?"صحة الحساب":"Health"}</span><strong>{A.health}/100</strong></div><div><span>{lang==="ar"?"جهات الاتصال":"Contacts"}</span><strong>{accountContacts.length}</strong></div></div></div></article><section className={styles.grid2}><div><HubPanel title={lang==="ar"?"جهات الاتصال وصناع القرار":"Contacts & decision makers"}>{accountContacts.map(c=><Item key={c.id} icon="♙" title={`${c.name} · ${L(c.role)}`} sub={`${L(c.decision)} · ${c.email}`}/>)}</HubPanel><HubPanel title={lang==="ar"?"الفرص وعروض الأسعار":"Opportunities & quotes"}>{accountOpps.map(o=><Item key={o.id} icon="↗" title={`${L(o.title)} · ${money(o.value,lang)}`} sub={`${stageLabel(o.stage,lang)} · AI ${o.score}`}/>)}{accountQuotes.map(q=><Item key={q.id} icon="▤" title={`${q.no} · ${money(q.value,lang)}`} sub={`${L(q.status)} · ${L(q.date)}`}/>)}</HubPanel><HubPanel title={lang==="ar"?"المهام والمستندات":"Tasks & documents"}>{accountTasks.map(t=><Item key={t.id} icon={t.done?"✓":"○"} title={L(t.title)} sub={`${t.owner} · ${L(t.due)}`}/>)}{accountDocs.map(d=><Item key={d.id} icon="▱" title={L(d.name)} sub={`${L(d.type)} · ${L(d.status)}`}/>)}</HubPanel></div><div><article className={styles.aiCard}><small>ACCOUNT AI</small><h2>{lang==="ar"?"الإجراء التالي المقترح":"Recommended next action"}</h2><p>{accountId===1?(lang==="ar"?"متابعة عرض PCR اليوم والإشارة للمذكرة التطبيقية وتوقيت التنفيذ، ثم جدولة متابعة بعد 3 أيام إذا لم يصل رد.":"Follow up the PCR quotation today, reference the application note and implementation timing, then schedule another touch in 3 days if there is no reply."):(lang==="ar"?"راجع آخر نشاط وحدد صاحب القرار التالي والإجراء التجاري الأكثر إلحاحاً.":"Review the latest activity, identify the next decision-maker and prioritise the most time-sensitive commercial action.")}</p><div className={styles.quickPrompts}><button onClick={()=>ask("follow")}>{lang==="ar"?"إعداد متابعة":"Prepare follow-up"}</button><button onClick={()=>ask("risk")}>{lang==="ar"?"تحليل المخاطر":"Analyse risk"}</button></div></article><article className={styles.panel} style={{marginTop:12}}><div className={styles.panelHead}><div><small>{lang==="ar"?"السجل":"Timeline"}</small><h2>{lang==="ar"?"تاريخ الحساب":"Account history"}</h2></div></div><div className={styles.timeline}><article><small>{lang==="ar"?"اليوم 09:21":"Today 09:21"}</small><strong>{lang==="ar"?"تم فتح عرض السعر":"Quotation opened"}</strong><p>{lang==="ar"?"تم ربط مشاهدة المستند بالفرصة الحالية.":"Document engagement was logged against the opportunity."}</p></article><article><small>{lang==="ar"?"أمس":"Yesterday"}</small><strong>{lang==="ar"?"تمت مشاركة مذكرة تطبيقية":"Application note shared"}</strong><p>{lang==="ar"?"أضيف المستند إلى سجل الحساب.":"The document was added to the account history."}</p></article><article><small>{lang==="ar"?"12 أغسطس":"12 Aug"}</small><strong>{lang==="ar"?"تم إصدار عرض السعر":"Quotation issued"}</strong><p>{lang==="ar"?"تم إنشاء مهمة متابعة تلقائياً.":"A follow-up task was created automatically."}</p></article></div></article></div></section></>;
-
- const opportunities=<><Head e={B("Commercial pipeline","مسار المبيعات")} t={B("Opportunities","الفرص")} c={B("From first enquiry through technical review, quotation, tender and won.","من أول استفسار إلى المراجعة الفنية وعرض السعر والمنافسة والفوز.")}/><div className={styles.kanban}>{stages.map(s=><div className={styles.kanbanCol} key={s}><div className={styles.kanbanHead}><strong>{stageLabel(s,lang)}</strong><span>{counts[s]}</span></div>{opps.filter(o=>o.stage===s).map(o=><button className={styles.oppCard} key={o.id} onClick={()=>openAccount(o.accountId)}><strong><AccountName id={o.accountId}/></strong><small>{L(o.title)}</small><small>{L(o.division)}</small><footer><span>{money(o.value,lang)}</span><span className={`${styles.score} ${o.score>=85?styles.scoreHigh:""}`}>{o.score}</span></footer></button>)}</div>)}</div><article className={styles.panel} style={{marginTop:12}}><div className={styles.toolbar}>{stages.map(s=><button className={styles.secondary} key={s} onClick={()=>{setOpps(v=>v.map(o=>o.id===1?{...o,stage:s}:o));notify(lang==="ar"?"تم تحديث المرحلة":"Stage updated")}}>{stageLabel(s,lang)}</button>)}</div></article></>;
-
- const contactsView=<><Head e={B("Relationship map","خريطة العلاقات")} t={B("Contacts & decision makers","جهات الاتصال وصناع القرار")} c={B("Commercial, technical and procurement contacts linked to each account.","جهات تجارية وفنية ومشتريات مرتبطة بكل حساب.")}/><div className={styles.contactGrid}>{contacts.map(c=><article className={styles.contactCard} key={c.id}><div className={styles.avatar}>{c.name.slice(0,2)}</div><h3>{c.name}</h3><p>{L(c.role)} · <AccountName id={c.accountId}/></p><small><span className={styles.statusDot}/>{L(c.decision)}</small><small>{c.email}</small><div className={styles.contactActions}><button onClick={()=>notify(lang==="ar"?"تم فتح مسودة بريد توضيحية":"Illustrative email draft opened")}>✉ {lang==="ar"?"بريد":"Email"}</button><button onClick={()=>openAccount(c.accountId)}>◎ {lang==="ar"?"الحساب":"Account"}</button></div></article>)}</div></>;
-
- const quotesView=<><Head e={B("Commercial documents","المستندات التجارية")} t={B("Quotes & proposals","عروض الأسعار والمقترحات")} c={B("Track draft, sent, viewed and revision states with follow-up context.","متابعة المسودة والإرسال والمشاهدة والمراجعة مع سياق المتابعة.")}/><article className={styles.panel}>{quotes.map(q=><Row key={q.id} title={q.no} sub={<AccountName id={q.accountId}/>} a={money(q.value,lang)} b={L(q.status)} c={L(q.date)} button={lang==="ar"?"إعداد متابعة":"Prepare follow-up"} onClick={()=>notify(lang==="ar"?"تم إعداد متابعة مرتبطة بالعرض":"Context-aware follow-up prepared")}/>)}</article></>;
- const tendersView=<><Head e={B("Deadline intelligence","ذكاء المواعيد")} t={B("Tenders","المنافسات")} c={B("Deadlines, values and missing work surfaced before submission dates.","إظهار المواعيد والقيم والعمل الناقص قبل تاريخ التقديم.")}/><article className={styles.panel}>{tenders.map(t=><Row key={t.id} title={L(t.title)} sub={<AccountName id={t.accountId}/>} a={money(t.value,lang)} b={L(t.deadline)} c={L(t.status)} button={lang==="ar"?"قائمة المستندات":"Checklist"} onClick={()=>notify(lang==="ar"?"تم فتح قائمة المنافسة":"Tender checklist opened")}/>)}</article></>;
- const tasksView=<><Head e={B("Execution layer","طبقة التنفيذ")} t={B("Tasks & next actions","المهام والإجراءات التالية")} c={B("One queue for commercial, technical and tender work.","قائمة موحدة للعمل التجاري والفني والمنافسات.")}/><article className={styles.panel}>{tasks.map(t=><div className={styles.taskRow} key={t.id}><div className={styles.rowTitle}><strong style={{textDecoration:t.done?"line-through":"none"}}>{L(t.title)}</strong><small><AccountName id={t.accountId}/></small></div><div className={styles.rowCell}>{t.owner}</div><div className={styles.rowCell}>{L(t.due)}</div><div className={styles.rowCell}>{t.priority}</div><button className={t.done?styles.ghost:styles.primary} onClick={()=>{setTasks(v=>v.map(x=>x.id===t.id?{...x,done:!x.done}:x));notify(lang==="ar"?"تم تحديث المهمة":"Task updated")}}>{t.done?(lang==="ar"?"إعادة فتح":"Reopen"):(lang==="ar"?"إكمال":"Complete")}</button></div>)}</article></>;
- const emailView=<><Head e={B("Customer communication","تواصل العملاء")} t={B("Email & automatic follow-up","البريد والمتابعة الآلية")} c={B("Drafts, schedules and reply-stop logic in the same customer history.","المسودات والمواعيد وإيقاف التسلسل عند الرد في تاريخ العميل نفسه.")}/><section className={styles.grid2}><article className={styles.panel}>{emails.map(e=><div className={styles.mailRow} key={e.id}><div className={styles.rowTitle}><strong>{L(e.subject)}</strong><small><AccountName id={e.accountId}/></small></div><div className={styles.rowCell}>{L(e.status)}</div><div className={styles.rowCell}>{L(e.when)}</div><div className={styles.rowCell}>{lang==="ar"?"تسلسل متابعة":"Follow-up sequence"}</div></div>)}</article><article className={styles.aiCard}><small>{lang==="ar"?"تحكم بشري":"HUMAN CONTROL"}</small><h2>{lang==="ar"?"الأتمتة دون فقدان السيطرة":"Automation without losing control"}</h2><p>{lang==="ar"?"الردود البشرية توقف التسلسل فوراً، ويمكن إبقاء الإرسال خلف بوابة مراجعة بشرية.":"Genuine human replies stop sequences immediately, and sending can remain behind a human review gate."}</p><div className={styles.quickPrompts}><button onClick={()=>ask("follow")}>{lang==="ar"?"إنشاء مسودة متابعة":"Generate follow-up draft"}</button></div></article></section></>;
- const automationView=<><Head e={B("Workflow engine","محرك سير العمل")} t={B("Automation","الأتمتة")} c={B("Visible business rules that can be understood, switched and controlled.","قواعد عمل واضحة يمكن فهمها وتشغيلها وإيقافها.")}/><div className={styles.automationGrid}>{autoDefs.map((x,i)=><article className={styles.automationCard} key={i}><header><div><h3>{L(x)}</h3><p>{lang==="ar"?"سير عمل توضيحي يربط الأحداث بالإجراء التالي المناسب تلقائياً.":"Illustrative workflow connecting business events to the appropriate next action."}</p></div><button className={`${styles.switch} ${auto[i]?styles.switchOn:""}`} onClick={()=>setAuto(v=>({...v,[i]:!v[i]}))}>{auto[i]?(lang==="ar"?"مفعّل":"ON"):(lang==="ar"?"متوقف":"OFF")}</button></header><div className={styles.flow}><span>{lang==="ar"?"حدث":"Event"}</span><b>→</b><span>AI</span><b>→</b><span>{lang==="ar"?"إجراء":"Action"}</span></div></article>)}</div></>;
- const teamView=<><Head e={B("Commercial ownership","المسؤولية التجارية")} t={B("Team & regional performance","الفريق وأداء المناطق")} c={B("Pipeline, follow-up load and conversion by region and support function.","المسار وحجم المتابعات والتحويل حسب المنطقة ووظيفة الدعم.")}/><div className={styles.teamGrid}>{team.map((m,i)=><article className={styles.teamCard} key={i}><h3>{m.name}</h3><p>{L(m.region)}</p><div className={styles.teamMetric}><span>{lang==="ar"?"المسار":"Pipeline"}</span><strong>{money(m.pipeline,lang)}</strong></div><div className={styles.teamMetric}><span>{lang==="ar"?"متابعات":"Follow-ups"}</span><strong>{m.followups}</strong></div><div className={styles.teamMetric}><span>{lang==="ar"?"معدل الفوز":"Win rate"}</span><strong>{m.rate}%</strong></div></article>)}</div></>;
- const docsView=<><Head e={B("Shared commercial memory","الذاكرة التجارية المشتركة")} t={B("Documents","المستندات")} c={B("Quotes, technical sheets and tender files attached to the right account.","عروض الأسعار والمواصفات وملفات المنافسات مرتبطة بالحساب الصحيح.")}/><article className={styles.panel}>{docs.map(d=><div className={styles.docRow} key={d.id}><div className={styles.rowTitle}><strong>{L(d.name)}</strong><small><AccountName id={d.accountId}/></small></div><div className={styles.rowCell}>{L(d.type)}</div><div className={styles.rowCell}>{L(d.status)}</div><button className={styles.secondary} onClick={()=>notify(lang==="ar"?"تم فتح مستند توضيحي":"Illustrative document opened")}>{lang==="ar"?"فتح":"Open"}</button></div>)}</article></>;
- const reportsView=<><Head e={B("Management intelligence","ذكاء الإدارة")} t={B("Reports","التقارير")} c={B("Performance by region, division and workflow with an AI interpretation layer.","الأداء حسب المنطقة والقسم وسير العمل مع طبقة تفسير بالذكاء الاصطناعي.")}/><div className={styles.reportGrid}><Report a={lang==="ar"?"المسار المفتوح":"Open pipeline"} b={money(openValue,lang)} c={lang==="ar"?"قيمة توضيحية":"Illustrative value"}/><Report a={lang==="ar"?"معدل التأهيل":"Qualification rate"} b="61%" c={lang==="ar"?"تجاوز بوابة التأهيل":"Passed qualification"}/><Report a={lang==="ar"?"نسبة الرد":"Response rate"} b="47%" c={lang==="ar"?"تسلسلات المتابعة":"Follow-up sequences"}/><Report a={lang==="ar"?"المتابعة في الوقت":"On-time follow-up"} b="84%" c={lang==="ar"?"مؤشر تشغيلي":"Operating KPI"}/><Report a={lang==="ar"?"المنافسات":"Active tenders"} b={String(tenders.length)} c={money(tenderValue,lang)}/><Report a={lang==="ar"?"المهام المكتملة":"Tasks completed"} b={`${tasks.filter(t=>t.done).length}/${tasks.length}`} c={lang==="ar"?"من التنفيذ المباشر":"From execution"}/></div><section className={styles.gridEqual}><article className={styles.panel}><div className={styles.panelHead}><div><small>{lang==="ar"?"الأقسام":"Divisions"}</small><h2>{lang==="ar"?"القيمة التجارية حسب القسم":"Commercial value by division"}</h2></div></div><div className={styles.barGroup}>{[[B("Molecular diagnostics","التشخيص الجزيئي"),92],[B("Hematology","أمراض الدم"),78],[B("IHC","الكيمياء النسيجية المناعية"),69],[B("Toxicology","السموم"),54]].map(([n,v],i)=><div className={styles.barRow} key={i}><span>{L(n as Bi)}</span><div className={styles.barTrack}><i style={{width:`${v}%`}}/></div><strong>{String(v)}</strong></div>)}</div></article><article className={styles.aiCard}><small>{lang==="ar"?"تفسير AI":"AI INTERPRETATION"}</small><h2>{lang==="ar"?"ماذا تعني الأرقام؟":"What do the numbers mean?"}</h2><p>{lang==="ar"?"القيمة القريبة تتركز في التشخيص الجزيئي وأمراض الدم وIHC. أوضح تحسين تشغيلي هو تقليل الفترة بين العرض والمتابعة الأولى.":"Near-term value is concentrated in molecular diagnostics, hematology and IHC. The clearest operational improvement is shortening the gap between quotation and first follow-up."}</p></article></section></>;
- const aiView=<><Head e={B("AI operating layer","طبقة التشغيل بالذكاء الاصطناعي")} t={B("AI Command Center","مركز الذكاء الاصطناعي")} c={B("Ask what needs attention, what is at risk and what should happen next.","اسأل عما يحتاج الاهتمام وما هو معرض للخطر وما الإجراء التالي.")}/><div className={styles.aiWorkspace}><article className={styles.aiChat}><h2>{lang==="ar"?"مساعد الإدارة التجارية":"Commercial operations assistant"}</h2><p>{lang==="ar"?"بيانات العرض توضيحية ولا تمثل سجلات حقيقية للشركة.":"Demo data is illustrative and does not represent actual company records."}</p><div className={styles.bubble}>{lang==="ar"?"ما الذي يجب أن أركز عليه اليوم؟":"What should I focus on today?"}</div><div className={`${styles.bubble} ${styles.bubbleAI}`}>{L(ai)}</div><div className={styles.quickPrompts}><button onClick={()=>ask("focus")}>{lang==="ar"?"الأولويات":"Priorities"}</button><button onClick={()=>ask("risk")}>{lang==="ar"?"المخاطر":"Risks"}</button><button onClick={()=>ask("follow")}>{lang==="ar"?"متابعة":"Follow-up"}</button><button onClick={()=>ask("forecast")}>{lang==="ar"?"التوقع":"Forecast"}</button></div><div className={styles.aiInput}><div>{lang==="ar"?"اسأل عن الحسابات أو الفرص أو المنافسات...":"Ask about accounts, opportunities, tenders or follow-ups..."}</div><button className={styles.primary} onClick={()=>ask("focus")}>✦</button></div></article><aside className={styles.panel}><div className={styles.panelHead}><div><small>{lang==="ar"?"تنبيهات تلقائية":"PROACTIVE INTELLIGENCE"}</small><h2>{lang==="ar"?"استنتاجات مقترحة":"Suggested insights"}</h2></div></div><Item icon="◇" title={lang==="ar"?"منافسة تحتاج تصعيداً":"Tender needs escalation"} sub={lang==="ar"?"موعد IHC قريب ومستندان ناقصان.":"IHC deadline is near with two missing documents."}/><Item icon="▤" title={lang==="ar"?"عرض عالي النية":"High-intent quotation"} sub={lang==="ar"?"تمت مشاهدة Q-2026-084 اليوم.":"Q-2026-084 was viewed today."}/><Item icon="↗" title={lang==="ar"?"فرصة قد تبرد":"Opportunity may go cold"} sub={lang==="ar"?"استفسار الأحياء الدقيقة يحتاج مواصفات إضافية.":"Microbiology enquiry needs more specifications."}/></aside></div></>;
-
- const views:Record<View,React.ReactNode>={overview,accounts:accountsView,hub,opportunities,contacts:contactsView,quotes:quotesView,tenders:tendersView,tasks:tasksView,email:emailView,automation:automationView,team:teamView,documents:docsView,reports:reportsView,ai:aiView};
- return <main className={styles.page} data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}>{toast&&<div className={styles.toast}>{toast}</div>}<aside className={styles.sidebar}><a className={styles.brand} href="/systems"><span>Lab</span>Narrative<b>Systems</b></a><div className={styles.conceptTag}>{lang==="ar"?"تصور خاص · مسار الشفاء الطبية":"Private concept · Medical Masar"}</div><nav className={styles.nav}>{nav.map(n=><button key={n.id} className={active===n.id?styles.active:""} onClick={()=>setActive(n.id)}><i>{n.icon}</i>{L(n.label)}</button>)}</nav><div className={styles.sidebarFoot}><strong>{lang==="ar"?"تصور مخصص لمسار الشفاء الطبية":"Prepared for Medical Masar Al Shefaa"}</strong><p>{lang==="ar"?"الأسماء والقيم توضيحية، بينما سير العمل مصمم حول نموذج موزع مختبرات وتشخيصات متعدد المناطق.":"Names and values are illustrative; the workflow is designed around a multi-region laboratory and diagnostics distributor model."}</p><a href="mailto:hello@labnarrative.com?subject=Medical%20Masar%20Systems%20concept">{lang==="ar"?"ناقش هذا التصور ↗":"Discuss this concept ↗"}</a></div></aside><section className={styles.main}><header className={styles.topbar}><div className={styles.titleBlock}><small>{lang==="ar"?"مسار الشفاء الطبية · نظام تجاري توضيحي":"Medical Masar · commercial system concept"}</small><h1>{L(title)}</h1></div><div className={styles.topActions}><div className={styles.seg}><button className={lang==="en"?styles.selected:""} onClick={()=>setLang("en")}>EN</button><button className={lang==="ar"?styles.selected:""} onClick={()=>setLang("ar")}>عربي</button></div><div className={styles.seg} aria-label="Theme"><button className={theme==="light"?styles.selected:""} onClick={()=>setTheme("light")}>☀ {lang==="ar"?"فاتح":"Light"}</button><button className={theme==="dark"?styles.selected:""} onClick={()=>setTheme("dark")}>☾ {lang==="ar"?"داكن":"Dark"}</button></div><span className={styles.live}><i/>{lang==="ar"?"الأتمتة مفعلة":"Automation live"}</span><button className={styles.primary} onClick={()=>{setOpps(v=>[{id:Math.max(...v.map(x=>x.id))+1,accountId:4,title:B("New molecular testing enquiry","استفسار فحوص جزيئية جديد"),value:84000,score:91,stage:"New",division:B("Molecular Diagnostics","التشخيص الجزيئي")},...v]);setActive("opportunities");notify(lang==="ar"?"تم تسجيل الاستفسار وتصنيفه وتوجيهه تلقائياً":"Enquiry captured, classified and routed automatically")}}>+ {lang==="ar"?"محاكاة استفسار":"Simulate enquiry"}</button></div></header><div className={styles.content}>{views[active]}</div></section></main>
+function CustomerName({ id, lang }: { id: number; lang: Lang }) {
+  const c = customers.find((x) => x.id === id);
+  return <>{c ? c.name[lang] : "—"}</>;
 }
 
-function Metric({a,b,c}:{a:string;b:string;c:string}){return <article className={styles.metric}><span>{a}</span><strong>{b}</strong><small>{c}</small></article>}
-function Report({a,b,c}:{a:string;b:string;c:string}){return <article className={styles.reportCard}><span>{a}</span><strong>{b}</strong><small>{c}</small></article>}
-function Item({icon,title,sub}:{icon:string;title:string;sub:string}){return <div className={styles.activityItem}><i>{icon}</i><div><strong>{title}</strong><p>{sub}</p></div></div>}
-function HubPanel({title,children}:{title:string;children:React.ReactNode}){return <article className={styles.panel} style={{marginBottom:12}}><div className={styles.panelHead}><div><h2>{title}</h2></div></div>{children}</article>}
-function Row({title,sub,a,b,c,button,onClick}:{title:string;sub:React.ReactNode;a:string;b:string;c:string;button:string;onClick:()=>void}){return <div className={styles.quoteRow}><div className={styles.rowTitle}><strong>{title}</strong><small>{sub}</small></div><div className={styles.rowCell}><strong>{a}</strong></div><div className={styles.rowCell}>{b}</div><div className={styles.rowCell}>{c}</div><button className={styles.secondary} onClick={onClick}>{button}</button></div>}
+function money(v: number, lang: Lang) {
+  return new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }).format(v);
+}
+function num(v: number, lang: Lang) {
+  return new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-US", { maximumFractionDigits: 0 }).format(v);
+}
+function localizeId(v: string, lang: Lang) {
+  if (lang !== "ar") return v;
+  const ar = "٠١٢٣٤٥٦٧٨٩";
+  return v.replace(/\d/g, (d) => ar[Number(d)]);
+}
+function pct(v: number, lang: Lang) {
+  return `${num(v, lang)}٪`;
+}
+
+export default function Page() {
+  const [lang, setLang] = useState<Lang>("en");
+  const [theme, setTheme] = useState<Theme>("light");
+  const [active, setActive] = useState<View>("overview");
+  const [selectedOrder, setSelectedOrder] = useState("SO-2026-041");
+  const [toast, setToast] = useState("");
+  const [automationState, setAutomationState] = useState<Record<number, boolean>>(() => Object.fromEntries(automations.map((_, i) => [i, true])));
+  const [aiText, setAiText] = useState<Bi>(B(
+    "Do not dispatch SO-2026-041 yet. Three units across two supply lines are still missing. Resolve AB-PDL1-37 and RGT-DAB-051 first, then release the order.",
+    "لا تشحن الطلب SO-2026-041 الآن. ما زالت ٣ وحدات ضمن بندين ناقصة. عالج AB-PDL1-37 وRGT-DAB-051 أولًا ثم اسمح بخروج الطلب."
+  ));
+
+  const L = (v: Bi | string) => (typeof v === "string" ? v : v[lang]);
+  const title = nav.find((n) => n.id === active)?.label ?? nav[0].label;
+  const openTenderValue = tenders.reduce((s, t) => s + t.value, 0);
+  const activeSupply = orders.filter((o) => !L(o.status).includes(lang === "ar" ? "تم التسليم" : "Delivered")).length;
+  const shortageLines = orders.reduce((s, o) => s + o.missing, 0);
+  const totalInvoiced = invoices.reduce((s, x) => s + x.amount, 0);
+  const outstanding = invoices.reduce((s, x) => s + (x.amount - x.paid), 0);
+  const overdue = invoices.filter((x) => x.status.en === "Overdue").reduce((s, x) => s + (x.amount - x.paid), 0);
+  const selected = useMemo(() => orders.find((o) => o.id === selectedOrder) ?? orders[0], [selectedOrder]);
+
+  const notify = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 1800);
+  };
+
+  const ask = (key: "risk" | "cash" | "tender" | "supply") => {
+    const map: Record<typeof key, Bi> = {
+      risk: B("The immediate operational risk is SO-2026-041: 21 of 24 items are ready, but three units across two lines are missing. The system should block dispatch until all lines are complete.", "الخطر التشغيلي المباشر هو الطلب SO-2026-041: تم تجهيز ٢١ من ٢٤ بندًا، لكن ما زالت ٣ وحدات ضمن بندين ناقصة. يجب أن يمنع النظام الشحن حتى يكتمل كل شيء."),
+      cash: B(`Outstanding receivables are ${money(outstanding, "en")}, including ${money(overdue, "en")} overdue. Prioritise the two overdue invoices today and keep the partial-payment balance on schedule.`, `إجمالي المبالغ غير المحصلة ${money(outstanding, "ar")} منها ${money(overdue, "ar")} متأخرة. أعطِ الأولوية اليوم للفاتورتين المتأخرتين واستمر بمتابعة الرصيد المدفوع جزئيًا.`),
+      tender: B("TND-2608-014 closes in 8 days and is 83% ready with two documents missing. It should be the first tender escalation today.", "المناقصة TND-2608-014 تغلق خلال ٨ أيام وجاهزيتها ٨٣٪ مع نقص مستندين. يجب أن تكون أول مناقصة يتم تصعيدها اليوم."),
+      supply: B("The IHC order is the clearest supply exception: one PD-L1 antibody and two DAB Chromogen units remain unavailable. Supplier follow-up should be tied directly to the order lines.", "طلب IHC هو أوضح استثناء في التوريد: ينقص جسم مضاد PD-L1 واحد ووحدتان من DAB Chromogen. يجب ربط متابعة المورد مباشرة ببنود الطلب."),
+    };
+    setAiText(map[key]);
+    notify(lang === "ar" ? "تم تحديث تحليل الذكاء الاصطناعي" : "AI analysis updated");
+  };
+
+  const Head = ({ eyebrow, heading, copy }: { eyebrow: Bi; heading: Bi; copy: Bi }) => (
+    <div className={styles.sectionHeader}>
+      <div>
+        <small>{L(eyebrow)}</small>
+        <h2>{L(heading)}</h2>
+        <p>{L(copy)}</p>
+      </div>
+    </div>
+  );
+
+  const flow = (
+    <div className={styles.flowRail}>
+      {[
+        ["tenders", "◇", B("Tenders", "المناقصات")],
+        ["quotes", "▤", B("Quotations", "عروض الأسعار")],
+        ["orders", "▦", B("Orders", "الطلبات")],
+        ["warehouse", "▧", B("Warehouse", "المستودع")],
+        ["supply", "↗", B("Supply", "التوريد")],
+        ["invoices", "▱", B("Invoices", "الفواتير")],
+        ["collection", "◉", B("Collection", "التحصيل")],
+        ["management", "▥", B("Management", "الإدارة")],
+      ].map(([id, icon, label], i) => (
+        <div key={id as string} className={styles.flowStepWrap}>
+          <button className={styles.flowStep} onClick={() => setActive(id as View)}>
+            <i>{icon as string}</i>
+            <strong>{L(label as Bi)}</strong>
+          </button>
+          {i < 7 && <span className={styles.flowArrow}>{lang === "ar" ? "←" : "→"}</span>}
+        </div>
+      ))}
+    </div>
+  );
+
+  const overview = (
+    <>
+      <section className={styles.heroStrip}>
+        <div>
+          <span>{lang === "ar" ? "نظام تشغيل مخصص لموزع مختبرات" : "Laboratory distributor operating system"}</span>
+          <h2>{lang === "ar" ? "من المناقصة إلى التحصيل — بدون فقدان بند واحد" : "From tender to collection — without losing a single line item"}</h2>
+          <p>{lang === "ar" ? "تصور يربط المناقصات، عروض الأسعار، الطلبات، المستودع، التوريد، الفواتير والتحصيل في رحلة واحدة أمام الفريق والإدارة." : "A tailored concept connecting tenders, quotations, orders, warehouse, supply, invoicing and collections in one continuous workflow for teams and management."}</p>
+        </div>
+        <button className={styles.primary} onClick={() => setActive("supply")}>{lang === "ar" ? "شاهد طلبًا فيه نواقص" : "See an incomplete order"}</button>
+      </section>
+      {flow}
+      <section className={styles.metricGrid}>
+        <Metric a={lang === "ar" ? "المناقصات المفتوحة" : "Open tenders"} b={num(tenders.length, lang)} c={money(openTenderValue, lang)} />
+        <Metric a={lang === "ar" ? "طلبات تحت التوريد" : "Orders in supply"} b={num(activeSupply, lang)} c={lang === "ar" ? "متابعة مباشرة لكل بند" : "Line-by-line tracking"} />
+        <Metric a={lang === "ar" ? "وحدات ناقصة" : "Missing units"} b={num(shortageLines, lang)} c={lang === "ar" ? "يمنع الشحن حتى الحل" : "Dispatch blocked until resolved"} danger />
+        <Metric a={lang === "ar" ? "مبالغ غير محصلة" : "Outstanding receivables"} b={money(outstanding, lang)} c={`${money(overdue, lang)} ${lang === "ar" ? "متأخرة" : "overdue"}`} />
+      </section>
+      <section className={styles.grid2}>
+        <article className={styles.panel}>
+          <div className={styles.panelHead}>
+            <div><small>{lang === "ar" ? "استثناء تشغيلي" : "OPERATING EXCEPTION"}</small><h2>{lang === "ar" ? "طلب لا يجب أن يخرج ناقصًا" : "An order that must not leave incomplete"}</h2></div>
+            <button onClick={() => { setSelectedOrder("SO-2026-041"); setActive("supply"); }}>{lang === "ar" ? "فتح الطلب" : "Open order"}</button>
+          </div>
+          <div className={styles.exceptionCard}>
+            <div className={styles.exceptionTop}>
+              <div><strong>{localizeId("SO-2026-041", lang)}</strong><p><CustomerName id={1} lang={lang} /> · {money(176000, lang)}</p></div>
+              <span className={styles.badgeDanger}>{lang === "ar" ? "لا تشحن" : "DO NOT DISPATCH"}</span>
+            </div>
+            <div className={styles.bigProgress}><i style={{ width: `${(21 / 24) * 100}%` }} /></div>
+            <div className={styles.progressMeta}><span>{lang === "ar" ? `${num(21, lang)} من ${num(24, lang)} بند جاهز` : "21 of 24 items ready"}</span><strong>{lang === "ar" ? `${num(3, lang)} وحدات ناقصة` : "3 units missing"}</strong></div>
+            <div className={styles.shortages}><span>AB-PDL1-37 · {lang === "ar" ? "ناقص ١" : "missing 1"}</span><span>RGT-DAB-051 · {lang === "ar" ? "ناقص ٢" : "missing 2"}</span></div>
+          </div>
+        </article>
+        <article className={styles.aiCard}>
+          <small>{lang === "ar" ? "ملخص الإدارة بالذكاء الاصطناعي" : "AI MANAGEMENT BRIEF"}</small>
+          <h2>{lang === "ar" ? "ما الذي يحتاج تدخل اليوم؟" : "What needs intervention today?"}</h2>
+          <p>{L(aiText)}</p>
+          <div className={styles.quickPrompts}>
+            <button onClick={() => ask("risk")}>{lang === "ar" ? "مخاطر التشغيل" : "Operational risk"}</button>
+            <button onClick={() => ask("tender")}>{lang === "ar" ? "المناقصات" : "Tenders"}</button>
+            <button onClick={() => ask("cash")}>{lang === "ar" ? "التحصيل" : "Collections"}</button>
+          </div>
+        </article>
+      </section>
+    </>
+  );
+
+  const tendersView = (
+    <>
+      <Head eyebrow={B("Replace spreadsheet tracking", "بديل متابعة الإكسل")} heading={B("Tenders", "المناقصات")} copy={B("One shared tender board with countdowns, owners, readiness, missing work and management visibility.", "لوحة مشتركة تعرض الوقت المتبقي والمسؤول ونسبة الجاهزية والنواقص أمام الفريق والإدارة.")} />
+      <section className={styles.tenderGrid}>
+        {tenders.map((t) => (
+          <article className={styles.tenderCard} key={t.id}>
+            <header><div><small>{localizeId(t.id, lang)}</small><h3>{L(t.title)}</h3><p><CustomerName id={t.customerId} lang={lang} /></p></div><div className={styles.countdown}><strong>{num(t.daysLeft, lang)}</strong><span>{lang === "ar" ? "يوم متبقي" : "days left"}</span></div></header>
+            <div className={styles.tenderStats}>
+              <div><span>{lang === "ar" ? "القيمة" : "Value"}</span><strong>{money(t.value, lang)}</strong></div>
+              <div><span>{lang === "ar" ? "البنود" : "Items"}</span><strong>{num(t.items, lang)}</strong></div>
+              <div><span>{lang === "ar" ? "النواقص" : "Missing"}</span><strong className={t.missing ? styles.textDanger : ""}>{num(t.missing, lang)}</strong></div>
+            </div>
+            <div className={styles.readiness}><div><span>{lang === "ar" ? "الجاهزية" : "Readiness"}</span><strong>{pct(t.readiness, lang)}</strong></div><div className={styles.progress}><i style={{ width: `${t.readiness}%` }} /></div></div>
+            <footer><div><span>{L(t.deadline)}</span><small>{L(t.owner)}</small></div><button className={styles.secondary} onClick={() => notify(lang === "ar" ? "تم فتح قائمة النواقص للمناقصة" : "Tender checklist opened")}>{lang === "ar" ? "قائمة النواقص" : "Checklist"}</button></footer>
+          </article>
+        ))}
+      </section>
+    </>
+  );
+
+  const quotesView = (
+    <>
+      <Head eyebrow={B("Error prevention before send", "منع الخطأ قبل الإرسال")} heading={B("Quotations", "عروض الأسعار")} copy={B("Validate every requested line, quantity and commercial value before a quotation reaches the customer.", "التحقق من كل بند وكمية وقيمة تجارية قبل وصول عرض السعر للعميل.")} />
+      <article className={styles.panel}>
+        {quotes.map((q) => (
+          <div className={styles.dataRow} key={q.id}>
+            <div className={styles.rowTitle}><strong>{localizeId(q.id, lang)}</strong><small><CustomerName id={q.customerId} lang={lang} /></small></div>
+            <div className={styles.rowCell}><span>{lang === "ar" ? "القيمة" : "Value"}</span><strong>{money(q.value, lang)}</strong></div>
+            <div className={styles.rowCell}><span>{lang === "ar" ? "البنود" : "Lines"}</span><strong>{num(q.items, lang)}</strong></div>
+            <div className={styles.rowCell}><span>{lang === "ar" ? "تم التحقق" : "Verified"}</span><strong>{num(q.verified, lang)}/{num(q.items, lang)}</strong></div>
+            <div className={styles.rowCell}><span>{lang === "ar" ? "الأخطاء" : "Errors"}</span><strong className={q.errors ? styles.textDanger : styles.textGood}>{num(q.errors, lang)}</strong></div>
+            <div className={styles.rowCell}><span>{lang === "ar" ? "الحالة" : "Status"}</span><strong>{L(q.status)}</strong><small>{L(q.next)}</small></div>
+          </div>
+        ))}
+      </article>
+    </>
+  );
+
+  const ordersView = (
+    <>
+      <Head eyebrow={B("Won work becomes execution", "تحويل الفوز إلى تنفيذ")} heading={B("Orders", "الطلبات")} copy={B("Every won tender or accepted quotation becomes a controlled fulfilment record with item-level completeness.", "كل مناقصة فائزة أو عرض مقبول يتحول إلى سجل تنفيذ مضبوط مع متابعة اكتمال كل بند.")} />
+      <div className={styles.orderGrid}>
+        {orders.map((o) => (
+          <button key={o.id} className={`${styles.orderCard} ${o.missing ? styles.orderRisk : ""}`} onClick={() => { setSelectedOrder(o.id); setActive("supply"); }}>
+            <header><div><small>{localizeId(o.source, lang)} →</small><h3>{localizeId(o.id, lang)}</h3><p><CustomerName id={o.customerId} lang={lang} /></p></div><span className={o.missing ? styles.badgeDanger : styles.badgeGood}>{L(o.status)}</span></header>
+            <div className={styles.orderValue}>{money(o.value, lang)}</div>
+            <div className={styles.bigProgress}><i style={{ width: `${(o.ready / o.items) * 100}%` }} /></div>
+            <footer><span>{lang === "ar" ? `${num(o.ready, lang)} / ${num(o.items, lang)} بند جاهز` : `${o.ready} / ${o.items} items ready`}</span><strong className={o.missing ? styles.textDanger : styles.textGood}>{o.missing ? `${num(o.missing, lang)} ${lang === "ar" ? "ناقص" : "missing"}` : (lang === "ar" ? "مكتمل" : "Complete")}</strong></footer>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
+  const warehouseView = (
+    <>
+      <Head eyebrow={B("Stock connected to customer commitments", "المخزون مرتبط بالتزامات العملاء")} heading={B("Warehouse", "المستودع")} copy={B("See what is physically available, what is reserved, and which order line will fail before the dispatch date.", "اعرف ما هو متوفر فعليًا وما هو محجوز وأي بند سيسبب مشكلة قبل موعد الشحن.")} />
+      <article className={styles.panel}>
+        <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>SKU</th><th>{lang === "ar" ? "الصنف" : "Item"}</th><th>{lang === "ar" ? "المخزون" : "Stock"}</th><th>{lang === "ar" ? "محجوز" : "Reserved"}</th><th>{lang === "ar" ? "مطلوب" : "Needed"}</th><th>{lang === "ar" ? "متاح" : "Available"}</th><th>{lang === "ar" ? "الحالة" : "Status"}</th></tr></thead><tbody>{warehouse.map((w) => <tr key={w.sku}><td><strong>{localizeId(w.sku, lang)}</strong></td><td>{L(w.name)}</td><td>{num(w.stock, lang)}</td><td>{num(w.reserved, lang)}</td><td>{num(w.needed, lang)}</td><td>{num(w.available, lang)}</td><td><span className={w.status.en === "Ready" ? styles.badgeGood : styles.badgeDanger}>{L(w.status)}</span></td></tr>)}</tbody></table></div>
+      </article>
+    </>
+  );
+
+  const supplyView = (
+    <>
+      <Head eyebrow={B("No incomplete delivery", "لا توريد ناقص")} heading={B("Supply & fulfilment", "التوريد والتنفيذ")} copy={B("Track every line until the complete customer order is ready. Missing lines stay visible and can block dispatch.", "متابعة كل بند حتى يكتمل طلب العميل بالكامل. البنود الناقصة تبقى ظاهرة ويمكنها منع الشحن.")} />
+      <section className={styles.supplyHero}>
+        <div><small>{lang === "ar" ? "الطلب المحدد" : "SELECTED ORDER"}</small><h2>{localizeId(selected.id, lang)}</h2><p><CustomerName id={selected.customerId} lang={lang} /> · {money(selected.value, lang)} · {L(selected.due)}</p></div>
+        <div className={styles.completionBox}><strong>{pct(Math.round((selected.ready / selected.items) * 100), lang)}</strong><span>{lang === "ar" ? `${num(selected.ready, lang)} من ${num(selected.items, lang)} بند جاهز` : `${selected.ready} of ${selected.items} items ready`}</span></div>
+        <div className={selected.missing ? styles.dispatchBlocked : styles.dispatchReady}><strong>{selected.missing ? (lang === "ar" ? "الشحن محظور" : "DISPATCH BLOCKED") : (lang === "ar" ? "جاهز للشحن" : "READY TO DISPATCH")}</strong><span>{selected.missing ? (lang === "ar" ? `${num(selected.missing, lang)} وحدات ناقصة` : `${selected.missing} units missing`) : (lang === "ar" ? "كل البنود مكتملة" : "All lines complete")}</span></div>
+      </section>
+      {selected.id === "SO-2026-041" ? <article className={styles.panel}><div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>#</th><th>SKU</th><th>{lang === "ar" ? "البند" : "Line item"}</th><th>{lang === "ar" ? "الكمية" : "Qty"}</th><th>{lang === "ar" ? "المخصص" : "Allocated"}</th><th>{lang === "ar" ? "المصدر" : "Source"}</th><th>{lang === "ar" ? "الحالة" : "Status"}</th></tr></thead><tbody>{supplyLines.map((x) => <tr key={x.no} className={x.allocated < x.qty ? styles.riskRow : ""}><td>{num(x.no, lang)}</td><td><strong>{localizeId(x.sku, lang)}</strong></td><td>{L(x.item)}</td><td>{num(x.qty, lang)}</td><td>{num(x.allocated, lang)}</td><td>{L(x.source)}</td><td><span className={x.allocated < x.qty ? styles.badgeDanger : styles.badgeGood}>{L(x.status)}</span></td></tr>)}</tbody></table></div><div className={styles.tableNote}>{lang === "ar" ? "يعرض النموذج أول ٦ بنود من أصل ٢٤ بندًا. النظام الفعلي يتابع كل بند حتى اكتماله." : "The demo shows the first 6 of 24 lines. A production system tracks every line until completion."}</div></article> : <article className={styles.successPanel}><strong>✓</strong><h3>{lang === "ar" ? "كل البنود مكتملة" : "All order lines are complete"}</h3><p>{lang === "ar" ? "يمكن تحرير الطلب للشحن بعد مراجعة المستخدم المخول." : "The order can be released for dispatch after authorised human review."}</p></article>}
+    </>
+  );
+
+  const invoicesView = (
+    <>
+      <Head eyebrow={B("Billing tied to fulfilment", "الفوترة مرتبطة بالتنفيذ")} heading={B("Invoices", "الفواتير")} copy={B("Every invoice remains connected to the customer and source order so finance can trace what was supplied and what is due.", "كل فاتورة تبقى مرتبطة بالعميل والطلب الأصلي حتى تستطيع المالية معرفة ما تم توريده وما هو مستحق.")} />
+      <article className={styles.panel}>{invoices.map((x) => <div className={styles.invoiceRow} key={x.id}><div className={styles.rowTitle}><strong>{localizeId(x.id, lang)}</strong><small><CustomerName id={x.customerId} lang={lang} /> · {localizeId(x.order, lang)}</small></div><div className={styles.rowCell}><span>{lang === "ar" ? "المبلغ" : "Amount"}</span><strong>{money(x.amount, lang)}</strong></div><div className={styles.rowCell}><span>{lang === "ar" ? "تاريخ الإصدار" : "Issued"}</span><strong>{L(x.issued)}</strong></div><div className={styles.rowCell}><span>{lang === "ar" ? "الاستحقاق" : "Due"}</span><strong>{L(x.due)}</strong></div><div className={styles.rowCell}><span>{lang === "ar" ? "تم دفع" : "Paid"}</span><strong>{money(x.paid, lang)}</strong></div><span className={x.status.en === "Overdue" ? styles.badgeDanger : styles.badgeNeutral}>{L(x.status)}</span></div>)}</article>
+    </>
+  );
+
+  const collectionView = (
+    <>
+      <Head eyebrow={B("Cash follow-up", "متابعة النقد")} heading={B("Collection", "التحصيل")} copy={B("A live receivables queue showing who owes what, what is overdue, who owns the follow-up and the next action.", "قائمة مباشرة توضح من عليه مبلغ وكم قيمته وما المتأخر ومن المسؤول وما الإجراء التالي.")} />
+      <section className={styles.metricGrid}>
+        <Metric a={lang === "ar" ? "إجمالي غير المحصل" : "Total outstanding"} b={money(outstanding, lang)} c={lang === "ar" ? "رصيد فواتير مفتوحة" : "Open invoice balance"} />
+        <Metric a={lang === "ar" ? "متأخر" : "Overdue"} b={money(overdue, lang)} c={lang === "ar" ? "يحتاج تدخل" : "Needs intervention"} danger />
+        <Metric a={lang === "ar" ? "مدفوع جزئيًا" : "Partial balance"} b={money(74000, lang)} c={localizeId("INV-260804", lang)} />
+        <Metric a={lang === "ar" ? "إجراءات اليوم" : "Actions today"} b={num(2, lang)} c={lang === "ar" ? "مالية + تحصيل" : "Finance + collection"} />
+      </section>
+      <article className={styles.panel} style={{ marginTop: 12 }}>{collectionActions.map((x) => <div className={styles.collectionRow} key={x.invoice}><div className={styles.rowTitle}><strong>{localizeId(x.invoice, lang)}</strong><small><CustomerName id={x.customerId} lang={lang} /></small></div><div className={styles.rowCell}><span>{lang === "ar" ? "المبلغ" : "Balance"}</span><strong>{money(x.amount, lang)}</strong></div><div className={styles.rowCell}><span>{lang === "ar" ? "التأخير" : "Overdue"}</span><strong>{x.overdue ? `${num(x.overdue, lang)} ${lang === "ar" ? "يوم" : "days"}` : "—"}</strong></div><div className={styles.rowCell}><span>{lang === "ar" ? "المسؤول" : "Owner"}</span><strong>{L(x.owner)}</strong></div><div className={styles.rowCell}><span>{lang === "ar" ? "الإجراء التالي" : "Next action"}</span><strong>{L(x.action)}</strong></div><span className={x.overdue ? styles.badgeDanger : styles.badgeNeutral}>{L(x.status)}</span></div>)}</article>
+    </>
+  );
+
+  const managementView = (
+    <>
+      <Head eyebrow={B("One view for leadership", "شاشة واحدة للإدارة العليا")} heading={B("Management Dashboard", "لوحة الإدارة")} copy={B("Leadership can see tenders, fulfilment risk, warehouse shortages, invoicing and collections without asking every department for an update.", "تستطيع الإدارة رؤية المناقصات ومخاطر التوريد ونواقص المستودع والفواتير والتحصيل دون سؤال كل قسم عن آخر تحديث.")} />
+      <section className={styles.reportGrid}>
+        <Report a={lang === "ar" ? "مناقصات مفتوحة" : "Open tenders"} b={num(3, lang)} c={money(openTenderValue, lang)} />
+        <Report a={lang === "ar" ? "عروض قيد المتابعة" : "Quotes in follow-up"} b={num(3, lang)} c={money(441000, lang)} />
+        <Report a={lang === "ar" ? "طلبات نشطة" : "Active orders"} b={num(3, lang)} c={money(489000, lang)} />
+        <Report a={lang === "ar" ? "نواقص توريد" : "Supply shortages"} b={num(3, lang)} c={lang === "ar" ? "وحدات في طلب واحد" : "units in one order"} danger />
+        <Report a={lang === "ar" ? "إجمالي الفوترة" : "Total invoiced"} b={money(totalInvoiced, lang)} c={lang === "ar" ? "في هذا النموذج" : "in this demo view"} />
+        <Report a={lang === "ar" ? "غير محصل" : "Outstanding"} b={money(outstanding, lang)} c={`${money(overdue, lang)} ${lang === "ar" ? "متأخرة" : "overdue"}`} danger />
+      </section>
+      <section className={styles.grid2}>
+        <article className={styles.panel}><div className={styles.panelHead}><div><small>{lang === "ar" ? "مؤشرات التشغيل" : "OPERATING KPIs"}</small><h2>{lang === "ar" ? "الصورة التشغيلية اليوم" : "Today’s operating picture"}</h2></div></div><Kpi label={lang === "ar" ? "جاهزية أقرب مناقصة" : "Nearest tender readiness"} value={83} lang={lang} /><Kpi label={lang === "ar" ? "اكتمال الطلبات" : "Order completeness"} value={96} lang={lang} /><Kpi label={lang === "ar" ? "توفر البنود الحرجة" : "Critical item availability"} value={88} lang={lang} /><Kpi label={lang === "ar" ? "التحصيل في الموعد" : "On-time collection"} value={72} lang={lang} /></article>
+        <article className={styles.aiCard}><small>{lang === "ar" ? "تفسير الإدارة" : "EXECUTIVE INTERPRETATION"}</small><h2>{lang === "ar" ? "ما الذي يجب أن تعرفه الإدارة؟" : "What should management know?"}</h2><p>{lang === "ar" ? "التشغيل مستقر عمومًا، لكن هناك استثناءان واضحان: طلب IHC لا يزال ناقصًا ويجب منع شحنه، والتحصيل يحتوي على فاتورتين متأخرتين بقيمة كبيرة. المناقصة الأقرب تحتاج أيضًا استكمال مستندين خلال ٨ أيام." : "Operations are broadly stable, but two exceptions need attention: the IHC order is still incomplete and should remain blocked from dispatch, while collections contain two material overdue invoices. The nearest tender also needs two missing documents completed within 8 days."}</p></article>
+      </section>
+    </>
+  );
+
+  const accountsView = (
+    <>
+      <Head eyebrow={B("Customer context", "سياق العميل")} heading={B("Customers", "العملاء")} copy={B("Commercial activity, current commitments and receivables connected to each customer.", "النشاط التجاري والالتزامات الحالية والمبالغ المستحقة مرتبطة بكل عميل.")} />
+      <div className={styles.customerGrid}>{customers.map((c) => <article className={styles.customerCard} key={c.id}><small>{L(c.segment)} · {L(c.city)}</small><h3>{L(c.name)}</h3><div><span>{lang === "ar" ? "فرص والتزامات" : "Pipeline & commitments"}</span><strong>{money(c.open, lang)}</strong></div><div><span>{lang === "ar" ? "مبالغ مستحقة" : "Outstanding"}</span><strong>{money(c.outstanding, lang)}</strong></div></article>)}</div>
+    </>
+  );
+
+  const automationView = (
+    <>
+      <Head eyebrow={B("Controlled workflow automation", "أتمتة سير العمل بضوابط")} heading={B("Automation", "الأتمتة")} copy={B("Business rules reduce manual follow-up while keeping critical commercial and dispatch decisions visible to humans.", "قواعد العمل تقلل المتابعة اليدوية مع إبقاء القرارات التجارية وقرارات الشحن الحرجة واضحة للمستخدمين.")} />
+      <div className={styles.automationGrid}>{automations.map((x, i) => <article className={styles.automationCard} key={i}><header><div><h3>{L(x)}</h3><p>{lang === "ar" ? "قاعدة تشغيلية توضيحية تربط الحدث بالتنبيه أو الإجراء المناسب." : "Illustrative operating rule connecting an event to the right alert or action."}</p></div><button className={`${styles.switch} ${automationState[i] ? styles.switchOn : ""}`} onClick={() => setAutomationState((v) => ({ ...v, [i]: !v[i] }))}>{automationState[i] ? (lang === "ar" ? "مفعّل" : "ON") : (lang === "ar" ? "متوقف" : "OFF")}</button></header><div className={styles.miniFlow}><span>{lang === "ar" ? "حدث" : "Event"}</span><b>{lang === "ar" ? "←" : "→"}</b><span>AI / Rule</span><b>{lang === "ar" ? "←" : "→"}</b><span>{lang === "ar" ? "إجراء" : "Action"}</span></div></article>)}</div>
+    </>
+  );
+
+  const aiView = (
+    <>
+      <Head eyebrow={B("Ask across the whole operation", "اسأل عن كامل العملية")} heading={B("AI Command Center", "مركز الذكاء الاصطناعي")} copy={B("Ask what is late, incomplete, at risk or unpaid across tenders, supply and finance.", "اسأل عما هو متأخر أو ناقص أو معرض للخطر أو غير محصل عبر المناقصات والتوريد والمالية.")} />
+      <div className={styles.aiWorkspace}>
+        <article className={styles.aiChat}><h2>{lang === "ar" ? "مساعد العمليات والإدارة" : "Operations & management assistant"}</h2><p>{lang === "ar" ? "بيانات العرض توضيحية وليست سجلات حقيقية للشركة." : "Demo data is illustrative and does not represent actual company records."}</p><div className={styles.bubble}>{lang === "ar" ? "ما أهم شيء يحتاج تدخل الآن؟" : "What needs intervention right now?"}</div><div className={`${styles.bubble} ${styles.bubbleAI}`}>{L(aiText)}</div><div className={styles.quickPrompts}><button onClick={() => ask("risk")}>{lang === "ar" ? "المخاطر" : "Risk"}</button><button onClick={() => ask("tender")}>{lang === "ar" ? "المناقصة الأقرب" : "Nearest tender"}</button><button onClick={() => ask("supply")}>{lang === "ar" ? "نواقص التوريد" : "Supply shortages"}</button><button onClick={() => ask("cash")}>{lang === "ar" ? "التحصيل" : "Collections"}</button></div><div className={styles.aiInput}><div>{lang === "ar" ? "اسأل عن مناقصة أو طلب أو فاتورة..." : "Ask about a tender, order or invoice..."}</div><button className={styles.primary} onClick={() => ask("risk")}>✦</button></div></article>
+        <aside className={styles.panel}><div className={styles.panelHead}><div><small>{lang === "ar" ? "تنبيهات استباقية" : "PROACTIVE ALERTS"}</small><h2>{lang === "ar" ? "استثناءات تحتاج اهتمام" : "Exceptions needing attention"}</h2></div></div><Alert icon="◇" title={lang === "ar" ? "مناقصة خلال ٨ أيام" : "Tender closes in 8 days"} sub={lang === "ar" ? "نقص مستندين في TND-2608-014." : "Two documents missing in TND-2608-014."} /><Alert icon="↗" title={lang === "ar" ? "منع شحن طلب ناقص" : "Incomplete order blocked"} sub={lang === "ar" ? "SO-2026-041 ما زال ينقصه ٣ وحدات." : "SO-2026-041 is still missing 3 units."} /><Alert icon="◉" title={lang === "ar" ? "تحصيل متأخر" : "Overdue collections"} sub={lang === "ar" ? "فاتورتان متأخرتان بإجمالي ٢١٤ ألف ريال." : "Two invoices are overdue for SAR 214k."} /></aside>
+      </div>
+    </>
+  );
+
+  const views: Record<View, React.ReactNode> = { overview, tenders: tendersView, quotes: quotesView, orders: ordersView, warehouse: warehouseView, supply: supplyView, invoices: invoicesView, collection: collectionView, management: managementView, accounts: accountsView, automation: automationView, ai: aiView };
+
+  return (
+    <main className={styles.page} data-theme={theme} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+      {toast && <div className={styles.toast}>{toast}</div>}
+      <aside className={styles.sidebar}>
+        <a className={styles.brand} href="/systems"><span>Lab</span>Narrative<b>Systems</b></a>
+        <div className={styles.conceptTag}>{lang === "ar" ? "تصور خاص · مسار الشفاء الطبية" : "Private concept · Medical Masar"}</div>
+        <nav className={styles.nav}>{nav.map((n) => <button key={n.id} className={`${active === n.id ? styles.active : ""} ${n.core ? styles.coreNav : ""}`} onClick={() => setActive(n.id)}><i>{n.icon}</i>{L(n.label)}</button>)}</nav>
+        <div className={styles.sidebarFoot}><strong>{lang === "ar" ? "مصمم حول المناقصات والتوريد والتحصيل" : "Built around tenders, fulfilment and collections"}</strong><p>{lang === "ar" ? "الأسماء والقيم توضيحية. الفكرة هي توحيد رحلة العمل وربطها مع Odoo أو Zoho بدل استبدالها." : "Names and values are illustrative. The concept unifies the operating workflow and can connect with Odoo or Zoho rather than replacing them."}</p><a href="mailto:hello@labnarrative.com?subject=Medical%20Masar%20Systems%20concept">{lang === "ar" ? "ناقش هذا التصور ↗" : "Discuss this concept ↗"}</a></div>
+      </aside>
+      <section className={styles.main}>
+        <header className={styles.topbar}>
+          <div className={styles.titleBlock}><small>{lang === "ar" ? "مسار الشفاء الطبية · نظام تشغيلي توضيحي" : "Medical Masar · operating system concept"}</small><h1>{L(title)}</h1></div>
+          <div className={styles.topActions}>
+            <div className={styles.seg}><button className={lang === "en" ? styles.selected : ""} onClick={() => setLang("en")}>EN</button><button className={lang === "ar" ? styles.selected : ""} onClick={() => setLang("ar")}>عربي</button></div>
+            <div className={styles.seg}><button className={theme === "light" ? styles.selected : ""} onClick={() => setTheme("light")}>☀ {lang === "ar" ? "فاتح" : "Light"}</button><button className={theme === "dark" ? styles.selected : ""} onClick={() => setTheme("dark")}>☾ {lang === "ar" ? "داكن" : "Dark"}</button></div>
+            <span className={styles.live}><i />{lang === "ar" ? "الأتمتة مفعلة" : "Automation live"}</span>
+            <button className={styles.primary} onClick={() => setActive("management")}>{lang === "ar" ? "لوحة الإدارة" : "Management view"}</button>
+          </div>
+        </header>
+        <div className={styles.content}>{views[active]}</div>
+      </section>
+    </main>
+  );
+}
+
+function Metric({ a, b, c, danger = false }: { a: string; b: string; c: string; danger?: boolean }) { return <article className={`${styles.metric} ${danger ? styles.metricDanger : ""}`}><span>{a}</span><strong>{b}</strong><small>{c}</small></article>; }
+function Report({ a, b, c, danger = false }: { a: string; b: string; c: string; danger?: boolean }) { return <article className={`${styles.reportCard} ${danger ? styles.metricDanger : ""}`}><span>{a}</span><strong>{b}</strong><small>{c}</small></article>; }
+function Kpi({ label, value, lang }: { label: string; value: number; lang: Lang }) { return <div className={styles.kpi}><div><span>{label}</span><strong>{new Intl.NumberFormat(lang === "ar" ? "ar-SA" : "en-US").format(value)}٪</strong></div><div className={styles.progress}><i style={{ width: `${value}%` }} /></div></div>; }
+function Alert({ icon, title, sub }: { icon: string; title: string; sub: string }) { return <div className={styles.activityItem}><i>{icon}</i><div><strong>{title}</strong><p>{sub}</p></div></div>; }
