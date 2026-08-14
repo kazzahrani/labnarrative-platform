@@ -15,14 +15,14 @@ type Prospect = {
 type Contact = {id:string; prospect_id:string; name:string; title:string; linkedin_url:string|null; email:string|null; source_url:string|null; priority:number; is_current_verified:boolean; evidence:unknown};
 type MailMessage = {id:string; prospect_id:string; contact_id:string|null; parent_message_id:string|null; message_kind:"initial"|"followup_1"|"followup_2"; sequence:number; sender_email:string; recipient_email:string; subject:string; body_text:string; reply_to_email:string; provider_message_id:string|null; internet_message_id:string; status:string; delivery_status:string; scheduled_for:string|null; sent_at:string|null; delivered_at:string|null; delivery_delayed_at:string|null; opened_at:string|null; clicked_at:string|null; bounced_at:string|null; complained_at:string|null; error_message:string; copy_recipient_email:string|null; copy_provider_message_id:string|null; copy_delivery_status:string; copy_sent_at:string|null; copy_delivered_at:string|null; copy_delivery_delayed_at:string|null; copy_bounced_at:string|null; copy_error_message:string; created_at:string};
 type Reply = {id:string; prospect_id:string; message_id:string|null; provider_email_id:string; from_email:string; to_email:string; subject:string; body_text:string; body_html:string; received_at:string; reply_kind:"human"|"automatic"; classification_reason:string; forwarded_at:string|null; created_at:string};
-type Filter = "all"|"ready_to_send"|"interested"|"contacted"|"replied"|"won";
+type Filter = "all"|"ready_to_send"|"contacted"|"replied"|"interested"|"won";
 type ViewMode = "prospects"|"replies";
 type DetailModal = "linkedin"|"email"|"contacts"|"evidence"|"pipeline"|null;
 
 const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const supabase=createClient(supabaseUrl,supabaseKey);
-const filters:Array<{id:Filter;label:string}>=[{id:"all",label:"All"},{id:"ready_to_send",label:"Ready to send"},{id:"interested",label:"Interested"},{id:"contacted",label:"Contacted"},{id:"replied",label:"Replied"},{id:"won",label:"Won"}];
+const filters:Array<{id:Filter;label:string}>=[{id:"all",label:"All"},{id:"ready_to_send",label:"Ready to send"},{id:"contacted",label:"Contacted"},{id:"replied",label:"Replied"},{id:"interested",label:"Interested"},{id:"won",label:"Won"}];
 const stageButtons:Array<{value:ProspectStatus;label:string}>=[{value:"ready_to_send",label:"Ready to send"},{value:"contacted",label:"Contacted"},{value:"connected",label:"Connected"},{value:"replied",label:"Replied"},{value:"interested",label:"Interested"},{value:"meeting",label:"Meeting"},{value:"proposal",label:"Proposal"},{value:"won",label:"Won"},{value:"not_fit",label:"Not fit"}];
 
 function evidenceUrls(value:unknown):string[]{if(!Array.isArray(value))return[];return value.flatMap((item)=>{if(typeof item==="string"&&item.startsWith("http"))return[item];if(item&&typeof item==="object"&&"url" in item&&typeof(item as {url?:unknown}).url==="string")return[(item as {url:string}).url];return[]}).slice(0,8)}
