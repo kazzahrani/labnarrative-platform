@@ -23,13 +23,17 @@ function isClientJourneyPath(path: string) {
   return /^\/admin\/sales\/[^/]+(?:\/.*)?$/.test(path);
 }
 
+function hidesWebsiteWorkspaceTabs(path: string) {
+  return path === "/admin/systems-outreach" || path.startsWith("/admin/systems-outreach/");
+}
+
 export default function AdminWorkspaceTabs() {
   const pathname = usePathname();
   const [mount, setMount] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const currentPath = pathname || "";
-    if (!currentPath.startsWith("/admin")) {
+    if (!currentPath.startsWith("/admin") || hidesWebsiteWorkspaceTabs(currentPath)) {
       setMount(null);
       return;
     }
@@ -76,7 +80,7 @@ export default function AdminWorkspaceTabs() {
     };
   }, [pathname]);
 
-  if (!mount || !pathname) return null;
+  if (!mount || !pathname || hidesWebsiteWorkspaceTabs(pathname)) return null;
 
   return createPortal(
     <div
