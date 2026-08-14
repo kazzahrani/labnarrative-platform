@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/normalize-medical-masar-numerals.mjs && node scripts/prepare-figure-resolver.mjs && npm run verify:templates",
+    "prebuild": "node scripts/normalize-medical-masar-numerals.mjs && node scripts/prepare-systems-client-demo.mjs && node scripts/prepare-figure-resolver.mjs && npm run verify:templates",
     "build": "next build",
     "start": "next start",
     "verify:figures": "node scripts/verify-research-figures.mjs",
