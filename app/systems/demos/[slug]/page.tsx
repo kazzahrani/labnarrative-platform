@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import ConceptDemoClient from "./ConceptDemoClient";
+import MasterOperationsDemoClient from "./MasterOperationsDemoClient";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: `Private Concept — ${prospect.company_name} | LabNarrative Systems`,
-    description: `A private illustrative LabNarrative Systems concept prepared for ${prospect.company_name}.`,
+    description: `A private illustrative LabNarrative Systems concept connecting tenders, quotations, orders, warehouse, supply, invoicing, collections and management visibility for ${prospect.company_name}.`,
     robots: { index: false, follow: false, nocache: true },
   };
 }
@@ -55,7 +55,7 @@ export default async function DynamicSystemsDemoPage({ params }: { params: Promi
   if (!prospect) notFound();
 
   return (
-    <ConceptDemoClient
+    <MasterOperationsDemoClient
       companyName={prospect.company_name}
       industry={prospect.industry ?? "Business operations"}
       location={[prospect.city, prospect.country].filter(Boolean).join(", ")}
