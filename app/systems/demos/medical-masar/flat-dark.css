@@ -4,9 +4,9 @@ main[data-theme="dark"] {
   --surface: #0f222c;
   --surface2: #0b1b24;
   --surface3: #122a35;
-  --line: #2a3136;
-  --line2: #20262b;
-  --line-hover: #343c42;
+  --line: #292d31 !important;
+  --line2: #22262a !important;
+  --line-hover: #34383d !important;
   --text: #f2f5f7;
   --muted: #a9b5bd;
   --muted2: #83939e;
@@ -19,6 +19,7 @@ main[data-theme="dark"] {
 
 main[data-theme="dark"] > aside {
   background: var(--surface2) !important;
+  border-color: var(--line) !important;
 }
 
 main[data-theme="dark"] > section > header {
@@ -60,20 +61,20 @@ main[data-theme="dark"] [class*="exceptionCard"] {
 
 main[data-theme="dark"] [class*="metricDanger"] {
   background: var(--danger-bg) !important;
-  border-color: #3b3030 !important;
+  border-color: #353033 !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="dispatchBlocked"] {
   background: var(--danger-bg) !important;
-  border-color: #3b3030 !important;
+  border-color: #353033 !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="dispatchReady"],
 main[data-theme="dark"] [class*="successPanel"] {
   background: var(--good-bg) !important;
-  border-color: #283a31 !important;
+  border-color: #2b332f !important;
   box-shadow: none !important;
 }
 
