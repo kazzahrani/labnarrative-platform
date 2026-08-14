@@ -11,6 +11,7 @@ const corsHeaders = {
 
 const SENDER = "Khaled Azzahrani <khaled@labnarrative.com>";
 const KSU_COPY = "kazzahrani@ksu.edu.sa";
+const DIRECT_REPLY = "khaled@labnarrative.com";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -18,7 +19,6 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 }
-
 function envMap(name: string): Record<string, string> {
   try { return JSON.parse(Deno.env.get(name) || "{}") as Record<string, string>; } catch { return {}; }
 }
@@ -44,6 +44,87 @@ function htmlFromText(value: string) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#171717;max-width:680px">${paragraphs}</div>`;
 }
 function addDaysIso(days: number) { const date = new Date(); date.setUTCDate(date.getUTCDate() + days); return date.toISOString(); }
+
+async function sendKsuCopy(admin: any, resendKey: string, message: J, prospectId: string, subject: string, bodyText: string, bodyHtml: string) {
+  const existingStatus = text(message.copy_delivery_status, 100);
+  if (["sent", "delivery_delayed", "delivered"].includes(existingStatus) || message.copy_provider_message_id) {
+    return {
+      requested: true,
+      recipient: message.copy_recipient_email || KSU_COPY,
+      providerMessageId: message.copy_provider_message_id || null,
+      status: existingStatus || "sent",
+      alreadySent: true,
+      error: null,
+    };
+  }
+
+  const startedAt = new Date().toISOString();
+  await admin.from("systems_outreach_messages").update({
+    copy_recipient_email: KSU_COPY,
+    copy_delivery_status: "pending",
+    copy_error_message: "",
+    copy_delivery_details: { mode: "separate_transaction", requested_at: startedAt },
+    updated_at: startedAt,
+  }).eq("id", message.id);
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${resendKey}`,
+        "content-type": "application/json",
+        "idempotency-key": `labnarrative-systems-copy/${message.id}/ksu`,
+      },
+      body: JSON.stringify({
+        from: SENDER,
+        to: [KSU_COPY],
+        subject,
+        text: bodyText,
+        html: bodyHtml,
+        reply_to: DIRECT_REPLY,
+        tags: [
+          { name: "app", value: "labnarrative_systems_copy" },
+          { name: "message_id", value: String(message.id) },
+          { name: "prospect_id", value: prospectId },
+          { name: "message_kind", value: "initial_copy" },
+        ],
+      }),
+    });
+    const result = await response.json().catch(() => ({})) as J;
+    const providerMessageId = text(result.id, 500);
+    if (!response.ok || !providerMessageId) {
+      const error = text(result?.error?.message, 2000) || text(result?.message, 2000) || `Resend returned HTTP ${response.status}.`;
+      await admin.from("systems_outreach_messages").update({
+        copy_delivery_status: "failed",
+        copy_error_message: error,
+        copy_delivery_details: { mode: "separate_transaction", failed_at: new Date().toISOString(), error },
+        updated_at: new Date().toISOString(),
+      }).eq("id", message.id);
+      return { requested: true, recipient: KSU_COPY, providerMessageId: null, status: "failed", alreadySent: false, error };
+    }
+
+    const sentAt = new Date().toISOString();
+    await admin.from("systems_outreach_messages").update({
+      copy_recipient_email: KSU_COPY,
+      copy_provider_message_id: providerMessageId,
+      copy_delivery_status: "sent",
+      copy_sent_at: sentAt,
+      copy_error_message: "",
+      copy_delivery_details: { mode: "separate_transaction", provider_message_id: providerMessageId, sent_at: sentAt },
+      updated_at: sentAt,
+    }).eq("id", message.id);
+    return { requested: true, recipient: KSU_COPY, providerMessageId, status: "sent", alreadySent: false, error: null };
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : "Copy delivery failed.";
+    await admin.from("systems_outreach_messages").update({
+      copy_delivery_status: "failed",
+      copy_error_message: messageText,
+      copy_delivery_details: { mode: "separate_transaction", failed_at: new Date().toISOString(), error: messageText },
+      updated_at: new Date().toISOString(),
+    }).eq("id", message.id);
+    return { requested: true, recipient: KSU_COPY, providerMessageId: null, status: "failed", alreadySent: false, error: messageText };
+  }
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -92,9 +173,22 @@ Deno.serve(async (req: Request) => {
 
   let { data: message, error: messageError } = await admin.from("systems_outreach_messages").select("*").eq("prospect_id", prospectId).eq("message_kind", "initial").maybeSingle();
   if (messageError) return json({ error: messageError.message }, 500);
-  if (message?.status === "sent" && message.provider_message_id) return json({ ok: true, alreadySent: true, providerMessageId: message.provider_message_id, recipient: message.recipient_email, sentAt: message.sent_at, replyTo: message.reply_to_email });
 
   const initialHtml = htmlFromText(bodyText);
+  if (message?.status === "sent" && message.provider_message_id) {
+    const copyResult = copyToKsu ? await sendKsuCopy(admin, resendKey, message, prospectId, subject, bodyText, initialHtml) : null;
+    return json({
+      ok: true,
+      alreadySent: true,
+      providerMessageId: message.provider_message_id,
+      recipient: message.recipient_email,
+      sentAt: message.sent_at,
+      replyTo: message.reply_to_email,
+      copy: copyResult,
+      bccCopy: null,
+    });
+  }
+
   if (!message) {
     const { data: created, error: createError } = await admin.from("systems_outreach_messages").insert({ prospect_id: prospectId, contact_id: contactId, message_kind: "initial", sequence: 1, sender_email: SENDER, recipient_email: recipient, subject, body_text: bodyText, body_html: initialHtml, status: "draft", delivery_status: "pending" }).select("*").single();
     if (createError) return json({ error: createError.message }, 500);
@@ -108,8 +202,20 @@ Deno.serve(async (req: Request) => {
   const replyTo = `sys-${String(message.id).toLowerCase()}@${inboundDomain}`;
   await admin.from("systems_outreach_messages").update({ reply_to_email: replyTo, updated_at: new Date().toISOString() }).eq("id", message.id);
 
-  const resendPayload: J = { from: SENDER, to: [recipient], subject, text: bodyText, html: initialHtml, reply_to: replyTo, tags: [{ name: "app", value: "labnarrative_systems" }, { name: "message_id", value: String(message.id) }, { name: "prospect_id", value: prospectId }, { name: "message_kind", value: "initial" }] };
-  if (copyToKsu) resendPayload.bcc = [KSU_COPY];
+  const resendPayload: J = {
+    from: SENDER,
+    to: [recipient],
+    subject,
+    text: bodyText,
+    html: initialHtml,
+    reply_to: replyTo,
+    tags: [
+      { name: "app", value: "labnarrative_systems" },
+      { name: "message_id", value: String(message.id) },
+      { name: "prospect_id", value: prospectId },
+      { name: "message_kind", value: "initial" },
+    ],
+  };
 
   try {
     const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: `Bearer ${resendKey}`, "content-type": "application/json", "idempotency-key": `labnarrative-systems/${message.id}` }, body: JSON.stringify(resendPayload) });
@@ -139,8 +245,29 @@ Deno.serve(async (req: Request) => {
 
     const preContact = ["discovered", "researching", "qualified", "concept_ready", "ready_to_send"].includes(String(prospect.status || ""));
     await admin.from("systems_outreach_prospects").update({ ...(preContact ? { status: "contacted", contacted_at: sentAt } : {}), email_recipient_contact_id: contactId, email_recipient_email: recipient, email_provider_message_id: providerMessageId, email_sent_at: sentAt, email_delivery_status: "sent", email_last_error: "", email_last_event_at: sentAt, sequence_status: (followup1Text || followup2Text) ? "active" : "completed", sequence_started_at: sentAt, sequence_stopped_at: null, sequence_stop_reason: "", updated_at: sentAt }).eq("id", prospectId);
-    await admin.from("systems_outreach_events").insert({ prospect_id: prospectId, channel: "email", event_type: "email_sent", status: "sent", content: `Initial email sent from khaled@labnarrative.com to ${contact.name} <${recipient}>.${copyToKsu ? ` BCC copy sent to ${KSU_COPY}.` : ""} Automatic follow-ups prepared behind the approved human send gate.` });
-    return json({ ok: true, providerMessageId, recipient, recipientName: contact.name, recipientTitle: contact.title, sender: SENDER, replyTo, sentAt, sequenceActive: Boolean(followup1Text || followup2Text), bccCopy: copyToKsu ? KSU_COPY : null });
+
+    const copyResult = copyToKsu ? await sendKsuCopy(admin, resendKey, { ...message, status: "sent", provider_message_id: providerMessageId }, prospectId, subject, bodyText, initialHtml) : null;
+    await admin.from("systems_outreach_events").insert({
+      prospect_id: prospectId,
+      channel: "email",
+      event_type: "email_sent",
+      status: "sent",
+      content: `Initial email sent from khaled@labnarrative.com to ${contact.name} <${recipient}>.${copyResult ? ` Separate KSU copy ${copyResult.status} for ${KSU_COPY}.` : ""} Automatic follow-ups prepared behind the approved human send gate.`,
+    });
+
+    return json({
+      ok: true,
+      providerMessageId,
+      recipient,
+      recipientName: contact.name,
+      recipientTitle: contact.title,
+      sender: SENDER,
+      replyTo,
+      sentAt,
+      sequenceActive: Boolean(followup1Text || followup2Text),
+      copy: copyResult,
+      bccCopy: null,
+    });
   } catch (error) {
     const err = error instanceof Error ? error.message : "Email delivery failed.";
     await admin.from("systems_outreach_messages").update({ status: "failed", delivery_status: "failed", error_message: err, updated_at: new Date().toISOString() }).eq("id", message.id);
