@@ -203,6 +203,7 @@ export default function SystemsPage() {
         <nav className={styles.nav} aria-label="Systems navigation">
           <a href="#what-we-build">What we build</a>
           <a href="#examples">Examples</a>
+          <a href="/systems/demo">Live demo</a>
           <a href="#pricing">Pricing</a>
         </nav>
         <a className={styles.headerCta} href="mailto:hello@labnarrative.com?subject=LabNarrative%20Systems%20project">
@@ -234,7 +235,9 @@ export default function SystemsPage() {
         </div>
 
         <div className={styles.heroDemo}>
-          <DemoPanel />
+          <a href="/systems/demo" aria-label="Open the interactive LabNarrative Systems demo" style={{ display: "block" }}>
+            <DemoPanel />
+          </a>
         </div>
 
         <div className={styles.heroFooter}>
