@@ -291,6 +291,8 @@ export default function AdminSitePreviewPage() {
   }
 
   const route = resolveSiteRoute(path);
+  const googleImageQuery = [site.piName, site.institution].filter(Boolean).join(" ").trim();
+  const googleImagesUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(googleImageQuery)}`;
 
   return (
     <>
@@ -313,22 +315,43 @@ export default function AdminSitePreviewPage() {
       >
         <span>{status === "draft" ? "Draft preview" : `${status} preview`}</span>
         {status === "draft" ? (
-          <button
-            type="button"
-            onClick={openPortraitEditor}
-            style={{
-              border: "1px solid rgba(255,255,255,0.24)",
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.10)",
-              color: "white",
-              padding: "7px 12px",
-              font: "inherit",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            Portrait URL
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={openPortraitEditor}
+              style={{
+                border: "1px solid rgba(255,255,255,0.24)",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.10)",
+                color: "white",
+                padding: "7px 12px",
+                font: "inherit",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              Portrait URL
+            </button>
+            <a
+              href={googleImagesUrl}
+              target="_blank"
+              rel="noreferrer"
+              title={`Search Google Images for ${googleImageQuery}`}
+              style={{
+                border: "1px solid rgba(255,255,255,0.24)",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.10)",
+                color: "white",
+                padding: "7px 12px",
+                font: "inherit",
+                fontWeight: 800,
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Google Images ↗
+            </a>
+          </>
         ) : null}
         {reviewRun ? (
           <button
