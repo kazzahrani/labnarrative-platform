@@ -5,6 +5,34 @@ import { useLayoutEffect } from "react";
 const ARABIC_DIGITS = /[٠-٩]/g;
 const LATIN_DIGITS = "0123456789";
 
+function toLatinDigits(value: string) {
+  ARABIC_DIGITS.lastIndex = 0;
+  return value.replace(ARABIC_DIGITS, (digit) => LATIN_DIGITS[digit.charCodeAt(0) - 0x0660]);
+}
+
+function normalizeTextNode(node: Node) {
+  if (node.nodeType !== Node.TEXT_NODE) return;
+  const text = node.nodeValue;
+  if (!text) return;
+  ARABIC_DIGITS.lastIndex = 0;
+  if (ARABIC_DIGITS.test(text)) node.nodeValue = toLatinDigits(text);
+  ARABIC_DIGITS.lastIndex = 0;
+}
+
+function normalizeSubtree(root: Node) {
+  if (root.nodeType === Node.TEXT_NODE) {
+    normalizeTextNode(root);
+    return;
+  }
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    normalizeTextNode(node);
+    node = walker.nextNode();
+  }
+}
+
 export default function NumeralPerformanceBridge() {
   useLayoutEffect(() => {
     const OriginalNumberFormat = Intl.NumberFormat;
@@ -15,10 +43,10 @@ export default function NumeralPerformanceBridge() {
       options?: Intl.NumberFormatOptions,
     ): Intl.NumberFormat {
       const localeList = Array.isArray(locales) ? locales : locales ? [locales] : [];
-      const isArabic = localeList.some((locale) => String(locale).toLowerCase().startsWith("ar"));
-      const normalizedOptions: Intl.NumberFormatOptions = isArabic
-        ? { ...options, numberingSystem: "latn" }
-        : { ...options };
+      const normalizedOptions: Intl.NumberFormatOptions = {
+        ...options,
+        numberingSystem: "latn",
+      };
       const key = JSON.stringify([localeList.map(String), normalizedOptions]);
 
       let formatter = formatterCache.get(key);
@@ -41,31 +69,27 @@ export default function NumeralPerformanceBridge() {
       };
     }
 
-    let frame = 0;
-    const normalizeText = () => {
-      frame = 0;
-      if (main.getAttribute("lang") !== "ar") return;
+    // Normalize once immediately, then only touch nodes React actually changes.
+    normalizeSubtree(main);
 
-      const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
-      let node = walker.nextNode();
-      while (node) {
-        const text = node.nodeValue;
-        if (text && ARABIC_DIGITS.test(text)) {
-          ARABIC_DIGITS.lastIndex = 0;
-          node.nodeValue = text.replace(ARABIC_DIGITS, (digit) => LATIN_DIGITS[digit.charCodeAt(0) - 0x0660]);
-        } else {
-          ARABIC_DIGITS.lastIndex = 0;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "characterData") {
+          normalizeTextNode(mutation.target);
+          continue;
         }
-        node = walker.nextNode();
+
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach(normalizeSubtree);
+          continue;
+        }
+
+        if (mutation.type === "attributes" && mutation.target === main) {
+          normalizeSubtree(main);
+        }
       }
-    };
+    });
 
-    const scheduleNormalize = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(normalizeText);
-    };
-
-    const observer = new MutationObserver(scheduleNormalize);
     observer.observe(main, {
       subtree: true,
       childList: true,
@@ -74,11 +98,8 @@ export default function NumeralPerformanceBridge() {
       attributeFilter: ["lang", "dir"],
     });
 
-    scheduleNormalize();
-
     return () => {
       observer.disconnect();
-      if (frame) window.cancelAnimationFrame(frame);
       (Intl as { NumberFormat: typeof Intl.NumberFormat }).NumberFormat = OriginalNumberFormat;
     };
   }, []);
