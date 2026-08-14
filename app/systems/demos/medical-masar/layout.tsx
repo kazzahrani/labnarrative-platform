@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Private Concept — Medical Masar | LabNarrative Systems",
-  description: "A private illustrative LabNarrative Systems concept for a medical and laboratory distribution sales workflow.",
+  description: "A private illustrative LabNarrative Systems concept connecting tenders, quotations, orders, warehouse, supply, invoicing, collections, and management visibility for a laboratory distributor.",
   robots: {
     index: false,
     follow: false,
