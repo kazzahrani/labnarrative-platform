@@ -1,12 +1,12 @@
-/* Medical Masar dark mode: flat LabNarrative Websites-style surfaces, no overlays or glow effects. */
+/* Medical Masar dark mode: flat LabNarrative Websites-style surfaces with extremely faint cyan borders. */
 main[data-theme="dark"] {
   --bg: #0d1b24;
   --surface: #0f222c;
   --surface2: #0b1b24;
   --surface3: #122a35;
-  --line: transparent !important;
-  --line2: transparent !important;
-  --line-hover: transparent !important;
+  --line: rgba(63, 201, 202, .055) !important;
+  --line2: rgba(63, 201, 202, .035) !important;
+  --line-hover: rgba(63, 201, 202, .09) !important;
   --text: #f2f5f7;
   --muted: #a9b5bd;
   --muted2: #83939e;
@@ -19,12 +19,12 @@ main[data-theme="dark"] {
 
 main[data-theme="dark"] > aside {
   background: var(--surface2) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
 }
 
 main[data-theme="dark"] > section > header {
   background: var(--bg) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
@@ -40,41 +40,31 @@ main[data-theme="dark"] [class*="tenderCard"],
 main[data-theme="dark"] [class*="orderCard"],
 main[data-theme="dark"] [class*="sidebarFoot"],
 main[data-theme="dark"] [class*="flowRail"],
-main[data-theme="dark"] [class*="supplyHero"] > div {
-  background: var(--surface) !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
+main[data-theme="dark"] [class*="supplyHero"] > div,
 main[data-theme="dark"] [class*="heroStrip"],
 main[data-theme="dark"] [class*="aiCard"] {
   background: var(--surface) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="exceptionCard"] {
   background: var(--surface2) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
   box-shadow: none !important;
 }
 
-main[data-theme="dark"] [class*="metricDanger"] {
-  background: var(--danger-bg) !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
+main[data-theme="dark"] [class*="metricDanger"],
 main[data-theme="dark"] [class*="dispatchBlocked"] {
   background: var(--danger-bg) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="dispatchReady"],
 main[data-theme="dark"] [class*="successPanel"] {
   background: var(--good-bg) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
   box-shadow: none !important;
 }
 
@@ -100,15 +90,16 @@ main[data-theme="dark"] [class*="miniFlow"] span,
 main[data-theme="dark"] [class*="countdown"],
 main[data-theme="dark"] [class*="tenderStats"] div,
 main[data-theme="dark"] [class*="bubble"],
-main[data-theme="dark"] [class*="aiInput"] div {
+main[data-theme="dark"] [class*="aiInput"] div,
+main[data-theme="dark"] [class*="toast"] {
   background: var(--surface2) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="seg"] [class*="selected"] {
   background: var(--surface3) !important;
-  border-color: transparent !important;
+  border-color: var(--line) !important;
   color: var(--text) !important;
   box-shadow: none !important;
 }
@@ -118,7 +109,7 @@ main[data-theme="dark"] [class*="quickPrompts"] button:hover,
 main[data-theme="dark"] [class*="flowStep"]:hover,
 main[data-theme="dark"] [class*="nav"] button:hover {
   background: var(--surface3) !important;
-  border-color: transparent !important;
+  border-color: var(--line-hover) !important;
   color: var(--text) !important;
   box-shadow: none !important;
 }
@@ -135,17 +126,18 @@ main[data-theme="dark"] [class*="live"] i {
   box-shadow: none !important;
 }
 
-main[data-theme="dark"] [class*="toast"] {
-  background: var(--surface) !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Remove all remaining dark-theme borders while preserving element dimensions. */
-main[data-theme="dark"] *,
-main[data-theme="dark"] *::before,
-main[data-theme="dark"] *::after {
-  border-color: transparent !important;
+/* Internal separators should be even fainter than card outlines. */
+main[data-theme="dark"] [class*="dataRow"],
+main[data-theme="dark"] [class*="invoiceRow"],
+main[data-theme="dark"] [class*="collectionRow"],
+main[data-theme="dark"] [class*="kpi"],
+main[data-theme="dark"] [class*="activityItem"],
+main[data-theme="dark"] [class*="tenderCard"] footer,
+main[data-theme="dark"] [class*="customerCard"] div,
+main[data-theme="dark"] [class*="sidebarFoot"] a,
+main[data-theme="dark"] table th,
+main[data-theme="dark"] table td {
+  border-color: var(--line2) !important;
 }
 
 /* Keep the Management View action visually aligned with the language/theme controls. */
