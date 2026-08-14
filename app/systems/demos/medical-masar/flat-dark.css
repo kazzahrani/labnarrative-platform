@@ -1,30 +1,31 @@
-/* Medical Masar dark mode: flat LabNarrative Websites-style surfaces with extremely faint cyan borders. */
+/* Medical Masar dark mode: exact LabNarrative Systems admin palette. */
 main[data-theme="dark"] {
-  --bg: #0d1b24;
-  --surface: #0f222c;
-  --surface2: #0b1b24;
-  --surface3: #122a35;
-  --line: rgba(63, 201, 202, .055) !important;
-  --line2: rgba(63, 201, 202, .035) !important;
-  --line-hover: rgba(63, 201, 202, .09) !important;
-  --text: #f2f5f7;
-  --muted: #a9b5bd;
-  --muted2: #83939e;
-  --accent: #3fc9ca;
-  --accent-strong: #39c5c7;
-  --accent-ink: #062227;
-  --shadow: none;
+  --bg: #09161f !important;
+  --surface: #10212b !important;
+  --surface2: #132832 !important;
+  --surface3: #18323d !important;
+  --line: #25414e !important;
+  --line2: #1d3540 !important;
+  --line-hover: #426675 !important;
+  --text: #f2f6f7 !important;
+  --muted: #9aadb6 !important;
+  --muted2: #718894 !important;
+  --accent: #35c7c1 !important;
+  --accent-strong: #21b4ae !important;
+  --accent-ink: #062a29 !important;
+  --lime: #aee94e !important;
+  --shadow: 0 16px 34px rgba(0,0,0,.08) !important;
   background: var(--bg) !important;
 }
 
 main[data-theme="dark"] > aside {
-  background: var(--surface2) !important;
+  background: var(--surface) !important;
   border-color: var(--line) !important;
 }
 
 main[data-theme="dark"] > section > header {
   background: var(--bg) !important;
-  border-color: var(--line) !important;
+  border-color: var(--line2) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
@@ -45,25 +46,23 @@ main[data-theme="dark"] [class*="heroStrip"],
 main[data-theme="dark"] [class*="aiCard"] {
   background: var(--surface) !important;
   border-color: var(--line) !important;
-  box-shadow: none !important;
+  box-shadow: var(--shadow) !important;
 }
 
 main[data-theme="dark"] [class*="exceptionCard"] {
   background: var(--surface2) !important;
-  border-color: var(--line) !important;
+  border-color: var(--line2) !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="metricDanger"],
 main[data-theme="dark"] [class*="dispatchBlocked"] {
-  background: var(--danger-bg) !important;
   border-color: var(--line) !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="dispatchReady"],
 main[data-theme="dark"] [class*="successPanel"] {
-  background: var(--good-bg) !important;
   border-color: var(--line) !important;
   box-shadow: none !important;
 }
@@ -72,13 +71,17 @@ main[data-theme="dark"] [class*="primary"],
 main[data-theme="dark"] [class*="switchOn"],
 main[data-theme="dark"] [class*="nav"] [class*="active"] {
   background: var(--accent) !important;
-  border-color: transparent !important;
+  border-color: var(--accent) !important;
   color: var(--accent-ink) !important;
   box-shadow: none !important;
 }
 
 main[data-theme="dark"] [class*="nav"] [class*="active"] i {
   color: var(--accent-ink) !important;
+}
+
+main[data-theme="dark"] [class*="brand"] span {
+  color: var(--lime) !important;
 }
 
 main[data-theme="dark"] [class*="secondary"],
@@ -122,11 +125,10 @@ main[data-theme="dark"] [class*="activityItem"] i {
 }
 
 main[data-theme="dark"] [class*="live"] i {
-  background: var(--accent-strong) !important;
-  box-shadow: none !important;
+  background: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(53,199,193,.08) !important;
 }
 
-/* Internal separators should be even fainter than card outlines. */
 main[data-theme="dark"] [class*="dataRow"],
 main[data-theme="dark"] [class*="invoiceRow"],
 main[data-theme="dark"] [class*="collectionRow"],
