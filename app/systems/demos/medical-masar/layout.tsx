@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./flat-dark.css";
+import LatinNumerals from "./latin-numerals";
 
 export const metadata: Metadata = {
   title: "Private Concept — Medical Masar | LabNarrative Systems",
@@ -12,5 +13,10 @@ export const metadata: Metadata = {
 };
 
 export default function MedicalMasarConceptLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return children;
+  return (
+    <>
+      <LatinNumerals />
+      {children}
+    </>
+  );
 }
