@@ -1,0 +1,16 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const cssPath = path.resolve(here, "../app/systems/demos/medical-masar/v2.module.css");
+const marker = "/* Dynamic Systems client demo support */";
+
+let css = fs.readFileSync(cssPath, "utf8");
+
+if (!css.includes(marker)) {
+  css += `\n\n${marker}\n.accountGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.accountCard{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:16px;box-shadow:var(--shadow)}.accountTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.accountTop h3{margin:0;font-size:.72rem}.accountTop p{margin:4px 0 0;color:var(--muted);font-size:.54rem}.accountCard>p{margin:12px 0 0;color:var(--muted);font-size:.56rem}.accountMeta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px}.accountMeta span{display:grid;gap:4px;padding:9px;border-radius:8px;background:var(--surface2);color:var(--muted2);font-size:.49rem}.accountMeta strong{color:var(--text);font-size:.56rem}.score{display:inline-grid;place-items:center;min-width:34px;height:26px;padding:0 8px;border-radius:999px;background:var(--surface3);color:var(--text);font-size:.56rem;font-weight:800}.scoreHigh{background:var(--lime,#aee94e);color:#17221b}.cellTitle{display:block;color:var(--text);font-size:.59rem;font-weight:800}.cellSub{display:block;margin-top:3px;color:var(--muted2);font-size:.5rem}.contactGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.contactCard{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:16px;box-shadow:var(--shadow)}.avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:var(--surface3);color:var(--accent-strong);font-size:.58rem;font-weight:850}.contactCard h3{margin:11px 0 3px;font-size:.7rem}.contactCard p{margin:0;color:var(--muted);font-size:.54rem}.contactCard small{display:block;margin-top:8px;color:var(--muted2);font-size:.5rem;line-height:1.45}.statusDot{display:inline-block;width:6px;height:6px;margin-inline-end:6px;border-radius:50%;background:var(--accent)}.contactActions{margin-top:12px}.contactActions button{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--text);padding:7px 9px;font-size:.52rem;text-align:start}.quoteRow,.tenderRow,.taskRow,.mailRow,.docRow{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(110px,.8fr) minmax(100px,.75fr) minmax(100px,.8fr) auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line2)}.quoteRow:last-child,.tenderRow:last-child,.taskRow:last-child,.mailRow:last-child,.docRow:last-child{border-bottom:0}.quoteRow:hover,.tenderRow:hover,.taskRow:hover,.mailRow:hover,.docRow:hover{background:color-mix(in srgb,var(--surface2) 55%,transparent)}\n@media(max-width:900px){.accountGrid,.contactGrid{grid-template-columns:1fr}.quoteRow,.tenderRow,.taskRow,.mailRow,.docRow{grid-template-columns:1fr;gap:5px;padding:12px 0}.accountMeta{grid-template-columns:1fr}}\n`;
+  fs.writeFileSync(cssPath, css, "utf8");
+}
+
+console.log("Systems client demo support styles prepared.");
