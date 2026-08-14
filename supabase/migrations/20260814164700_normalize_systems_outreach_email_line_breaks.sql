@@ -54,8 +54,5 @@ update public.systems_outreach_messages
 set body_text = public.normalize_systems_outreach_draft_text(body_text),
     body_html = '',
     updated_at = now()
-where status in ('draft','scheduled','sending')
-  and (
-    strpos(coalesce(body_text,''), chr(92)||'n') > 0
-    or strpos(coalesce(body_text,''), chr(92)||'r'||chr(92)||'n') > 0
-  );
+where strpos(coalesce(body_text,''), chr(92)||'n') > 0
+   or strpos(coalesce(body_text,''), chr(92)||'r'||chr(92)||'n') > 0;
