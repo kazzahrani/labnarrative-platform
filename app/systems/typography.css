@@ -1,0 +1,17 @@
+.lnSystemsTypography h1,
+.lnSystemsTypography h2,
+.lnSystemsTypography h3,
+.lnSystemsTypography h4 {
+  font-weight: 700 !important;
+}
+
+.lnSystemsTypography[dir="rtl"] h1,
+.lnSystemsTypography[dir="rtl"] h2,
+.lnSystemsTypography[dir="rtl"] h3,
+.lnSystemsTypography[dir="rtl"] h4,
+.lnSystemsTypography :dir(rtl) h1,
+.lnSystemsTypography :dir(rtl) h2,
+.lnSystemsTypography :dir(rtl) h3,
+.lnSystemsTypography :dir(rtl) h4 {
+  font-weight: 700 !important;
+}
