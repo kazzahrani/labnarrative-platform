@@ -132,3 +132,12 @@ main[data-theme="dark"] [class*="toast"] {
   border-color: var(--line) !important;
   box-shadow: none !important;
 }
+
+/* Keep the Management View action visually aligned with the language/theme controls. */
+main [class*="topActions"] > [class*="primary"] {
+  min-height: 27px;
+  padding: 6px 8px !important;
+  border-radius: 6px !important;
+  font-size: .57rem !important;
+  line-height: 1.1;
+}
