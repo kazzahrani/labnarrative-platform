@@ -62,14 +62,7 @@ function currentPortraitUrl(site: LabSite) {
 
 function withPortraitUrl(site: LabSite, nextUrl: string) {
   const previousUrl = currentPortraitUrl(site);
-  const next = structuredClone(site) as LabSite & {
-    pages?: {
-      home?: Record<string, unknown> & { piImage?: string; topPortrait?: string; homepageImage?: string };
-      contact?: Record<string, unknown> & { piImage?: string };
-      [key: string]: unknown;
-    };
-    team?: Array<{ name?: string; role?: string; image?: string; [key: string]: unknown }>;
-  };
+  const next = structuredClone(site) as any;
 
   const sameOrEmpty = (value: unknown) => !value || value === previousUrl;
   const isPiEntry = (entry: { name?: string; role?: string } | undefined) => {
