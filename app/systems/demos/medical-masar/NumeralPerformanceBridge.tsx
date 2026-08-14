@@ -5,34 +5,6 @@ import { useLayoutEffect } from "react";
 const ARABIC_DIGITS = /[٠-٩]/g;
 const LATIN_DIGITS = "0123456789";
 
-function toLatinDigits(value: string) {
-  ARABIC_DIGITS.lastIndex = 0;
-  return value.replace(ARABIC_DIGITS, (digit) => LATIN_DIGITS[digit.charCodeAt(0) - 0x0660]);
-}
-
-function normalizeTextNode(node: Node) {
-  if (node.nodeType !== Node.TEXT_NODE) return;
-  const text = node.nodeValue;
-  if (!text) return;
-  ARABIC_DIGITS.lastIndex = 0;
-  if (ARABIC_DIGITS.test(text)) node.nodeValue = toLatinDigits(text);
-  ARABIC_DIGITS.lastIndex = 0;
-}
-
-function normalizeSubtree(root: Node) {
-  if (root.nodeType === Node.TEXT_NODE) {
-    normalizeTextNode(root);
-    return;
-  }
-
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode();
-  while (node) {
-    normalizeTextNode(node);
-    node = walker.nextNode();
-  }
-}
-
 export default function NumeralPerformanceBridge() {
   useLayoutEffect(() => {
     const OriginalNumberFormat = Intl.NumberFormat;
@@ -69,37 +41,40 @@ export default function NumeralPerformanceBridge() {
       };
     }
 
-    // Normalize once immediately, then only touch nodes React actually changes.
-    normalizeSubtree(main);
+    let frame = 0;
+    const normalizeArabicTextOnce = () => {
+      frame = 0;
+      if (main.getAttribute("lang") !== "ar") return;
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "characterData") {
-          normalizeTextNode(mutation.target);
-          continue;
+      const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node) {
+        const text = node.nodeValue;
+        if (text && /[٠-٩]/.test(text)) {
+          node.nodeValue = text.replace(ARABIC_DIGITS, (digit) => LATIN_DIGITS[digit.charCodeAt(0) - 0x0660]);
         }
-
-        if (mutation.type === "childList") {
-          mutation.addedNodes.forEach(normalizeSubtree);
-          continue;
-        }
-
-        if (mutation.type === "attributes" && mutation.target === main) {
-          normalizeSubtree(main);
-        }
+        node = walker.nextNode();
       }
+    };
+
+    const scheduleNormalize = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(normalizeArabicTextOnce);
+    };
+
+    // Only react to the language switch itself. Watching subtree/text mutations
+    // causes repeated rescans while React renders the Arabic view and creates lag.
+    const observer = new MutationObserver(scheduleNormalize);
+    observer.observe(main, {
+      attributes: true,
+      attributeFilter: ["lang"],
     });
 
-    observer.observe(main, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["lang", "dir"],
-    });
+    scheduleNormalize();
 
     return () => {
       observer.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
       (Intl as { NumberFormat: typeof Intl.NumberFormat }).NumberFormat = OriginalNumberFormat;
     };
   }, []);
