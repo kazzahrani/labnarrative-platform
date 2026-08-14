@@ -24,6 +24,7 @@ function envMap(name: string): Record<string, string> {
 }
 function serviceKey() { return envMap("SUPABASE_SECRET_KEYS").default || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""; }
 function text(value: unknown, max = 100000) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
+function validEmail(value: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
 function normalizeBody(value: unknown, max = 100000) {
   return text(value, max)
     .replace(/\\r\\n/g, "\n")
@@ -147,19 +148,38 @@ Deno.serve(async (req: Request) => {
   const requestBody = await req.json().catch(() => ({})) as J;
   const prospectId = text(requestBody.prospectId, 100);
   const contactId = text(requestBody.contactId, 100);
+  const useManualRecipient = requestBody.useManualRecipient === true;
   const copyToKsu = requestBody.copyToKsu === true;
-  if (!prospectId || !contactId) return json({ error: "prospectId and contactId are required." }, 400);
+  if (!prospectId) return json({ error: "prospectId is required." }, 400);
+  if (!useManualRecipient && !contactId) return json({ error: "Choose a verified contact or a saved manual recipient." }, 400);
 
-  const { data: prospect, error: prospectError } = await admin.from("systems_outreach_prospects").select("id,company_name,status,email_subject,email_body,followup_1,followup_2,email_draft_approved_at").eq("id", prospectId).maybeSingle();
+  const { data: prospect, error: prospectError } = await admin.from("systems_outreach_prospects").select("id,company_name,status,email_subject,email_body,followup_1,followup_2,email_draft_approved_at,manual_email_recipient_email,manual_email_recipient_name").eq("id", prospectId).maybeSingle();
   if (prospectError) return json({ error: prospectError.message }, 500);
   if (!prospect) return json({ error: "Systems prospect was not found." }, 404);
   if (!prospect.email_draft_approved_at) return json({ error: "Approve the current email draft before sending." }, 409);
 
-  const { data: contact, error: contactError } = await admin.from("systems_outreach_contacts").select("id,prospect_id,name,title,email,is_current_verified").eq("id", contactId).eq("prospect_id", prospectId).maybeSingle();
-  if (contactError) return json({ error: contactError.message }, 500);
-  if (!contact) return json({ error: "The selected contact does not belong to this prospect." }, 404);
-  const recipient = text(contact.email, 320).toLowerCase();
-  if (!contact.is_current_verified || !recipient) return json({ error: "A current verified contact with a public work email is required." }, 409);
+  let contact: J | null = null;
+  let recipient = "";
+  let recipientName = "";
+  let recipientTitle = "";
+  let recipientSource = "verified_public";
+
+  if (useManualRecipient) {
+    recipient = text(prospect.manual_email_recipient_email, 320).toLowerCase();
+    recipientName = text(prospect.manual_email_recipient_name, 300) || prospect.company_name;
+    recipientTitle = "Manual recipient";
+    recipientSource = "manual_admin_override";
+    if (!recipient || !validEmail(recipient)) return json({ error: "Save a valid manual recipient email before sending." }, 409);
+  } else {
+    const { data: contactRow, error: contactError } = await admin.from("systems_outreach_contacts").select("id,prospect_id,name,title,email,is_current_verified").eq("id", contactId).eq("prospect_id", prospectId).maybeSingle();
+    if (contactError) return json({ error: contactError.message }, 500);
+    if (!contactRow) return json({ error: "The selected contact does not belong to this prospect." }, 404);
+    contact = contactRow;
+    recipient = text(contact.email, 320).toLowerCase();
+    recipientName = text(contact.name, 300) || prospect.company_name;
+    recipientTitle = text(contact.title, 500);
+    if (!contact.is_current_verified || !recipient || !validEmail(recipient)) return json({ error: "A current verified contact with a public work email is required." }, 409);
+  }
 
   const subject = text(prospect.email_subject, 1000);
   const bodyText = normalizeBody(prospect.email_body, 100000);
@@ -182,6 +202,7 @@ Deno.serve(async (req: Request) => {
       alreadySent: true,
       providerMessageId: message.provider_message_id,
       recipient: message.recipient_email,
+      recipientName,
       sentAt: message.sent_at,
       replyTo: message.reply_to_email,
       copy: copyResult,
@@ -189,12 +210,13 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const storedContactId = useManualRecipient ? null : contactId;
   if (!message) {
-    const { data: created, error: createError } = await admin.from("systems_outreach_messages").insert({ prospect_id: prospectId, contact_id: contactId, message_kind: "initial", sequence: 1, sender_email: SENDER, recipient_email: recipient, subject, body_text: bodyText, body_html: initialHtml, status: "draft", delivery_status: "pending" }).select("*").single();
+    const { data: created, error: createError } = await admin.from("systems_outreach_messages").insert({ prospect_id: prospectId, contact_id: storedContactId, message_kind: "initial", sequence: 1, sender_email: SENDER, recipient_email: recipient, subject, body_text: bodyText, body_html: initialHtml, status: "draft", delivery_status: "pending" }).select("*").single();
     if (createError) return json({ error: createError.message }, 500);
     message = created;
   } else {
-    const { data: updated, error: updateDraftError } = await admin.from("systems_outreach_messages").update({ contact_id: contactId, recipient_email: recipient, subject, body_text: bodyText, body_html: initialHtml, sender_email: SENDER, updated_at: new Date().toISOString() }).eq("id", message.id).select("*").single();
+    const { data: updated, error: updateDraftError } = await admin.from("systems_outreach_messages").update({ contact_id: storedContactId, recipient_email: recipient, subject, body_text: bodyText, body_html: initialHtml, sender_email: SENDER, updated_at: new Date().toISOString() }).eq("id", message.id).select("*").single();
     if (updateDraftError) return json({ error: updateDraftError.message }, 500);
     message = updated;
   }
@@ -234,17 +256,17 @@ Deno.serve(async (req: Request) => {
 
     let followup1: J | null = null;
     if (followup1Text) {
-      const { data: f1, error: f1Error } = await admin.from("systems_outreach_messages").upsert({ prospect_id: prospectId, contact_id: contactId, parent_message_id: message.id, message_kind: "followup_1", sequence: 2, sender_email: SENDER, recipient_email: recipient, subject: `Re: ${subject.replace(/^Re:\s*/i, "")}`, body_text: followup1Text, body_html: htmlFromText(followup1Text), reply_to_email: "", status: "scheduled", delivery_status: "pending", scheduled_for: addDaysIso(3), updated_at: sentAt }, { onConflict: "prospect_id,message_kind" }).select("*").single();
+      const { data: f1, error: f1Error } = await admin.from("systems_outreach_messages").upsert({ prospect_id: prospectId, contact_id: storedContactId, parent_message_id: message.id, message_kind: "followup_1", sequence: 2, sender_email: SENDER, recipient_email: recipient, subject: `Re: ${subject.replace(/^Re:\s*/i, "")}`, body_text: followup1Text, body_html: htmlFromText(followup1Text), reply_to_email: "", status: "scheduled", delivery_status: "pending", scheduled_for: addDaysIso(3), updated_at: sentAt }, { onConflict: "prospect_id,message_kind" }).select("*").single();
       if (!f1Error) { followup1 = f1; await admin.from("systems_outreach_messages").update({ reply_to_email: `sys-${String(f1.id).toLowerCase()}@${inboundDomain}` }).eq("id", f1.id); }
     }
     if (followup2Text) {
       const parentId = followup1?.id || message.id;
-      const { data: f2, error: f2Error } = await admin.from("systems_outreach_messages").upsert({ prospect_id: prospectId, contact_id: contactId, parent_message_id: parentId, message_kind: "followup_2", sequence: 3, sender_email: SENDER, recipient_email: recipient, subject: `Re: ${subject.replace(/^Re:\s*/i, "")}`, body_text: followup2Text, body_html: htmlFromText(followup2Text), reply_to_email: "", status: "scheduled", delivery_status: "pending", scheduled_for: addDaysIso(7), updated_at: sentAt }, { onConflict: "prospect_id,message_kind" }).select("*").single();
+      const { data: f2, error: f2Error } = await admin.from("systems_outreach_messages").upsert({ prospect_id: prospectId, contact_id: storedContactId, parent_message_id: parentId, message_kind: "followup_2", sequence: 3, sender_email: SENDER, recipient_email: recipient, subject: `Re: ${subject.replace(/^Re:\s*/i, "")}`, body_text: followup2Text, body_html: htmlFromText(followup2Text), reply_to_email: "", status: "scheduled", delivery_status: "pending", scheduled_for: addDaysIso(7), updated_at: sentAt }, { onConflict: "prospect_id,message_kind" }).select("*").single();
       if (!f2Error) await admin.from("systems_outreach_messages").update({ reply_to_email: `sys-${String(f2.id).toLowerCase()}@${inboundDomain}` }).eq("id", f2.id);
     }
 
     const preContact = ["discovered", "researching", "qualified", "concept_ready", "ready_to_send"].includes(String(prospect.status || ""));
-    await admin.from("systems_outreach_prospects").update({ ...(preContact ? { status: "contacted", contacted_at: sentAt } : {}), email_recipient_contact_id: contactId, email_recipient_email: recipient, email_provider_message_id: providerMessageId, email_sent_at: sentAt, email_delivery_status: "sent", email_last_error: "", email_last_event_at: sentAt, sequence_status: (followup1Text || followup2Text) ? "active" : "completed", sequence_started_at: sentAt, sequence_stopped_at: null, sequence_stop_reason: "", updated_at: sentAt }).eq("id", prospectId);
+    await admin.from("systems_outreach_prospects").update({ ...(preContact ? { status: "contacted", contacted_at: sentAt } : {}), email_recipient_contact_id: storedContactId, email_recipient_email: recipient, email_provider_message_id: providerMessageId, email_sent_at: sentAt, email_delivery_status: "sent", email_last_error: "", email_last_event_at: sentAt, sequence_status: (followup1Text || followup2Text) ? "active" : "completed", sequence_started_at: sentAt, sequence_stopped_at: null, sequence_stop_reason: "", updated_at: sentAt }).eq("id", prospectId);
 
     const copyResult = copyToKsu ? await sendKsuCopy(admin, resendKey, { ...message, status: "sent", provider_message_id: providerMessageId }, prospectId, subject, bodyText, initialHtml) : null;
     await admin.from("systems_outreach_events").insert({
@@ -252,15 +274,16 @@ Deno.serve(async (req: Request) => {
       channel: "email",
       event_type: "email_sent",
       status: "sent",
-      content: `Initial email sent from khaled@labnarrative.com to ${contact.name} <${recipient}>.${copyResult ? ` Separate KSU copy ${copyResult.status} for ${KSU_COPY}.` : ""} Automatic follow-ups prepared behind the approved human send gate.`,
+      content: `Initial email sent from khaled@labnarrative.com to ${recipientName} <${recipient}> (${recipientSource}).${copyResult ? ` Separate KSU copy ${copyResult.status} for ${KSU_COPY}.` : ""} Automatic follow-ups prepared behind the approved human send gate.`,
     });
 
     return json({
       ok: true,
       providerMessageId,
       recipient,
-      recipientName: contact.name,
-      recipientTitle: contact.title,
+      recipientName,
+      recipientTitle,
+      recipientSource,
       sender: SENDER,
       replyTo,
       sentAt,
