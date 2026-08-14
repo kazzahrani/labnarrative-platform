@@ -5,6 +5,30 @@ import { useLayoutEffect } from "react";
 const ARABIC_DIGITS = /[٠-٩]/g;
 const LATIN_DIGITS = "0123456789";
 
+function normalizeTextNode(node: Node) {
+  if (node.nodeType !== Node.TEXT_NODE) return;
+  const text = node.nodeValue;
+  if (!text || !/[٠-٩]/.test(text)) return;
+  node.nodeValue = text.replace(
+    ARABIC_DIGITS,
+    (digit) => LATIN_DIGITS[digit.charCodeAt(0) - 0x0660],
+  );
+}
+
+function normalizeAddedNode(node: Node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    normalizeTextNode(node);
+    return;
+  }
+
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+  let textNode = walker.nextNode();
+  while (textNode) {
+    normalizeTextNode(textNode);
+    textNode = walker.nextNode();
+  }
+}
+
 export default function NumeralPerformanceBridge() {
   useLayoutEffect(() => {
     const OriginalNumberFormat = Intl.NumberFormat;
@@ -31,8 +55,10 @@ export default function NumeralPerformanceBridge() {
 
     Object.setPrototypeOf(CachedNumberFormat, OriginalNumberFormat);
     CachedNumberFormat.prototype = OriginalNumberFormat.prototype;
-    (CachedNumberFormat as typeof Intl.NumberFormat).supportedLocalesOf = OriginalNumberFormat.supportedLocalesOf.bind(OriginalNumberFormat);
-    (Intl as { NumberFormat: typeof Intl.NumberFormat }).NumberFormat = CachedNumberFormat as typeof Intl.NumberFormat;
+    (CachedNumberFormat as typeof Intl.NumberFormat).supportedLocalesOf =
+      OriginalNumberFormat.supportedLocalesOf.bind(OriginalNumberFormat);
+    (Intl as { NumberFormat: typeof Intl.NumberFormat }).NumberFormat =
+      CachedNumberFormat as typeof Intl.NumberFormat;
 
     const main = document.querySelector<HTMLElement>('main[data-theme][lang]');
     if (!main) {
@@ -41,40 +67,54 @@ export default function NumeralPerformanceBridge() {
       };
     }
 
-    let frame = 0;
-    const normalizeArabicTextOnce = () => {
-      frame = 0;
-      if (main.getAttribute("lang") !== "ar") return;
+    let activeObserver: MutationObserver | null = null;
+    let stopTimer = 0;
 
-      const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
-      let node = walker.nextNode();
-      while (node) {
-        const text = node.nodeValue;
-        if (text && /[٠-٩]/.test(text)) {
-          node.nodeValue = text.replace(ARABIC_DIGITS, (digit) => LATIN_DIGITS[digit.charCodeAt(0) - 0x0660]);
+    const stopShortObserver = () => {
+      activeObserver?.disconnect();
+      activeObserver = null;
+      if (stopTimer) window.clearTimeout(stopTimer);
+      stopTimer = 0;
+    };
+
+    const armForArabicRender = () => {
+      stopShortObserver();
+
+      // Observe only the React mutations produced by this one language switch.
+      // We normalize only the nodes React actually changes, rather than rescanning
+      // the entire page. This keeps IDs such as SO-2026-041 unchanged with no lag.
+      activeObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "characterData") {
+            normalizeTextNode(mutation.target);
+          } else if (mutation.type === "childList") {
+            mutation.addedNodes.forEach(normalizeAddedNode);
+          }
         }
-        node = walker.nextNode();
-      }
+      });
+
+      activeObserver.observe(main, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
+
+      stopTimer = window.setTimeout(stopShortObserver, 120);
     };
 
-    const scheduleNormalize = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(normalizeArabicTextOnce);
+    const onClickCapture = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest("button");
+      if (!button) return;
+      if (button.textContent?.trim() === "عربي") armForArabicRender();
     };
 
-    // Only react to the language switch itself. Watching subtree/text mutations
-    // causes repeated rescans while React renders the Arabic view and creates lag.
-    const observer = new MutationObserver(scheduleNormalize);
-    observer.observe(main, {
-      attributes: true,
-      attributeFilter: ["lang"],
-    });
-
-    scheduleNormalize();
+    document.addEventListener("click", onClickCapture, true);
 
     return () => {
-      observer.disconnect();
-      if (frame) window.cancelAnimationFrame(frame);
+      document.removeEventListener("click", onClickCapture, true);
+      stopShortObserver();
       (Intl as { NumberFormat: typeof Intl.NumberFormat }).NumberFormat = OriginalNumberFormat;
     };
   }, []);
