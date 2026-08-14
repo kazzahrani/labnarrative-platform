@@ -4,6 +4,14 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pagePath = path.resolve(here, "../app/systems/demos/medical-masar/page.tsx");
+const dynamicDemoPath = path.resolve(here, "../app/systems/demos/[slug]/ConceptDemoClient.tsx");
+
+const arabicIndic = "٠١٢٣٤٥٦٧٨٩";
+const easternArabic = "۰۱۲۳۴۵۶۷۸۹";
+const westernizeLiteralDigits = (value) => value
+  .replace(/[٠-٩]/g, (digit) => String(arabicIndic.indexOf(digit)))
+  .replace(/[۰-۹]/g, (digit) => String(easternArabic.indexOf(digit)));
+
 let source = fs.readFileSync(pagePath, "utf8");
 
 // Make both language versions use Western digits at source/build time.
@@ -15,15 +23,10 @@ source = source
     /function localizeId\(v: string, lang: Lang\) \{[\s\S]*?\n\}/,
     'function localizeId(v: string, _lang: Lang) {\n  return v;\n}',
   );
+source = westernizeLiteralDigits(source);
 
-const arabicIndic = "٠١٢٣٤٥٦٧٨٩";
-const easternArabic = "۰۱۲۳۴۵۶۷۸۹";
-source = source
-  .replace(/[٠-٩]/g, (digit) => String(arabicIndic.indexOf(digit)))
-  .replace(/[۰-۹]/g, (digit) => String(easternArabic.indexOf(digit)));
-
-// Performance: the original component eagerly creates every demo screen on every
-// language/theme state change. Turn each screen into a lazy render function so
+// Performance: the original Medical Masar component eagerly creates every demo screen
+// on every language/theme state change. Turn each screen into a lazy render function so
 // only the currently visible screen is constructed when Arabic/English changes.
 for (const viewName of [
   "overview",
@@ -53,4 +56,14 @@ source = source
   );
 
 fs.writeFileSync(pagePath, source, "utf8");
-console.log("Medical Masar numerals normalized and inactive views lazy-rendered for build.");
+
+// Dynamic client demos (including NSC) must follow the same reference-number standard:
+// Arabic UI text is RTL, but all numbers remain Western 0-9 for IDs, values and reports.
+let dynamicSource = fs.readFileSync(dynamicDemoPath, "utf8");
+dynamicSource = dynamicSource
+  .replaceAll('lang === "ar" ? "ar-SA-u-nu-arab" : "en-US"', '"en-US"')
+  .replaceAll('lang === "ar" ? "ar-SA-u-nu-arab" : "en-SA"', '"en-SA"');
+dynamicSource = westernizeLiteralDigits(dynamicSource);
+fs.writeFileSync(dynamicDemoPath, dynamicSource, "utf8");
+
+console.log("Systems demo numerals normalized to Western 0-9; Medical Masar inactive views lazy-rendered.");
