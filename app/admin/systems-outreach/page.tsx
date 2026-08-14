@@ -8,6 +8,7 @@ import styles from "./systems-outreach.module.css";
 type ProspectStatus = "discovered"|"researching"|"qualified"|"concept_ready"|"ready_to_send"|"contacted"|"connected"|"replied"|"meeting"|"proposal"|"won"|"not_fit"|"blocked";
 type Prospect = {
   id:string; company_name:string; slug:string; website_url:string|null; linkedin_url:string|null; country:string|null; city:string|null; industry:string|null; company_summary:string|null; fit_score:number; fit_reason:string|null; public_evidence:unknown; status:ProspectStatus; demo_status:"none"|"draft"|"ready"; linkedin_note:string|null; email_subject:string|null; email_body:string|null; followup_1:string|null; followup_2:string|null; last_researched_at:string|null; created_at:string;
+  email_recipient_contact_id:string|null; email_recipient_email:string|null; email_provider_message_id:string|null; email_sent_at:string|null; email_delivery_status:string|null; email_last_error:string|null; email_last_event_at:string|null;
 };
 type Contact = {id:string; prospect_id:string; name:string; title:string; linkedin_url:string|null; email:string|null; source_url:string|null; priority:number; is_current_verified:boolean; evidence:unknown};
 
@@ -34,7 +35,7 @@ function evidenceUrls(value:unknown):string[]{
 function dateLabel(value:string|null){if(!value)return "—";const d=new Date(value);return Number.isNaN(d.getTime())?"—":new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Riyadh",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)}
 
 export default function SystemsOutreachPage(){
-  const [session,setSession]=useState<Session|null>(null),[authReady,setAuthReady]=useState(false),[role,setRole]=useState<string|null>(null),[prospects,setProspects]=useState<Prospect[]>([]),[contacts,setContacts]=useState<Contact[]>([]),[loading,setLoading]=useState(false),[notice,setNotice]=useState(""),[filter,setFilter]=useState<Filter>("ready_to_send"),[search,setSearch]=useState(""),[selectedId,setSelectedId]=useState<string|null>(null),[updating,setUpdating]=useState(false);
+  const [session,setSession]=useState<Session|null>(null),[authReady,setAuthReady]=useState(false),[role,setRole]=useState<string|null>(null),[prospects,setProspects]=useState<Prospect[]>([]),[contacts,setContacts]=useState<Contact[]>([]),[loading,setLoading]=useState(false),[notice,setNotice]=useState(""),[filter,setFilter]=useState<Filter>("ready_to_send"),[search,setSearch]=useState(""),[selectedId,setSelectedId]=useState<string|null>(null),[updating,setUpdating]=useState(false),[sendingEmail,setSendingEmail]=useState(false);
 
   const load=useCallback(async(activeSession:Session)=>{
     setLoading(true);setNotice("");
@@ -42,7 +43,7 @@ export default function SystemsOutreachPage(){
     if(roleError||roleRow?.role!=="admin"){setRole(roleRow?.role??null);setNotice(roleError?.message??"Administrator access required.");setLoading(false);return}
     setRole("admin");
     const [p,c]=await Promise.all([
-      supabase.from("systems_outreach_prospects").select("id,company_name,slug,website_url,linkedin_url,country,city,industry,company_summary,fit_score,fit_reason,public_evidence,status,demo_status,linkedin_note,email_subject,email_body,followup_1,followup_2,last_researched_at,created_at").order("fit_score",{ascending:false}).order("created_at",{ascending:false}),
+      supabase.from("systems_outreach_prospects").select("id,company_name,slug,website_url,linkedin_url,country,city,industry,company_summary,fit_score,fit_reason,public_evidence,status,demo_status,linkedin_note,email_subject,email_body,followup_1,followup_2,last_researched_at,created_at,email_recipient_contact_id,email_recipient_email,email_provider_message_id,email_sent_at,email_delivery_status,email_last_error,email_last_event_at").order("fit_score",{ascending:false}).order("created_at",{ascending:false}),
       supabase.from("systems_outreach_contacts").select("id,prospect_id,name,title,linkedin_url,email,source_url,priority,is_current_verified,evidence").order("priority",{ascending:true})
     ]);
     if(p.error||c.error){setNotice(p.error?.message??c.error?.message??"Unable to load Systems outreach.");setLoading(false);return}
@@ -64,6 +65,10 @@ export default function SystemsOutreachPage(){
   }),[prospects,filter,search]);
   const selected=prospects.find((p)=>p.id===selectedId)??null;
   const selectedContacts=selected?contacts.filter((c)=>c.prospect_id===selected.id):[];
+  const emailContacts=selectedContacts.filter((c)=>Boolean(c.email)&&c.is_current_verified).sort((a,b)=>a.priority-b.priority);
+  const emailRecipient=selected?.email_recipient_contact_id
+    ? selectedContacts.find((c)=>c.id===selected.email_recipient_contact_id)??emailContacts[0]??null
+    : emailContacts[0]??null;
 
   const updateStage=async(status:ProspectStatus)=>{
     if(!selected||updating)return;setUpdating(true);setNotice("");
@@ -75,6 +80,19 @@ export default function SystemsOutreachPage(){
     setUpdating(false);
   };
   const copy=async(text:string|null,label:string)=>{if(!text)return;await navigator.clipboard?.writeText(text);setNotice(`${label} copied.`)};
+  const sendEmail=async()=>{
+    if(!selected||!emailRecipient?.email||!session||sendingEmail)return;
+    setSendingEmail(true);setNotice("");
+    try{
+      const {data,error}=await supabase.functions.invoke("systems-send-outreach",{body:{prospectId:selected.id,contactId:emailRecipient.id}});
+      if(error)throw error;
+      const result=(data??{}) as {ok?:boolean;alreadySent?:boolean;recipient?:string;recipientName?:string;sentAt?:string;error?:string};
+      if(result.error)throw new Error(result.error);
+      setNotice(result.alreadySent?`Email was already sent to ${result.recipient||emailRecipient.email}.`:`Email sent from khaled@labnarrative.com to ${result.recipientName||emailRecipient.name} <${result.recipient||emailRecipient.email}>.`);
+      await load(session);
+    }catch(error){setNotice(error instanceof Error?error.message:"Unable to send the email.")}
+    finally{setSendingEmail(false)}
+  };
 
   if(!authReady)return <main className={styles.page}><section className={styles.auth}>Preparing Systems outreach…</section></main>;
   if(!session)return <main className={styles.page}><section className={styles.auth}><div className={styles.brand}><span>Lab</span>Narrative</div><p className={styles.eyebrow}>Systems outreach</p><h1>Administrator sign-in required.</h1><p>Use the existing LabNarrative administrator login, then return to this command center.</p><Link href="/admin">Go to admin sign-in →</Link></section></main>;
@@ -91,7 +109,11 @@ export default function SystemsOutreachPage(){
       <div className={styles.section}><h3>Decision-makers</h3>{selectedContacts.length?selectedContacts.map((c)=><div className={styles.contact} key={c.id}><strong>{c.name}</strong><p>{c.title}{c.is_current_verified?" · current role verified":""}</p><div>{c.linkedin_url?<a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn ↗</a>:null}{c.email?<span className={styles.muted}> · {c.email}</span>:null}</div></div>):<p className={styles.muted}>Contact research pending.</p>}</div>
       <div className={styles.section}><h3>Private concept</h3>{selected.demo_status==="ready"?<a className={`${styles.linkButton} ${styles.primary}`} href={`/systems/demos/${selected.slug}`} target="_blank" rel="noreferrer">Open tailored concept ↗</a>:<p className={styles.muted}>Demo not frozen yet.</p>}</div>
       <div className={styles.section}><h3>LinkedIn connection note</h3><div className={styles.draft}><label>≤ 300 characters</label><pre>{selected.linkedin_note||"Draft pending."}</pre>{selected.linkedin_note?<div className={styles.draftActions}><button className={styles.smallButton} onClick={()=>void copy(selected.linkedin_note,"LinkedIn note")}>Copy note</button></div>:null}</div></div>
-      <div className={styles.section}><h3>Email outreach</h3><div className={styles.draft}><label>{selected.email_subject||"Subject pending"}</label><pre>{selected.email_body||"Email draft pending."}</pre>{selected.email_body?<div className={styles.draftActions}><button className={styles.smallButton} onClick={()=>void copy(`${selected.email_subject??""}\n\n${selected.email_body}`,"Email draft")}>Copy email</button></div>:null}</div>{selected.followup_1?<div className={styles.draft}><label>Follow-up 1</label><pre>{selected.followup_1}</pre></div>:null}{selected.followup_2?<div className={styles.draft}><label>Follow-up 2</label><pre>{selected.followup_2}</pre></div>:null}</div>
+      <div className={styles.section}><h3>Email outreach</h3>
+        <div className={styles.mailRoute}><div><span>From</span><strong>Khaled Azzahrani &lt;khaled@labnarrative.com&gt;</strong></div><div><span>To</span><strong>{emailRecipient?.email?`${emailRecipient.name} <${emailRecipient.email}>`:"No verified public work email available"}</strong>{emailRecipient?<small>{emailRecipient.title}</small>:null}</div></div>
+        <div className={styles.draft}><label>{selected.email_subject||"Subject pending"}</label><pre>{selected.email_body||"Email draft pending."}</pre>{selected.email_body?<div className={styles.draftActions}><button className={styles.smallButton} onClick={()=>void copy(`${selected.email_subject??""}\n\n${selected.email_body}`,"Email draft")}>Copy email</button>{selected.email_sent_at?<span className={styles.sentState}>Sent {dateLabel(selected.email_sent_at)} · {selected.email_delivery_status||"sent"}</span>:<button className={styles.sendButton} disabled={sendingEmail||!emailRecipient?.email||!selected.email_subject||!selected.email_body} onClick={()=>void sendEmail()}>{sendingEmail?"Sending…":"Send email"}</button>}</div>:null}{selected.email_last_error?<p className={styles.mailError}>{selected.email_last_error}</p>:null}</div>
+        {selected.followup_1?<div className={styles.draft}><label>Follow-up 1</label><pre>{selected.followup_1}</pre></div>:null}{selected.followup_2?<div className={styles.draft}><label>Follow-up 2</label><pre>{selected.followup_2}</pre></div>:null}
+      </div>
       <div className={styles.section}><h3>Evidence</h3><div className={styles.evidence}>{evidenceUrls(selected.public_evidence).length?evidenceUrls(selected.public_evidence).map((url)=><a key={url} href={url} target="_blank" rel="noreferrer">{url} ↗</a>):<span className={styles.muted}>Evidence links pending.</span>}</div></div>
       <div className={styles.section}><h3>Human gate</h3><div className={styles.statusButtons}>{stageButtons.map((s)=><button key={s.value} disabled={updating||selected.status===s.value} className={styles.smallButton} onClick={()=>void updateStage(s.value)}>{s.label}</button>)}</div></div>
       </div>:<div className={styles.empty}>Select a prospect to inspect the research, contacts, demo and outreach drafts.</div>}</aside>
