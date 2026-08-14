@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./flat-dark.css";
-import NumeralPerformanceBridge from "./NumeralPerformanceBridge";
 
 export const metadata: Metadata = {
   title: "Private Concept — Medical Masar | LabNarrative Systems",
@@ -13,10 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function MedicalMasarConceptLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <>
-      <NumeralPerformanceBridge />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
