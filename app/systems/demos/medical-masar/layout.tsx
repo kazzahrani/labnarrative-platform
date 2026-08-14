@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./flat-dark.css";
 
 export const metadata: Metadata = {
   title: "Private Concept — Medical Masar | LabNarrative Systems",
