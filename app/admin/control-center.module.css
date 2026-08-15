@@ -1,0 +1,473 @@
+.page {
+  --paper: #f6f7f2;
+  --ink: #152019;
+  --muted: #66736c;
+  --green: #244b3b;
+  --green-deep: #132d24;
+  --line: #d8ded9;
+  --lime: #ddff79;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.page * {
+  box-sizing: border-box;
+}
+
+.page a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.header {
+  height: 84px;
+  margin: 0 clamp(22px, 4.5vw, 72px);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brandLine {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+}
+
+.wordmark {
+  font-size: 1.14rem;
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+
+.wordmark span {
+  color: var(--green);
+}
+
+.product {
+  color: #7b8881;
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 0.69rem;
+  font-weight: 760;
+}
+
+.headerActions a {
+  padding-bottom: 4px;
+  border-bottom: 1px solid currentColor;
+}
+
+.headerActions a:hover,
+.primaryButton:hover,
+.secondaryButton:hover,
+.toolLink:hover,
+.footer a:hover {
+  opacity: 0.65;
+}
+
+.hero {
+  padding: clamp(72px, 8vw, 118px) clamp(22px, 4.5vw, 72px) clamp(62px, 7vw, 100px);
+}
+
+.eyebrow,
+.sectionLabel {
+  margin: 0;
+  color: var(--green);
+  font-size: 0.59rem;
+  font-weight: 850;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.38fr);
+  gap: clamp(46px, 8vw, 128px);
+  align-items: end;
+  margin-top: 34px;
+}
+
+.hero h1 {
+  max-width: 1040px;
+  margin: 0;
+  font-size: clamp(4rem, 7.2vw, 7.8rem);
+  font-weight: 720;
+  letter-spacing: -0.075em;
+  line-height: 0.88;
+}
+
+.hero h1 em {
+  color: var(--green);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.heroAside {
+  padding-bottom: 5px;
+}
+
+.heroAside p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.72;
+}
+
+.activeMarker {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 24px;
+  color: var(--green);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.activeMarker::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  content: "";
+}
+
+.branchSection {
+  padding: 0 clamp(22px, 4.5vw, 72px) clamp(88px, 9vw, 138px);
+}
+
+.sectionIntro {
+  display: grid;
+  grid-template-columns: 0.34fr 1fr;
+  gap: 44px;
+  align-items: start;
+  padding-top: 30px;
+  border-top: 1px solid var(--line);
+}
+
+.sectionIntro h2 {
+  max-width: 850px;
+  margin: 0;
+  font-size: clamp(2.45rem, 4.5vw, 4.8rem);
+  font-weight: 430;
+  letter-spacing: -0.065em;
+  line-height: 1;
+}
+
+.branchGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: clamp(52px, 6vw, 82px);
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.branchCard {
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(30px, 3.2vw, 46px);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: #7b8881;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  letter-spacing: 0.08em;
+}
+
+.status::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  content: "";
+}
+
+.branchCard h3 {
+  margin: 52px 0 0;
+  font-size: clamp(2.35rem, 3.25vw, 3.75rem);
+  font-weight: 520;
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+}
+
+.branchCard > p {
+  max-width: 520px;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.68;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 0.67rem;
+  font-weight: 820;
+  transition: opacity 150ms ease;
+}
+
+.primaryButton {
+  background: var(--green);
+  color: #fff !important;
+}
+
+.secondaryButton {
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.tools {
+  margin-top: auto;
+  padding-top: 42px;
+}
+
+.toolsLabel {
+  margin: 0 0 13px;
+  color: #88938d;
+  font-size: 0.53rem;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.toolLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 690;
+  transition: opacity 150ms ease;
+}
+
+.toolLink:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.toolLink small {
+  color: #8a958f;
+  font-size: 0.55rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.shared {
+  padding: clamp(78px, 8vw, 120px) clamp(22px, 4.5vw, 72px);
+  background: var(--green-deep);
+  color: #fff;
+}
+
+.sharedTop {
+  display: grid;
+  grid-template-columns: 0.43fr 1fr;
+  gap: clamp(46px, 8vw, 120px);
+  align-items: start;
+}
+
+.shared .sectionLabel {
+  color: var(--lime);
+}
+
+.shared h2 {
+  max-width: 900px;
+  margin: 0;
+  font-size: clamp(2.8rem, 4.8vw, 5.1rem);
+  font-weight: 430;
+  letter-spacing: -0.065em;
+  line-height: 1;
+}
+
+.sharedGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: clamp(50px, 6vw, 80px);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sharedCard {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 26px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background 150ms ease;
+}
+
+.sharedCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sharedCard small {
+  color: var(--lime);
+  font-size: 0.52rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sharedCard strong {
+  margin-top: 30px;
+  font-size: 1.05rem;
+  font-weight: 640;
+  letter-spacing: -0.025em;
+}
+
+.sharedCard span {
+  margin-top: auto;
+  color: #adbbb4;
+  font-size: 0.67rem;
+}
+
+.footer {
+  padding: 26px clamp(22px, 4.5vw, 72px);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 20px;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  color: #748078;
+  font-size: 0.66rem;
+}
+
+.footer > span {
+  text-align: center;
+}
+
+.footer a:last-child {
+  justify-self: end;
+  color: var(--ink);
+}
+
+@media (max-width: 1080px) {
+  .branchGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sharedGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  .heroGrid,
+  .sectionIntro,
+  .sharedTop {
+    grid-template-columns: 1fr;
+  }
+
+  .heroGrid {
+    gap: 36px;
+  }
+
+  .hero h1 {
+    font-size: clamp(3.7rem, 12vw, 6rem);
+  }
+
+  .branchGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .branchCard {
+    min-height: 460px;
+  }
+
+  .footer {
+    grid-template-columns: 1fr auto;
+  }
+
+  .footer > span {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .header {
+    height: 72px;
+    margin: 0 20px;
+  }
+
+  .product,
+  .headerActions a:first-child {
+    display: none;
+  }
+
+  .hero,
+  .branchSection,
+  .shared,
+  .footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .hero h1 {
+    font-size: 3.55rem;
+  }
+
+  .branchCard {
+    min-height: 430px;
+    padding: 28px;
+  }
+
+  .sharedGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sharedCard {
+    min-height: 150px;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
+  }
+
+  .footer a:last-child {
+    justify-self: start;
+  }
+}
