@@ -8,10 +8,16 @@ import styles from "./systems-theme-toggle.module.css";
 type SystemsTheme = "dark" | "light";
 const STORAGE_KEY = "labnarrative-systems-theme";
 const LIGHT_CONTRAST_STYLE_ID = "labnarrative-systems-light-heading-contrast";
+const FORCED_HEADING_ATTR = "data-systems-light-heading";
 const LIGHT_CONTRAST_CSS = `
 html[data-systems-theme="light"] body main h1,
 html[data-systems-theme="light"] body main h2 {
   color: #152019 !important;
+  -webkit-text-fill-color: #152019 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
 }
 `;
 
@@ -50,6 +56,32 @@ function ensureLightContrastStyle() {
   }
 }
 
+function forceLightHeadingContrast() {
+  const main = systemsMain();
+  if (!main) return;
+  main.querySelectorAll<HTMLElement>("h1,h2").forEach((heading) => {
+    heading.setAttribute(FORCED_HEADING_ATTR, "true");
+    heading.style.setProperty("color", "#152019", "important");
+    heading.style.setProperty("-webkit-text-fill-color", "#152019", "important");
+    heading.style.setProperty("opacity", "1", "important");
+    heading.style.setProperty("visibility", "visible", "important");
+    heading.style.setProperty("filter", "none", "important");
+    heading.style.setProperty("mix-blend-mode", "normal", "important");
+  });
+}
+
+function clearForcedHeadingContrast() {
+  document.querySelectorAll<HTMLElement>(`[${FORCED_HEADING_ATTR}]`).forEach((heading) => {
+    heading.removeAttribute(FORCED_HEADING_ATTR);
+    heading.style.removeProperty("color");
+    heading.style.removeProperty("-webkit-text-fill-color");
+    heading.style.removeProperty("opacity");
+    heading.style.removeProperty("visibility");
+    heading.style.removeProperty("filter");
+    heading.style.removeProperty("mix-blend-mode");
+  });
+}
+
 export default function SystemsThemeToggle() {
   const pathname = usePathname();
   const isSystemsRoute = pathname === "/admin/systems" || pathname === "/admin/systems-outreach";
@@ -71,7 +103,9 @@ export default function SystemsThemeToggle() {
         main.style.backgroundColor = "#f6f7f2";
         main.style.color = "#152019";
       }
+      forceLightHeadingContrast();
     } else {
+      clearForcedHeadingContrast();
       document.documentElement.style.backgroundColor = "#09161f";
       document.body.style.backgroundColor = "#09161f";
       if (main) {
@@ -84,6 +118,7 @@ export default function SystemsThemeToggle() {
 
   useEffect(() => {
     if (!isSystemsRoute) {
+      clearForcedHeadingContrast();
       document.documentElement.removeAttribute("data-systems-theme");
       document.body.removeAttribute("data-systems-theme");
       document.documentElement.style.removeProperty("color-scheme");
@@ -105,14 +140,15 @@ export default function SystemsThemeToggle() {
     setTheme(next);
     applyTheme(next);
 
-    const findTarget = () => {
+    const syncDynamicUi = () => {
       const systemsSiteLink = document.querySelector<HTMLAnchorElement>('a[href="/systems"]');
       const parent = systemsSiteLink?.parentElement;
       if (parent) setTarget(parent);
+      if (document.documentElement.dataset.systemsTheme === "light") forceLightHeadingContrast();
     };
 
-    findTarget();
-    const observer = new MutationObserver(findTarget);
+    syncDynamicUi();
+    const observer = new MutationObserver(syncDynamicUi);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [applyTheme, isSystemsRoute]);
