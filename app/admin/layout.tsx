@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "./systems-intelligence-light.css";
 import SystemsLinkedInBatchLauncher from "./SystemsLinkedInBatchLauncher";
 import SystemsEmailBatchLauncher from "./SystemsEmailBatchLauncher";
 import SystemsConnectedFilterEnhancer from "./SystemsConnectedFilterEnhancer";
