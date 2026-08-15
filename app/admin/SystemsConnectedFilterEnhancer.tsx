@@ -29,7 +29,7 @@ export default function SystemsConnectedFilterEnhancer() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname !== "/admin/systems-outreach") return;
+    if (pathname !== "/admin/systems" && pathname !== "/admin/systems-outreach") return;
 
     let disposed = false;
     let connectedCompanies = new Set<string>();
