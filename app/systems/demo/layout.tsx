@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Live Demo — LabNarrative Systems",
+  title: "Live Operations Demo — LabNarrative Systems",
   description:
-    "Explore an interactive LabNarrative Systems demo showing AI lead qualification, CRM pipeline management, automated follow-up and business reporting.",
+    "Explore a LabNarrative Systems operations demo connecting tenders, quotations, orders, warehouse, supply, invoices, collection and management visibility.",
 };
 
 export default function SystemsDemoLayout({ children }: Readonly<{ children: React.ReactNode }>) {
