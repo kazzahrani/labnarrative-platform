@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "./systems-intelligence-light.css";
+import "./systems-50-50.css";
 import AdminSessionContinuity from "@/components/admin/AdminSessionContinuity";
 import SystemsLinkedInBatchLauncher from "./SystemsLinkedInBatchLauncher";
 import SystemsEmailBatchLauncher from "./SystemsEmailBatchLauncher";
