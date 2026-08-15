@@ -6,7 +6,7 @@ const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform-lab-narrative.vercel.app",
   "labnarrative-platform-git-main-lab-narrative.vercel.app",
 ]);
-const CANONICAL_PLATFORM_HOST = "platform.labnarrative.com";
+const LEGACY_PLATFORM_HOST = "platform.labnarrative.com";
 const WEBSITE_ADMIN_SEGMENTS = new Set([
   "sites",
   "sites-v3",
@@ -21,8 +21,6 @@ const WEBSITE_ADMIN_SEGMENTS = new Set([
   "outreach-setup",
   "preview",
   "recovery",
-  "session-import",
-  "session-transfer",
 ]);
 
 export function proxy(request: NextRequest) {
@@ -31,7 +29,7 @@ export function proxy(request: NextRequest) {
   const isAdminHost =
     host === rootDomain ||
     host === `www.${rootDomain}` ||
-    host === CANONICAL_PLATFORM_HOST ||
+    host === LEGACY_PLATFORM_HOST ||
     host === "localhost";
 
   // Engine v4 machine renderer capability URLs are short-lived private
@@ -45,21 +43,63 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // Keep the administrator session on one browser origin for Vercel aliases.
-  // The public LabNarrative domain is intentionally allowed to host the new
-  // umbrella admin and its branch namespaces.
+  // labnarrative.com is the single canonical browser origin for the primary
+  // administrator session. Vercel aliases never keep a separate auth copy.
   if (request.nextUrl.pathname.startsWith("/admin") && PLATFORM_ALIAS_HOSTS.has(host)) {
     const canonicalUrl = request.nextUrl.clone();
     canonicalUrl.protocol = "https:";
-    canonicalUrl.hostname = CANONICAL_PLATFORM_HOST;
+    canonicalUrl.hostname = rootDomain;
     canonicalUrl.port = "";
     return NextResponse.redirect(canonicalUrl, 307);
   }
 
-  // /admin is the LabNarrative umbrella Control Center. It must never resolve
-  // into a branch automatically. Keep it uncached so old legacy redirects or
-  // landing responses cannot be reused by the browser/CDN.
-  if (isAdminHost && request.nextUrl.pathname === "/admin" && request.nextUrl.search === "") {
+  // Preserve platform.labnarrative.com only long enough to hand an existing
+  // browser session to labnarrative.com. Every legacy admin URL enters the
+  // transfer page first so the requested destination can be restored exactly.
+  if (host === LEGACY_PLATFORM_HOST && request.nextUrl.pathname.startsWith("/admin")) {
+    if (request.nextUrl.pathname === "/admin/session-transfer") {
+      const response = NextResponse.next();
+      response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+      response.headers.set("Pragma", "no-cache");
+      response.headers.set("Expires", "0");
+      return response;
+    }
+
+    if (request.nextUrl.pathname === "/admin/session-import") {
+      const canonicalUrl = request.nextUrl.clone();
+      canonicalUrl.protocol = "https:";
+      canonicalUrl.hostname = rootDomain;
+      canonicalUrl.port = "";
+      return NextResponse.redirect(canonicalUrl, 307);
+    }
+
+    const transferUrl = request.nextUrl.clone();
+    const requestedPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    transferUrl.protocol = "https:";
+    transferUrl.hostname = LEGACY_PLATFORM_HOST;
+    transferUrl.port = "";
+    transferUrl.pathname = "/admin/session-transfer";
+    transferUrl.search = "";
+    transferUrl.searchParams.set("return_to", requestedPath);
+    return NextResponse.redirect(transferUrl, 307);
+  }
+
+  // /admin is the LabNarrative Control Center and shared login gate. Keep it
+  // uncached so authentication state can never be hidden behind a stale page.
+  if (isAdminHost && request.nextUrl.pathname === "/admin") {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    return response;
+  }
+
+  // Session import/transfer are shared authentication infrastructure, not a
+  // Websites namespace. Keep them directly addressable at top-level /admin.
+  if (
+    (host === rootDomain || host === `www.${rootDomain}` || host === "localhost") &&
+    (request.nextUrl.pathname === "/admin/session-import" || request.nextUrl.pathname === "/admin/session-transfer")
+  ) {
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
     response.headers.set("Pragma", "no-cache");
@@ -84,9 +124,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.rewrite(outreachUrl);
   }
 
-  // LabNarrative Websites now lives under /admin/websites/*.
-  // Rewrite those clean branch URLs to the existing, proven admin pages while
-  // preserving the browser-visible namespace.
+  // LabNarrative Websites lives under /admin/websites/*.
   if (isAdminHost && request.nextUrl.pathname.startsWith("/admin/websites/")) {
     const internalUrl = request.nextUrl.clone();
     internalUrl.pathname = `/admin/${request.nextUrl.pathname.slice("/admin/websites/".length)}`;
@@ -94,8 +132,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Redirect legacy top-level Websites admin URLs on the public root into the
-  // new Websites namespace. This also keeps links generated by older internal
-  // pages inside /admin/websites/... as the user navigates.
+  // Websites namespace. Session routes were deliberately removed from this set.
   if (
     (host === rootDomain || host === `www.${rootDomain}` || host === "localhost") &&
     request.nextUrl.pathname.startsWith("/admin/")
@@ -115,9 +152,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // The root LabNarrative brand now acts as an umbrella for Websites and
-  // Intelligence. Keep the established Websites implementation available at
-  // /websites while serving the umbrella homepage at the public root.
+  // The root LabNarrative brand acts as an umbrella for the businesses.
   if (
     request.nextUrl.pathname === "/" &&
     (
@@ -152,9 +187,6 @@ export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     const internalPrefix = `/sites/${subdomain}`;
 
-    // Public subdomains should expose clean paths such as /research. Older
-    // renderer links may already include /sites/{slug}; strip that prefix
-    // before applying the hostname rewrite so it is never duplicated.
     const publicPath = url.pathname === internalPrefix
       ? "/"
       : url.pathname.startsWith(`${internalPrefix}/`)
