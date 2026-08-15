@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/admin/systems", label: "Systems Home", short: "Home" },
@@ -22,17 +22,16 @@ function active(pathname: string, href: string) {
 
 export default function SystemsPlatformNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isSystems = pathname === "/admin/systems" || pathname.startsWith("/admin/systems-outreach");
   if (!isSystems) return null;
 
-  const prospect = searchParams.get("prospect");
-  const destination = (href: string) => {
-    if (!prospect || href === "/admin/systems") return href;
-    return `${href}?prospect=${encodeURIComponent(prospect)}`;
-  };
   const go = (href: string) => {
-    window.location.assign(destination(href));
+    let destination = href;
+    if (href !== "/admin/systems") {
+      const prospect = new URLSearchParams(window.location.search).get("prospect");
+      if (prospect) destination = `${href}?prospect=${encodeURIComponent(prospect)}`;
+    }
+    window.location.assign(destination);
   };
 
   return (
