@@ -228,7 +228,7 @@ export default function SystemsSimpleOutreachPanel() {
 
     attach();
     observer = new MutationObserver(attach);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
     return () => {
       observer?.disconnect();
@@ -336,6 +336,7 @@ export default function SystemsSimpleOutreachPanel() {
     if (selected.status === "ready_to_send") {
       prospectPatch.status = "contacted";
       prospectPatch.contacted_at = now;
+      prospectPatch.linkedin_request_sent_at = now;
     }
 
     await supabase.from("systems_outreach_prospects").update(prospectPatch).eq("id", selected.id);
