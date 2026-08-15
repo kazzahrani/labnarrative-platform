@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import styles from "./control-center.module.css";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "LabNarrative Control Center",
   description: "Central access point for LabNarrative Websites, Intelligence and Systems.",
