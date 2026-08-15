@@ -28,6 +28,11 @@ const WEBSITE_ADMIN_SEGMENTS = new Set([
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
+  const isAdminHost =
+    host === rootDomain ||
+    host === `www.${rootDomain}` ||
+    host === CANONICAL_PLATFORM_HOST ||
+    host === "localhost";
 
   // Engine v4 machine renderer capability URLs are short-lived private
   // verification surfaces. Prevent the token in the query string from being
@@ -51,13 +56,27 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 307);
   }
 
-  // LabNarrative Websites now lives under /admin/websites/* on the public root.
+  // /admin is the LabNarrative umbrella. /admin/websites is the Websites
+  // branch root and leads into the existing Sites workspace.
+  if (isAdminHost && (request.nextUrl.pathname === "/admin/websites" || request.nextUrl.pathname === "/admin/websites/")) {
+    const sitesUrl = request.nextUrl.clone();
+    sitesUrl.pathname = "/admin/websites/sites";
+    return NextResponse.redirect(sitesUrl, 307);
+  }
+
+  // Give Websites a clean top-level outreach route while retaining the current
+  // outreach setup implementation. Run-specific outreach URLs continue to map
+  // through /admin/websites/outreach/[runId].
+  if (isAdminHost && request.nextUrl.pathname === "/admin/websites/outreach") {
+    const outreachUrl = request.nextUrl.clone();
+    outreachUrl.pathname = "/admin/outreach-setup";
+    return NextResponse.rewrite(outreachUrl);
+  }
+
+  // LabNarrative Websites now lives under /admin/websites/*.
   // Rewrite those clean branch URLs to the existing, proven admin pages while
   // preserving the browser-visible namespace.
-  if (
-    (host === rootDomain || host === `www.${rootDomain}` || host === "localhost") &&
-    request.nextUrl.pathname.startsWith("/admin/websites/")
-  ) {
+  if (isAdminHost && request.nextUrl.pathname.startsWith("/admin/websites/")) {
     const internalUrl = request.nextUrl.clone();
     internalUrl.pathname = `/admin/${request.nextUrl.pathname.slice("/admin/websites/".length)}`;
     return NextResponse.rewrite(internalUrl);
