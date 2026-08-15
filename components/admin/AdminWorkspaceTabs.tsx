@@ -9,7 +9,7 @@ const TABS = [
   { label: "Sites", href: "/admin/websites/sites" },
   { label: "Review", href: "/admin/websites/review" },
   { label: "Sales", href: "/admin/websites/sales" },
-  { label: "Inbox", href: "/admin/websites/inbox" },
+  { label: "Inbox", href: "/admin/inbox" },
   { label: "Outreach", href: "/admin/websites/outreach" },
 ] as const;
 
@@ -24,11 +24,13 @@ const LEGACY_WEBSITE_PREFIXES = [
 ] as const;
 
 function isWebsiteWorkspacePath(path: string) {
+  if (path === "/admin/inbox" || path.startsWith("/admin/inbox/")) return true;
   if (path.startsWith("/admin/websites/")) return true;
   return LEGACY_WEBSITE_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
 function normalizedWebsitePath(path: string) {
+  if (path === "/admin/inbox" || path.startsWith("/admin/inbox/")) return path;
   if (path.startsWith("/admin/websites/")) return path;
   if (path === "/admin/sites-v3" || path.startsWith("/admin/sites-v3/")) {
     return path.replace("/admin/sites-v3", "/admin/websites/sites");
