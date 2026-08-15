@@ -5,26 +5,53 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { label: "Discovery", href: "/admin/discovery" },
-  { label: "Production", href: "/admin/automation" },
-  { label: "Review", href: "/admin/review" },
-  { label: "Websites", href: "/admin/sites" },
-  { label: "Sales", href: "/admin/sales" },
+  { label: "Discovery", href: "/admin/websites/discovery" },
+  { label: "Sites", href: "/admin/websites/sites" },
+  { label: "Review", href: "/admin/websites/review" },
+  { label: "Sales", href: "/admin/websites/sales" },
+  { label: "Outreach", href: "/admin/websites/outreach" },
 ] as const;
 
-function isActivePath(path: string, href: (typeof TABS)[number]["href"]) {
-  if (href === "/admin/sites") {
-    return path === href || path.startsWith(`${href}/`) || path === "/admin/sites-v3" || path.startsWith("/admin/sites-v3/");
+const LEGACY_WEBSITE_PREFIXES = [
+  "/admin/sites",
+  "/admin/discovery",
+  "/admin/review",
+  "/admin/sales",
+  "/admin/outreach",
+  "/admin/care",
+  "/admin/linkedin",
+] as const;
+
+function isWebsiteWorkspacePath(path: string) {
+  if (path.startsWith("/admin/websites/")) return true;
+  return LEGACY_WEBSITE_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
+function normalizedWebsitePath(path: string) {
+  if (path.startsWith("/admin/websites/")) return path;
+  if (path === "/admin/sites-v3" || path.startsWith("/admin/sites-v3/")) {
+    return path.replace("/admin/sites-v3", "/admin/websites/sites");
   }
-  return path === href || path.startsWith(`${href}/`);
+  if (path === "/admin/sites-v4" || path.startsWith("/admin/sites-v4/")) {
+    return path.replace("/admin/sites-v4", "/admin/websites/sites");
+  }
+  for (const prefix of LEGACY_WEBSITE_PREFIXES) {
+    if (path === prefix || path.startsWith(`${prefix}/`)) {
+      const segment = prefix.replace("/admin/", "");
+      const canonicalSegment = segment === "outreach-setup" ? "outreach" : segment;
+      return path.replace(prefix, `/admin/websites/${canonicalSegment}`);
+    }
+  }
+  return path;
+}
+
+function isActivePath(path: string, href: (typeof TABS)[number]["href"]) {
+  const current = normalizedWebsitePath(path);
+  return current === href || current.startsWith(`${href}/`);
 }
 
 function isClientJourneyPath(path: string) {
-  return /^\/admin\/sales\/[^/]+(?:\/.*)?$/.test(path);
-}
-
-function hidesWebsiteWorkspaceTabs(path: string) {
-  return path === "/admin/systems-outreach" || path.startsWith("/admin/systems-outreach/");
+  return /^\/admin\/(?:websites\/)?sales\/[^/]+(?:\/.*)?$/.test(path);
 }
 
 export default function AdminWorkspaceTabs() {
@@ -33,7 +60,7 @@ export default function AdminWorkspaceTabs() {
 
   useEffect(() => {
     const currentPath = pathname || "";
-    if (!currentPath.startsWith("/admin") || hidesWebsiteWorkspaceTabs(currentPath)) {
+    if (!isWebsiteWorkspacePath(currentPath)) {
       setMount(null);
       return;
     }
@@ -64,8 +91,6 @@ export default function AdminWorkspaceTabs() {
       setMount(node);
     };
 
-    // Run after the route's new DOM has committed, then retry briefly if its header
-    // is still mounting. This avoids holding a stale anchor across client navigation.
     const firstFrame = window.requestAnimationFrame(place);
     const retry = window.setInterval(place, 250);
     const stopRetry = window.setTimeout(() => window.clearInterval(retry), 3000);
@@ -80,7 +105,7 @@ export default function AdminWorkspaceTabs() {
     };
   }, [pathname]);
 
-  if (!mount || !pathname || hidesWebsiteWorkspaceTabs(pathname)) return null;
+  if (!mount || !pathname || !isWebsiteWorkspacePath(pathname)) return null;
 
   return createPortal(
     <div
@@ -92,7 +117,7 @@ export default function AdminWorkspaceTabs() {
       }}
     >
       <nav
-        aria-label="LabNarrative workspace"
+        aria-label="LabNarrative Websites workspace"
         style={{
           width: "min(1500px, calc(100% - 48px))",
           margin: "0 auto",
@@ -116,7 +141,7 @@ export default function AdminWorkspaceTabs() {
                 alignItems: "center",
                 justifyContent: "center",
                 minHeight: 38,
-                minWidth: 112,
+                minWidth: 108,
                 padding: "0 17px",
                 borderRadius: 999,
                 border: active ? "1px solid rgba(139,211,176,.36)" : "1px solid rgba(148,163,184,.16)",
