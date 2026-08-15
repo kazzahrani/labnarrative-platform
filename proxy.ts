@@ -56,8 +56,19 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 307);
   }
 
-  // /admin is the LabNarrative umbrella. /admin/websites is the Websites
-  // branch root and leads into the existing Sites workspace.
+  // /admin is the LabNarrative umbrella Control Center. It must never resolve
+  // into a branch automatically. Keep it uncached so old legacy redirects or
+  // landing responses cannot be reused by the browser/CDN.
+  if (isAdminHost && request.nextUrl.pathname === "/admin" && request.nextUrl.search === "") {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    return response;
+  }
+
+  // /admin/websites is the Websites branch root and leads into the existing
+  // Sites workspace.
   if (isAdminHost && (request.nextUrl.pathname === "/admin/websites" || request.nextUrl.pathname === "/admin/websites/")) {
     const sitesUrl = request.nextUrl.clone();
     sitesUrl.pathname = "/admin/websites/sites";
