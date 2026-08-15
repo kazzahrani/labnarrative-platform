@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import AdminLandingRedirect from "@/components/admin/AdminLandingRedirect";
 import AdminAuthRecoveryEnhancer from "@/components/admin/AdminAuthRecoveryEnhancer";
 import AdminHeaderCleanup from "@/components/admin/AdminHeaderCleanup";
 import AdminWorkspaceTabs from "@/components/admin/AdminWorkspaceTabs";
@@ -62,7 +61,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <AdminLandingRedirect />
         <AdminAuthRecoveryEnhancer />
         <AdminWorkspaceTabs />
         <AdminHeaderCleanup />
