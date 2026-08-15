@@ -10,8 +10,9 @@ const STORAGE_KEY = "labnarrative-systems-theme";
 const LIGHT_CONTRAST_STYLE_ID = "labnarrative-systems-light-heading-contrast";
 const FORCED_HEADING_ATTR = "data-systems-light-heading";
 const LIGHT_CONTRAST_CSS = `
-html[data-systems-theme="light"] body main h1,
-html[data-systems-theme="light"] body main h2 {
+html[data-systems-theme="light"] body h1,
+html[data-systems-theme="light"] body h2,
+html[data-systems-theme="light"] body h3 {
   color: #152019 !important;
   -webkit-text-fill-color: #152019 !important;
   opacity: 1 !important;
@@ -57,9 +58,7 @@ function ensureLightContrastStyle() {
 }
 
 function forceLightHeadingContrast() {
-  const main = systemsMain();
-  if (!main) return;
-  main.querySelectorAll<HTMLElement>("h1,h2").forEach((heading) => {
+  document.body.querySelectorAll<HTMLElement>("h1,h2,h3").forEach((heading) => {
     heading.setAttribute(FORCED_HEADING_ATTR, "true");
     heading.style.setProperty("color", "#152019", "important");
     heading.style.setProperty("-webkit-text-fill-color", "#152019", "important");
