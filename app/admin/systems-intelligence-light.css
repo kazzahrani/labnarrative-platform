@@ -1,0 +1,99 @@
+/* Systems light mode: exact LabIntelligence production palette. Dark mode is intentionally untouched. */
+html[data-systems-theme="light"],
+html[data-systems-theme="light"] body{
+  background:#f6f7f2!important;
+  color:#152019;
+}
+body[data-systems-theme="light"] main{
+  --bg:#f6f7f2!important;
+  --surface:#ffffff!important;
+  --surface2:#f0f3ee!important;
+  --surface3:#e8ede8!important;
+  --line:#d8ded9!important;
+  --line2:#e1e6e2!important;
+  --text:#152019!important;
+  --textSoft:#34443b!important;
+  --muted:#627069!important;
+  --muted2:#7b8881!important;
+  --accent:#244b3b!important;
+  --accentStrong:#315f50!important;
+  --accentSoft:#e9f0eb!important;
+  --accentLine:#c6d5cc!important;
+  --lime:#ddff79!important;
+  --accentInk:#ffffff!important;
+  --shadow:0 18px 48px rgba(36,75,59,.08)!important;
+  background:#f6f7f2!important;
+  color:#152019!important;
+}
+body[data-systems-theme="light"] main [class*="metric"],
+body[data-systems-theme="light"] main [class*="panel"]{
+  background:#ffffff!important;
+  border-color:#e1e6e2!important;
+  box-shadow:none!important;
+}
+body[data-systems-theme="light"] main [class*="panelHead"],
+body[data-systems-theme="light"] main [class*="section"],
+body[data-systems-theme="light"] main [class*="messageRow"],
+body[data-systems-theme="light"] main [class*="result"]{
+  border-color:#e1e6e2!important;
+}
+body[data-systems-theme="light"] main [class*="summary"],
+body[data-systems-theme="light"] main [class*="quickStats"]>div,
+body[data-systems-theme="light"] main [class*="actionCard"],
+body[data-systems-theme="light"] main [class*="draft"],
+body[data-systems-theme="light"] main [class*="mailRoute"],
+body[data-systems-theme="light"] main [class*="tracking"],
+body[data-systems-theme="light"] main [class*="inlineReply"],
+body[data-systems-theme="light"] main [class*="modalIntro"]{
+  background:#f0f3ee!important;
+  border-color:#e1e6e2!important;
+}
+body[data-systems-theme="light"] main [class*="search"],
+body[data-systems-theme="light"] main input,
+body[data-systems-theme="light"] main textarea,
+body[data-systems-theme="light"] main select{
+  background:#ffffff!important;
+  color:#152019!important;
+  border-color:#d8ded9!important;
+}
+body[data-systems-theme="light"] main table th{
+  background:#f0f3ee!important;
+  color:#627069!important;
+  border-color:#e1e6e2!important;
+}
+body[data-systems-theme="light"] main table td{
+  color:#34443b!important;
+  border-color:#e1e6e2!important;
+}
+body[data-systems-theme="light"] main table tbody tr:hover,
+body[data-systems-theme="light"] main [class*="selectedRow"]{
+  background:#f0f3ee!important;
+}
+body[data-systems-theme="light"] main [class*="filterActive"],
+body[data-systems-theme="light"] main [class*="viewActive"],
+body[data-systems-theme="light"] main [class*="actionPrimary"],
+body[data-systems-theme="light"] main [class*="replyAlert"],
+body[data-systems-theme="light"] main [class*="notice"]{
+  background:#e9f0eb!important;
+  border-color:#c6d5cc!important;
+  color:#244b3b!important;
+}
+body[data-systems-theme="light"] main [class*="button"],
+body[data-systems-theme="light"] main [class*="smallButton"],
+body[data-systems-theme="light"] main [class*="pipelineButton"]{
+  border-color:#d8ded9;
+}
+body[data-systems-theme="light"] main a{
+  color:#40564a;
+}
+body[data-systems-theme="light"] main a:hover{
+  color:#244b3b;
+}
+body[data-systems-theme="light"] main [class*="eyebrow"]{
+  color:#315f50!important;
+}
+body[data-systems-theme="light"] main [class*="modal"]{
+  background:#ffffff;
+  border-color:#d8ded9;
+  box-shadow:0 18px 48px rgba(36,75,59,.08);
+}
