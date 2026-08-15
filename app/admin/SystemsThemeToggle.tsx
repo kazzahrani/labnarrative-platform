@@ -7,6 +7,13 @@ import styles from "./systems-theme-toggle.module.css";
 
 type SystemsTheme = "dark" | "light";
 const STORAGE_KEY = "labnarrative-systems-theme";
+const LIGHT_CONTRAST_STYLE_ID = "labnarrative-systems-light-heading-contrast";
+const LIGHT_CONTRAST_CSS = `
+html[data-systems-theme="light"] body main h1,
+html[data-systems-theme="light"] body main h2 {
+  color: #152019 !important;
+}
+`;
 
 // Exact LabIntelligence production light-theme tokens.
 const LIGHT_VARS: Record<string, string> = {
@@ -33,6 +40,16 @@ function systemsMain() {
   return document.querySelector<HTMLElement>("main");
 }
 
+function ensureLightContrastStyle() {
+  let style = document.getElementById(LIGHT_CONTRAST_STYLE_ID) as HTMLStyleElement | null;
+  if (!style) {
+    style = document.createElement("style");
+    style.id = LIGHT_CONTRAST_STYLE_ID;
+    style.textContent = LIGHT_CONTRAST_CSS;
+    document.head.appendChild(style);
+  }
+}
+
 export default function SystemsThemeToggle() {
   const pathname = usePathname();
   const isSystemsRoute = pathname === "/admin/systems" || pathname === "/admin/systems-outreach";
@@ -46,6 +63,7 @@ export default function SystemsThemeToggle() {
 
     const main = systemsMain();
     if (next === "light") {
+      ensureLightContrastStyle();
       document.documentElement.style.backgroundColor = "#f6f7f2";
       document.body.style.backgroundColor = "#f6f7f2";
       if (main) {
@@ -71,6 +89,7 @@ export default function SystemsThemeToggle() {
       document.documentElement.style.removeProperty("color-scheme");
       document.documentElement.style.removeProperty("background-color");
       document.body.style.removeProperty("background-color");
+      document.getElementById(LIGHT_CONTRAST_STYLE_ID)?.remove();
       const main = systemsMain();
       if (main) {
         Object.keys(LIGHT_VARS).forEach((key) => main.style.removeProperty(key));
