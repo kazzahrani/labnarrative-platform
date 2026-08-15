@@ -1,131 +1,77 @@
 "use client";
 
-import { createClient, type Session } from "@supabase/supabase-js";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
+const SYSTEMS_PATHS = new Set(["/admin/systems", "/admin/systems-outreach"]);
 
-function findQueueFilters() {
-  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>("button"));
-  const contacted = buttons.find((button) => {
-    if (button.textContent?.trim() !== "Contacted") return false;
+function normalizeLinkedInStatus(value: string) {
+  const text = value.trim().toLowerCase();
+  if (!text) return value;
+  if (text.includes("replied")) return "Replied";
+  if (text.includes("sent") || text.includes("connected") || text.includes("follow-up") || text.includes("contacted")) return "Contacted";
+  if (text.includes("ready") || text.includes("draft") || text.includes("no target")) return "Not contacted";
+  return value;
+}
+
+function removeConnectedControls() {
+  document.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+    if (button.textContent?.trim() !== "Connected") return;
     const parent = button.parentElement;
-    if (!parent) return false;
-    const labels = Array.from(parent.querySelectorAll("button")).map((item) => item.textContent?.trim());
-    return labels.includes("All") && labels.includes("Ready to send") && labels.includes("Replied");
+    if (!parent) return;
+    const siblingLabels = Array.from(parent.querySelectorAll("button")).map((item) => item.textContent?.trim());
+    if (siblingLabels.includes("Contacted") && siblingLabels.includes("Replied")) button.remove();
   });
-  if (!contacted?.parentElement) return null;
-  const parent = contacted.parentElement;
-  const replied = Array.from(parent.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent?.trim() === "Replied") ?? null;
-  const all = Array.from(parent.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent?.trim() === "All") ?? null;
-  return replied && all ? { parent, contacted, replied, all } : null;
+}
+
+function normalizeQueueTables() {
+  document.querySelectorAll<HTMLTableElement>("table").forEach((table) => {
+    const headers = Array.from(table.querySelectorAll("thead th")).map((th) => th.textContent?.trim().toLowerCase() || "");
+    const linkedinStatusIndex = headers.findIndex((header) => header.includes("linkedin") && header.includes("status"));
+
+    if (linkedinStatusIndex >= 0) {
+      table.querySelectorAll<HTMLTableRowElement>("tbody tr").forEach((row) => {
+        const cells = Array.from(row.querySelectorAll<HTMLTableCellElement>("td"));
+        const cell = cells[linkedinStatusIndex];
+        if (!cell) return;
+        const target = cell.querySelector<HTMLElement>("span") ?? cell;
+        const next = normalizeLinkedInStatus(target.textContent || cell.textContent || "");
+        if (next !== (target.textContent || "").trim()) target.textContent = next;
+      });
+      return;
+    }
+
+    const channelIndex = headers.findIndex((header) => header === "channel");
+    const statusIndex = headers.findIndex((header) => header === "status");
+    if (channelIndex < 0 || statusIndex < 0) return;
+
+    table.querySelectorAll<HTMLTableRowElement>("tbody tr").forEach((row) => {
+      const cells = Array.from(row.querySelectorAll<HTMLTableCellElement>("td"));
+      if ((cells[channelIndex]?.textContent || "").trim().toLowerCase() !== "linkedin") return;
+      const cell = cells[statusIndex];
+      if (!cell) return;
+      const target = cell.querySelector<HTMLElement>("span") ?? cell;
+      const next = normalizeLinkedInStatus(target.textContent || cell.textContent || "");
+      if (next !== (target.textContent || "").trim()) target.textContent = next;
+    });
+  });
 }
 
 export default function SystemsConnectedFilterEnhancer() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname !== "/admin/systems" && pathname !== "/admin/systems-outreach") return;
+    if (!SYSTEMS_PATHS.has(pathname)) return;
 
-    let disposed = false;
-    let connectedCompanies = new Set<string>();
-    let connectedMode = false;
-    let internalAllClick = false;
-    let connectedButton: HTMLButtonElement | null = null;
-    let observer: MutationObserver | null = null;
-
-    const loadConnected = async (session: Session) => {
-      const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle();
-      if (role?.role !== "admin") return;
-      const { data } = await supabase.from("systems_outreach_prospects").select("company_name").eq("status", "connected");
-      if (disposed) return;
-      connectedCompanies = new Set((data ?? []).map((row) => String(row.company_name).trim()));
-      if (connectedMode) applyConnectedRows();
+    const apply = () => {
+      removeConnectedControls();
+      normalizeQueueTables();
     };
 
-    const restoreRows = () => {
-      document.querySelectorAll<HTMLTableRowElement>("table tbody tr").forEach((row) => {
-        row.style.display = "";
-      });
-    };
-
-    const applyConnectedRows = () => {
-      if (!connectedMode) return;
-      const filters = findQueueFilters();
-      if (!filters) return;
-      document.querySelectorAll<HTMLTableRowElement>("table tbody tr").forEach((row) => {
-        const company = row.querySelector("td span")?.textContent?.trim() ?? "";
-        row.style.display = connectedCompanies.has(company) ? "" : "none";
-      });
-      if (connectedButton) {
-        connectedButton.className = filters.all.className;
-        filters.all.className = filters.contacted.className;
-      }
-    };
-
-    const deactivateConnected = () => {
-      if (!connectedMode) return;
-      connectedMode = false;
-      restoreRows();
-      const filters = findQueueFilters();
-      if (filters && connectedButton) connectedButton.className = filters.contacted.className;
-    };
-
-    const ensureButton = () => {
-      if (disposed) return;
-      const filters = findQueueFilters();
-      if (!filters) return;
-      const existing = Array.from(filters.parent.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.dataset.systemsConnectedFilter === "true");
-      if (existing) {
-        connectedButton = existing;
-        return;
-      }
-
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = "Connected";
-      button.dataset.systemsConnectedFilter = "true";
-      button.className = filters.contacted.className;
-      button.addEventListener("click", () => {
-        internalAllClick = true;
-        filters.all.click();
-        internalAllClick = false;
-        connectedMode = true;
-        connectedButton = button;
-        window.setTimeout(applyConnectedRows, 0);
-      });
-      filters.parent.insertBefore(button, filters.replied);
-      connectedButton = button;
-
-      Array.from(filters.parent.querySelectorAll<HTMLButtonElement>("button")).forEach((nativeButton) => {
-        if (nativeButton === button) return;
-        nativeButton.addEventListener("click", () => {
-          if (!internalAllClick) deactivateConnected();
-        });
-      });
-    };
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) void loadConnected(data.session);
-    });
-
-    ensureButton();
-    observer = new MutationObserver(() => {
-      ensureButton();
-      if (connectedMode) applyConnectedRows();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => {
-      disposed = true;
-      observer?.disconnect();
-      restoreRows();
-      connectedButton?.remove();
-    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
   }, [pathname]);
 
   return null;
