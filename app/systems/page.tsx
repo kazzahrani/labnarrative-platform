@@ -2,96 +2,96 @@ import type { Metadata } from "next";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
-  title: "LabNarrative Systems — AI-powered business systems",
+  title: "LabNarrative Systems — Custom operational systems",
   description:
-    "Custom AI-powered systems for sales, operations, workflows, follow-up and reporting — designed around the way your business actually works.",
+    "Fast, modern operational systems built around the way your company actually works — from tender and quotation to supply, collection and management visibility.",
 };
 
 const outcomes = [
   {
     number: "01",
-    title: "Capture every opportunity",
-    copy: "Bring website enquiries, referrals and inbound leads into one structured pipeline instead of scattered inboxes and spreadsheets.",
+    title: "Keep the workflow complete",
+    copy: "Connect tenders, quotations, orders, warehouse readiness, supply, invoices and collection so work does not disappear between departments.",
   },
   {
     number: "02",
-    title: "Automate the repetitive work",
-    copy: "Qualify leads, prepare messages, trigger follow-ups and move work forward automatically while your team keeps control.",
+    title: "Catch what needs attention",
+    copy: "Surface missing line items, approaching deadlines, stock shortages, incomplete deliveries and overdue invoices before they become bigger problems.",
   },
   {
     number: "03",
-    title: "See the business clearly",
-    copy: "Turn activity into a useful operating view: pipeline, priorities, response status, conversion and the next action for every account.",
+    title: "Give management one clear view",
+    copy: "See what is active, delayed, at risk, outstanding and collectible without asking several teams to rebuild the picture manually.",
   },
 ];
 
 const systemModules = [
-  "Lead capture",
-  "CRM & pipeline",
-  "AI qualification",
-  "Email automation",
-  "Follow-up sequences",
-  "Internal workflows",
-  "Dashboards",
-  "Reports",
+  "Tenders / enquiries",
+  "Quotations",
+  "Orders",
+  "Warehouse",
+  "Supply",
+  "Invoices",
+  "Collection",
+  "Management overview",
 ];
 
 const useCases = [
   {
-    tag: "Sales",
-    title: "From enquiry to qualified opportunity.",
-    copy: "Capture inbound leads, enrich the record, score fit, prepare outreach, schedule follow-ups and keep the pipeline current.",
+    tag: "Distributor operations",
+    title: "From tender to collection — without losing a line item.",
+    copy: "Track commercial and operational work as one connected journey, with item-level readiness, ownership, deadlines and management visibility.",
   },
   {
-    tag: "Operations",
-    title: "Replace repetitive admin with a workflow.",
-    copy: "Turn forms, emails, approvals and recurring manual steps into one guided system with clear ownership and status.",
+    tag: "Management",
+    title: "See the important problems before they reach your desk.",
+    copy: "A focused Overview shows active work, delivery risks, outstanding invoices, collection priorities and the issues that need intervention now.",
   },
   {
-    tag: "Reporting",
-    title: "Generate useful outputs without rebuilding them each time.",
-    copy: "Collect structured inputs, apply your business logic and produce consistent dashboards, summaries and client-ready reports.",
+    tag: "Existing systems",
+    title: "Add the missing workflow without replacing everything.",
+    copy: "LabNarrative Systems can sit alongside tools such as Odoo, Zoho and existing ERP or accounting software, then connect the workflows your team still manages manually.",
   },
 ];
 
 const packages = [
   {
-    name: "Launch System",
-    price: "$2,500",
-    subtitle: "For one high-value workflow",
-    features: [
-      "Lead or workflow capture",
-      "Custom CRM / operating dashboard",
-      "AI-assisted qualification or processing",
-      "Email automation",
-      "Follow-up sequence",
-      "Core analytics",
-    ],
-  },
-  {
-    name: "Pro System",
-    price: "$4,500",
-    subtitle: "For an end-to-end business process",
+    name: "Operational Pilot",
+    price: "SAR 7,500",
+    subtitle: "Start with one high-value workflow",
     recommended: true,
     features: [
-      "Everything in Launch",
-      "Multiple workflows and team roles",
-      "Advanced dashboard and reporting",
-      "Custom business logic",
-      "External integrations",
-      "Deployment and handover",
+      "Discovery and workflow mapping",
+      "Working company-specific pilot",
+      "Management overview",
+      "Core operational modules",
+      "Targeted automation and AI assistance",
+      "Real-team testing before expansion",
     ],
   },
   {
-    name: "Custom Platform",
-    price: "From $7,500",
-    subtitle: "For broader internal software",
+    name: "Full Operational System",
+    price: "Scoped after pilot",
+    subtitle: "Expand the validated workflow across the business",
     features: [
-      "Multi-module internal platform",
-      "Custom data model",
-      "Advanced automation",
-      "Role-based access",
-      "AI-enabled workflows",
+      "End-to-end operating process",
+      "Team roles and permissions",
+      "Advanced workflow logic",
+      "Odoo / Zoho / ERP integrations",
+      "Reporting and management controls",
+      "Training, rollout and expansion plan",
+    ],
+  },
+  {
+    name: "Group Platform",
+    price: "Custom scope",
+    subtitle: "For multiple companies, branches or business units",
+    features: [
+      "Separate company workspaces",
+      "Group-level management overview",
+      "Shared or isolated permissions",
+      "Cross-company reporting",
+      "Advanced integrations and automation",
       "Ongoing expansion options",
     ],
   },
@@ -108,7 +108,7 @@ function Wordmark() {
 
 function DemoPanel() {
   return (
-    <div className={styles.demoShell} aria-label="Example LabNarrative Systems dashboard">
+    <div className={styles.demoShell} aria-label="Example LabNarrative Systems management overview">
       <div className={styles.demoRail}>
         <div className={styles.demoMark}>LN</div>
         <span className={styles.railActive}>01</span>
@@ -120,71 +120,71 @@ function DemoPanel() {
       <div className={styles.demoMain}>
         <div className={styles.demoTopbar}>
           <div>
-            <span className={styles.demoEyebrow}>Sales system</span>
-            <strong>Pipeline overview</strong>
+            <span className={styles.demoEyebrow}>Operations system</span>
+            <strong>Management overview</strong>
           </div>
           <div className={styles.liveBadge}><span /> Live</div>
         </div>
 
         <div className={styles.metricGrid}>
           <article>
-            <span>Open opportunities</span>
-            <strong>34</strong>
-            <small>+8 this month</small>
+            <span>Active tenders</span>
+            <strong>12</strong>
+            <small>3 due this week</small>
           </article>
           <article>
-            <span>Qualified</span>
-            <strong>18</strong>
-            <small>53% of pipeline</small>
+            <span>Orders at risk</span>
+            <strong>04</strong>
+            <small>Missing items or stock</small>
           </article>
           <article>
-            <span>Follow-ups due</span>
-            <strong>07</strong>
-            <small>3 high priority</small>
+            <span>Collection due</span>
+            <strong>186K</strong>
+            <small>SAR outstanding</small>
           </article>
         </div>
 
         <div className={styles.demoWorkspace}>
           <div className={styles.pipelineCard}>
             <div className={styles.cardHead}>
-              <strong>Opportunity pipeline</strong>
+              <strong>Needs attention now</strong>
               <span>Today</span>
             </div>
             <div className={styles.pipelineRow}>
               <span>01</span>
-              <div><strong>Northstar Bio</strong><small>Research services</small></div>
-              <b className={styles.scoreHigh}>92</b>
-              <em>Qualified</em>
+              <div><strong>Tender deadline</strong><small>Technical document still missing</small></div>
+              <b className={styles.scoreHigh}>31h</b>
+              <em>Urgent</em>
             </div>
             <div className={styles.pipelineRow}>
               <span>02</span>
-              <div><strong>Atlas Consulting</strong><small>Advisory</small></div>
-              <b>81</b>
-              <em>Follow-up</em>
+              <div><strong>Supply readiness</strong><small>21 of 24 line items ready</small></div>
+              <b>3</b>
+              <em>Blocked</em>
             </div>
             <div className={styles.pipelineRow}>
               <span>03</span>
-              <div><strong>Nexa Health</strong><small>Healthcare</small></div>
-              <b>74</b>
-              <em>Review</em>
+              <div><strong>Invoice collection</strong><small>SAR 186,000 outstanding</small></div>
+              <b>18d</b>
+              <em>Overdue</em>
             </div>
           </div>
 
           <div className={styles.automationCard}>
             <div className={styles.cardHead}>
-              <strong>Automation</strong>
+              <strong>Connected workflow</strong>
               <span>Active</span>
             </div>
             <div className={styles.flowStep}>
-              <span>Lead captured</span><i>✓</i>
+              <span>Tender → quotation</span><i>✓</i>
             </div>
             <div className={styles.flowLine} />
             <div className={styles.flowStep}>
-              <span>AI qualification</span><i>✓</i>
+              <span>Order → warehouse</span><i>✓</i>
             </div>
             <div className={styles.flowLine} />
             <div className={styles.flowStep}>
-              <span>Personalised follow-up</span><i>→</i>
+              <span>Supply → collection</span><i>→</i>
             </div>
           </div>
         </div>
@@ -204,10 +204,10 @@ export default function SystemsPage() {
           <a href="#what-we-build">What we build</a>
           <a href="#examples">Examples</a>
           <a href="/systems/demo">Live demo</a>
-          <a href="#pricing">Pricing</a>
+          <a href="#pricing">Pilot</a>
         </nav>
-        <a className={styles.headerCta} href="mailto:hello@labnarrative.com?subject=LabNarrative%20Systems%20project">
-          Build my system <span aria-hidden="true">↗</span>
+        <a className={styles.headerCta} href="mailto:hello@labnarrative.com?subject=LabNarrative%20Systems%20workflow">
+          Discuss your workflow <span aria-hidden="true">↗</span>
         </a>
       </header>
 
@@ -216,20 +216,19 @@ export default function SystemsPage() {
         <div className={styles.heroGrid}>
           <div>
             <h1>
-              Build the system
+              Your workflow.
               <br />
-              your business
+              One modern
               <br />
-              actually <em>needs.</em>
+              <em>operating system.</em>
             </h1>
           </div>
           <div className={styles.heroAside}>
             <p>
-              Custom AI-powered platforms that automate leads, follow-ups, workflows,
-              reporting and repetitive operations — designed around the way your business already works.
+              Fast, modern operational systems built around the way your company already works — connecting the steps your team still follows across spreadsheets, messages and separate software.
             </p>
-            <a href="mailto:hello@labnarrative.com?subject=LabNarrative%20Systems%20project">
-              Discuss your workflow <span aria-hidden="true">↗</span>
+            <a href="mailto:hello@labnarrative.com?subject=LabNarrative%20Systems%20workflow">
+              Show us the bottleneck <span aria-hidden="true">↗</span>
             </a>
           </div>
         </div>
@@ -241,26 +240,23 @@ export default function SystemsPage() {
         </div>
 
         <div className={styles.heroFooter}>
-          <span>Custom software</span>
-          <span>AI automation</span>
-          <span>Human control</span>
+          <span>Fast & easy to use</span>
           <span>Built around your workflow</span>
+          <span>Works alongside existing systems</span>
+          <span>AI where it is useful</span>
         </div>
       </section>
 
       <section className={styles.problemSection}>
-        <p className={styles.sectionLabel}>The opportunity</p>
+        <p className={styles.sectionLabel}>Built around the real work</p>
         <div className={styles.problemGrid}>
-          <h2>Your business should not run on scattered spreadsheets, inboxes and memory.</h2>
+          <h2>The problem is rarely “we need another CRM.” It is the work that still falls between systems.</h2>
           <div>
             <p>
-              Most teams already know where time is being lost. Leads are followed up manually.
-              Customer information lives in different places. Reports are rebuilt repeatedly.
-              Small admin tasks interrupt the work that actually creates value.
+              A quotation is prepared in one place, tender deadlines are tracked somewhere else, warehouse readiness is checked manually, supply is followed through messages, and management has to ask several people for the full picture.
             </p>
             <p>
-              We turn that friction into one focused system — without forcing your company into
-              generic enterprise software that was never designed for your process.
+              We map that real workflow and build a focused operating layer around it — without forcing the company to abandon software that already works.
             </p>
           </div>
         </div>
@@ -269,7 +265,7 @@ export default function SystemsPage() {
       <section className={styles.outcomeSection} id="what-we-build">
         <div className={styles.sectionTopline}>
           <p className={styles.sectionLabel}>What the system changes</p>
-          <span>One workflow. One source of truth.</span>
+          <span>From tender to collection. One connected view.</span>
         </div>
         <div className={styles.outcomeGrid}>
           {outcomes.map((item) => (
@@ -282,7 +278,7 @@ export default function SystemsPage() {
         </div>
 
         <div className={styles.moduleBand}>
-          <p>Typical modules</p>
+          <p>Typical distributor workflow</p>
           <div>
             {systemModules.map((module) => <span key={module}>{module}</span>)}
           </div>
@@ -291,11 +287,11 @@ export default function SystemsPage() {
 
       <section className={styles.useCaseSection} id="examples">
         <div className={styles.sectionToplineDark}>
-          <p className={styles.sectionLabel}>Three useful starting points</p>
-          <span>Start with the bottleneck that costs you most.</span>
+          <p className={styles.sectionLabel}>Where we start</p>
+          <span>Scientific · medical · laboratory · technical operations</span>
         </div>
         <div className={styles.useCaseIntro}>
-          <h2>Not “AI for AI’s sake.” A practical system tied to a measurable business process.</h2>
+          <h2>Not generic AI software. A practical operating system shaped around the process that matters.</h2>
         </div>
         <div className={styles.useCaseGrid}>
           {useCases.map((item) => (
@@ -309,28 +305,27 @@ export default function SystemsPage() {
       </section>
 
       <section className={styles.buildSection}>
-        <p className={styles.sectionLabel}>How we build</p>
+        <p className={styles.sectionLabel}>Discovery-led implementation</p>
         <div className={styles.buildGrid}>
-          <h2>Start small enough to launch. Design well enough to expand.</h2>
+          <h2>We do not guess your whole company before speaking to your team.</h2>
           <ol>
-            <li><span>01</span><div><strong>Map</strong><p>We identify the workflow, users, hand-offs and decisions that matter.</p></div></li>
-            <li><span>02</span><div><strong>Build</strong><p>We create the focused system, database, automation and interface around that process.</p></div></li>
-            <li><span>03</span><div><strong>Operate</strong><p>Your team uses it in the real workflow while we refine the high-value details.</p></div></li>
-            <li><span>04</span><div><strong>Expand</strong><p>Once the first process works, additional modules can be added without rebuilding everything.</p></div></li>
+            <li><span>01</span><div><strong>Discover</strong><p>We identify the 2–3 areas taking the most time, causing errors or requiring the most manual follow-up.</p></div></li>
+            <li><span>02</span><div><strong>Pilot</strong><p>We build one real, usable workflow around the highest-value bottleneck and let the team test it.</p></div></li>
+            <li><span>03</span><div><strong>Prove</strong><p>We refine the system using real operational feedback and measure whether it improves visibility, speed or execution.</p></div></li>
+            <li><span>04</span><div><strong>Expand</strong><p>Only after the pilot works do we add integrations, departments, branches or additional companies.</p></div></li>
           </ol>
         </div>
       </section>
 
       <section className={styles.pricingSection} id="pricing">
         <div className={styles.sectionTopline}>
-          <p className={styles.sectionLabel}>Starting engagements</p>
-          <span>Clear first scope. Expand only when useful.</span>
+          <p className={styles.sectionLabel}>Start with a paid pilot</p>
+          <span>Small enough to test. Designed to expand.</span>
         </div>
         <div className={styles.pricingIntro}>
-          <h2>Begin with one system that removes a real bottleneck.</h2>
+          <h2>Validate one important workflow before committing to a full company-wide system.</h2>
           <p>
-            Exact scope depends on the workflow, integrations and number of users. These packages
-            are designed to make the first engagement easy to understand.
+            The pilot is intentionally focused. A full implementation is scoped separately after we understand the real workflow, integrations, users, branches and management requirements.
           </p>
         </div>
         <div className={styles.pricingGrid}>
@@ -349,17 +344,17 @@ export default function SystemsPage() {
       </section>
 
       <section className={styles.finalCta}>
-        <p className={styles.sectionLabel}>Bring us the messy part</p>
+        <p className={styles.sectionLabel}>Start with the pain, not the software</p>
         <h2>
-          Show us the workflow
+          What are the 2–3 things
           <br />
-          you wish worked <em>better.</em>
+          your team follows up <em>manually?</em>
         </h2>
         <p>
-          We’ll map the opportunity and recommend the smallest useful system worth building first.
+          Show us how the work happens today. We will identify the smallest useful pilot worth building first.
         </p>
         <a href="mailto:hello@labnarrative.com?subject=LabNarrative%20Systems%20workflow">
-          Start with your workflow <span aria-hidden="true">↗</span>
+          Discuss your workflow <span aria-hidden="true">↗</span>
         </a>
       </section>
 
