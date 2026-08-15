@@ -8,20 +8,25 @@ import styles from "./systems-theme-toggle.module.css";
 type SystemsTheme = "dark" | "light";
 const STORAGE_KEY = "labnarrative-systems-theme";
 
+// Exact LabIntelligence production light-theme tokens.
 const LIGHT_VARS: Record<string, string> = {
-  "--bg": "#f6f7f3",
+  "--bg": "#f6f7f2",
   "--surface": "#ffffff",
-  "--surface2": "#f5f7f4",
-  "--surface3": "#e9efeb",
-  "--line": "#d8e0da",
-  "--line2": "#e7ece8",
-  "--text": "#142018",
-  "--muted": "#68766f",
-  "--muted2": "#89968f",
-  "--accent": "#356a58",
-  "--accentStrong": "#285443",
-  "--lime": "#dceade",
+  "--surface2": "#f0f3ee",
+  "--surface3": "#e8ede8",
+  "--line": "#d8ded9",
+  "--line2": "#e1e6e2",
+  "--text": "#152019",
+  "--textSoft": "#34443b",
+  "--muted": "#627069",
+  "--muted2": "#7b8881",
+  "--accent": "#244b3b",
+  "--accentStrong": "#315f50",
+  "--accentSoft": "#e9f0eb",
+  "--accentLine": "#c6d5cc",
+  "--lime": "#ddff79",
   "--accentInk": "#ffffff",
+  "--shadow": "0 18px 48px rgba(36,75,59,.08)",
 };
 
 function systemsMain() {
@@ -41,12 +46,12 @@ export default function SystemsThemeToggle() {
 
     const main = systemsMain();
     if (next === "light") {
-      document.documentElement.style.backgroundColor = "#f6f7f3";
-      document.body.style.backgroundColor = "#f6f7f3";
+      document.documentElement.style.backgroundColor = "#f6f7f2";
+      document.body.style.backgroundColor = "#f6f7f2";
       if (main) {
         Object.entries(LIGHT_VARS).forEach(([key, value]) => main.style.setProperty(key, value));
-        main.style.backgroundColor = "#f6f7f3";
-        main.style.color = "#142018";
+        main.style.backgroundColor = "#f6f7f2";
+        main.style.color = "#152019";
       }
     } else {
       document.documentElement.style.backgroundColor = "#09161f";
