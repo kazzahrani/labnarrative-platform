@@ -67,14 +67,6 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // The Unified Inbox is a top-level admin capability, not a Websites branch
-  // route. Keep old bookmarks working while enforcing one canonical URL.
-  if (isAdminHost && request.nextUrl.pathname === "/admin/websites/inbox") {
-    const inboxUrl = request.nextUrl.clone();
-    inboxUrl.pathname = "/admin/inbox";
-    return NextResponse.redirect(inboxUrl, 307);
-  }
-
   // /admin/websites is the Websites branch root and leads into the existing
   // Sites workspace.
   if (isAdminHost && (request.nextUrl.pathname === "/admin/websites" || request.nextUrl.pathname === "/admin/websites/")) {
