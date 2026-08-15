@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
 
 const LEGACY_PLATFORM_ORIGIN = "https://platform.labnarrative.com";
@@ -12,6 +12,11 @@ function safeReturnTo(raw: string | null) {
   return raw;
 }
 
+function requestedReturnTo() {
+  if (typeof window === "undefined") return "/admin";
+  return safeReturnTo(new URLSearchParams(window.location.search).get("return_to"));
+}
+
 export default function AdminControlCenterGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"checking" | "signed_out" | "ready">("checking");
   const [email, setEmail] = useState("hello@labnarrative.com");
@@ -19,11 +24,6 @@ export default function AdminControlCenterGate({ children }: { children: ReactNo
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-
-  const returnTo = useMemo(() => {
-    if (typeof window === "undefined") return "/admin";
-    return safeReturnTo(new URLSearchParams(window.location.search).get("return_to"));
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -43,7 +43,7 @@ export default function AdminControlCenterGate({ children }: { children: ReactNo
 
   const restoreExisting = () => {
     const transfer = new URL("/admin/session-transfer", LEGACY_PLATFORM_ORIGIN);
-    transfer.searchParams.set("return_to", returnTo);
+    transfer.searchParams.set("return_to", requestedReturnTo());
     window.location.assign(transfer.toString());
   };
 
@@ -79,6 +79,7 @@ export default function AdminControlCenterGate({ children }: { children: ReactNo
       return;
     }
     window.sessionStorage.removeItem("labnarrative-admin-recovery-attempted");
+    const returnTo = requestedReturnTo();
     if (returnTo !== "/admin") {
       window.location.replace(returnTo);
       return;
