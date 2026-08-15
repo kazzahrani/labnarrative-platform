@@ -28,8 +28,11 @@ type Contact = {
   title: string;
   linkedin_url: string | null;
   priority: number;
+  linkedin_note: string | null;
+  linkedin_note_ar: string | null;
+  linkedin_request_sent_at: string | null;
 };
-type QueueItem = { prospect: Prospect; contact: Contact };
+type QueueItem = { prospect: Prospect; contact: Contact; companyContactIndex: number; companyContactCount: number };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -68,7 +71,7 @@ export default function SystemsLinkedInBatchLauncher() {
         .order("company_name", { ascending: true }),
       supabase
         .from("systems_outreach_contacts")
-        .select("id,prospect_id,name,title,linkedin_url,priority")
+        .select("id,prospect_id,name,title,linkedin_url,priority,linkedin_note,linkedin_note_ar,linkedin_request_sent_at")
         .order("priority", { ascending: true }),
     ]);
     if (!p.error) setProspects((p.data ?? []) as Prospect[]);
@@ -96,16 +99,26 @@ export default function SystemsLinkedInBatchLauncher() {
   }, [pathname, load]);
 
   const queue = useMemo<QueueItem[]>(() => {
-    const byId = new Map(contacts.map((contact) => [contact.id, contact]));
     return prospects.flatMap((prospect) => {
       if (!eligibleStatuses.has(prospect.status)) return [];
-      if (prospect.linkedin_request_sent_at || prospect.linkedin_connected_at || prospect.linkedin_reply_at) return [];
-      if (!prospect.linkedin_note && !prospect.linkedin_note_ar) return [];
-      const contact = prospect.linkedin_recipient_contact_id
-        ? byId.get(prospect.linkedin_recipient_contact_id)
-        : undefined;
-      if (!contact?.linkedin_url) return [];
-      return [{ prospect, contact }];
+      if (prospect.linkedin_connected_at || prospect.linkedin_reply_at) return [];
+
+      const companyContacts = contacts
+        .filter((contact) => contact.prospect_id === prospect.id && Boolean(contact.linkedin_url))
+        .sort((a, b) => a.priority - b.priority);
+
+      const pendingContacts = companyContacts.filter((contact) => !contact.linkedin_request_sent_at);
+      return pendingContacts.flatMap((contact) => {
+        const noteEn = contact.linkedin_note || prospect.linkedin_note;
+        const noteAr = contact.linkedin_note_ar || prospect.linkedin_note_ar;
+        if (!noteEn && !noteAr) return [];
+        return [{
+          prospect,
+          contact,
+          companyContactIndex: companyContacts.findIndex((candidate) => candidate.id === contact.id) + 1,
+          companyContactCount: companyContacts.length,
+        }];
+      });
     });
   }, [prospects, contacts]);
 
@@ -132,11 +145,9 @@ export default function SystemsLinkedInBatchLauncher() {
   if (pathname !== "/admin/systems-outreach" || !session || !isAdmin) return null;
 
   const item = queue[index] ?? null;
-  const note = item
-    ? language === "ar"
-      ? item.prospect.linkedin_note_ar || item.prospect.linkedin_note || ""
-      : item.prospect.linkedin_note || item.prospect.linkedin_note_ar || ""
-    : "";
+  const englishNote = item ? item.contact.linkedin_note || item.prospect.linkedin_note || "" : "";
+  const arabicNote = item ? item.contact.linkedin_note_ar || item.prospect.linkedin_note_ar || "" : "";
+  const note = language === "ar" ? arabicNote || englishNote : englishNote || arabicNote;
 
   const openBatch = () => {
     setIndex(0);
@@ -173,31 +184,44 @@ export default function SystemsLinkedInBatchLauncher() {
     setRecording(true);
     setNotice("");
     const now = new Date().toISOString();
-    const shouldMoveToContacted = item.prospect.status === "ready_to_send";
-    const patch: Record<string, unknown> = {
-      linkedin_request_sent_at: now,
-      updated_at: now,
-    };
-    if (shouldMoveToContacted) {
-      patch.status = "contacted";
-      patch.contacted_at = now;
-    }
-    const { error } = await supabase
-      .from("systems_outreach_prospects")
-      .update(patch)
-      .eq("id", item.prospect.id);
-    if (error) {
-      setNotice(error.message);
+
+    const { error: contactError } = await supabase
+      .from("systems_outreach_contacts")
+      .update({ linkedin_request_sent_at: now, linkedin_request_sent_by: session.user.id, updated_at: now })
+      .eq("id", item.contact.id)
+      .eq("prospect_id", item.prospect.id);
+
+    if (contactError) {
+      setNotice(contactError.message);
       setRecording(false);
       return;
     }
+
+    const prospectPatch: Record<string, unknown> = { updated_at: now };
+    if (!item.prospect.linkedin_request_sent_at) prospectPatch.linkedin_request_sent_at = now;
+    if (item.prospect.status === "ready_to_send") {
+      prospectPatch.status = "contacted";
+      prospectPatch.contacted_at = now;
+    }
+    const { error: prospectError } = await supabase
+      .from("systems_outreach_prospects")
+      .update(prospectPatch)
+      .eq("id", item.prospect.id);
+
+    if (prospectError) {
+      setNotice(prospectError.message);
+      setRecording(false);
+      return;
+    }
+
     await supabase.from("systems_outreach_events").insert({
       prospect_id: item.prospect.id,
       channel: "linkedin",
       event_type: "linkedin_connection_request_sent",
       status: "recorded",
-      content: `Administrator confirmed the LinkedIn connection request was manually sent to ${item.contact.name}.`,
+      content: `Administrator confirmed the LinkedIn connection request was manually sent to ${item.contact.name} (${item.contact.title}).`,
     });
+
     setPrepared(false);
     await load(session);
     setRecording(false);
@@ -223,7 +247,7 @@ export default function SystemsLinkedInBatchLauncher() {
               <div>
                 <span className={styles.eyebrow}>Systems · manual batch workflow</span>
                 <h2>All LinkedIn Outreach</h2>
-                <p>Work through one company at a time without reopening each prospect card.</p>
+                <p>Every prepared contact appears separately, grouped company-by-company.</p>
               </div>
               <button className={styles.close} onClick={() => setOpen(false)} aria-label="Close">×</button>
             </header>
@@ -245,7 +269,7 @@ export default function SystemsLinkedInBatchLauncher() {
                     <p>{[item.prospect.city, item.prospect.country].filter(Boolean).join(" · ")} · Fit {item.prospect.fit_score}/100</p>
                   </div>
                   <div className={styles.person}>
-                    <span>Contact</span>
+                    <span>Contact {item.companyContactIndex} of {item.companyContactCount}</span>
                     <strong>{item.contact.name}</strong>
                     <small>{item.contact.title}</small>
                   </div>
@@ -261,14 +285,14 @@ export default function SystemsLinkedInBatchLauncher() {
 
                 <div className={styles.notesGrid}>
                   <button className={`${styles.noteCard} ${language === "en" ? styles.noteSelected : ""}`} onClick={() => setLanguage("en")}>
-                    <span>English connection note</span>
-                    <p>{item.prospect.linkedin_note || "English note unavailable."}</p>
-                    <small>{item.prospect.linkedin_note?.length ?? 0}/300</small>
+                    <span>English connection note · {item.contact.name}</span>
+                    <p>{englishNote || "English note unavailable."}</p>
+                    <small>{englishNote.length}/300</small>
                   </button>
                   <button className={`${styles.noteCard} ${styles.arabicCard} ${language === "ar" ? styles.noteSelected : ""}`} onClick={() => setLanguage("ar")} dir="rtl">
-                    <span>رسالة الاتصال العربية</span>
-                    <p>{item.prospect.linkedin_note_ar || "الرسالة العربية غير متاحة."}</p>
-                    <small>{item.prospect.linkedin_note_ar?.length ?? 0}/300</small>
+                    <span>رسالة الاتصال العربية · {item.contact.name}</span>
+                    <p>{arabicNote || "الرسالة العربية غير متاحة."}</p>
+                    <small>{arabicNote.length}/300</small>
                   </button>
                 </div>
 
@@ -289,7 +313,7 @@ export default function SystemsLinkedInBatchLauncher() {
                     </button>
                   )}
                 </div>
-                <p className={styles.humanGate}>LinkedIn stays manual. The first click only copies the note and opens the profile; “Sent → Next” records your confirmation after you actually send it.</p>
+                <p className={styles.humanGate}>LinkedIn stays manual. “Sent → Next” records this specific contact only, so the remaining contacts at the same company stay in the queue.</p>
               </>
             ) : (
               <div className={styles.complete}>
