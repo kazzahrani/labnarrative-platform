@@ -8,11 +8,12 @@ import SystemsConnectedFilterEnhancer from "./SystemsConnectedFilterEnhancer";
 import SystemsContactSearchEnhancer from "./SystemsContactSearchEnhancer";
 import SystemsSimpleOutreachPanel from "./SystemsSimpleOutreachPanel";
 import SystemsThemeToggle from "./SystemsThemeToggle";
-import SystemsDiscoveryLauncher from "./SystemsDiscoveryLauncher";
+import SystemsPlatformNav from "./SystemsPlatformNav";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <>
+      <SystemsPlatformNav />
       {children}
       <AdminSessionContinuity />
       <SystemsThemeToggle />
@@ -21,7 +22,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <SystemsSimpleOutreachPanel />
       <SystemsEmailBatchLauncher />
       <SystemsLinkedInBatchLauncher />
-      <SystemsDiscoveryLauncher />
     </>
   );
 }
