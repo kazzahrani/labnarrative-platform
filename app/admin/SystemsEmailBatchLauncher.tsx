@@ -44,6 +44,7 @@ function validEmail(value: string) {
 
 export default function SystemsEmailBatchLauncher() {
   const pathname = usePathname();
+  const isSystemsRoute = pathname === "/admin/systems" || pathname === "/admin/systems-outreach";
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -89,7 +90,7 @@ export default function SystemsEmailBatchLauncher() {
   }, []);
 
   useEffect(() => {
-    if (pathname !== "/admin/systems-outreach") return;
+    if (!isSystemsRoute) return;
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) void load(data.session);
@@ -106,7 +107,7 @@ export default function SystemsEmailBatchLauncher() {
       }
     });
     return () => subscription.unsubscribe();
-  }, [pathname, load]);
+  }, [isSystemsRoute, load]);
 
   const queue = useMemo<QueueItem[]>(() => {
     return prospects.flatMap((prospect) => {
@@ -170,7 +171,7 @@ export default function SystemsEmailBatchLauncher() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  if (pathname !== "/admin/systems-outreach" || !session || !isAdmin) return null;
+  if (!isSystemsRoute || !session || !isAdmin) return null;
 
   const selectedContact = item?.contacts.find((contact) => contact.id === recipientId) ?? item?.contacts[0] ?? null;
   const usingManual = recipientId === "manual" || (!selectedContact && Boolean(manualEmail.trim()));
