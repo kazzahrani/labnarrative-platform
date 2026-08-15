@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "./systems-intelligence-light.css";
+import AdminSessionContinuity from "@/components/admin/AdminSessionContinuity";
 import SystemsLinkedInBatchLauncher from "./SystemsLinkedInBatchLauncher";
 import SystemsEmailBatchLauncher from "./SystemsEmailBatchLauncher";
 import SystemsConnectedFilterEnhancer from "./SystemsConnectedFilterEnhancer";
@@ -10,6 +11,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
+      <AdminSessionContinuity />
       <SystemsThemeToggle />
       <SystemsConnectedFilterEnhancer />
       <SystemsContactSearchEnhancer />
