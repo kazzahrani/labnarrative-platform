@@ -2,9 +2,13 @@
 html[data-systems-theme="light"],
 html[data-systems-theme="light"] body{
   background:#f6f7f2!important;
-  color:#152019;
+  color:#152019!important;
 }
-body[data-systems-theme="light"] main{
+
+/* The actual Systems page is a CSS-module <main class="...page...">.
+   Force the entire canvas to LabIntelligence paper so no dark-blue shell survives. */
+html[data-systems-theme="light"] body main,
+html[data-systems-theme="light"] body main[class*="page"]{
   --bg:#f6f7f2!important;
   --surface:#ffffff!important;
   --surface2:#f0f3ee!important;
@@ -23,77 +27,102 @@ body[data-systems-theme="light"] main{
   --accentInk:#ffffff!important;
   --shadow:0 18px 48px rgba(36,75,59,.08)!important;
   background:#f6f7f2!important;
+  background-color:#f6f7f2!important;
   color:#152019!important;
 }
-body[data-systems-theme="light"] main [class*="metric"],
-body[data-systems-theme="light"] main [class*="panel"]{
+html[data-systems-theme="light"] body main[class*="page"] > div{
+  background-color:transparent!important;
+}
+
+html[data-systems-theme="light"] body main [class*="top"],
+html[data-systems-theme="light"] body main [class*="shell"],
+html[data-systems-theme="light"] body main [class*="metrics"],
+html[data-systems-theme="light"] body main [class*="grid"]{
+  background-color:transparent!important;
+}
+
+html[data-systems-theme="light"] body main [class*="metric"],
+html[data-systems-theme="light"] body main [class*="panel"]{
   background:#ffffff!important;
   border-color:#e1e6e2!important;
   box-shadow:none!important;
 }
-body[data-systems-theme="light"] main [class*="panelHead"],
-body[data-systems-theme="light"] main [class*="section"],
-body[data-systems-theme="light"] main [class*="messageRow"],
-body[data-systems-theme="light"] main [class*="result"]{
+html[data-systems-theme="light"] body main [class*="panelHead"],
+html[data-systems-theme="light"] body main [class*="section"],
+html[data-systems-theme="light"] body main [class*="messageRow"],
+html[data-systems-theme="light"] body main [class*="result"]{
   border-color:#e1e6e2!important;
 }
-body[data-systems-theme="light"] main [class*="summary"],
-body[data-systems-theme="light"] main [class*="quickStats"]>div,
-body[data-systems-theme="light"] main [class*="actionCard"],
-body[data-systems-theme="light"] main [class*="draft"],
-body[data-systems-theme="light"] main [class*="mailRoute"],
-body[data-systems-theme="light"] main [class*="tracking"],
-body[data-systems-theme="light"] main [class*="inlineReply"],
-body[data-systems-theme="light"] main [class*="modalIntro"]{
+html[data-systems-theme="light"] body main [class*="summary"],
+html[data-systems-theme="light"] body main [class*="quickStats"]>div,
+html[data-systems-theme="light"] body main [class*="actionCard"],
+html[data-systems-theme="light"] body main [class*="draft"],
+html[data-systems-theme="light"] body main [class*="mailRoute"],
+html[data-systems-theme="light"] body main [class*="tracking"],
+html[data-systems-theme="light"] body main [class*="inlineReply"],
+html[data-systems-theme="light"] body main [class*="modalIntro"]{
   background:#f0f3ee!important;
   border-color:#e1e6e2!important;
 }
-body[data-systems-theme="light"] main [class*="search"],
-body[data-systems-theme="light"] main input,
-body[data-systems-theme="light"] main textarea,
-body[data-systems-theme="light"] main select{
+html[data-systems-theme="light"] body main [class*="search"],
+html[data-systems-theme="light"] body main input,
+html[data-systems-theme="light"] body main textarea,
+html[data-systems-theme="light"] body main select{
   background:#ffffff!important;
   color:#152019!important;
   border-color:#d8ded9!important;
 }
-body[data-systems-theme="light"] main table th{
+html[data-systems-theme="light"] body main [class*="search"]::placeholder{
+  color:#7b8881!important;
+}
+html[data-systems-theme="light"] body main table th{
   background:#f0f3ee!important;
   color:#627069!important;
   border-color:#e1e6e2!important;
 }
-body[data-systems-theme="light"] main table td{
+html[data-systems-theme="light"] body main table td{
   color:#34443b!important;
   border-color:#e1e6e2!important;
 }
-body[data-systems-theme="light"] main table tbody tr:hover,
-body[data-systems-theme="light"] main [class*="selectedRow"]{
+html[data-systems-theme="light"] body main table tbody tr:hover,
+html[data-systems-theme="light"] body main [class*="selectedRow"]{
   background:#f0f3ee!important;
 }
-body[data-systems-theme="light"] main [class*="filterActive"],
-body[data-systems-theme="light"] main [class*="viewActive"],
-body[data-systems-theme="light"] main [class*="actionPrimary"],
-body[data-systems-theme="light"] main [class*="replyAlert"],
-body[data-systems-theme="light"] main [class*="notice"]{
+html[data-systems-theme="light"] body main [class*="filterActive"],
+html[data-systems-theme="light"] body main [class*="viewActive"],
+html[data-systems-theme="light"] body main [class*="actionPrimary"],
+html[data-systems-theme="light"] body main [class*="replyAlert"],
+html[data-systems-theme="light"] body main [class*="notice"]{
   background:#e9f0eb!important;
   border-color:#c6d5cc!important;
   color:#244b3b!important;
 }
-body[data-systems-theme="light"] main [class*="button"],
-body[data-systems-theme="light"] main [class*="smallButton"],
-body[data-systems-theme="light"] main [class*="pipelineButton"]{
+html[data-systems-theme="light"] body main [class*="button"],
+html[data-systems-theme="light"] body main [class*="smallButton"],
+html[data-systems-theme="light"] body main [class*="pipelineButton"]{
   border-color:#d8ded9;
 }
-body[data-systems-theme="light"] main a{
+html[data-systems-theme="light"] body main a{
   color:#40564a;
 }
-body[data-systems-theme="light"] main a:hover{
+html[data-systems-theme="light"] body main a:hover{
   color:#244b3b;
 }
-body[data-systems-theme="light"] main [class*="eyebrow"]{
+html[data-systems-theme="light"] body main [class*="eyebrow"]{
   color:#315f50!important;
 }
-body[data-systems-theme="light"] main [class*="modal"]{
-  background:#ffffff;
-  border-color:#d8ded9;
-  box-shadow:0 18px 48px rgba(36,75,59,.08);
+html[data-systems-theme="light"] body main h1,
+html[data-systems-theme="light"] body main h2,
+html[data-systems-theme="light"] body main h3,
+html[data-systems-theme="light"] body main [class*="brand"]{
+  color:#152019!important;
+}
+html[data-systems-theme="light"] body main [class*="modal"]{
+  background:#ffffff!important;
+  border-color:#d8ded9!important;
+  box-shadow:0 18px 48px rgba(36,75,59,.08)!important;
+}
+html[data-systems-theme="light"] body main [class*="modalHead"]{
+  background:#ffffff!important;
+  border-color:#e1e6e2!important;
 }
