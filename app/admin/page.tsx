@@ -7,8 +7,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const PLATFORM = "https://platform.labnarrative.com";
-
 function Wordmark() {
   return (
     <>
@@ -41,14 +39,15 @@ const branches: Branch[] = [
     title: "Websites",
     description:
       "Scientific websites for principal investigators and laboratories, supported by the full discovery, production, review and sales workflow.",
-    publicHref: "https://labnarrative.com/websites",
-    workspaceHref: `${PLATFORM}/admin/sites`,
-    workspaceLabel: "Open Websites platform",
+    publicHref: "/websites",
+    workspaceHref: "/admin/websites/sites",
+    workspaceLabel: "Open Websites admin",
     tools: [
-      { label: "Discovery", hint: "Find strong PIs", href: `${PLATFORM}/admin/discovery` },
-      { label: "Final Review", hint: "Human publication gate", href: `${PLATFORM}/admin/review` },
-      { label: "Outreach", hint: "Email + follow-ups", href: `${PLATFORM}/admin/outreach` },
-      { label: "Sales", hint: "Clients + conversion", href: `${PLATFORM}/admin/sales` },
+      { label: "Sites", hint: "Website portfolio + production", href: "/admin/websites/sites" },
+      { label: "Discovery", hint: "Find strong PIs", href: "/admin/websites/discovery" },
+      { label: "Final Review", hint: "Human publication gate", href: "/admin/websites/review" },
+      { label: "Sales", hint: "Clients + conversion", href: "/admin/websites/sales" },
+      { label: "Outreach", hint: "Email + follow-ups", href: "/admin/websites/outreach" },
     ],
   },
   {
@@ -57,19 +56,19 @@ const branches: Branch[] = [
     title: "Intelligence",
     description:
       "Evidence-backed commercial intelligence for life-science suppliers, connecting products with relevant laboratories and decision-makers.",
-    publicHref: "https://labnarrative.com/intelligence",
-    workspaceHref: `${PLATFORM}/admin/intelligence`,
-    workspaceLabel: "Open Intelligence platform",
+    publicHref: "/intelligence",
+    workspaceHref: "/admin/intelligence",
+    workspaceLabel: "Open Intelligence admin",
     tools: [
       {
         label: "Intelligence Platform",
         hint: "Dashboard + pipeline",
-        href: `${PLATFORM}/admin/intelligence`,
+        href: "/admin/intelligence",
       },
       {
         label: "Public Intelligence Page",
         hint: "Service overview",
-        href: "https://labnarrative.com/intelligence",
+        href: "/intelligence",
       },
     ],
   },
@@ -79,24 +78,24 @@ const branches: Branch[] = [
     title: "Systems",
     description:
       "Custom AI-powered business systems that organize workflows, automate repetitive work and turn operations into focused digital platforms.",
-    publicHref: "https://labnarrative.com/systems",
-    workspaceHref: `${PLATFORM}/admin/systems`,
-    workspaceLabel: "Open Systems platform",
+    publicHref: "/systems",
+    workspaceHref: "/admin/systems",
+    workspaceLabel: "Open Systems admin",
     tools: [
       {
         label: "Acquisition",
         hint: "Prospects + outreach",
-        href: `${PLATFORM}/admin/systems-outreach`,
+        href: "/admin/systems-outreach",
       },
       {
         label: "Master Demo",
         hint: "Systems showcase",
-        href: "https://labnarrative.com/systems/demo",
+        href: "/systems/demo",
       },
       {
         label: "Medical Masar Demo",
         hint: "Laboratory supplier flow",
-        href: "https://labnarrative.com/systems/demos/medical-masar",
+        href: "/systems/demos/medical-masar",
       },
     ],
   },
@@ -106,22 +105,22 @@ const sharedTools = [
   {
     label: "Automation",
     description: "Scheduled and operational workers",
-    href: `${PLATFORM}/admin/automation`,
+    href: "/admin/automation",
   },
   {
     label: "Client Care",
-    description: "Annual care and active clients",
-    href: `${PLATFORM}/admin/care`,
+    description: "Annual care and active website clients",
+    href: "/admin/websites/care",
   },
   {
     label: "LinkedIn",
     description: "Website outreach tracking",
-    href: `${PLATFORM}/admin/linkedin`,
+    href: "/admin/websites/linkedin",
   },
   {
     label: "Operations Guide",
     description: "Internal platform guidance",
-    href: `${PLATFORM}/admin/guide`,
+    href: "/admin/guide",
   },
 ];
 
@@ -130,14 +129,14 @@ export default function LabNarrativeAdminHome() {
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.brandLine}>
-          <a className={styles.wordmark} href="https://labnarrative.com" aria-label="LabNarrative home">
+          <a className={styles.wordmark} href="/" aria-label="LabNarrative home">
             <Wordmark />
           </a>
           <span className={styles.product}>Control Center</span>
         </div>
         <div className={styles.headerActions}>
-          <a href="https://labnarrative.com">Public site ↗</a>
-          <a href={`${PLATFORM}/admin/sites`}>Platform ↗</a>
+          <a href="/">Public site ↗</a>
+          <a href="/admin/websites/sites">Websites admin ↗</a>
         </div>
       </header>
 
@@ -216,7 +215,7 @@ export default function LabNarrativeAdminHome() {
       </section>
 
       <footer className={styles.footer}>
-        <a className={styles.wordmark} href="https://labnarrative.com">
+        <a className={styles.wordmark} href="/">
           <Wordmark />
         </a>
         <span>Websites · Intelligence · Systems</span>
