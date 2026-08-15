@@ -28,6 +28,7 @@ type LinkedInReply = {
   notification_type: "reply" | "notification" | "unknown";
   match_method: string;
   status: "new" | "handled" | "ignored";
+  raw_payload: Record<string, unknown> | null;
   received_at: string;
 };
 
@@ -75,6 +76,16 @@ function formatDate(value: string) {
 
 function linkedinSearch(name: string, institution: string) {
   return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([name, institution].filter(Boolean).join(" "))}`;
+}
+
+function linkedinPreview(row: LinkedInReply) {
+  const payload = row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {};
+  const gmailBody = typeof payload.gmail_body_text === "string" ? payload.gmail_body_text.trim() : "";
+  if (gmailBody) return gmailBody;
+  if (row.notification_type === "unknown") {
+    return "LinkedIn notification received. Review it on LinkedIn before treating it as a confirmed reply.";
+  }
+  return "LinkedIn reply detected from the notification email.";
 }
 
 export default function UnifiedInboxPage() {
@@ -128,7 +139,7 @@ export default function UnifiedInboxPage() {
         .limit(120),
       supabase
         .from("linkedin_inbox_messages")
-        .select("id,prospect_id,source_from_email,subject,sender_name,sender_profile_url,notification_type,match_method,status,received_at")
+        .select("id,prospect_id,source_from_email,subject,sender_name,sender_profile_url,notification_type,match_method,status,raw_payload,received_at")
         .in("notification_type", ["reply", "unknown"])
         .neq("status", "ignored")
         .order("received_at", { ascending: false })
@@ -222,9 +233,7 @@ export default function UnifiedInboxPage() {
         name: prospect?.pi_name || row.sender_name || "Unmatched LinkedIn reply",
         institution: prospect?.institution || "",
         subject: row.subject || "LinkedIn message notification",
-        preview: row.notification_type === "unknown"
-          ? "LinkedIn notification received. Review it on LinkedIn before treating it as a confirmed reply."
-          : "LinkedIn reply detected from the notification email.",
+        preview: linkedinPreview(row),
         receivedAt: row.received_at,
         state: row.status === "handled" ? "Handled" : row.notification_type === "reply" ? "New reply" : "Needs review",
         profileUrl: row.sender_profile_url || profile || "",
@@ -304,7 +313,7 @@ export default function UnifiedInboxPage() {
       <div>
         <p className="ln-inbox-kicker">LinkedIn connection</p>
         <h2>Notification forwarding address</h2>
-        <p>Forward LinkedIn message-notification emails to this dedicated LabNarrative inbound address. The system matches a reply only when the PI identity is unambiguous.</p>
+        <p>Hourly Gmail sync is active. This dedicated address is also ready for near-real-time LinkedIn notification forwarding when you want to enable it.</p>
       </div>
       <code>{forwardingAddress}</code>
     </section>
@@ -317,7 +326,7 @@ export default function UnifiedInboxPage() {
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search PI, institution or subject…" />
       </div>
 
-      {!visible.length ? <div className="ln-inbox-empty"><h3>No replies in this view yet.</h3><p>New human email replies appear automatically. LinkedIn replies will appear after LinkedIn notification forwarding is enabled.</p></div> : <div className="ln-inbox-list">
+      {!visible.length ? <div className="ln-inbox-empty"><h3>No replies in this view yet.</h3><p>New human email replies appear automatically. LinkedIn replies appear after LinkedIn messaging email notifications reach the connected Gmail account.</p></div> : <div className="ln-inbox-list">
         {visible.map((item) => {
           const prospect = item.prospectId ? prospects.get(item.prospectId) : undefined;
           const linkedinHref = item.profileUrl || linkedinSearch(item.name, item.institution);
@@ -327,7 +336,7 @@ export default function UnifiedInboxPage() {
               <div className="ln-inbox-title"><strong>{item.name}</strong><span>{formatDate(item.receivedAt)}</span></div>
               {item.institution ? <small>{item.institution}</small> : null}
               <h3>{item.subject}</h3>
-              <p>{item.preview.length > 280 ? `${item.preview.slice(0, 280)}…` : item.preview}</p>
+              <p>{item.preview.length > 900 ? `${item.preview.slice(0, 900)}…` : item.preview}</p>
               <div className="ln-inbox-state"><span className={item.unmatched ? "warn" : "ok"}>{item.unmatched ? "Unmatched" : "Matched prospect"}</span><span>{item.state}</span></div>
             </div>
             <div className="ln-inbox-actions">
@@ -345,6 +354,6 @@ export default function UnifiedInboxPage() {
 
 function Styles() {
   return <style jsx global>{`
-    .ln-inbox-page{min-height:100vh;background:#0c1a23;color:#eef4f1;padding:38px 24px 64px;font-family:Arial,Helvetica,sans-serif}.ln-inbox-header,.ln-inbox-metrics,.ln-inbox-connection,.ln-inbox-card,.ln-inbox-notice,.ln-inbox-error{width:min(1220px,100%);margin-left:auto;margin-right:auto}.ln-inbox-header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}.ln-inbox-kicker{margin:0 0 8px;color:#79c9b2;text-transform:uppercase;letter-spacing:.12em;font-size:.7rem;font-weight:900}.ln-inbox-header h1{font-size:2.45rem;margin:0}.ln-inbox-header p:last-child{color:#9cafaa;margin:10px 0 0}.ln-inbox-header button,.ln-inbox-actions button{border:1px solid #356d5e;background:#245747;color:#f2faf7;border-radius:10px;padding:10px 14px;font-weight:850;cursor:pointer}.ln-inbox-notice,.ln-inbox-error{box-sizing:border-box;margin-top:18px;padding:11px 13px;border-radius:10px;font-size:.82rem}.ln-inbox-notice{background:#14352e;border:1px solid #316a5b;color:#a8e7d3}.ln-inbox-error{background:#3a2022;border:1px solid #744247;color:#ffc2c5}.ln-inbox-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}.ln-inbox-metrics article{background:#10232d;border:1px solid #29404a;border-radius:16px;padding:18px}.ln-inbox-metrics span,.ln-inbox-metrics small{display:block;color:#8fa49e}.ln-inbox-metrics strong{display:block;font-size:2rem;margin:6px 0}.ln-inbox-connection{box-sizing:border-box;margin-top:14px;padding:20px;border:1px solid #315348;background:#102a29;border-radius:16px;display:flex;justify-content:space-between;gap:24px;align-items:center}.ln-inbox-connection h2{margin:0;font-size:1.18rem}.ln-inbox-connection p:last-child{margin:7px 0 0;color:#a2b6b0;line-height:1.5}.ln-inbox-connection code{background:#091a1d;border:1px solid #31665a;border-radius:10px;padding:12px 14px;color:#9fe0cc;font-weight:800;white-space:nowrap}.ln-inbox-card{box-sizing:border-box;margin-top:14px;background:#10232d;border:1px solid #29404a;border-radius:20px;padding:20px}.ln-inbox-toolbar{display:flex;justify-content:space-between;gap:14px;align-items:center}.ln-inbox-filters{display:flex;gap:7px}.ln-inbox-filters button{border:1px solid #334a54;background:#0e2029;color:#aebfba;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer}.ln-inbox-filters button.active{background:#286451;border-color:#3c806c;color:#fff}.ln-inbox-toolbar input{width:min(390px,100%);border:1px solid #38515e;border-radius:10px;background:#0b1820;color:#edf4f1;padding:10px 12px;font:inherit}.ln-inbox-list{margin-top:18px;display:grid;gap:10px}.ln-inbox-row{display:grid;grid-template-columns:78px 1fr auto;gap:16px;align-items:start;padding:18px;border:1px solid #29434c;border-radius:15px;background:#0e2029}.ln-inbox-channel{display:inline-flex;justify-content:center;align-items:center;border-radius:999px;padding:7px 9px;font-size:.7rem;font-weight:900}.ln-inbox-channel.email{background:#193245;color:#a9d6ef;border:1px solid #31536b}.ln-inbox-channel.linkedin{background:#14382f;color:#9fe0cc;border:1px solid #326b5b}.ln-inbox-title{display:flex;justify-content:space-between;gap:14px}.ln-inbox-title strong{font-size:1.04rem}.ln-inbox-title span,.ln-inbox-copy small{color:#879b95;font-size:.75rem}.ln-inbox-copy h3{margin:9px 0 6px;font-size:.92rem}.ln-inbox-copy p{margin:0;color:#aabbb6;line-height:1.5;font-size:.84rem}.ln-inbox-state{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}.ln-inbox-state span{border:1px solid #354c54;border-radius:999px;padding:4px 8px;color:#a8bab4;font-size:.68rem;font-weight:800}.ln-inbox-state .ok{border-color:#315f51;color:#89d1bc}.ln-inbox-state .warn{border-color:#7a6336;color:#f1ca7d}.ln-inbox-actions{display:grid;gap:7px;min-width:130px}.ln-inbox-actions a,.ln-inbox-actions button{display:flex;justify-content:center;text-align:center;text-decoration:none;border-radius:9px;padding:8px 10px;font-size:.72rem;font-weight:850}.ln-inbox-actions a{border:1px solid #36505a;background:#142b35;color:#dce9e5}.ln-inbox-actions button{border-color:#356d5e}.ln-inbox-empty{padding:54px 20px;text-align:center;color:#9cafaa}.ln-inbox-empty h3{color:#edf4f1}.ln-inbox-auth{width:min(760px,calc(100% - 48px));margin:80px auto;background:#10232d;border:1px solid #29404a;border-radius:18px;padding:28px}.ln-inbox-auth a{color:#98dac6;font-weight:800}@media(max-width:900px){.ln-inbox-metrics{grid-template-columns:repeat(2,1fr)}.ln-inbox-connection{display:grid}.ln-inbox-connection code{white-space:normal;word-break:break-all}.ln-inbox-row{grid-template-columns:1fr}.ln-inbox-channel{justify-self:start}.ln-inbox-actions{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}}@media(max-width:620px){.ln-inbox-page{padding:26px 14px 46px}.ln-inbox-header,.ln-inbox-toolbar{display:grid}.ln-inbox-metrics{grid-template-columns:1fr 1fr}.ln-inbox-toolbar input{width:100%;box-sizing:border-box}.ln-inbox-title{display:grid;gap:5px}.ln-inbox-actions{grid-template-columns:1fr}}
+    .ln-inbox-page{min-height:100vh;background:#0c1a23;color:#eef4f1;padding:38px 24px 64px;font-family:Arial,Helvetica,sans-serif}.ln-inbox-header,.ln-inbox-metrics,.ln-inbox-connection,.ln-inbox-card,.ln-inbox-notice,.ln-inbox-error{width:min(1220px,100%);margin-left:auto;margin-right:auto}.ln-inbox-header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}.ln-inbox-kicker{margin:0 0 8px;color:#79c9b2;text-transform:uppercase;letter-spacing:.12em;font-size:.7rem;font-weight:900}.ln-inbox-header h1{font-size:2.45rem;margin:0}.ln-inbox-header p:last-child{color:#9cafaa;margin:10px 0 0}.ln-inbox-header button,.ln-inbox-actions button{border:1px solid #356d5e;background:#245747;color:#f2faf7;border-radius:10px;padding:10px 14px;font-weight:850;cursor:pointer}.ln-inbox-notice,.ln-inbox-error{box-sizing:border-box;margin-top:18px;padding:11px 13px;border-radius:10px;font-size:.82rem}.ln-inbox-notice{background:#14352e;border:1px solid #316a5b;color:#a8e7d3}.ln-inbox-error{background:#3a2022;border:1px solid #744247;color:#ffc2c5}.ln-inbox-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:26px}.ln-inbox-metrics article{background:#10232d;border:1px solid #29404a;border-radius:16px;padding:18px}.ln-inbox-metrics span,.ln-inbox-metrics small{display:block;color:#8fa49e}.ln-inbox-metrics strong{display:block;font-size:2rem;margin:6px 0}.ln-inbox-connection{box-sizing:border-box;margin-top:14px;padding:20px;border:1px solid #315348;background:#102a29;border-radius:16px;display:flex;justify-content:space-between;gap:24px;align-items:center}.ln-inbox-connection h2{margin:0;font-size:1.18rem}.ln-inbox-connection p:last-child{margin:7px 0 0;color:#a2b6b0;line-height:1.5}.ln-inbox-connection code{background:#091a1d;border:1px solid #31665a;border-radius:10px;padding:12px 14px;color:#9fe0cc;font-weight:800;white-space:nowrap}.ln-inbox-card{box-sizing:border-box;margin-top:14px;background:#10232d;border:1px solid #29404a;border-radius:20px;padding:20px}.ln-inbox-toolbar{display:flex;justify-content:space-between;gap:14px;align-items:center}.ln-inbox-filters{display:flex;gap:7px}.ln-inbox-filters button{border:1px solid #334a54;background:#0e2029;color:#aebfba;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer}.ln-inbox-filters button.active{background:#286451;border-color:#3c806c;color:#fff}.ln-inbox-toolbar input{width:min(390px,100%);border:1px solid #38515e;border-radius:10px;background:#0b1820;color:#edf4f1;padding:10px 12px;font:inherit}.ln-inbox-list{margin-top:18px;display:grid;gap:10px}.ln-inbox-row{display:grid;grid-template-columns:78px 1fr auto;gap:16px;align-items:start;padding:18px;border:1px solid #29434c;border-radius:15px;background:#0e2029}.ln-inbox-channel{display:inline-flex;justify-content:center;align-items:center;border-radius:999px;padding:7px 9px;font-size:.7rem;font-weight:900}.ln-inbox-channel.email{background:#193245;color:#a9d6ef;border:1px solid #31536b}.ln-inbox-channel.linkedin{background:#14382f;color:#9fe0cc;border:1px solid #326b5b}.ln-inbox-title{display:flex;justify-content:space-between;gap:14px}.ln-inbox-title strong{font-size:1.04rem}.ln-inbox-title span,.ln-inbox-copy small{color:#879b95;font-size:.75rem}.ln-inbox-copy h3{margin:9px 0 6px;font-size:.92rem}.ln-inbox-copy p{margin:0;color:#aabbb6;line-height:1.5;font-size:.84rem;white-space:pre-wrap}.ln-inbox-state{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}.ln-inbox-state span{border:1px solid #354c54;border-radius:999px;padding:4px 8px;color:#a8bab4;font-size:.68rem;font-weight:800}.ln-inbox-state .ok{border-color:#315f51;color:#89d1bc}.ln-inbox-state .warn{border-color:#7a6336;color:#f1ca7d}.ln-inbox-actions{display:grid;gap:7px;min-width:130px}.ln-inbox-actions a,.ln-inbox-actions button{display:flex;justify-content:center;text-align:center;text-decoration:none;border-radius:9px;padding:8px 10px;font-size:.72rem;font-weight:850}.ln-inbox-actions a{border:1px solid #36505a;background:#142b35;color:#dce9e5}.ln-inbox-actions button{border-color:#356d5e}.ln-inbox-empty{padding:54px 20px;text-align:center;color:#9cafaa}.ln-inbox-empty h3{color:#edf4f1}.ln-inbox-auth{width:min(760px,calc(100% - 48px));margin:80px auto;background:#10232d;border:1px solid #29404a;border-radius:18px;padding:28px}.ln-inbox-auth a{color:#98dac6;font-weight:800}@media(max-width:900px){.ln-inbox-metrics{grid-template-columns:repeat(2,1fr)}.ln-inbox-connection{display:grid}.ln-inbox-connection code{white-space:normal;word-break:break-all}.ln-inbox-row{grid-template-columns:1fr}.ln-inbox-channel{justify-self:start}.ln-inbox-actions{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}}@media(max-width:620px){.ln-inbox-page{padding:26px 14px 46px}.ln-inbox-header,.ln-inbox-toolbar{display:grid}.ln-inbox-metrics{grid-template-columns:1fr 1fr}.ln-inbox-toolbar input{width:100%;box-sizing:border-box}.ln-inbox-title{display:grid;gap:5px}.ln-inbox-actions{grid-template-columns:1fr}}
   `}</style>;
 }
