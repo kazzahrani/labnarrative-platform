@@ -31,7 +31,7 @@ type Contact = {
   is_current_verified: boolean;
 };
 
-type QueueItem = { prospect: Prospect; contacts: Contact[] };
+type QueueItem = { prospect: Prospect; contacts: Contact[]; knownEmails: Contact[] };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
@@ -112,16 +112,18 @@ export default function SystemsEmailBatchLauncher() {
     return prospects.flatMap((prospect) => {
       if (!eligibleStatuses.has(prospect.status) || prospect.email_sent_at) return [];
       if (!prospect.email_subject?.trim() || !prospect.email_body?.trim()) return [];
-      const verified = contacts
+
+      const knownEmails = contacts
         .filter(
           (contact) =>
             contact.prospect_id === prospect.id &&
-            contact.is_current_verified &&
             Boolean(contact.email) &&
             validEmail(contact.email ?? ""),
         )
         .sort((a, b) => a.priority - b.priority);
-      return [{ prospect, contacts: verified }];
+
+      const verified = knownEmails.filter((contact) => contact.is_current_verified);
+      return [{ prospect, contacts: verified, knownEmails }];
     });
   }, [prospects, contacts]);
 
@@ -316,7 +318,7 @@ export default function SystemsEmailBatchLauncher() {
               <div>
                 <span className={styles.eyebrow}>Systems · human-approved batch workflow</span>
                 <h2>All Email Outreach</h2>
-                <p>Review, approve and send one company at a time without reopening each prospect card.</p>
+                <p>Review the exact receiver and email address before every send.</p>
               </div>
               <button className={styles.close} onClick={() => setOpen(false)} aria-label="Close">×</button>
             </header>
@@ -346,21 +348,51 @@ export default function SystemsEmailBatchLauncher() {
                 <div className={styles.recipientCard}>
                   <div className={styles.recipientHead}>
                     <div>
-                      <span className={styles.label}>Recipient</span>
-                      <strong>{activeEmail ? `${activeName} <${activeEmail}>` : "No verified public email found"}</strong>
-                      <small>{usingManual ? "Human-entered override · not research-verified" : selectedContact ? `${selectedContact.title} · verified public work email` : "Add a manual recipient below to continue."}</small>
+                      <span className={styles.label}>Receiver</span>
+                      <strong>{activeName || "No receiver selected"}</strong>
+                      <small>{usingManual ? "Human-entered override · not research-verified" : selectedContact ? selectedContact.title : "Choose or enter a receiver below."}</small>
                     </div>
                     {item.contacts.length ? (
                       <select value={recipientId} onChange={(event) => setRecipientId(event.target.value)}>
                         {item.contacts.map((contact) => (
-                          <option value={contact.id} key={contact.id}>{contact.name} &lt;{contact.email}&gt;</option>
+                          <option value={contact.id} key={contact.id}>{contact.name} · {contact.email}</option>
                         ))}
                         {item.prospect.manual_email_recipient_email ? (
-                          <option value="manual">{item.prospect.manual_email_recipient_name || "Manual recipient"} &lt;{item.prospect.manual_email_recipient_email}&gt;</option>
+                          <option value="manual">{item.prospect.manual_email_recipient_name || "Manual recipient"} · {item.prospect.manual_email_recipient_email}</option>
                         ) : null}
                       </select>
                     ) : null}
                   </div>
+
+                  <div className={styles.manualGrid}>
+                    <label>
+                      <span>Email address</span>
+                      <input value={activeEmail} readOnly placeholder="No receiver email selected" />
+                    </label>
+                    <label>
+                      <span>Address status</span>
+                      <input value={activeEmail ? (usingManual ? "Manual human-entered address" : "Verified public work email") : "Missing — enter manually below"} readOnly />
+                    </label>
+                  </div>
+
+                  {item.knownEmails.length ? (
+                    <div className={styles.editor}>
+                      <label>
+                        <span>Known email addresses for this company</span>
+                        <select value={recipientId} onChange={(event) => {
+                          const nextId = event.target.value;
+                          const candidate = item.contacts.find((contact) => contact.id === nextId);
+                          if (candidate) setRecipientId(candidate.id);
+                        }}>
+                          {item.knownEmails.map((contact) => (
+                            <option value={contact.id} key={`known-${contact.id}`} disabled={!contact.is_current_verified}>
+                              {contact.name} · {contact.email} · {contact.is_current_verified ? "verified / sendable" : "known / not verified for sending"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  ) : null}
 
                   {item.contacts.length && !usingManual ? (
                     <button className={styles.manualToggle} onClick={() => setRecipientId("manual")}>Use a manual recipient instead</button>
@@ -408,7 +440,7 @@ export default function SystemsEmailBatchLauncher() {
                     {sending ? "Sending…" : needsApproval || draftDirty || manualDirty ? "Approve & Send → Next" : "Send Email → Next"}
                   </button>
                 </div>
-                <p className={styles.humanGate}>Nothing is sent automatically. Clicking the main button is the human approval/send gate for the email currently on screen. After a successful send, that company leaves this batch and the next company appears.</p>
+                <p className={styles.humanGate}>Nothing is sent automatically. The receiver name and exact email address shown above are the destination for this send.</p>
               </>
             ) : (
               <div className={styles.complete}>
