@@ -79,9 +79,9 @@ export default function SystemsThemeToggle() {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     const next: SystemsTheme = saved === "light" ? "light" : "dark";
     setTheme(next);
+    applyTheme(next);
 
     const findTarget = () => {
-      applyTheme(next);
       const systemsSiteLink = document.querySelector<HTMLAnchorElement>('a[href="/systems"]');
       const parent = systemsSiteLink?.parentElement;
       if (parent) setTarget(parent);
