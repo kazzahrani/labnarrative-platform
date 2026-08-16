@@ -12,6 +12,7 @@ function json(body: unknown, status = 200, origin: string | null = null) { retur
 function isUuid(v: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v); }
 function normalizePriority(v: unknown) { const s = text(v, 20); return ["high", "normal", "low"].includes(s) ? s : "normal"; }
 function object(v: unknown): Record<string, any> { return v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, any> : {}; }
+function hasProductIdentity(item: any) { return Boolean(text(item?.productName, 600) || text(item?.catalogNumber, 300) || text(item?.productUrl, 1600)); }
 async function bridge(action:string, token:string){const r=await fetch(PORTFOLIO_BRIDGE_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,token}),cache:"no-store"});const p=await r.json().catch(()=>({})) as any;if(!r.ok)throw new Error(String(p.error||"Intelligence fulfillment bridge failed."));return p}
 
 Deno.serve(async (req: Request) => {
@@ -63,7 +64,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "load") { const result = await loadWorkspace(); if (!result.ok) return json({ error: result.error }, result.status, origin); return json(result.data, 200, origin); }
-  if (action !== "save") return json({ error: "Unknown workspace action." }, 400, origin);
+  if (!["save", "submit_product"].includes(action)) return json({ error: "Unknown workspace action." }, 400, origin);
 
   const current = await loadWorkspace();
   if (!current.ok) return json({ error: current.error }, current.status, origin);
@@ -74,27 +75,42 @@ Deno.serve(async (req: Request) => {
 
   const now = new Date().toISOString();
   for (const existing of currentProducts) {
-    if (!["awaiting_product", "submitted"].includes(existing.status)) continue;
+    if (existing.status !== "awaiting_product") continue;
     const item = byPosition.get(existing.position); if (!item) continue;
-    const productName = text(item.productName, 600), productUrl = text(item.productUrl, 1600), catalogNumber = text(item.catalogNumber, 300), notes = text(item.clientNotes, 3000), filled = Boolean(productName || productUrl || catalogNumber);
-    await db.from("intelligence_product_requests").update({ product_name: productName || null, product_url: productUrl || null, catalog_number: catalogNumber || null, priority: normalizePriority(item.priority), client_notes: notes || null, status: filled ? "submitted" : "awaiting_product", submitted_at: filled ? now : null, updated_at: now }).eq("id", existing.id);
+    const productName = text(item.productName, 600), productUrl = text(item.productUrl, 1600), catalogNumber = text(item.catalogNumber, 300), notes = text(item.clientNotes, 3000);
+    await db.from("intelligence_product_requests").update({ product_name: productName || null, product_url: productUrl || null, catalog_number: catalogNumber || null, priority: normalizePriority(item.priority), client_notes: notes || null, updated_at: now }).eq("id", existing.id);
   }
 
-  const { data: afterProducts } = await db.from("intelligence_product_requests").select("id,status").eq("workspace_id", workspace.id);
-  const submittedCount = (afterProducts || []).filter((p: any) => p.status !== "awaiting_product").length, detailsReady = Boolean(companyName && contactName && contactEmail);
-  let onboardingStatus = !detailsReady ? "awaiting_details" : submittedCount >= purchase.productCount ? "ready_for_research" : "collecting_products";
-  await db.from("intelligence_client_workspaces").update({ company_name: companyName || null, company_website: companyWebsite || null, contact_name: contactName || null, contact_email: contactEmail || null, target_geography: targetGeography || null, client_notes: clientNotes || null, onboarding_status: onboardingStatus, submitted_at: onboardingStatus === "ready_for_research" ? (workspace.submittedAt || now) : null, updated_at: now }).eq("id", workspace.id);
+  const detailsReady = Boolean(companyName && contactName && contactEmail);
+  const hasExistingFulfillment = currentProducts.some((p:any) => ["submitted","queued","researching","scientific_review","complete","blocked"].includes(String(p.status || "")));
+  let onboardingStatus = !detailsReady ? "awaiting_details" : hasExistingFulfillment ? "in_progress" : "collecting_products";
+  await db.from("intelligence_client_workspaces").update({ company_name: companyName || null, company_website: companyWebsite || null, contact_name: contactName || null, contact_email: contactEmail || null, target_geography: targetGeography || null, client_notes: clientNotes || null, onboarding_status: onboardingStatus, updated_at: now }).eq("id", workspace.id);
 
   try { await bridge("register", token); } catch (e) { console.error("portfolio account mirror", e); }
 
-  if (onboardingStatus === "ready_for_research") {
+  if (action === "submit_product") {
+    if (!detailsReady) return json({ error: "Complete company name, contact name and contact email before starting an analysis." }, 400, origin);
+    const submitPosition = Number(body.position);
+    if (!Number.isInteger(submitPosition) || submitPosition < 1 || submitPosition > purchase.productCount) return json({ error: "Choose a valid product slot." }, 400, origin);
+    const selected = byPosition.get(submitPosition);
+    if (!selected || !hasProductIdentity(selected)) return json({ error: "Add a product name, catalogue number, or product URL before starting this analysis." }, 400, origin);
+    const currentSelected = currentProducts.find((p:any) => Number(p.position) === submitPosition);
+    if (!currentSelected) return json({ error: "Product slot not found." }, 404, origin);
+    if (currentSelected.status !== "awaiting_product") return json({ error: "This product has already been submitted." }, 409, origin);
+
+    await db.from("intelligence_product_requests").update({ status: "submitted", submitted_at: now, updated_at: now }).eq("id", currentSelected.id).eq("status", "awaiting_product");
+    await db.from("intelligence_client_workspaces").update({ onboarding_status: "ready_for_research", submitted_at: workspace.submittedAt || now, updated_at: now }).eq("id", workspace.id);
+
     try {
       const ingested = await bridge("ingest", token), queued = Array.isArray(ingested.queued) ? ingested.queued : [];
       for (const job of queued) if (job?.sourceProductRequestId) await db.from("intelligence_product_requests").update({ status: "queued", updated_at: new Date().toISOString() }).eq("id", job.sourceProductRequestId).in("status", ["submitted","queued"]);
       onboardingStatus = "in_progress";
       await db.from("intelligence_client_workspaces").update({ onboarding_status: "in_progress", updated_at: new Date().toISOString() }).eq("id", workspace.id);
       try { await bridge("register", token); } catch (e) { console.error("portfolio account mirror after ingest", e); }
-    } catch (e) { console.error("portfolio ingest bridge", e); }
+    } catch (e) {
+      console.error("portfolio ingest bridge", e);
+      return json({ error: "Your product was saved, but the Intelligence queue could not start it yet. Please try again." }, 502, origin);
+    }
   }
 
   const refreshed = await loadWorkspace();
