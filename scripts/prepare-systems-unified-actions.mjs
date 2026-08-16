@@ -97,16 +97,67 @@ for (const [path, from, to] of routePatches) {
 
 const simplePanelPath = "app/admin/SystemsSimpleOutreachPanel.tsx";
 let simplePanel = fs.readFileSync(simplePanelPath, "utf8");
+
 simplePanel = replaceIfPresent(
   simplePanel,
-  'const note = noteFor(contact);',
-  'const note = noteFor(contact); const noteAr = contact.linkedin_note_ar || "";'
+  '  linkedin_note: string | null;\n  linkedin_recipient_contact_id: string | null;',
+  '  linkedin_note: string | null;\n  linkedin_note_ar: string | null;\n  linkedin_followup: string | null;\n  linkedin_followup_ar: string | null;\n  linkedin_recipient_contact_id: string | null;'
 );
+
 simplePanel = replaceIfPresent(
   simplePanel,
-  'disabled={!note}>Copy</button>',
-  'disabled={!note}>EN</button><button type="button" onClick={() => void copyText(noteAr, `${contact.name}\'s Arabic LinkedIn note copied.`)} disabled={!noteAr}>AR</button>'
+  '.select("id,company_name,slug,website_url,city,country,industry,fit_score,status,demo_status,linkedin_note,linkedin_recipient_contact_id,linkedin_connected_at,linkedin_followup_sent_at,linkedin_reply_at,email_subject,email_body,email_recipient_contact_id,email_recipient_email,email_draft_approved_at,email_sent_at,email_delivery_status,manual_email_recipient_email,manual_email_recipient_name,sequence_status")',
+  '.select("id,company_name,slug,website_url,city,country,industry,fit_score,status,demo_status,linkedin_note,linkedin_note_ar,linkedin_followup,linkedin_followup_ar,linkedin_recipient_contact_id,linkedin_connected_at,linkedin_followup_sent_at,linkedin_reply_at,email_subject,email_body,email_recipient_contact_id,email_recipient_email,email_draft_approved_at,email_sent_at,email_delivery_status,manual_email_recipient_email,manual_email_recipient_name,sequence_status")'
 );
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '  const noteFor = (contact: Contact) => contact.linkedin_note || (contact.id === selected.linkedin_recipient_contact_id ? selected.linkedin_note : null) || "";',
+  '  const noteFor = (contact: Contact) => contact.linkedin_note || (contact.id === selected.linkedin_recipient_contact_id ? selected.linkedin_note : null) || "";\n  const noteArFor = (contact: Contact) => contact.linkedin_note_ar || (contact.id === selected.linkedin_recipient_contact_id ? selected.linkedin_note_ar : null) || "";\n  const followupFor = (contact: Contact) => contact.id === selected.linkedin_recipient_contact_id ? (selected.linkedin_followup || "") : "";\n  const followupArFor = (contact: Contact) => contact.id === selected.linkedin_recipient_contact_id ? (selected.linkedin_followup_ar || "") : "";'
+);
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '    if (!session || busyContact || contact.linkedin_request_sent_at) {\n      if (contact.linkedin_request_sent_at) clickLegacyAction("LinkedIn");\n      return;\n    }',
+  '    if (!session || busyContact || contact.linkedin_request_sent_at) return;'
+);
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '  const companySubtitle = [selected.industry, selected.city, selected.country, `Fit ${selected.fit_score}/100`].filter(Boolean).join(" · ");',
+  '  const markLinkedinConnected = async (contact: Contact) => {\n    if (!session || busyContact || !contact.linkedin_request_sent_at) return;\n    const isConnectedContact = contact.id === selected.linkedin_recipient_contact_id && Boolean(selected.linkedin_connected_at);\n    if (isConnectedContact) return;\n    if (selected.linkedin_connected_at && contact.id !== selected.linkedin_recipient_contact_id) {\n      setNotice(`A LinkedIn connection is already recorded for ${selected.company_name}.`);\n      return;\n    }\n\n    setBusyContact(contact.id);\n    setNotice("");\n    const { error } = await supabase.rpc("record_systems_linkedin_connected", {\n      p_prospect_id: selected.id,\n      p_contact_id: contact.id,\n    });\n\n    if (error) setNotice(error.message);\n    else {\n      setNotice(`${contact.name} marked as connected. EN/AR now copy the post-acceptance follow-up.`);\n      await load(session);\n    }\n    setBusyContact(null);\n  };\n\n  const markLinkedinFollowupSent = async (contact: Contact) => {\n    const isConnectedContact = contact.id === selected.linkedin_recipient_contact_id && Boolean(selected.linkedin_connected_at);\n    if (!session || busyContact || !isConnectedContact || selected.linkedin_followup_sent_at) return;\n\n    setBusyContact(contact.id);\n    setNotice("");\n    const { error } = await supabase.rpc("record_systems_linkedin_followup_sent", { p_prospect_id: selected.id });\n    if (error) setNotice(error.message);\n    else {\n      setNotice(`Post-acceptance LinkedIn follow-up to ${contact.name} recorded as sent.`);\n      await load(session);\n    }\n    setBusyContact(null);\n  };\n\n  const companySubtitle = [selected.industry, selected.city, selected.country, `Fit ${selected.fit_score}/100`].filter(Boolean).join(" · ");'
+);
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '              const currentStatus = contactStatus(contact);\n              const note = noteFor(contact);',
+  '              const currentStatus = contactStatus(contact);\n              const isPrimary = contact.id === selected.linkedin_recipient_contact_id;\n              const isConnectedContact = isPrimary && Boolean(selected.linkedin_connected_at);\n              const note = isConnectedContact ? followupFor(contact) : noteFor(contact);\n              const noteAr = isConnectedContact ? followupArFor(contact) : noteArFor(contact);'
+);
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '                      <button type="button" onClick={() => void copyText(note, `${contact.name}\'s LinkedIn note copied.`)} disabled={!note}>Copy</button>',
+  '                      <button type="button" onClick={() => void copyText(note, `${contact.name}\'s ${isConnectedContact ? "follow-up" : "LinkedIn note"} copied in English.`)} disabled={!note}>EN</button><button type="button" onClick={() => void copyText(noteAr, `${contact.name}\'s ${isConnectedContact ? "follow-up" : "LinkedIn note"} copied in Arabic.`)} disabled={!noteAr}>AR</button>'
+);
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '                        disabled={busyContact === contact.id}\n                        title={contact.linkedin_request_sent_at ? "Open LinkedIn status workflow" : "Record this manual LinkedIn request as sent"}',
+  '                        disabled={busyContact === contact.id || Boolean(contact.linkedin_request_sent_at)}\n                        title={contact.linkedin_request_sent_at ? "LinkedIn request recorded as sent" : "Record this manual LinkedIn request as sent"}'
+);
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '                      >\n                        {busyContact === contact.id ? "Saving…" : contact.linkedin_request_sent_at ? "✓ Sent" : "Mark Sent"}\n                      </button>\n                    </div>',
+  '                      >\n                        {busyContact === contact.id ? "Saving…" : contact.linkedin_request_sent_at ? "✓ Sent" : "Mark Sent"}\n                      </button>\n                      {contact.linkedin_request_sent_at ? <button className={isConnectedContact ? styles.sentButton : styles.primaryButton} type="button" onClick={() => void markLinkedinConnected(contact)} disabled={busyContact === contact.id || isConnectedContact || Boolean(selected.linkedin_connected_at && !isConnectedContact)} title={isConnectedContact ? "Connection accepted" : "Record that this LinkedIn contact accepted the connection request"}>{isConnectedContact ? "✓ Connected" : "Connected"}</button> : null}\n                      {isConnectedContact ? <button className={selected.linkedin_followup_sent_at ? styles.sentButton : styles.primaryButton} type="button" onClick={() => void markLinkedinFollowupSent(contact)} disabled={busyContact === contact.id || Boolean(selected.linkedin_followup_sent_at) || (!selected.linkedin_followup && !selected.linkedin_followup_ar)} title="Record the post-acceptance LinkedIn follow-up as sent">{selected.linkedin_followup_sent_at ? "✓ Follow-up" : "Follow-up Sent"}</button> : null}\n                    </div>'
+);
+
+simplePanel = replaceIfPresent(
+  simplePanel,
+  '          <button type="button" onClick={() => clickLegacyAction("LinkedIn")}>LinkedIn details</button>\n',
+  ''
+);
+
 fs.writeFileSync(simplePanelPath, simplePanel);
 
-console.log("Prepared unified Systems Home, native Acquisition navigation, and EN/AR LinkedIn copy actions.");
+console.log("Prepared unified Systems Home, inline LinkedIn EN/AR, Sent, Connected and Follow-up workflow.");
