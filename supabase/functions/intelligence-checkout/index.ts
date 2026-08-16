@@ -3,6 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 type J = Record<string, unknown>;
 type PackageKey = "starter" | "portfolio" | "portfolio_plus";
+const PORTFOLIO_BRIDGE_URL = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-portfolio-bridge";
 const PACKAGES: Record<PackageKey, { name: string; products: number; amount: number }> = {
   starter: { name: "Starter", products: 5, amount: 399 },
   portfolio: { name: "Portfolio", products: 10, amount: 699 },
@@ -78,6 +79,13 @@ function payerMeta(payload: J) {
   const name = asObject(payer.name);
   return { name: [text(name.given_name, 200), text(name.surname, 200)].filter(Boolean).join(" "), email: text(payer.email_address, 320) };
 }
+async function registerWorkspace(accessToken: string) {
+  if (!isUuid(accessToken)) return;
+  try {
+    const r = await fetch(PORTFOLIO_BRIDGE_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "register", token: accessToken }), cache: "no-store" });
+    if (!r.ok) console.error("client portfolio registration failed", r.status, await r.text());
+  } catch (e) { console.error("client portfolio registration failed", e); }
+}
 async function ensureWorkspace(admin: any, purchase: any) {
   let { data: workspace, error } = await admin.from("intelligence_client_workspaces").select("*").eq("purchase_id", purchase.id).maybeSingle();
   if (error) throw new Error(error.message);
@@ -104,6 +112,7 @@ async function ensureWorkspace(admin: any, purchase: any) {
     const upsert = await admin.from("intelligence_product_requests").upsert(slots, { onConflict: "workspace_id,position", ignoreDuplicates: true });
     if (upsert.error) throw new Error(upsert.error.message);
   }
+  await registerWorkspace(workspace.access_token);
   return workspace;
 }
 
