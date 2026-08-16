@@ -24,9 +24,9 @@ const deliverables = [
 ];
 
 const foundingPackages = [
-  ["Starter", "5 products", "$399"],
-  ["Portfolio", "10 products", "$699"],
-  ["Portfolio Plus", "20 products", "$1,190"],
+  { key: "starter", name: "Starter", scope: "5 products", price: "$399" },
+  { key: "portfolio", name: "Portfolio", scope: "10 products", price: "$699" },
+  { key: "portfolio_plus", name: "Portfolio Plus", scope: "20 products", price: "$1,190" },
 ];
 
 function Wordmark() {
@@ -106,13 +106,13 @@ export default function IntelligencePage() {
             <p>We select a high-opportunity product and prepare a complete evidence-backed report with no artificial laboratory cap.</p>
             <strong>Free</strong>
           </div>
-          {foundingPackages.map(([name, scope, price]) => (
-            <div className={styles.card} key={name}>
+          {foundingPackages.map(({ key, name, scope, price }) => (
+            <a className={styles.card} key={key} href={`/intelligence/buy?package=${key}`} aria-label={`Buy the ${name} Intelligence package`}>
               <small>{name}</small>
               <h3>{scope}</h3>
               <p>Complete product opportunity analyses using the same research, verification and evidence standard as the demonstration report.</p>
-              <strong>{price}</strong>
-            </div>
+              <strong>{price} · Buy securely →</strong>
+            </a>
           ))}
         </div>
       </section>
@@ -133,9 +133,9 @@ export default function IntelligencePage() {
 
       <section className={styles.final}>
         <p className={styles.label}>First five paying customers</p>
-        <h2>Start with a complete report at no cost.</h2>
+        <h2>Ready to expand across your portfolio?</h2>
         <p>Founding 5 pricing is reserved for the first five LabNarrative Intelligence customers. Paid packages start with 5 complete product analyses for $399. No subscription is required during the launch phase.</p>
-        <a href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20analysis">REQUEST A COMPLIMENTARY ANALYSIS →</a>
+        <a href="/intelligence/buy">CHOOSE A PACKAGE & PAY SECURELY →</a>
       </section>
 
       <footer className={styles.footer}>
