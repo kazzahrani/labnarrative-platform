@@ -138,6 +138,7 @@ export default function IntelligenceWorkspace() {
   }, [token]);
 
   const submittedCount = useMemo(() => data?.products.filter((item) => item.status !== "awaiting_product").length || 0, [data]);
+  const filledDraftCount = useMemo(() => data?.products.filter((item) => Boolean(item.productName.trim() || item.catalogNumber.trim() || item.productUrl.trim())).length || 0, [data]);
   const completedCount = useMemo(() => data?.products.filter((item) => item.status === "complete").length || 0, [data]);
   const researchCount = useMemo(() => data?.products.filter((item) => ["researching", "scientific_review"].includes(item.status)).length || 0, [data]);
 
@@ -203,6 +204,7 @@ export default function IntelligenceWorkspace() {
   if (!data) return null;
 
   const companyReady = Boolean(data.workspace.companyName && data.workspace.contactName && data.workspace.contactEmail);
+  const portfolioReady = companyReady && filledDraftCount === data.purchase.productCount;
   const liveWorkspaceStatus = workspaceStatusLabel[data.workspace.onboardingStatus] || "Active";
 
   return (
@@ -306,10 +308,10 @@ export default function IntelligenceWorkspace() {
 
         <div className={styles.saveBar}>
           <div>
-            <strong>{submittedCount} of {data.purchase.productCount} product slots filled</strong>
-            <span>{companyReady ? "Client details complete" : "Complete company name, contact name and email"}</span>
+            <strong>{filledDraftCount} of {data.purchase.productCount} product slots filled</strong>
+            <span>{!companyReady ? "Complete company name, contact name and email" : portfolioReady ? "All products ready to submit" : "Save progress and return anytime"}</span>
           </div>
-          <button type="button" onClick={saveWorkspace} disabled={saving}>{saving ? "SAVING…" : "SAVE & SUBMIT PORTFOLIO →"}</button>
+          <button type="button" onClick={saveWorkspace} disabled={saving}>{saving ? "SAVING…" : portfolioReady ? "SUBMIT PORTFOLIO →" : "SAVE PROGRESS →"}</button>
         </div>
         {saved ? <p className={styles.saved}>{data.workspace.onboardingStatus === "in_progress" ? "Submitted. Your products are now queued in the Intelligence engagement." : "Saved. Your workspace details are up to date."}</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
