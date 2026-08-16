@@ -33,7 +33,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
 );
 
-const validPaths = new Set(["/admin/systems", "/admin/systems-outreach"]);
+const validPaths = new Set(["/admin/systems", "/admin/systems/acquire", "/admin/systems-outreach"]);
 
 function findMainSearchInput() {
   return Array.from(document.querySelectorAll<HTMLInputElement>("input")).find((input) =>
@@ -47,7 +47,7 @@ function findAllFilterButton() {
     const parent = button.parentElement;
     if (!parent) return false;
     const labels = Array.from(parent.querySelectorAll("button")).map((item) => item.textContent?.trim());
-    return labels.includes("Ready to send") && labels.includes("Contacted") && labels.includes("Replied");
+    return labels.includes("Ready to send") && labels.includes("Contacted");
   }) ?? null;
 }
 
@@ -60,13 +60,40 @@ function setControlledInputValue(input: HTMLInputElement, value: string) {
 
 function clickCompanyRow(companyName: string) {
   const normalized = companyName.trim().toLowerCase();
-  const row = Array.from(document.querySelectorAll<HTMLTableRowElement>("table tbody tr")).find((candidate) => {
+  const rows = Array.from(document.querySelectorAll<HTMLTableRowElement>("table tbody tr"));
+  const row = rows.find((candidate) => {
     const firstCell = candidate.querySelector("td");
-    const company = firstCell?.querySelector("span")?.textContent?.trim().toLowerCase() ?? "";
-    return company === normalized;
+    if (!firstCell) return false;
+    const primary = firstCell.querySelector("strong, span")?.textContent?.trim().toLowerCase() ?? "";
+    if (primary === normalized) return true;
+    const full = firstCell.textContent?.trim().toLowerCase() ?? "";
+    return full === normalized || full.startsWith(`${normalized}\n`);
   });
   row?.click();
   return Boolean(row);
+}
+
+function focusContactRow(contactName: string) {
+  const normalized = contactName.trim().toLowerCase();
+  const scope = document.querySelector<HTMLElement>('[data-systems-simple-outreach-host="true"]') ?? document.querySelector<HTMLElement>("main aside");
+  if (!scope) return false;
+
+  const row = Array.from(scope.querySelectorAll<HTMLTableRowElement>("table tbody tr")).find((candidate) => {
+    const name = candidate.querySelector("td strong")?.textContent?.trim().toLowerCase() ?? "";
+    return name === normalized;
+  });
+  if (!row) return false;
+
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  const previousBackground = row.style.background;
+  const previousBoxShadow = row.style.boxShadow;
+  row.style.background = "rgba(53, 199, 193, 0.10)";
+  row.style.boxShadow = "inset 3px 0 0 rgba(53, 199, 193, 0.95)";
+  window.setTimeout(() => {
+    row.style.background = previousBackground;
+    row.style.boxShadow = previousBoxShadow;
+  }, 2400);
+  return true;
 }
 
 export default function SystemsContactSearchEnhancer() {
@@ -209,16 +236,31 @@ export default function SystemsContactSearchEnhancer() {
     const input = findMainSearchInput();
     if (!input) return;
 
+    // Contact lookup must work regardless of the status filter currently selected.
     findAllFilterButton()?.click();
-    window.setTimeout(() => {
+
+    const openAndFocus = (attempt = 0) => {
       setControlledInputValue(input, result.company_name);
       setQuery("");
+
       window.setTimeout(() => {
-        if (clickCompanyRow(result.company_name)) {
-          document.querySelector("aside")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        const opened = clickCompanyRow(result.company_name);
+        if (!opened && attempt < 4) {
+          openAndFocus(attempt + 1);
+          return;
         }
-      }, 80);
-    }, 40);
+        if (!opened) return;
+
+        // The right-hand company panel is rendered just after the company selection changes.
+        const focus = (focusAttempt = 0) => {
+          if (focusContactRow(result.name)) return;
+          if (focusAttempt < 8) window.setTimeout(() => focus(focusAttempt + 1), 120);
+        };
+        window.setTimeout(() => focus(), 80);
+      }, attempt === 0 ? 80 : 140);
+    };
+
+    window.setTimeout(() => openAndFocus(), 40);
   };
 
   if (!mount || !validPaths.has(pathname) || !session || !isAdmin || results.length === 0) return null;
