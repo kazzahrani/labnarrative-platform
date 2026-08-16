@@ -4,6 +4,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 type J = Record<string, unknown>;
 type PackageKey = "starter" | "portfolio" | "portfolio_plus";
 const PORTFOLIO_BRIDGE_URL = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-portfolio-bridge";
+const REPORT_SUMMARY_URL = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-report-summary";
 const PACKAGES: Record<PackageKey, { name: string; products: number; amount: number }> = {
   starter: { name: "Starter", products: 5, amount: 389 },
   portfolio: { name: "Portfolio", products: 10, amount: 689 },
@@ -67,6 +68,19 @@ async function paypal(path: string, init: RequestInit = {}) {
   });
   const payload = await response.json().catch(() => ({})) as J;
   return { response, payload };
+}
+async function sourceReportSnapshot(reportId: string) {
+  if (!isUuid(reportId)) return null;
+  try {
+    const response = await fetch(`${REPORT_SUMMARY_URL}?report_id=${encodeURIComponent(reportId)}`, { headers: { accept: "application/json" }, cache: "no-store" });
+    const payload = await response.json().catch(() => ({})) as J;
+    const report = asObject(payload.report);
+    if (!response.ok || text(report.id, 100) !== reportId) return null;
+    return report;
+  } catch (error) {
+    console.error("complimentary report snapshot failed", error);
+    return null;
+  }
 }
 function captureFrom(payload: J) {
   const units = Array.isArray(payload.purchase_units) ? payload.purchase_units as J[] : [];
@@ -164,7 +178,8 @@ Deno.serve(async (req: Request) => {
       if (insertError || !purchase) throw new Error(insertError?.message || "Purchase record could not be created.");
 
       const amount = Number(selected.amount).toFixed(2);
-      const created = await paypal("/v2/checkout/orders", {
+      const reportPromise = sourceReportId ? sourceReportSnapshot(sourceReportId) : Promise.resolve(null);
+      const paypalPromise = paypal("/v2/checkout/orders", {
         method: "POST",
         headers: { "PayPal-Request-Id": `intelligence-${purchase.id}-v2` },
         body: JSON.stringify({
@@ -173,13 +188,19 @@ Deno.serve(async (req: Request) => {
           application_context: { brand_name: "LabNarrative Intelligence", shipping_preference: "NO_SHIPPING", user_action: "PAY_NOW" },
         }),
       });
+      const [created, reportSnapshot] = await Promise.all([paypalPromise, reportPromise]);
       const orderId = text(created.payload.id, 300);
       if (!created.response.ok || !orderId) {
         const message = text(created.payload.message, 1000) || `PayPal returned HTTP ${created.response.status}.`;
         await admin.from("intelligence_package_purchases").update({ status: "failed", failure_message: message, updated_at: new Date().toISOString() }).eq("id", purchase.id);
         return json({ error: message, code: "paypal_create_failed" }, 502, origin);
       }
-      const { error: bindError } = await admin.from("intelligence_package_purchases").update({ provider_order_id: orderId, status: "processing", updated_at: new Date().toISOString(), provider_metadata: { ...asObject(purchase.provider_metadata), paypal_create_status: text(created.payload.status, 50), paypal_environment: paypalEnvironment() } }).eq("id", purchase.id);
+      const { error: bindError } = await admin.from("intelligence_package_purchases").update({
+        provider_order_id: orderId,
+        status: "processing",
+        updated_at: new Date().toISOString(),
+        provider_metadata: { ...asObject(purchase.provider_metadata), paypal_create_status: text(created.payload.status, 50), paypal_environment: paypalEnvironment(), ...(reportSnapshot ? { source_report_snapshot: reportSnapshot } : {}) },
+      }).eq("id", purchase.id);
       if (bindError) throw new Error(bindError.message);
       return json({ ok: true, orderId, purchaseId: purchase.id }, 200, origin);
     }
