@@ -53,7 +53,7 @@ Deno.serve(async (req: Request) => {
     let onboardingStatus = workspace.onboarding_status;
     if (products.length && products.every((p:any)=>p.status === "complete") && onboardingStatus !== "complete") { onboardingStatus = "complete"; await db.from("intelligence_client_workspaces").update({ onboarding_status: "complete", updated_at: new Date().toISOString() }).eq("id", workspace.id); }
 
-    return { ok: true as const, data: { ok: true, workspace: { id: workspace.id, companyName: workspace.company_name || "", companyWebsite: workspace.company_website || "", contactName: workspace.contact_name || "", contactEmail: workspace.contact_email || purchase.payer_email || "", targetGeography: workspace.target_geography || "", clientNotes: workspace.client_notes || "", onboardingStatus, submittedAt: workspace.submitted_at }, purchase: { id: purchase.id, packageName: purchase.package_name, productCount: purchase.product_count, amount: Number(purchase.amount), currency: purchase.currency, paidAt: purchase.paid_at, payerName: purchase.payer_name || "", payerEmail: purchase.payer_email || "" }, products, sourceReport } };
+    return { ok: true as const, data: { ok: true, workspace: { id: workspace.id, companyName: workspace.company_name || "", companyWebsite: workspace.company_website || "", contactName: workspace.contact_name || "", contactEmail: workspace.contact_email || purchase.payer_email || "", targetGeography: workspace.target_geography || "", clientNotes: workspace.client_notes || "", onboardingStatus, submittedAt: workspace.submitted_at }, purchase: { id: purchase.id, packageKey: purchase.package_key || "", packageName: purchase.package_name, productCount: purchase.product_count, amount: Number(purchase.amount), currency: purchase.currency, paidAt: purchase.paid_at, payerName: purchase.payer_name || "", payerEmail: purchase.payer_email || "", sourceReportId: purchase.source_report_id || "" }, products, sourceReport } };
   }
 
   if (action === "load") { const result = await loadWorkspace(); if (!result.ok) return json({ error: result.error }, result.status, origin); return json(result.data, 200, origin); }
@@ -79,12 +79,15 @@ Deno.serve(async (req: Request) => {
   let onboardingStatus = !detailsReady ? "awaiting_details" : submittedCount >= purchase.productCount ? "ready_for_research" : "collecting_products";
   await db.from("intelligence_client_workspaces").update({ company_name: companyName || null, company_website: companyWebsite || null, contact_name: contactName || null, contact_email: contactEmail || null, target_geography: targetGeography || null, client_notes: clientNotes || null, onboarding_status: onboardingStatus, submitted_at: onboardingStatus === "ready_for_research" ? (workspace.submittedAt || now) : null, updated_at: now }).eq("id", workspace.id);
 
+  try { await bridge("register", token); } catch (e) { console.error("portfolio account mirror", e); }
+
   if (onboardingStatus === "ready_for_research") {
     try {
       const ingested = await bridge("ingest", token), queued = Array.isArray(ingested.queued) ? ingested.queued : [];
       for (const job of queued) if (job?.sourceProductRequestId) await db.from("intelligence_product_requests").update({ status: "queued", updated_at: new Date().toISOString() }).eq("id", job.sourceProductRequestId).in("status", ["submitted","queued"]);
       onboardingStatus = "in_progress";
       await db.from("intelligence_client_workspaces").update({ onboarding_status: "in_progress", updated_at: new Date().toISOString() }).eq("id", workspace.id);
+      try { await bridge("register", token); } catch (e) { console.error("portfolio account mirror after ingest", e); }
     } catch (e) { console.error("portfolio ingest bridge", e); }
   }
 
