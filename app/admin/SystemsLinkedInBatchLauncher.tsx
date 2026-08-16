@@ -47,14 +47,14 @@ const eligibleStatuses = new Set(["ready_to_send", "contacted"]);
 
 export default function SystemsLinkedInBatchLauncher() {
   const pathname = usePathname();
-  const isSystemsRoute = pathname === "/admin/systems" || pathname === "/admin/systems-outreach";
+  const isSystemsRoute = pathname === "/admin/systems" || pathname === "/admin/systems/acquire" || pathname === "/admin/systems-outreach";
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
-  const [recordingContact, setRecordingContact] = useState<string | null>(null);
+  const [recordingContacts, setRecordingContacts] = useState<Set<string>>(() => new Set());
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async (activeSession: Session) => {
@@ -201,57 +201,92 @@ export default function SystemsLinkedInBatchLauncher() {
     setIndex((current) => (current - 1 + queue.length) % queue.length);
   };
 
+  const startRecording = (contactId: string) => {
+    setRecordingContacts((current) => {
+      const next = new Set(current);
+      next.add(contactId);
+      return next;
+    });
+  };
+
+  const stopRecording = (contactId: string) => {
+    setRecordingContacts((current) => {
+      const next = new Set(current);
+      next.delete(contactId);
+      return next;
+    });
+  };
+
   const recordSent = async (contact: Contact) => {
-    if (!item || !session || recordingContact || contact.linkedin_request_sent_at) return;
-    setRecordingContact(contact.id);
+    if (!item || !session || recordingContacts.has(contact.id) || contact.linkedin_request_sent_at) return;
+    startRecording(contact.id);
     setNotice("");
     const now = new Date().toISOString();
 
-    const { error: contactError } = await supabase
-      .from("systems_outreach_contacts")
-      .update({
-        linkedin_request_sent_at: now,
-        linkedin_request_sent_by: session.user.id,
-        updated_at: now,
-      })
-      .eq("id", contact.id)
-      .eq("prospect_id", item.prospect.id);
+    try {
+      const { error: contactError } = await supabase
+        .from("systems_outreach_contacts")
+        .update({
+          linkedin_request_sent_at: now,
+          linkedin_request_sent_by: session.user.id,
+          updated_at: now,
+        })
+        .eq("id", contact.id)
+        .eq("prospect_id", item.prospect.id);
 
-    if (contactError) {
-      setNotice(contactError.message);
-      setRecordingContact(null);
-      return;
+      if (contactError) {
+        setNotice(contactError.message);
+        return;
+      }
+
+      const prospectPatch: Record<string, unknown> = { updated_at: now };
+      if (!item.prospect.linkedin_request_sent_at) prospectPatch.linkedin_request_sent_at = now;
+      if (item.prospect.status === "ready_to_send") {
+        prospectPatch.status = "contacted";
+        prospectPatch.contacted_at = now;
+      }
+
+      const { error: prospectError } = await supabase
+        .from("systems_outreach_prospects")
+        .update(prospectPatch)
+        .eq("id", item.prospect.id);
+
+      if (prospectError) {
+        setNotice(prospectError.message);
+        return;
+      }
+
+      // The durable writes succeeded. Reflect that immediately instead of
+      // holding the button in "Saving…" while a full refresh completes.
+      setContacts((current) => current.map((row) => (
+        row.id === contact.id ? { ...row, linkedin_request_sent_at: now } : row
+      )));
+      setProspects((current) => current.map((row) => (
+        row.id === item.prospect.id
+          ? {
+              ...row,
+              linkedin_request_sent_at: row.linkedin_request_sent_at || now,
+              status: row.status === "ready_to_send" ? "contacted" : row.status,
+            }
+          : row
+      )));
+      setNotice(`${contact.name} marked as Contacted.`);
+
+      // Event history and reconciliation are secondary to the button response.
+      // Keep them asynchronous so a slow refresh cannot leave the UI stuck.
+      void supabase.from("systems_outreach_events").insert({
+        prospect_id: item.prospect.id,
+        channel: "linkedin",
+        event_type: "linkedin_connection_request_sent",
+        status: "recorded",
+        content: `Administrator confirmed the LinkedIn connection request was manually sent to ${contact.name} (${contact.title}).`,
+      });
+      void load(session);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not record LinkedIn contact. Please try again.");
+    } finally {
+      stopRecording(contact.id);
     }
-
-    const prospectPatch: Record<string, unknown> = { updated_at: now };
-    if (!item.prospect.linkedin_request_sent_at) prospectPatch.linkedin_request_sent_at = now;
-    if (item.prospect.status === "ready_to_send") {
-      prospectPatch.status = "contacted";
-      prospectPatch.contacted_at = now;
-    }
-
-    const { error: prospectError } = await supabase
-      .from("systems_outreach_prospects")
-      .update(prospectPatch)
-      .eq("id", item.prospect.id);
-
-    if (prospectError) {
-      setNotice(prospectError.message);
-      setRecordingContact(null);
-      return;
-    }
-
-    await supabase.from("systems_outreach_events").insert({
-      prospect_id: item.prospect.id,
-      channel: "linkedin",
-      event_type: "linkedin_connection_request_sent",
-      status: "recorded",
-      content: `Administrator confirmed the LinkedIn connection request was manually sent to ${contact.name} (${contact.title}).`,
-    });
-
-    setNotice(`${contact.name} marked as Contacted.`);
-    await load(session);
-    setRecordingContact(null);
   };
 
   return (
@@ -315,6 +350,7 @@ export default function SystemsLinkedInBatchLauncher() {
                         const en = noteFor(contact, "en");
                         const ar = noteFor(contact, "ar");
                         const contacted = Boolean(contact.linkedin_request_sent_at);
+                        const saving = recordingContacts.has(contact.id);
                         return (
                           <tr key={contact.id}>
                             <td className={styles.contactCell}>
@@ -331,8 +367,8 @@ export default function SystemsLinkedInBatchLauncher() {
                                 <button className={styles.secondaryAction} onClick={() => void copyNote(contact, "en")} disabled={!en}>EN</button>
                                 <button className={styles.secondaryAction} onClick={() => void copyNote(contact, "ar")} disabled={!ar}>AR</button>
                                 <button className={styles.secondaryAction} onClick={() => openLinkedIn(contact)} disabled={!contact.linkedin_url}>Open LinkedIn ↗</button>
-                                <button className={contacted ? styles.contactedAction : styles.primaryAction} onClick={() => void recordSent(contact)} disabled={contacted || recordingContact === contact.id}>
-                                  {recordingContact === contact.id ? "Saving…" : contacted ? "✓ Contacted" : "Sent"}
+                                <button className={contacted ? styles.contactedAction : styles.primaryAction} onClick={() => void recordSent(contact)} disabled={contacted || saving}>
+                                  {saving ? "Saving…" : contacted ? "✓ Contacted" : "Sent"}
                                 </button>
                               </div>
                             </td>
