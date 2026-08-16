@@ -12,6 +12,7 @@ function requiresPrimaryAdminSession(pathname: string) {
     pathname === "/admin/systems" ||
     pathname.startsWith("/admin/systems/") ||
     pathname === "/admin/systems-outreach" ||
+    pathname === "/admin/websites" ||
     pathname.startsWith("/admin/websites/") ||
     pathname === "/admin/sites" ||
     pathname.startsWith("/admin/sites/") ||
@@ -37,17 +38,12 @@ export default function AdminSessionContinuity() {
     if (window.location.hostname !== "labnarrative.com" && window.location.hostname !== "www.labnarrative.com") return;
 
     let active = true;
+    let recovering = false;
 
-    const recover = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
-
-      if (data.session) {
-        window.sessionStorage.removeItem(RECOVERY_KEY);
-        return;
-      }
-
+    const transferToAdminSession = () => {
+      if (!active || recovering) return;
       if (window.sessionStorage.getItem(RECOVERY_KEY) === "1") return;
+      recovering = true;
       window.sessionStorage.setItem(RECOVERY_KEY, "1");
 
       const transfer = new URL("/admin/session-transfer", LEGACY_PLATFORM_ORIGIN);
@@ -55,15 +51,47 @@ export default function AdminSessionContinuity() {
       window.location.replace(transfer.toString());
     };
 
-    void recover();
+    const recover = async () => {
+      if (!active || recovering) return;
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-      if (session) {
+      const { data, error } = await supabase.auth.getSession();
+      if (!active || recovering) return;
+      const session = data.session;
+
+      if (error || !session) {
+        transferToAdminSession();
+        return;
+      }
+
+      const { data: roleRow, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (!active || recovering) return;
+
+      if (!roleError && roleRow?.role === "admin") {
         window.sessionStorage.removeItem(RECOVERY_KEY);
         return;
       }
-      if (event === "SIGNED_OUT") void recover();
+
+      // A valid non-admin session (for example an Intelligence client login)
+      // must never satisfy an administrator route. Clear only this browser
+      // session, then restore the dedicated admin session from the legacy
+      // admin origin or fall back to the normal admin sign-in flow.
+      await supabase.auth.signOut({ scope: "local" });
+      if (!active || recovering) return;
+      transferToAdminSession();
+    };
+
+    void recover();
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
+      if (!active || recovering) return;
+      // Run outside the auth callback so getSession/signOut never contend with
+      // the auth client's own state-change lock.
+      window.setTimeout(() => void recover(), 0);
     });
 
     return () => {
