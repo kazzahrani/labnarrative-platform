@@ -4,7 +4,7 @@ import styles from "./buy.module.css";
 import IntelligenceCheckout from "./IntelligenceCheckout";
 
 export const metadata: Metadata = {
-  title: "Buy LabNarrative Intelligence — Founding 5 Packages",
+  title: "Buy LabNarrative Intelligence — Launch Packages",
   description: "Choose a LabNarrative Intelligence portfolio package and pay securely through the connected PayPal checkout.",
 };
 
@@ -26,14 +26,14 @@ export default function IntelligenceBuyPage() {
       </header>
 
       <section className={styles.hero}>
-        <p className={brand.eyebrow}>Founding 5 launch checkout</p>
+        <p className={brand.eyebrow}>Launch discount checkout</p>
         <div className={styles.heroGrid}>
           <h1>Choose your portfolio <em>package.</em></h1>
           <div className={styles.heroAside}>
             <p>
               You have already seen the evidence standard in the complimentary report. Choose how many additional products you want LabNarrative Intelligence to analyze with the same comprehensive, source-backed workflow.
             </p>
-            <strong>One-time payment · No subscription</strong>
+            <strong>Launch discount · One-time payment · No subscription</strong>
           </div>
         </div>
       </section>
