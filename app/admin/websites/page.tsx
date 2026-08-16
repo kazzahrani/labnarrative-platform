@@ -12,7 +12,6 @@ type Campaign = {
   geography: string[];
   verticals: string[];
   ready_buffer_target: number;
-  daily_ready_target: number;
   qualification_score_threshold: number;
 };
 
@@ -20,7 +19,6 @@ type Prospect = {
   id: string;
   company_name: string;
   slug: string;
-  website_url: string | null;
   normalized_domain: string | null;
   country: string | null;
   city: string | null;
@@ -28,48 +26,34 @@ type Prospect = {
   business_quality_score: number;
   website_opportunity_score: number;
   systems_potential_score: number;
-  qualification_reason: string | null;
   status: string;
   concept_status: string;
-  concept_url: string | null;
-  contacted_at: string | null;
-  replied_at: string | null;
   updated_at: string;
 };
 
-type ContactRow = { prospect_id: string };
-type GuardRow = { business: string; source_id: string; status: string };
+type ContactRow = {
+  prospect_id: string;
+  is_current_verified: boolean;
+  linkedin_url: string | null;
+  linkedin_request_sent_at: string | null;
+  linkedin_connected_at: string | null;
+};
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+);
 
 const pipeline = [
-  ["01", "Discover", "Strong B2B companies whose current website undersells the real business."],
-  ["02", "Qualify", "Score business quality, website opportunity, reachability and commercial value."],
-  ["03", "Audit", "Document concrete weaknesses, missed conversion paths and high-value improvements."],
-  ["04", "Concept", "Build a focused visual preview only after a human presses Build Concept."],
-  ["05", "Review", "Approve, return or block the concept before any outreach preparation can begin."],
-  ["06", "Outreach", "Separate Websites messaging and a later human send gate."],
+  ["01", "Discover", "Find commercially strong B2B companies whose current website undersells the real business."],
+  ["02", "Qualify", "Require strong business quality, real website opportunity and a clear Systems cross-business guard."],
+  ["03", "Decision-makers", "Verify roughly 2–3 relevant LinkedIn people and prepare personalized EN + AR connection notes."],
+  ["04", "Connect", "Contact all selected decision-makers at the company in one manual LinkedIn sending session."],
+  ["05", "Concept", "Only after at least one person connects, unlock a focused visual concept and human review."],
+  ["06", "Sales", "Use the approved concept in the warm conversation, then move toward meeting, proposal and client."],
 ] as const;
 
-function dateLabel(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Riyadh",
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(date);
-}
-
-function Wordmark() {
-  return <><span>Lab</span>Narrative</>;
-}
+function Wordmark() { return <><span>Lab</span>Narrative</>; }
 
 export default function WebsitesCompanyHome() {
   const [session, setSession] = useState<Session | null>(null);
@@ -86,43 +70,27 @@ export default function WebsitesCompanyHome() {
   const load = useCallback(async (activeSession: Session) => {
     setLoading(true);
     setNotice("");
-
-    const { data: roleRow, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", activeSession.user.id)
-      .maybeSingle();
-
+    const { data: roleRow, error: roleError } = await supabase.from("user_roles").select("role").eq("user_id", activeSession.user.id).maybeSingle();
     if (roleError || roleRow?.role !== "admin") {
       setRole(roleRow?.role ?? null);
       setNotice(roleError?.message ?? "Administrator access required.");
       setLoading(false);
       return;
     }
-
     setRole("admin");
 
     const [campaignResult, prospectResult, contactResult, guardResult] = await Promise.all([
-      supabase
-        .from("websites_company_campaigns")
-        .select("id,name,is_active,geography,verticals,ready_buffer_target,daily_ready_target,qualification_score_threshold")
-        .eq("name", "LabNarrative Websites — Saudi/GCC B2B Acquisition")
-        .maybeSingle(),
-      supabase
-        .from("websites_company_prospects")
-        .select("id,company_name,slug,website_url,normalized_domain,country,city,industry,business_quality_score,website_opportunity_score,systems_potential_score,qualification_reason,status,concept_status,concept_url,contacted_at,replied_at,updated_at")
-        .order("updated_at", { ascending: false }),
-      supabase.from("websites_company_contacts").select("prospect_id"),
-      supabase.from("company_outreach_guard").select("business,source_id,status").eq("business", "systems"),
+      supabase.from("websites_company_campaigns").select("id,name,is_active,geography,verticals,ready_buffer_target,qualification_score_threshold").eq("name", "LabNarrative Websites — Saudi/GCC B2B Acquisition").maybeSingle(),
+      supabase.from("websites_company_prospects").select("id,company_name,slug,normalized_domain,country,city,industry,business_quality_score,website_opportunity_score,systems_potential_score,status,concept_status,updated_at").order("updated_at", { ascending: false }),
+      supabase.from("websites_company_contacts").select("prospect_id,is_current_verified,linkedin_url,linkedin_request_sent_at,linkedin_connected_at"),
+      supabase.from("company_outreach_guard").select("source_id").eq("business", "systems"),
     ]);
-
     const firstError = campaignResult.error || prospectResult.error || contactResult.error || guardResult.error;
     if (firstError) {
       setNotice(firstError.message);
       setLoading(false);
       return;
     }
-
     setCampaign((campaignResult.data ?? null) as Campaign | null);
     setProspects((prospectResult.data ?? []) as Prospect[]);
     setContacts((contactResult.data ?? []) as ContactRow[]);
@@ -136,191 +104,81 @@ export default function WebsitesCompanyHome() {
       setAuthReady(true);
       if (data.session) void load(data.session);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
       setAuthReady(true);
-      if (nextSession) void load(nextSession);
+      if (next) void load(next);
     });
-
     return () => subscription.unsubscribe();
   }, [load]);
 
+  const contactStats = useMemo(() => {
+    const map = new Map<string, { total: number; sent: number; connected: number }>();
+    contacts.filter((c) => c.is_current_verified && Boolean(c.linkedin_url)).forEach((c) => {
+      const row = map.get(c.prospect_id) ?? { total: 0, sent: 0, connected: 0 };
+      row.total += 1;
+      if (c.linkedin_request_sent_at) row.sent += 1;
+      if (c.linkedin_connected_at) row.connected += 1;
+      map.set(c.prospect_id, row);
+    });
+    return map;
+  }, [contacts]);
+
   const metrics = useMemo(() => ({
     total: prospects.length,
-    qualified: prospects.filter((p) => ["qualified", "concept_ready", "ready_to_send"].includes(p.status)).length,
-    concepts: prospects.filter((p) => ["brief_ready", "requested", "building", "review", "approved", "revision_requested"].includes(p.concept_status)).length,
-    ready: prospects.filter((p) => p.status === "ready_to_send").length,
-    conversations: prospects.filter((p) => ["replied", "interested", "proposal", "won"].includes(p.status)).length,
+    ready: prospects.filter((p) => p.status === "ready_for_connection").length,
+    sent: prospects.filter((p) => p.status === "connection_sent").length,
+    connected: prospects.filter((p) => ["connected", "concept_ready"].includes(p.status)).length,
+    concepts: prospects.filter((p) => ["requested", "building", "review", "approved", "revision_requested"].includes(p.concept_status)).length,
     won: prospects.filter((p) => p.status === "won").length,
   }), [prospects]);
 
   const visibleProspects = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return prospects
-      .filter((prospect) => !query || [
-        prospect.company_name,
-        prospect.industry,
-        prospect.city,
-        prospect.country,
-        prospect.normalized_domain,
-        prospect.status,
-      ].filter(Boolean).join(" ").toLowerCase().includes(query))
-      .slice(0, 60);
+    return prospects.filter((p) => !query || [p.company_name,p.industry,p.city,p.country,p.normalized_domain,p.status].filter(Boolean).join(" ").toLowerCase().includes(query)).slice(0,60);
   }, [prospects, search]);
 
-  const contactCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    contacts.forEach((contact) => counts.set(contact.prospect_id, (counts.get(contact.prospect_id) ?? 0) + 1));
-    return counts;
-  }, [contacts]);
+  if (!authReady) return <main className={styles.page}><div className={styles.center}>Preparing LabNarrative Websites…</div></main>;
+  if (!session) return <main className={styles.page}><div className={styles.center}><h1>Administrator sign-in required.</h1><Link href="/admin">Go to admin →</Link></div></main>;
+  if (role !== "admin") return <main className={styles.page}><div className={styles.center}><h1>Administrator permission required.</h1><p>{notice}</p></div></main>;
 
-  if (!authReady) {
-    return <main className={styles.page}><div className={styles.center}>Preparing LabNarrative Websites…</div></main>;
-  }
+  return <main className={styles.page}><div className={styles.shell}>
+    <header className={styles.topbar}>
+      <Link href="/admin" className={styles.wordmark}><Wordmark /></Link><span className={styles.branch}>WEBSITES</span>
+      <div className={styles.topActions}><Link href="/admin/websites/concepts" className={styles.secondaryLink}>Connections + Concepts</Link><Link href="/admin/websites/sites" className={styles.secondaryLink}>Legacy PI archive</Link><button onClick={() => void load(session)} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button></div>
+    </header>
 
-  if (!session) {
-    return <main className={styles.page}><div className={styles.center}><h1>Administrator sign-in required.</h1><Link href="/admin">Go to admin →</Link></div></main>;
-  }
+    <section className={styles.hero}>
+      <div><p className={styles.eyebrow}>LabNarrative Websites · Company Acquisition</p><h1>Connect first. <em>Build second.</em></h1></div>
+      <div className={styles.heroAside}><p>We now spend concept-production effort only after a real LinkedIn connection. Every selected decision-maker at a company is prepared together with English and Arabic notes for one easy manual sending session.</p><div className={styles.guardBadge}><span>Cross-business guard</span><strong>{systemsProtected} Systems companies protected</strong></div></div>
+    </section>
 
-  if (role !== "admin") {
-    return <main className={styles.page}><div className={styles.center}><h1>Administrator permission required.</h1><p>{notice}</p></div></main>;
-  }
+    <section className={styles.metrics}>
+      <article><span>Companies</span><strong>{metrics.total}</strong><small>new Websites pipeline</small></article>
+      <article><span>Ready to connect</span><strong>{metrics.ready}</strong><small>EN + AR prepared</small></article>
+      <article><span>Batch sent</span><strong>{metrics.sent}</strong><small>waiting for acceptance</small></article>
+      <article><span>Connected</span><strong>{metrics.connected}</strong><small>concept eligible</small></article>
+      <article><span>Concepts</span><strong>{metrics.concepts}</strong><small>requested / review / approved</small></article>
+      <article><span>Won</span><strong>{metrics.won}</strong><small>website clients</small></article>
+    </section>
 
-  return (
-    <main className={styles.page}>
-      <div className={styles.shell}>
-        <header className={styles.topbar}>
-          <Link href="/admin" className={styles.wordmark}><Wordmark /></Link>
-          <span className={styles.branch}>WEBSITES</span>
-          <div className={styles.topActions}>
-            <Link href="/admin/websites/concepts" className={styles.secondaryLink}>Concept Review</Link>
-            <Link href="/admin/websites/sites" className={styles.secondaryLink}>Legacy PI archive</Link>
-            <button onClick={() => session && void load(session)} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
-          </div>
-        </header>
+    {notice ? <div className={styles.notice}>{notice}</div> : null}
 
-        <section className={styles.hero}>
-          <div>
-            <p className={styles.eyebrow}>LabNarrative Websites · Company Acquisition</p>
-            <h1>Find strong businesses with <em>weak digital presence.</em></h1>
-          </div>
-          <div className={styles.heroAside}>
-            <p>Websites is now an independent B2B acquisition business. It targets commercially valuable companies whose current website does not reflect the quality, scale or credibility of the real business.</p>
-            <div className={styles.guardBadge}><span>Cross-business guard</span><strong>{systemsProtected} Systems companies protected</strong></div>
-          </div>
-        </section>
+    <section className={styles.strategyGrid}>
+      <article className={styles.strategyCard}><div className={styles.cardKicker}>CURRENT CAMPAIGN</div><h2>{campaign?.name ?? "Company Websites acquisition"}</h2><p>The worker discovers and audits strong businesses, then stops before outreach. You remain the sending gate.</p><div className={styles.ruleRow}><span>Status</span><strong>{campaign?.is_active ? "Active" : "Paused"}</strong></div><div className={styles.ruleRow}><span>Qualification gate</span><strong>{campaign?.qualification_score_threshold ?? 75}+</strong></div><div className={styles.ruleRow}><span>Company buffer</span><strong>{metrics.ready + metrics.sent + metrics.connected} / {campaign?.ready_buffer_target ?? 20}</strong></div></article>
+      <article className={styles.strategyCard}><div className={styles.cardKicker}>BATCH CONNECTION POLICY</div><h2>All decision-makers together.</h2><p>For operational ease, the platform groups every verified decision-maker at the same company into one sending session.</p><div className={styles.guardLine}><span className={styles.dot}/>Approximately 2–3 verified people</div><div className={styles.guardLine}><span className={styles.dot}/>English + Arabic connection notes</div><div className={styles.guardLine}><span className={styles.dot}/>One company-level “Mark all sent” action</div></article>
+      <article className={styles.strategyCard}><div className={styles.cardKicker}>CONCEPT GATE</div><h2>No connection, no concept.</h2><p>The database itself blocks concept production until at least one verified decision-maker is marked Connected.</p><div className={styles.guardLine}><span className={styles.dot}/>No speculative mass production</div><div className={styles.guardLine}><span className={styles.dot}/>Connection unlocks Build Concept</div><div className={styles.guardLine}><span className={styles.dot}/>No automatic LinkedIn or email sending</div></article>
+    </section>
 
-        <section className={styles.metrics}>
-          <article><span>Companies</span><strong>{metrics.total}</strong><small>new Websites pipeline</small></article>
-          <article><span>Qualified</span><strong>{metrics.qualified}</strong><small>strong opportunities</small></article>
-          <article><span>Concepts</span><strong>{metrics.concepts}</strong><small>brief / request / review</small></article>
-          <article><span>Ready</span><strong>{metrics.ready}</strong><small>human outreach gate</small></article>
-          <article><span>Conversations</span><strong>{metrics.conversations}</strong><small>reply or later</small></article>
-          <article><span>Won</span><strong>{metrics.won}</strong><small>website clients</small></article>
-        </section>
+    <section className={styles.pipelineSection}><div className={styles.sectionHead}><div><p className={styles.eyebrow}>OPERATING MODEL</p><h2>Engagement before production.</h2></div><p>The expensive creative step now happens only after the prospect shows a minimum real-world signal: a LinkedIn connection.</p></div><div className={styles.pipeline}>{pipeline.map(([n,t,d]) => <article key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></article>)}</div></section>
 
-        {notice ? <div className={styles.notice}>{notice}</div> : null}
+    <section className={styles.prospectSection}>
+      <div className={styles.sectionHead}><div><p className={styles.eyebrow}>COMPANY PIPELINE</p><h2>Website opportunities.</h2></div><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search company, industry or city…" aria-label="Search Website prospects" /></div>
+      {prospects.length === 0 ? <div className={styles.emptyState}><div><span>DISCOVERY ACTIVE</span><h3>Waiting for the first company batch.</h3><p>Qualified companies will arrive with their website audit, verified LinkedIn decision-makers, and bilingual connection notes already prepared.</p></div><div className={styles.emptyChecklist}><p><b>01</b> Strong company + weak website</p><p><b>02</b> Systems guard checked</p><p><b>03</b> 2–3 decision-makers researched</p><p><b>04</b> EN + AR notes prepared</p><p><b>05</b> You send all requests together</p></div></div> : <div className={styles.tableWrap}><table><thead><tr><th>Company</th><th>Website</th><th>Business</th><th>Contacts</th><th>Sent</th><th>Connected</th><th>Stage</th><th>Operate</th></tr></thead><tbody>{visibleProspects.map((p) => { const s=contactStats.get(p.id) ?? {total:0,sent:0,connected:0}; return <tr key={p.id}><td><strong>{p.company_name}</strong><small>{[p.industry,p.city,p.country].filter(Boolean).join(" · ") || "B2B company"}</small></td><td><b>{p.website_opportunity_score}</b><small>opportunity</small></td><td><b>{p.business_quality_score}</b><small>quality</small></td><td><b>{s.total}</b><small>decision-makers</small></td><td><b>{s.sent}</b><small>requests</small></td><td><b>{s.connected}</b><small>accepted</small></td><td><span className={styles.stage}>{p.status.replaceAll("_"," ")}</span></td><td><Link href={`/admin/websites/concepts?prospect=${p.id}`} className={styles.stage}>Open →</Link></td></tr>; })}</tbody></table></div>}
+    </section>
 
-        <section className={styles.strategyGrid}>
-          <article className={styles.strategyCard}>
-            <div className={styles.cardKicker}>CURRENT CAMPAIGN</div>
-            <h2>{campaign?.name ?? "Company Websites acquisition"}</h2>
-            <p>The first offer stays purely Websites. Systems remains a separate acquisition business and is only coordinated through the internal company guard.</p>
-            <div className={styles.ruleRow}><span>Status</span><strong>{campaign?.is_active ? "Active foundation" : "Paused"}</strong></div>
-            <div className={styles.ruleRow}><span>Qualification gate</span><strong>{campaign?.qualification_score_threshold ?? 75}+</strong></div>
-            <div className={styles.ruleRow}><span>Ready buffer</span><strong>{metrics.ready} / {campaign?.ready_buffer_target ?? 20}</strong></div>
-          </article>
-
-          <article className={styles.strategyCard}>
-            <div className={styles.cardKicker}>TARGET PROFILE</div>
-            <h2>Good business. Bad website.</h2>
-            <p>Website quality alone is not enough. We prioritize businesses with meaningful products, customers, commercial credibility and the ability to pay for a high-quality transformation.</p>
-            <div className={styles.tagWrap}>
-              {(campaign?.verticals ?? ["Medical & laboratory suppliers", "Scientific distributors", "Industrial suppliers", "Manufacturing"]).map((vertical) => <span key={vertical}>{vertical}</span>)}
-            </div>
-          </article>
-
-          <article className={styles.strategyCard}>
-            <div className={styles.cardKicker}>PRODUCTION POLICY</div>
-            <h2>Human-triggered concepts only.</h2>
-            <p>Discovery stops at a structured brief. A concept is not produced until you choose the company and press Build Concept in the review workspace.</p>
-            <div className={styles.guardLine}><span className={styles.dot} />No automatic mass concept production</div>
-            <div className={styles.guardLine}><span className={styles.dot} />Focused preview, not a full free website</div>
-            <div className={styles.guardLine}><span className={styles.dot} />Approval does not unlock outreach automatically</div>
-          </article>
-        </section>
-
-        <section className={styles.pipelineSection}>
-          <div className={styles.sectionHead}>
-            <div><p className={styles.eyebrow}>OPERATING MODEL</p><h2>Sales first. Production second.</h2></div>
-            <p>We no longer measure success by how many complete concepts are manufactured. The funnel is built around qualified opportunities, reviewed concepts, conversations and customers.</p>
-          </div>
-          <div className={styles.pipeline}>
-            {pipeline.map(([number, title, description]) => (
-              <article key={number}>
-                <span>{number}</span>
-                <h3>{title}</h3>
-                <p>{description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className={styles.prospectSection}>
-          <div className={styles.sectionHead}>
-            <div><p className={styles.eyebrow}>COMPANY PIPELINE</p><h2>Website opportunities.</h2></div>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search company, industry or city…" aria-label="Search Website prospects" />
-          </div>
-
-          {prospects.length === 0 ? (
-            <div className={styles.emptyState}>
-              <div><span>FOUNDATION READY</span><h3>Waiting for the first qualified company.</h3><p>The company Discovery worker is active. New companies will appear here only after the business-quality, website-opportunity and Systems-guard checks pass.</p></div>
-              <div className={styles.emptyChecklist}>
-                <p><b>01</b> Discover commercially strong companies</p>
-                <p><b>02</b> Check the Systems guard before admission</p>
-                <p><b>03</b> Audit and score the current website</p>
-                <p><b>04</b> Find 2–3 decision-makers</p>
-                <p><b>05</b> You choose which concept gets built</p>
-              </div>
-            </div>
-          ) : (
-            <div className={styles.tableWrap}>
-              <table>
-                <thead><tr><th>Company</th><th>Website</th><th>Business</th><th>Systems</th><th>Contacts</th><th>Stage</th><th>Review</th></tr></thead>
-                <tbody>
-                  {visibleProspects.map((prospect) => (
-                    <tr key={prospect.id}>
-                      <td><strong>{prospect.company_name}</strong><small>{[prospect.industry, prospect.city, prospect.country].filter(Boolean).join(" · ") || "B2B company"}</small></td>
-                      <td><b>{prospect.website_opportunity_score}</b><small>{prospect.concept_status.replaceAll("_", " ")}</small></td>
-                      <td><b>{prospect.business_quality_score}</b><small>quality score</small></td>
-                      <td><b>{prospect.systems_potential_score}</b><small>internal signal only</small></td>
-                      <td><b>{contactCounts.get(prospect.id) ?? 0}</b><small>decision-makers</small></td>
-                      <td><span className={styles.stage}>{prospect.status.replaceAll("_", " ")}</span></td>
-                      <td><Link href="/admin/websites/concepts" className={styles.stage}>Open →</Link></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section className={styles.legacyStrip}>
-          <div><span>CONCEPT REVIEW</span><h3>The new production gate is ready.</h3><p>Audit qualified companies, request only the concepts you want, inspect the preview and approve, revise or block it before outreach.</p></div>
-          <Link href="/admin/websites/concepts">Open Concept Review →</Link>
-        </section>
-
-        <section className={styles.legacyStrip}>
-          <div><span>LEGACY WEBSITES</span><h3>PI concepts and historical scientific website data are preserved — not deleted.</h3><p>They remain available for reference and existing client operations, but they are no longer the active acquisition engine.</p></div>
-          <Link href="/admin/websites/sites">Open legacy PI archive →</Link>
-        </section>
-
-        <footer className={styles.footer}>
-          <Link href="/admin" className={styles.wordmark}><Wordmark /></Link>
-          <span>Websites · Independent B2B acquisition</span>
-        </footer>
-      </div>
-    </main>
-  );
+    <section className={styles.legacyStrip}><div><span>CONNECTIONS + CONCEPTS</span><h3>Your daily Websites operating workspace.</h3><p>Copy EN/AR notes, open all decision-makers, mark the company batch sent, track who connects, then unlock concept production.</p></div><Link href="/admin/websites/concepts">Open workspace →</Link></section>
+    <section className={styles.legacyStrip}><div><span>LEGACY WEBSITES</span><h3>PI concepts and historical scientific website data are preserved.</h3><p>They remain available for existing client operations but are no longer the active acquisition engine.</p></div><Link href="/admin/websites/sites">Open legacy PI archive →</Link></section>
+    <footer className={styles.footer}><Link href="/admin" className={styles.wordmark}><Wordmark /></Link><span>Websites · Connection-first B2B acquisition</span></footer>
+  </div></main>;
 }
