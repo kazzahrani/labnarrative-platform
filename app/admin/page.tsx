@@ -33,8 +33,8 @@ const branches: Branch[] = [
     number: "01",
     name: "LabNarrative Websites",
     title: "Websites",
-    description: "Scientific websites for principal investigators and laboratories, from discovery through publication and sales.",
-    workspaceHref: "/admin/websites/sites",
+    description: "Premium B2B websites for established companies whose digital presence undersells the real business.",
+    workspaceHref: "/admin/websites",
     publicHref: "/websites",
   },
   {
