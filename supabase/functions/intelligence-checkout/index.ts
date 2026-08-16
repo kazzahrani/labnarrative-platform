@@ -5,9 +5,9 @@ type J = Record<string, unknown>;
 type PackageKey = "starter" | "portfolio" | "portfolio_plus";
 const PORTFOLIO_BRIDGE_URL = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-portfolio-bridge";
 const PACKAGES: Record<PackageKey, { name: string; products: number; amount: number }> = {
-  starter: { name: "Starter", products: 5, amount: 399 },
-  portfolio: { name: "Portfolio", products: 10, amount: 699 },
-  portfolio_plus: { name: "Portfolio Plus", products: 20, amount: 1190 },
+  starter: { name: "Starter", products: 5, amount: 389 },
+  portfolio: { name: "Portfolio", products: 10, amount: 689 },
+  portfolio_plus: { name: "Portfolio Plus", products: 20, amount: 1189 },
 };
 
 function allowedOrigin(origin: string | null) {
