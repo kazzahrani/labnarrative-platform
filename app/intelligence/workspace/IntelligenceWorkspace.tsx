@@ -62,6 +62,15 @@ const statusLabel: Record<string, string> = {
   researching: "AI research",
   scientific_review: "Scientific review",
   complete: "Complete",
+  blocked: "Needs review",
+};
+
+const workspaceStatusLabel: Record<string, string> = {
+  awaiting_details: "Onboarding",
+  collecting_products: "Portfolio setup",
+  ready_for_research: "Ready for research",
+  in_progress: "In progress",
+  complete: "Complete",
 };
 
 const stageIndex: Record<string, number> = {
@@ -71,6 +80,7 @@ const stageIndex: Record<string, number> = {
   researching: 2,
   scientific_review: 3,
   complete: 4,
+  blocked: 2,
 };
 
 function formatDate(value?: string | null) {
@@ -184,8 +194,8 @@ export default function IntelligenceWorkspace() {
 
   if (!data) return null;
 
-  const allSubmitted = submittedCount >= data.purchase.productCount;
   const companyReady = Boolean(data.workspace.companyName && data.workspace.contactName && data.workspace.contactEmail);
+  const liveWorkspaceStatus = workspaceStatusLabel[data.workspace.onboardingStatus] || "Active";
 
   return (
     <>
@@ -209,7 +219,7 @@ export default function IntelligenceWorkspace() {
         <div><span>Products submitted</span><strong>{submittedCount} / {data.purchase.productCount}</strong></div>
         <div><span>In research / review</span><strong>{researchCount}</strong></div>
         <div><span>Reports complete</span><strong>{completedCount}</strong></div>
-        <div><span>Workspace status</span><strong>{allSubmitted && companyReady ? "Ready" : "Onboarding"}</strong></div>
+        <div><span>Workspace status</span><strong>{liveWorkspaceStatus}</strong></div>
       </section>
 
       {data.sourceReport ? (
@@ -292,7 +302,7 @@ export default function IntelligenceWorkspace() {
           </div>
           <button type="button" onClick={saveWorkspace} disabled={saving}>{saving ? "SAVING…" : "SAVE & SUBMIT PORTFOLIO →"}</button>
         </div>
-        {saved ? <p className={styles.saved}>Saved. Your submitted products are now recorded in the Intelligence engagement.</p> : null}
+        {saved ? <p className={styles.saved}>{data.workspace.onboardingStatus === "in_progress" ? "Submitted. Your products are now queued in the Intelligence engagement." : "Saved. Your workspace details are up to date."}</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
       </section>
 
