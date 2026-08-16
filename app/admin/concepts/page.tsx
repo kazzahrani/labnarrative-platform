@@ -5,420 +5,75 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./concepts.module.css";
 
-type Prospect = {
-  id: string;
-  company_name: string;
-  slug: string;
-  website_url: string | null;
-  country: string | null;
-  city: string | null;
-  industry: string | null;
-  company_summary: string | null;
-  business_quality_score: number;
-  website_opportunity_score: number;
-  systems_potential_score: number;
-  qualification_reason: string | null;
-  website_audit: Record<string, unknown> | null;
-  status: string;
-  concept_status: string;
-  updated_at: string;
-};
+type Prospect = { id:string; company_name:string; slug:string; website_url:string|null; country:string|null; city:string|null; industry:string|null; company_summary:string|null; business_quality_score:number; website_opportunity_score:number; systems_potential_score:number; qualification_reason:string|null; website_audit:Record<string,unknown>|null; status:string; concept_status:string; updated_at:string };
+type Contact = { id:string; prospect_id:string; name:string; title:string|null; priority:number; is_current_verified:boolean; linkedin_url:string|null; source_url:string|null; linkedin_note:string|null; linkedin_note_ar:string|null; linkedin_followup:string|null; linkedin_followup_ar:string|null; linkedin_request_sent_at:string|null; linkedin_connected_at:string|null; linkedin_followup_sent_at:string|null; linkedin_reply_at:string|null };
+type ConceptRun = { id:string; prospect_id:string; version:number; status:string; preview_url:string|null; requested_at:string; review_ready_at:string|null; reviewed_at:string|null; reviewer_note:string|null; updated_at:string };
 
-type Contact = {
-  id: string;
-  prospect_id: string;
-  name: string;
-  title: string | null;
-  role_category: string | null;
-  contact_priority: number;
-  is_current_verified: boolean;
-  linkedin_url: string | null;
-  source_url: string | null;
-  linkedin_note: string | null;
-  linkedin_note_ar: string | null;
-  linkedin_followup: string | null;
-  linkedin_followup_ar: string | null;
-  linkedin_request_sent_at: string | null;
-  linkedin_connected_at: string | null;
-  linkedin_followup_sent_at: string | null;
-  linkedin_replied_at: string | null;
-};
+const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
+const asObject=(v:unknown):Record<string,unknown>=>v&&typeof v==="object"&&!Array.isArray(v)?v as Record<string,unknown>:{};
+const asString=(v:unknown)=>typeof v==="string"?v:"";
+const asStringList=(v:unknown):string[]=>Array.isArray(v)?v.filter((x):x is string=>typeof x==="string"):[];
+function dateLabel(v:string|null){if(!v)return"—";const d=new Date(v);if(Number.isNaN(d.getTime()))return"—";return new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Riyadh",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d)}
+const titleCase=(v:string)=>v.replaceAll("_"," ").replace(/\b\w/g,l=>l.toUpperCase());
+function contactState(c:Contact){if(c.linkedin_reply_at)return"Replied";if(c.linkedin_connected_at)return"Connected";if(c.linkedin_request_sent_at)return"Sent";return"Ready"}
 
-type ConceptRun = {
-  id: string;
-  prospect_id: string;
-  version: number;
-  status: string;
-  preview_url: string | null;
-  requested_at: string;
-  review_ready_at: string | null;
-  reviewed_at: string | null;
-  reviewer_note: string | null;
-  updated_at: string;
-};
+export default function WebsitesConnectionsConceptsPage(){
+ const[session,setSession]=useState<Session|null>(null),[authReady,setAuthReady]=useState(false),[role,setRole]=useState<string|null>(null);
+ const[prospects,setProspects]=useState<Prospect[]>([]),[contacts,setContacts]=useState<Contact[]>([]),[runs,setRuns]=useState<ConceptRun[]>([]);
+ const[selectedId,setSelectedId]=useState(""),[search,setSearch]=useState(""),[notice,setNotice]=useState(""),[reviewNote,setReviewNote]=useState(""),[copied,setCopied]=useState("");
+ const[loading,setLoading]=useState(false),[acting,setActing]=useState(false);
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
+ const load=useCallback(async(activeSession:Session)=>{setLoading(true);setNotice("");const{data:roleRow,error:roleError}=await supabase.from("user_roles").select("role").eq("user_id",activeSession.user.id).maybeSingle();if(roleError||roleRow?.role!=="admin"){setRole(roleRow?.role??null);setNotice(roleError?.message??"Administrator access required.");setLoading(false);return}setRole("admin");
+  const[pr,cr,rr]=await Promise.all([
+   supabase.from("websites_company_prospects").select("id,company_name,slug,website_url,country,city,industry,company_summary,business_quality_score,website_opportunity_score,systems_potential_score,qualification_reason,website_audit,status,concept_status,updated_at").in("status",["qualified","ready_for_connection","connection_sent","connected","concept_ready","ready_to_send","contacted","replied","interested","proposal","won"]).order("website_opportunity_score",{ascending:false}),
+   supabase.from("websites_company_contacts").select("id,prospect_id,name,title,priority,is_current_verified,linkedin_url,source_url,linkedin_note,linkedin_note_ar,linkedin_followup,linkedin_followup_ar,linkedin_request_sent_at,linkedin_connected_at,linkedin_followup_sent_at,linkedin_reply_at").order("priority",{ascending:true}),
+   supabase.from("websites_company_concept_runs").select("id,prospect_id,version,status,preview_url,requested_at,review_ready_at,reviewed_at,reviewer_note,updated_at").order("created_at",{ascending:false})]);
+  const err=pr.error||cr.error||rr.error;if(err){setNotice(err.message);setLoading(false);return}const next=(pr.data??[]) as Prospect[];const requested=typeof window!=="undefined"?new URLSearchParams(window.location.search).get("prospect"):null;setProspects(next);setContacts((cr.data??[]) as Contact[]);setRuns((rr.data??[]) as ConceptRun[]);setSelectedId(cur=>requested&&next.some(p=>p.id===requested)?requested:cur&&next.some(p=>p.id===cur)?cur:next.find(p=>p.concept_status==="review")?.id??next.find(p=>p.status==="connected")?.id??next.find(p=>p.status==="ready_for_connection")?.id??next[0]?.id??"");setLoading(false)},[]);
+ useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);setAuthReady(true);if(data.session)void load(data.session)});const{data:{subscription}}=supabase.auth.onAuthStateChange((_e,n)=>{setSession(n);setAuthReady(true);if(n)void load(n)});return()=>subscription.unsubscribe()},[load]);
 
-function asObject(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
+ const visible=useMemo(()=>{const q=search.trim().toLowerCase();return prospects.filter(p=>!q||[p.company_name,p.industry,p.city,p.country,p.status,p.concept_status].filter(Boolean).join(" ").toLowerCase().includes(q))},[prospects,search]);
+ const selected=prospects.find(p=>p.id===selectedId)??null,selectedContacts=contacts.filter(c=>c.prospect_id===selectedId&&c.is_current_verified&&Boolean(c.linkedin_url)),selectedRuns=runs.filter(r=>r.prospect_id===selectedId).sort((a,b)=>b.version-a.version),currentRun=selectedRuns[0]??null,audit=asObject(selected?.website_audit);
+ const connectedCount=selectedContacts.filter(c=>c.linkedin_connected_at).length,sentCount=selectedContacts.filter(c=>c.linkedin_request_sent_at).length,allNotesReady=selectedContacts.length>0&&selectedContacts.every(c=>c.linkedin_note?.trim()&&c.linkedin_note_ar?.trim()),allSent=selectedContacts.length>0&&selectedContacts.every(c=>c.linkedin_request_sent_at),conceptEligible=connectedCount>0;
+ const metrics=useMemo(()=>({ready:prospects.filter(p=>p.status==="ready_for_connection").length,sent:prospects.filter(p=>p.status==="connection_sent").length,connected:prospects.filter(p=>["connected","concept_ready"].includes(p.status)).length,review:runs.filter(r=>r.status==="review").length,approved:runs.filter(r=>r.status==="approved").length}),[prospects,runs]);
 
-function asString(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
+ async function copyText(key:string,text:string|null){if(!text)return;try{await navigator.clipboard.writeText(text);setCopied(key);window.setTimeout(()=>setCopied(c=>c===key?"":c),1800)}catch{setNotice("Copy failed. Select the message text manually.")}}
+ async function markAllSent(){if(!selected||!session)return;setActing(true);setNotice("");const{error}=await supabase.rpc("websites_company_admin_mark_all_connection_sent",{p_prospect_id:selected.id});setNotice(error?error.message:`All ${selectedContacts.length} verified decision-makers at ${selected.company_name} are marked Sent.`);await load(session);setActing(false)}
+ async function markConnected(c:Contact){if(!session)return;setActing(true);setNotice("");const{error}=await supabase.rpc("websites_company_admin_mark_contact_connected",{p_contact_id:c.id});setNotice(error?error.message:`${c.name} marked Connected. Concept production is now unlocked for this company.`);await load(session);setActing(false)}
+ async function requestConcept(){if(!selected||!session)return;setActing(true);setNotice("");const{error}=await supabase.rpc("websites_company_admin_request_concept",{p_prospect_id:selected.id});setNotice(error?error.message:`Concept build requested for ${selected.company_name}.`);await load(session);setActing(false)}
+ async function reviewConcept(decision:"approve"|"return"|"block"){if(!currentRun||!session)return;setActing(true);setNotice("");const{error}=await supabase.rpc("websites_company_admin_review_concept",{p_run_id:currentRun.id,p_decision:decision,p_note:reviewNote.trim()||null});setNotice(error?error.message:decision==="approve"?"Concept approved. Nothing has been sent automatically.":`Concept ${decision==="return"?"returned for revision":"blocked"}.`);if(!error)setReviewNote("");await load(session);setActing(false)}
 
-function asStringList(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
+ if(!authReady)return <main className={styles.page}><div className={styles.center}>Preparing Website Acquisition…</div></main>;
+ if(!session)return <main className={styles.page}><div className={styles.center}><h1>Administrator sign-in required.</h1><Link href="/admin">Go to admin →</Link></div></main>;
+ if(role!=="admin")return <main className={styles.page}><div className={styles.center}><h1>Administrator permission required.</h1><p>{notice}</p></div></main>;
 
-function dateLabel(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Riyadh",
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(date);
-}
+ return <main className={styles.page}><div className={styles.shell}>
+  <header className={styles.topbar}><div><Link href="/admin/websites" className={styles.wordmark}><span>Lab</span>Narrative</Link><b>WEBSITES · CONNECTIONS + CONCEPTS</b></div><div className={styles.topActions}><Link href="/admin/websites">Company pipeline</Link><button onClick={()=>void load(session)} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button></div></header>
+  <section className={styles.hero}><div><p>CONNECTION-FIRST ACQUISITION</p><h1>Connect first. <em>Build second.</em></h1></div><p className={styles.heroCopy}>All verified decision-makers at the same company are prepared together with English and Arabic LinkedIn notes. Send the batch manually, track acceptances per person, and build a concept only after at least one decision-maker connects.</p></section>
+  <section className={styles.metrics}><article><span>Ready to connect</span><strong>{metrics.ready}</strong></article><article><span>Batch sent</span><strong>{metrics.sent}</strong></article><article><span>Connected</span><strong>{metrics.connected}</strong></article><article><span>Concept review</span><strong>{metrics.review}</strong></article><article><span>Approved</span><strong>{metrics.approved}</strong></article></section>
+  {notice?<div className={styles.notice}>{notice}</div>:null}
+  <section className={styles.workspace}>
+   <aside className={styles.rail}><div className={styles.railHead}><div><span>Website companies</span><strong>{prospects.length}</strong></div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…"/></div><div className={styles.companyList}>{visible.map(p=>{const cc=contacts.filter(c=>c.prospect_id===p.id&&c.is_current_verified&&Boolean(c.linkedin_url)),cn=cc.filter(c=>c.linkedin_connected_at).length;return <button key={p.id} onClick={()=>{setSelectedId(p.id);setReviewNote("")}} className={p.id===selectedId?styles.activeCompany:""}><span><strong>{p.company_name}</strong><b>{p.website_opportunity_score}</b></span><small>{titleCase(p.status)} · {cc.length} contacts · {cn} connected</small></button>})}{!visible.length?<div className={styles.railEmpty}>The discovery worker has not prepared a company yet.</div>:null}</div></aside>
+   <section className={styles.detail}>{!selected?<div className={styles.emptyDetail}><span>WAITING FOR FIRST COMPANY</span><h2>The connection-first workflow is live.</h2><p>When Discovery prepares the first company, its decision-makers and bilingual LinkedIn notes will appear here together.</p></div>:<>
+    <div className={styles.companyHead}><div><p>{selected.industry||"B2B company"}</p><h2>{selected.company_name}</h2><span>{[selected.city,selected.country].filter(Boolean).join(" · ")}</span></div><div className={styles.scoreStack}><span>Website opportunity <b>{selected.website_opportunity_score}</b></span><span>Business quality <b>{selected.business_quality_score}</b></span><span>Systems signal <b>{selected.systems_potential_score}</b></span></div></div>
+    <div className={styles.connectionGate}><div><span>CONNECTION GATE</span><strong>{connectedCount?`${connectedCount} decision-maker${connectedCount===1?"":"s"} connected`:allSent?"Requests sent · waiting for acceptance":"Ready for one batch sending session"}</strong><small>{sentCount}/{selectedContacts.length} sent · {connectedCount}/{selectedContacts.length} connected</small></div><div className={styles.gatePills}><span className={allNotesReady?styles.goodPill:styles.warnPill}>EN + AR {allNotesReady?"ready":"incomplete"}</span><span className={conceptEligible?styles.goodPill:styles.lockPill}>{conceptEligible?"Concept unlocked":"Concept locked"}</span></div></div>
 
-function titleCase(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+    <article className={styles.panel}><div className={styles.panelTitleRow}><div><span className={styles.kicker}>DECISION-MAKERS · SEND TOGETHER</span><h3>Company connection batch</h3><p>Open each LinkedIn profile, copy either EN or AR, send all selected requests in this same session, then mark the whole company batch sent once.</p></div>{!allSent?<button className={styles.primary} onClick={()=>void markAllSent()} disabled={acting||!allNotesReady}>{acting?"Working…":`Mark all ${selectedContacts.length||""} sent`}</button>:<span className={styles.approved}>Batch marked sent</span>}</div>
+     <div className={styles.contactCards}>{selectedContacts.length?selectedContacts.map(c=><div className={styles.contactCard} key={c.id}>
+      <div className={styles.contactTop}><div><strong>{c.name}</strong><span>{c.title||"Decision-maker"}</span></div><div className={styles.contactTopActions}><b className={styles.stateBadge}>{contactState(c)}</b><a href={c.linkedin_url||"#"} target="_blank" rel="noreferrer">Open LinkedIn ↗</a></div></div>
+      <div className={styles.messageGrid}><div className={styles.messageBox} dir="ltr"><div><b>Connection note · EN</b><button onClick={()=>void copyText(`${c.id}-en`,c.linkedin_note)}>{copied===`${c.id}-en`?"Copied":"Copy EN"}</button></div><p>{c.linkedin_note||"English note has not been prepared yet."}</p></div><div className={styles.messageBox} dir="rtl"><div><b>رسالة الاتصال · AR</b><button onClick={()=>void copyText(`${c.id}-ar`,c.linkedin_note_ar)}>{copied===`${c.id}-ar`?"تم النسخ":"نسخ AR"}</button></div><p>{c.linkedin_note_ar||"لم يتم تجهيز الرسالة العربية بعد."}</p></div></div>
+      <div className={styles.contactFooter}><span>P{c.priority}{c.linkedin_request_sent_at?` · Sent ${dateLabel(c.linkedin_request_sent_at)}`:""}</span>{!c.linkedin_connected_at?<button onClick={()=>void markConnected(c)} disabled={acting}>Mark Connected</button>:<b>Connected {dateLabel(c.linkedin_connected_at)}</b>}</div>
+      {c.linkedin_connected_at?<div className={styles.followupArea}><span>POST-ACCEPTANCE INTEREST CHECK</span><div className={styles.messageGrid}><div className={styles.messageBox} dir="ltr"><div><b>Follow-up · EN</b><button onClick={()=>void copyText(`${c.id}-fen`,c.linkedin_followup)}>{copied===`${c.id}-fen`?"Copied":"Copy EN"}</button></div><p>{c.linkedin_followup||"English follow-up has not been prepared yet."}</p></div><div className={styles.messageBox} dir="rtl"><div><b>متابعة · AR</b><button onClick={()=>void copyText(`${c.id}-far`,c.linkedin_followup_ar)}>{copied===`${c.id}-far`?"تم النسخ":"نسخ AR"}</button></div><p>{c.linkedin_followup_ar||"لم يتم تجهيز رسالة المتابعة العربية بعد."}</p></div></div></div>:null}
+     </div>):<div className={styles.noContacts}>No verified LinkedIn decision-makers are stored yet. The company cannot enter the connection batch until Discovery finds at least one.</div>}</div>
+    </article>
 
-function contactState(contact: Contact) {
-  if (contact.linkedin_replied_at) return "Replied";
-  if (contact.linkedin_connected_at) return "Connected";
-  if (contact.linkedin_request_sent_at) return "Sent";
-  return "Ready";
-}
+    <div className={styles.gridTwo}><article className={styles.panel}><span className={styles.kicker}>WHY THIS COMPANY</span><h3>{selected.qualification_reason||"Qualified Website opportunity"}</h3><p>{selected.company_summary||"Company summary will appear from verified public research."}</p>{selected.website_url?<a href={selected.website_url} target="_blank" rel="noreferrer">Open current website ↗</a>:null}</article><article className={styles.panel}><span className={styles.kicker}>WEBSITE OPPORTUNITY</span><h3>{asString(audit.recommended_concept_focus)||"Focused commercial transformation"}</h3><p>{asString(audit.current_state_summary)||"The audit will concentrate on the most commercially visible website weaknesses."}</p></article></div>
+    <article className={styles.panel}><span className={styles.kicker}>WEBSITE AUDIT</span><div className={styles.auditGrid}><div><b>Weaknesses</b>{asStringList(audit.weaknesses).length?asStringList(audit.weaknesses).map(x=><p key={x}>— {x}</p>):<p>— Awaiting structured audit details</p>}</div><div><b>Missed opportunities</b>{asStringList(audit.missed_business_opportunities).length?asStringList(audit.missed_business_opportunities).map(x=><p key={x}>— {x}</p>):<p>— Awaiting structured audit details</p>}</div><div><b>Suggested pages / flows</b>{asStringList(audit.suggested_pages_or_flows).length?asStringList(audit.suggested_pages_or_flows).map(x=><p key={x}>— {x}</p>):<p>— Homepage<br/>— Products / services<br/>— RFQ / enquiry</p>}</div></div></article>
 
-export default function WebsitesConnectionsConceptsPage() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
-  const [prospects, setProspects] = useState<Prospect[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [runs, setRuns] = useState<ConceptRun[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [search, setSearch] = useState("");
-  const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [acting, setActing] = useState(false);
-  const [reviewNote, setReviewNote] = useState("");
-  const [copied, setCopied] = useState("");
+    <div className={styles.actionBar}><div><span>CONCEPT PRODUCTION</span><strong>{conceptEligible?titleCase(selected.concept_status):"Locked until connection"}</strong><small>{conceptEligible?"At least one verified decision-maker has connected.":"No concept work is spent before a real LinkedIn connection."}</small></div>{!conceptEligible?<span className={styles.locked}>Connect first</span>:null}{conceptEligible&&["brief_ready","revision_requested","blocked"].includes(selected.concept_status)?<button className={styles.primary} onClick={()=>void requestConcept()} disabled={acting}>{acting?"Working…":currentRun?.status==="returned"?"Build Revision":"Build Concept"}</button>:null}{currentRun?.status==="requested"?<span className={styles.locked}>Requested · waiting for producer</span>:null}{currentRun?.status==="building"?<span className={styles.locked}>Concept is being built</span>:null}{currentRun?.status==="approved"?<span className={styles.approved}>Concept approved</span>:null}</div>
 
-  const load = useCallback(async (activeSession: Session) => {
-    setLoading(true);
-    setNotice("");
-
-    const { data: roleRow, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", activeSession.user.id)
-      .maybeSingle();
-
-    if (roleError || roleRow?.role !== "admin") {
-      setRole(roleRow?.role ?? null);
-      setNotice(roleError?.message ?? "Administrator access required.");
-      setLoading(false);
-      return;
-    }
-
-    setRole("admin");
-
-    const [prospectResult, contactResult, runResult] = await Promise.all([
-      supabase
-        .from("websites_company_prospects")
-        .select("id,company_name,slug,website_url,country,city,industry,company_summary,business_quality_score,website_opportunity_score,systems_potential_score,qualification_reason,website_audit,status,concept_status,updated_at")
-        .in("status", ["qualified", "ready_for_connection", "connection_sent", "connected", "concept_ready", "ready_to_send", "contacted", "replied", "interested", "proposal", "won"])
-        .order("website_opportunity_score", { ascending: false }),
-      supabase
-        .from("websites_company_contacts")
-        .select("id,prospect_id,name,title,role_category,contact_priority,is_current_verified,linkedin_url,source_url,linkedin_note,linkedin_note_ar,linkedin_followup,linkedin_followup_ar,linkedin_request_sent_at,linkedin_connected_at,linkedin_followup_sent_at,linkedin_replied_at")
-        .order("contact_priority", { ascending: true }),
-      supabase
-        .from("websites_company_concept_runs")
-        .select("id,prospect_id,version,status,preview_url,requested_at,review_ready_at,reviewed_at,reviewer_note,updated_at")
-        .order("created_at", { ascending: false }),
-    ]);
-
-    const firstError = prospectResult.error || contactResult.error || runResult.error;
-    if (firstError) {
-      setNotice(firstError.message);
-      setLoading(false);
-      return;
-    }
-
-    const nextProspects = (prospectResult.data ?? []) as Prospect[];
-    const requestedId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("prospect") : null;
-    setProspects(nextProspects);
-    setContacts((contactResult.data ?? []) as Contact[]);
-    setRuns((runResult.data ?? []) as ConceptRun[]);
-    setSelectedId((current) => {
-      if (requestedId && nextProspects.some((p) => p.id === requestedId)) return requestedId;
-      if (current && nextProspects.some((p) => p.id === current)) return current;
-      return nextProspects.find((p) => p.concept_status === "review")?.id
-        ?? nextProspects.find((p) => p.status === "connected")?.id
-        ?? nextProspects.find((p) => p.status === "ready_for_connection")?.id
-        ?? nextProspects[0]?.id
-        ?? "";
-    });
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthReady(true);
-      if (data.session) void load(data.session);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setAuthReady(true);
-      if (next) void load(next);
-    });
-    return () => subscription.unsubscribe();
-  }, [load]);
-
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return prospects.filter((p) => !q || [p.company_name, p.industry, p.city, p.country, p.status, p.concept_status]
-      .filter(Boolean).join(" ").toLowerCase().includes(q));
-  }, [prospects, search]);
-
-  const selected = prospects.find((p) => p.id === selectedId) ?? null;
-  const selectedContacts = contacts.filter((c) => c.prospect_id === selectedId && c.is_current_verified && Boolean(c.linkedin_url));
-  const selectedRuns = runs.filter((r) => r.prospect_id === selectedId).sort((a, b) => b.version - a.version);
-  const currentRun = selectedRuns[0] ?? null;
-  const audit = asObject(selected?.website_audit);
-  const connectedCount = selectedContacts.filter((c) => c.linkedin_connected_at).length;
-  const sentCount = selectedContacts.filter((c) => c.linkedin_request_sent_at).length;
-  const allNotesReady = selectedContacts.length > 0 && selectedContacts.every((c) => c.linkedin_note?.trim() && c.linkedin_note_ar?.trim());
-  const allSent = selectedContacts.length > 0 && selectedContacts.every((c) => c.linkedin_request_sent_at);
-  const conceptEligible = connectedCount > 0;
-
-  const metrics = useMemo(() => ({
-    ready: prospects.filter((p) => p.status === "ready_for_connection").length,
-    sent: prospects.filter((p) => p.status === "connection_sent").length,
-    connected: prospects.filter((p) => ["connected", "concept_ready"].includes(p.status)).length,
-    review: runs.filter((r) => r.status === "review").length,
-    approved: runs.filter((r) => r.status === "approved").length,
-  }), [prospects, runs]);
-
-  const copyText = async (key: string, text: string | null) => {
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(key);
-      window.setTimeout(() => setCopied((current) => current === key ? "" : current), 1800);
-    } catch {
-      setNotice("Copy failed. Select the message text manually.");
-    }
-  };
-
-  const markAllSent = async () => {
-    if (!selected || !session) return;
-    setActing(true);
-    setNotice("");
-    const { error } = await supabase.rpc("websites_company_admin_mark_all_connection_sent", { p_prospect_id: selected.id });
-    if (error) setNotice(error.message);
-    else setNotice(`All ${selectedContacts.length} verified decision-makers at ${selected.company_name} are marked Sent.`);
-    await load(session);
-    setActing(false);
-  };
-
-  const markConnected = async (contact: Contact) => {
-    if (!session) return;
-    setActing(true);
-    setNotice("");
-    const { error } = await supabase.rpc("websites_company_admin_mark_contact_connected", { p_contact_id: contact.id });
-    if (error) setNotice(error.message);
-    else setNotice(`${contact.name} marked Connected. ${selected?.company_name ?? "Company"} is now eligible for concept production.`);
-    await load(session);
-    setActing(false);
-  };
-
-  const requestConcept = async () => {
-    if (!selected || !session) return;
-    setActing(true);
-    setNotice("");
-    const { error } = await supabase.rpc("websites_company_admin_request_concept", { p_prospect_id: selected.id });
-    if (error) setNotice(error.message);
-    else setNotice(`Concept build requested for ${selected.company_name}.`);
-    await load(session);
-    setActing(false);
-  };
-
-  const reviewConcept = async (decision: "approve" | "return" | "block") => {
-    if (!currentRun || !session) return;
-    setActing(true);
-    setNotice("");
-    const { error } = await supabase.rpc("websites_company_admin_review_concept", {
-      p_run_id: currentRun.id,
-      p_decision: decision,
-      p_note: reviewNote.trim() || null,
-    });
-    if (error) setNotice(error.message);
-    else {
-      setNotice(decision === "approve" ? "Concept approved. Nothing has been sent automatically." : `Concept ${decision === "return" ? "returned for revision" : "blocked"}.`);
-      setReviewNote("");
-    }
-    await load(session);
-    setActing(false);
-  };
-
-  if (!authReady) return <main className={styles.page}><div className={styles.center}>Preparing Website Acquisition…</div></main>;
-  if (!session) return <main className={styles.page}><div className={styles.center}><h1>Administrator sign-in required.</h1><Link href="/admin">Go to admin →</Link></div></main>;
-  if (role !== "admin") return <main className={styles.page}><div className={styles.center}><h1>Administrator permission required.</h1><p>{notice}</p></div></main>;
-
-  return (
-    <main className={styles.page}>
-      <div className={styles.shell}>
-        <header className={styles.topbar}>
-          <div><Link href="/admin/websites" className={styles.wordmark}><span>Lab</span>Narrative</Link><b>WEBSITES · CONNECTIONS + CONCEPTS</b></div>
-          <div className={styles.topActions}><Link href="/admin/websites">Company pipeline</Link><button onClick={() => void load(session)} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button></div>
-        </header>
-
-        <section className={styles.hero}>
-          <div><p>CONNECTION-FIRST ACQUISITION</p><h1>Connect first. <em>Build second.</em></h1></div>
-          <p className={styles.heroCopy}>All verified decision-makers at the same company are prepared together with English and Arabic LinkedIn notes. Send the batch manually, track acceptances per person, and build a concept only after at least one decision-maker connects.</p>
-        </section>
-
-        <section className={styles.metrics}>
-          <article><span>Ready to connect</span><strong>{metrics.ready}</strong></article>
-          <article><span>Batch sent</span><strong>{metrics.sent}</strong></article>
-          <article><span>Connected</span><strong>{metrics.connected}</strong></article>
-          <article><span>Concept review</span><strong>{metrics.review}</strong></article>
-          <article><span>Approved</span><strong>{metrics.approved}</strong></article>
-        </section>
-
-        {notice ? <div className={styles.notice}>{notice}</div> : null}
-
-        <section className={styles.workspace}>
-          <aside className={styles.rail}>
-            <div className={styles.railHead}><div><span>Website companies</span><strong>{prospects.length}</strong></div><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" /></div>
-            <div className={styles.companyList}>
-              {visible.map((p) => {
-                const companyContacts = contacts.filter((c) => c.prospect_id === p.id && c.is_current_verified && Boolean(c.linkedin_url));
-                const companyConnected = companyContacts.filter((c) => c.linkedin_connected_at).length;
-                return <button key={p.id} onClick={() => { setSelectedId(p.id); setReviewNote(""); }} className={p.id === selectedId ? styles.activeCompany : ""}>
-                  <span><strong>{p.company_name}</strong><b>{p.website_opportunity_score}</b></span>
-                  <small>{titleCase(p.status)} · {companyContacts.length} contacts · {companyConnected} connected</small>
-                </button>;
-              })}
-              {visible.length === 0 ? <div className={styles.railEmpty}>The discovery worker has not prepared a company yet.</div> : null}
-            </div>
-          </aside>
-
-          <section className={styles.detail}>
-            {!selected ? (
-              <div className={styles.emptyDetail}><span>WAITING FOR FIRST COMPANY</span><h2>The connection-first workflow is live.</h2><p>When Discovery prepares the first company, its decision-makers and bilingual LinkedIn notes will appear here together.</p></div>
-            ) : (
-              <>
-                <div className={styles.companyHead}>
-                  <div><p>{selected.industry || "B2B company"}</p><h2>{selected.company_name}</h2><span>{[selected.city, selected.country].filter(Boolean).join(" · ")}</span></div>
-                  <div className={styles.scoreStack}><span>Website opportunity <b>{selected.website_opportunity_score}</b></span><span>Business quality <b>{selected.business_quality_score}</b></span><span>Systems signal <b>{selected.systems_potential_score}</b></span></div>
-                </div>
-
-                <div className={styles.connectionGate}>
-                  <div><span>CONNECTION GATE</span><strong>{connectedCount > 0 ? `${connectedCount} decision-maker${connectedCount === 1 ? "" : "s"} connected` : allSent ? "Requests sent · waiting for acceptance" : "Ready for one batch sending session"}</strong><small>{sentCount}/{selectedContacts.length} sent · {connectedCount}/{selectedContacts.length} connected</small></div>
-                  <div className={styles.gatePills}><span className={allNotesReady ? styles.goodPill : styles.warnPill}>EN + AR {allNotesReady ? "ready" : "incomplete"}</span><span className={conceptEligible ? styles.goodPill : styles.lockPill}>{conceptEligible ? "Concept unlocked" : "Concept locked"}</span></div>
-                </div>
-
-                <article className={styles.panel}>
-                  <div className={styles.panelTitleRow}>
-                    <div><span className={styles.kicker}>DECISION-MAKERS · SEND TOGETHER</span><h3>Company connection batch</h3><p>Open each LinkedIn profile, copy either EN or AR, send all selected requests in this same session, then mark the whole company batch sent once.</p></div>
-                    {!allSent ? <button className={styles.primary} onClick={() => void markAllSent()} disabled={acting || !allNotesReady}>{acting ? "Working…" : `Mark all ${selectedContacts.length || ""} sent`}</button> : <span className={styles.approved}>Batch marked sent</span>}
-                  </div>
-
-                  <div className={styles.contactCards}>
-                    {selectedContacts.length ? selectedContacts.map((contact) => {
-                      const state = contactState(contact);
-                      return <div className={styles.contactCard} key={contact.id}>
-                        <div className={styles.contactTop}>
-                          <div><strong>{contact.name}</strong><span>{contact.title || contact.role_category || "Decision-maker"}</span></div>
-                          <div className={styles.contactTopActions}><b className={styles.stateBadge}>{state}</b><a href={contact.linkedin_url || "#"} target="_blank" rel="noreferrer">Open LinkedIn ↗</a></div>
-                        </div>
-
-                        <div className={styles.messageGrid}>
-                          <div className={styles.messageBox} dir="ltr"><div><b>Connection note · EN</b><button onClick={() => void copyText(`${contact.id}-en`, contact.linkedin_note)}>{copied === `${contact.id}-en` ? "Copied" : "Copy EN"}</button></div><p>{contact.linkedin_note || "English note has not been prepared yet."}</p></div>
-                          <div className={styles.messageBox} dir="rtl"><div><b>رسالة الاتصال · AR</b><button onClick={() => void copyText(`${contact.id}-ar`, contact.linkedin_note_ar)}>{copied === `${contact.id}-ar` ? "تم النسخ" : "نسخ AR"}</button></div><p>{contact.linkedin_note_ar || "لم يتم تجهيز الرسالة العربية بعد."}</p></div>
-                        </div>
-
-                        <div className={styles.contactFooter}>
-                          <span>P{contact.contact_priority} · {contact.role_category || "Decision-maker"}{contact.linkedin_request_sent_at ? ` · Sent ${dateLabel(contact.linkedin_request_sent_at)}` : ""}</span>
-                          {!contact.linkedin_connected_at ? <button onClick={() => void markConnected(contact)} disabled={acting}>Mark Connected</button> : <b>Connected {dateLabel(contact.linkedin_connected_at)}</b>}
-                        </div>
-
-                        {contact.linkedin_connected_at ? <div className={styles.followupArea}>
-                          <span>POST-ACCEPTANCE INTEREST CHECK</span>
-                          <div className={styles.messageGrid}>
-                            <div className={styles.messageBox} dir="ltr"><div><b>Follow-up · EN</b><button onClick={() => void copyText(`${contact.id}-fen`, contact.linkedin_followup)}>{copied === `${contact.id}-fen` ? "Copied" : "Copy EN"}</button></div><p>{contact.linkedin_followup || "English follow-up has not been prepared yet."}</p></div>
-                            <div className={styles.messageBox} dir="rtl"><div><b>متابعة · AR</b><button onClick={() => void copyText(`${contact.id}-far`, contact.linkedin_followup_ar)}>{copied === `${contact.id}-far` ? "تم النسخ" : "نسخ AR"}</button></div><p>{contact.linkedin_followup_ar || "لم يتم تجهيز رسالة المتابعة العربية بعد."}</p></div>
-                          </div>
-                        </div> : null}
-                      </div>;
-                    }) : <div className={styles.noContacts}>No verified LinkedIn decision-makers are stored yet. The company cannot enter the connection batch until Discovery finds at least one.</div>}
-                  </div>
-                </article>
-
-                <div className={styles.gridTwo}>
-                  <article className={styles.panel}>
-                    <span className={styles.kicker}>WHY THIS COMPANY</span>
-                    <h3>{selected.qualification_reason || "Qualified Website opportunity"}</h3>
-                    <p>{selected.company_summary || "Company summary will appear from verified public research."}</p>
-                    {selected.website_url ? <a href={selected.website_url} target="_blank" rel="noreferrer">Open current website ↗</a> : null}
-                  </article>
-                  <article className={styles.panel}>
-                    <span className={styles.kicker}>WEBSITE OPPORTUNITY</span>
-                    <h3>{asString(audit.recommended_concept_focus) || "Focused commercial transformation"}</h3>
-                    <p>{asString(audit.current_state_summary) || "The audit will concentrate on the most commercially visible website weaknesses."}</p>
-                  </article>
-                </div>
-
-                <article className={styles.panel}>
-                  <span className={styles.kicker}>WEBSITE AUDIT</span>
-                  <div className={styles.auditGrid}>
-                    <div><b>Weaknesses</b>{asStringList(audit.weaknesses).length ? asStringList(audit.weaknesses).map((item) => <p key={item}>— {item}</p>) : <p>— Awaiting structured audit details</p>}</div>
-                    <div><b>Missed opportunities</b>{asStringList(audit.missed_business_opportunities).length ? asStringList(audit.missed_business_opportunities).map((item) => <p key={item}>— {item}</p>) : <p>— Awaiting structured audit details</p>}</div>
-                    <div><b>Suggested pages / flows</b>{asStringList(audit.suggested_pages_or_flows).length ? asStringList(audit.suggested_pages_or_flows).map((item) => <p key={item}>— {item}</p>) : <p>— Homepage<br/>— Products / services<br/>— RFQ / enquiry</p>}</div>
-                  </div>
-                </article>
-
-                <div className={styles.actionBar}>
-                  <div><span>CONCEPT PRODUCTION</span><strong>{conceptEligible ? titleCase(selected.concept_status) : "Locked until connection"}</strong><small>{conceptEligible ? "At least one verified decision-maker has connected." : "No concept work is spent before a real LinkedIn connection."}</small></div>
-                  {!conceptEligible ? <span className={styles.locked}>Connect first</span> : null}
-                  {conceptEligible && ["brief_ready", "revision_requested", "blocked"].includes(selected.concept_status) ? <button className={styles.primary} onClick={() => void requestConcept()} disabled={acting}>{acting ? "Working…" : currentRun?.status === "returned" ? "Build Revision" : "Build Concept"}</button> : null}
-                  {currentRun?.status === "requested" ? <span className={styles.locked}>Requested · waiting for producer</span> : null}
-                  {currentRun?.status === "building" ? <span className={styles.locked}>Concept is being built</span> : null}
-                  {currentRun?.status === "approved" ? <span className={styles.approved}>Concept approved</span> : null}
-                </div>
-
-                {currentRun ? <article className={styles.panel}>
-                  <div className={styles.runHead}><div><span className={styles.kicker}>CONCEPT RUN</span><h3>Version {currentRun.version} · {titleCase(currentRun.status)}</h3></div><small>{dateLabel(currentRun.review_ready_at || currentRun.requested_at)}</small></div>
-                  <div className={styles.runPolicy}><span>Connection-gated</span><span>Focused preview</span><span>Max 3 primary flows</span><span>No invented company facts</span><span>Human review required</span></div>
-                  {currentRun.preview_url ? <a className={styles.previewButton} href={currentRun.preview_url} target="_blank" rel="noreferrer">Open concept preview ↗</a> : <p className={styles.waiting}>The producer will attach a preview URL here when the concept is ready.</p>}
-                  {currentRun.status === "review" ? <div className={styles.reviewBox}>
-                    <label>Reviewer note<textarea value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} placeholder="Optional approval note, revision request, or block reason…" /></label>
-                    <div><button className={styles.approveButton} onClick={() => void reviewConcept("approve")} disabled={acting}>Approve Concept</button><button onClick={() => void reviewConcept("return")} disabled={acting}>Return for Revision</button><button className={styles.dangerButton} onClick={() => void reviewConcept("block")} disabled={acting}>Block</button></div>
-                    <p>Approval only marks the concept ready. It does not send LinkedIn messages, email, or any other outreach.</p>
-                  </div> : null}
-                  {currentRun.reviewer_note ? <blockquote>{currentRun.reviewer_note}</blockquote> : null}
-                </article> : null}
-
-                {selectedRuns.length > 1 ? <article className={styles.panel}><span className={styles.kicker}>VERSION HISTORY</span><div className={styles.history}>{selectedRuns.map((run) => <div key={run.id}><strong>v{run.version}</strong><span>{titleCase(run.status)}</span><small>{dateLabel(run.updated_at)}</small></div>)}</div></article> : null}
-              </>
-            )}
-          </section>
-        </section>
-      </div>
-    </main>
-  );
+    {currentRun?<article className={styles.panel}><div className={styles.runHead}><div><span className={styles.kicker}>CONCEPT RUN</span><h3>Version {currentRun.version} · {titleCase(currentRun.status)}</h3></div><small>{dateLabel(currentRun.review_ready_at||currentRun.requested_at)}</small></div><div className={styles.runPolicy}><span>Connection-gated</span><span>Focused preview</span><span>Max 3 primary flows</span><span>No invented company facts</span><span>Human review required</span></div>{currentRun.preview_url?<a className={styles.previewButton} href={currentRun.preview_url} target="_blank" rel="noreferrer">Open concept preview ↗</a>:<p className={styles.waiting}>The producer will attach a preview URL here when the concept is ready.</p>}{currentRun.status==="review"?<div className={styles.reviewBox}><label>Reviewer note<textarea value={reviewNote} onChange={e=>setReviewNote(e.target.value)} placeholder="Optional approval note, revision request, or block reason…"/></label><div><button className={styles.approveButton} onClick={()=>void reviewConcept("approve")} disabled={acting}>Approve Concept</button><button onClick={()=>void reviewConcept("return")} disabled={acting}>Return for Revision</button><button className={styles.dangerButton} onClick={()=>void reviewConcept("block")} disabled={acting}>Block</button></div><p>Approval only marks the concept ready. It does not send LinkedIn messages, email, or any other outreach.</p></div>:null}{currentRun.reviewer_note?<blockquote>{currentRun.reviewer_note}</blockquote>:null}</article>:null}
+    {selectedRuns.length>1?<article className={styles.panel}><span className={styles.kicker}>VERSION HISTORY</span><div className={styles.history}>{selectedRuns.map(r=><div key={r.id}><strong>v{r.version}</strong><span>{titleCase(r.status)}</span><small>{dateLabel(r.updated_at)}</small></div>)}</div></article>:null}
+   </>}</section>
+  </section>
+ </div></main>
 }
