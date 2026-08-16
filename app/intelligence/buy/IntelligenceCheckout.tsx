@@ -198,7 +198,7 @@ export default function IntelligenceCheckout() {
           <div><span>Complete analyses</span><strong>{selected.products} products</strong></div>
           <div className={styles.total}><span>Total</span><strong>{selected.price} USD</strong></div>
         </div>
-        <p className={styles.checkoutCopy}>One-time Founding 5 launch payment. No subscription. The amount is fixed on the server and captured only after PayPal confirms the transaction.</p>
+        <p className={styles.checkoutCopy}>One-time introductory launch price. No subscription. The amount is fixed on the server and captured only after PayPal confirms the transaction.</p>
         {loading ? <div className={styles.loading}>Connecting secure checkout…</div> : null}
         {!loading && provider.verified && provider.clientId ? <div ref={buttonRef} className={styles.paypalSlot} /> : null}
         {!loading && !provider.verified ? <div className={styles.error}>{provider.authError || "PayPal checkout is temporarily unavailable."}</div> : null}
