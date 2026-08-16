@@ -4,8 +4,8 @@ export default function ConceptsLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <style>{`
-        /* Websites outreach mirrors the compact Systems / Intelligence contact rows.
-           Drafts remain stored and copyable, but message bodies are never rendered. */
+        /* Websites outreach mirrors compact Systems / Intelligence rows.
+           Drafts stay stored/copyable but message bodies are never rendered. */
         main div:has(> [dir="ltr"]):has(> [dir="rtl"]) {
           display: flex !important;
           grid-template-columns: none !important;
@@ -58,44 +58,48 @@ export default function ConceptsLayout({ children }: { children: ReactNode }) {
           font-weight: 850;
         }
 
-        /* One compact horizontal row per decision-maker. */
+        /* Hard rule: one decision-maker = one full-width row. */
         main [class*="contactCards"] {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) !important;
           gap: 7px !important;
+          width: 100% !important;
         }
 
-        main [class*="contactCard"] {
+        main [class*="contactCard"]:not([class*="contactCards"]) {
           display: grid !important;
-          grid-template-columns: minmax(210px, 1fr) auto auto auto auto !important;
+          grid-template-columns: minmax(220px, 1fr) auto auto auto !important;
           align-items: center !important;
           column-gap: 7px !important;
           row-gap: 0 !important;
+          width: 100% !important;
           min-height: 58px !important;
           padding: 10px 12px !important;
         }
 
-        main [class*="contactTop"] {
+        main [class*="contactTop"]:not([class*="contactTopActions"]) {
           display: contents !important;
           padding: 0 !important;
           border: 0 !important;
         }
 
-        main [class*="contactTop"] > div:first-child {
+        main [class*="contactTop"]:not([class*="contactTopActions"]) > div:first-child {
           min-width: 0 !important;
         }
 
-        main [class*="contactTop"] > div:first-child strong {
+        main [class*="contactTop"]:not([class*="contactTopActions"]) > div:first-child strong {
           font-size: .82rem !important;
           line-height: 1.2 !important;
         }
 
-        main [class*="contactTop"] > div:first-child span {
+        main [class*="contactTop"]:not([class*="contactTopActions"]) > div:first-child span {
           margin-top: 3px !important;
           font-size: .63rem !important;
           line-height: 1.25 !important;
           white-space: nowrap !important;
           overflow: hidden !important;
           text-overflow: ellipsis !important;
-          max-width: 330px !important;
+          max-width: 420px !important;
         }
 
         main [class*="contactTopActions"] {
@@ -185,32 +189,27 @@ export default function ConceptsLayout({ children }: { children: ReactNode }) {
           display: none !important;
         }
 
-        main [class*="followupArea"] [class*="messageGrid"] {
-          margin: 0 !important;
-        }
-
-        @media (max-width: 1180px) {
-          main [class*="contactCard"] {
-            grid-template-columns: minmax(190px, 1fr) auto auto auto !important;
+        @media (max-width: 980px) {
+          main [class*="contactCard"]:not([class*="contactCards"]) {
+            grid-template-columns: minmax(180px, 1fr) auto auto !important;
           }
-          main [class*="followupArea"] {
+          main [class*="contactFooter"] {
             grid-column: 2 / -1 !important;
             justify-content: flex-end !important;
-            margin-top: 6px !important;
           }
         }
 
-        @media (max-width: 820px) {
-          main [class*="contactCard"] {
+        @media (max-width: 760px) {
+          main [class*="contactCard"]:not([class*="contactCards"]) {
             display: flex !important;
             flex-wrap: wrap !important;
             align-items: center !important;
             gap: 6px !important;
           }
-          main [class*="contactTop"] {
+          main [class*="contactTop"]:not([class*="contactTopActions"]) {
             display: contents !important;
           }
-          main [class*="contactTop"] > div:first-child {
+          main [class*="contactTop"]:not([class*="contactTopActions"]) > div:first-child {
             flex: 1 1 100% !important;
             margin-bottom: 3px !important;
           }
