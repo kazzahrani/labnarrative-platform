@@ -27,13 +27,39 @@ export default function AdminControlCenterGate({ children }: { children: ReactNo
 
   useEffect(() => {
     let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
+
+    const validate = async () => {
+      const { data } = await supabase.auth.getSession();
       if (!active) return;
-      setState(data.session ? "ready" : "signed_out");
-    });
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      const session = data.session;
+      if (!session) {
+        setState("signed_out");
+        return;
+      }
+
+      const { data: roleRow, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
       if (!active) return;
-      setState(session ? "ready" : "signed_out");
+
+      if (!roleError && roleRow?.role === "admin") {
+        setState("ready");
+        return;
+      }
+
+      // A client/customer session may coexist on the same domain, but it must
+      // never be treated as an administrator session. Clear only the local
+      // default admin-storage session and show the admin recovery flow.
+      await supabase.auth.signOut({ scope: "local" });
+      if (active) setState("signed_out");
+    };
+
+    void validate();
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
+      if (!active) return;
+      window.setTimeout(() => void validate(), 0);
     });
     return () => {
       active = false;
@@ -96,7 +122,7 @@ export default function AdminControlCenterGate({ children }: { children: ReactNo
         <div style={{ fontWeight: 800, marginBottom: 26 }}><span style={{ color: "#244b3b" }}>Lab</span>Narrative</div>
         <p style={{ margin: "0 0 7px", color: "#315f50", fontSize: 11, fontWeight: 800, letterSpacing: ".12em", textTransform: "uppercase" }}>Administrator access</p>
         <h1 style={{ margin: "0 0 8px", fontSize: 30, letterSpacing: "-.04em" }}>{state === "checking" ? "Checking your session…" : "Restore administrator access."}</h1>
-        <p style={{ margin: "0 0 22px", color: "#627069", lineHeight: 1.6 }}>Your LabNarrative admin session is designed to stay signed in on one canonical domain. If an older platform tab still has a valid session, restore it instantly below.</p>
+        <p style={{ margin: "0 0 22px", color: "#627069", lineHeight: 1.6 }}>Your LabNarrative admin session is designed to stay signed in on one canonical domain. Client-portal sessions are kept separate and cannot satisfy the administrator gate.</p>
 
         {state === "signed_out" ? <>
           <button type="button" onClick={restoreExisting} style={{ width: "100%", border: "1px solid #244b3b", background: "#244b3b", color: "#fff", borderRadius: 10, padding: "11px 13px", fontWeight: 800, cursor: "pointer" }}>Restore existing admin session →</button>
