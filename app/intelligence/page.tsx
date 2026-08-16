@@ -24,9 +24,9 @@ const deliverables = [
 ];
 
 const launchPackages = [
-  { key: "starter", name: "Starter", scope: "5 products", price: "$399" },
-  { key: "portfolio", name: "Portfolio", scope: "10 products", price: "$699" },
-  { key: "portfolio_plus", name: "Portfolio Plus", scope: "20 products", price: "$1,190" },
+  { key: "starter", name: "Starter", scope: "5 products", price: "$389" },
+  { key: "portfolio", name: "Portfolio", scope: "10 products", price: "$689" },
+  { key: "portfolio_plus", name: "Portfolio Plus", scope: "20 products", price: "$1,189" },
 ];
 
 function Wordmark() {
@@ -134,7 +134,7 @@ export default function IntelligencePage() {
       <section className={styles.final}>
         <p className={styles.label}>Launch discount</p>
         <h2>Ready to expand across your portfolio?</h2>
-        <p>Introductory launch pricing is currently available across all paid LabNarrative Intelligence packages. Packages start with 5 complete product analyses for $399. No subscription is required during the launch phase.</p>
+        <p>Introductory launch pricing is currently available across all paid LabNarrative Intelligence packages. Packages start with 5 complete product analyses for $389. No subscription is required during the launch phase.</p>
         <a href="/intelligence/buy">CHOOSE A PACKAGE & PAY SECURELY →</a>
       </section>
 
