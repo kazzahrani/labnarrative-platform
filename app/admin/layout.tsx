@@ -3,7 +3,6 @@ import "./systems-intelligence-light.css";
 import "./systems-50-50.css";
 import AdminSessionContinuity from "@/components/admin/AdminSessionContinuity";
 import SystemsLinkedInBatchLauncher from "./SystemsLinkedInBatchLauncher";
-import SystemsEmailBatchLauncher from "./SystemsEmailBatchLauncher";
 import SystemsConnectedFilterEnhancer from "./SystemsConnectedFilterEnhancer";
 import SystemsContactSearchEnhancer from "./SystemsContactSearchEnhancer";
 import SystemsSimpleOutreachPanel from "./SystemsSimpleOutreachPanel";
@@ -20,7 +19,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <SystemsConnectedFilterEnhancer />
       <SystemsContactSearchEnhancer />
       <SystemsSimpleOutreachPanel />
-      <SystemsEmailBatchLauncher />
       <SystemsLinkedInBatchLauncher />
     </>
   );
