@@ -42,6 +42,7 @@ export default function IntelligencePage() {
           <a href="#how">How it works</a>
           <a href="#report">What you receive</a>
           <a href="#pricing">Launch pricing</a>
+          <a href="/intelligence/login">Client sign in</a>
         </nav>
         <a className={styles.cta} href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20analysis">Request a free analysis ↗</a>
       </header>
@@ -141,6 +142,7 @@ export default function IntelligencePage() {
       <footer className={styles.footer}>
         <a className={styles.wordmark} href="/"><span>Lab</span>Narrative</a>
         <span>Product opportunity intelligence</span>
+        <a href="/intelligence/login">Client Portal</a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
       </footer>
     </main>
