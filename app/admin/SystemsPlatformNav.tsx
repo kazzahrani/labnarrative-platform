@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/admin/systems", label: "Systems Home", short: "Home" },
-  { href: "/admin/systems-outreach", label: "Acquisition", short: "Acquire" },
+  { href: "/admin/systems/acquire", label: "Acquisition", short: "Acquire" },
   { href: "/admin/systems-outreach/discovery", label: "Discovery", short: "Discover" },
   { href: "/admin/systems-outreach/discovery/demo-v2", label: "Demo V2", short: "Demo V2" },
   { href: "/admin/systems-outreach/discovery/pilot", label: "Pilot Proposal", short: "Pilot" },
@@ -16,13 +16,13 @@ const items = [
 
 function active(pathname: string, href: string) {
   if (href === "/admin/systems") return pathname === href;
-  if (href === "/admin/systems-outreach") return pathname === href;
+  if (href === "/admin/systems/acquire") return pathname === href || pathname === "/admin/systems-outreach";
   return pathname.startsWith(href);
 }
 
 export default function SystemsPlatformNav() {
   const pathname = usePathname();
-  const isSystems = pathname === "/admin/systems" || pathname.startsWith("/admin/systems-outreach");
+  const isSystems = pathname.startsWith("/admin/systems") || pathname.startsWith("/admin/systems-outreach");
   if (!isSystems) return null;
 
   return (
