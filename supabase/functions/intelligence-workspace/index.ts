@@ -109,7 +109,11 @@ Deno.serve(async (req: Request) => {
       try { await bridge("register", token); } catch (e) { console.error("portfolio account mirror after ingest", e); }
     } catch (e) {
       console.error("portfolio ingest bridge", e);
-      return json({ error: "Your product was saved, but the Intelligence queue could not start it yet. Please try again." }, 502, origin);
+      const fallbackStatus = hasExistingFulfillment ? "in_progress" : "collecting_products";
+      await db.from("intelligence_product_requests").update({ status: "awaiting_product", submitted_at: null, updated_at: new Date().toISOString() }).eq("id", currentSelected.id).eq("status", "submitted");
+      await db.from("intelligence_client_workspaces").update({ onboarding_status: fallbackStatus, updated_at: new Date().toISOString() }).eq("id", workspace.id);
+      try { await bridge("register", token); } catch (registerError) { console.error("portfolio account mirror after retry rollback", registerError); }
+      return json({ error: "The Intelligence queue could not start this product yet. Your product is still saved and you can try again." }, 502, origin);
     }
   }
 
