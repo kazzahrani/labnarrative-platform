@@ -23,7 +23,7 @@ const deliverables = [
   "Commercial interpretation without claiming purchase intent",
 ];
 
-const foundingPackages = [
+const launchPackages = [
   { key: "starter", name: "Starter", scope: "5 products", price: "$399" },
   { key: "portfolio", name: "Portfolio", scope: "10 products", price: "$699" },
   { key: "portfolio_plus", name: "Portfolio Plus", scope: "20 products", price: "$1,190" },
@@ -41,7 +41,7 @@ export default function IntelligencePage() {
         <nav className={styles.nav} aria-label="Primary navigation">
           <a href="#how">How it works</a>
           <a href="#report">What you receive</a>
-          <a href="#pricing">Founding 5</a>
+          <a href="#pricing">Launch pricing</a>
         </nav>
         <a className={styles.cta} href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20analysis">Request a free analysis ↗</a>
       </header>
@@ -96,7 +96,7 @@ export default function IntelligencePage() {
 
       <section className={styles.products} id="pricing">
         <div className={styles.sectionHead}>
-          <p className={styles.label}>Founding 5 pricing</p>
+          <p className={styles.label}>Launch discount pricing</p>
           <h2>See the complete work first. Then expand across your portfolio.</h2>
         </div>
         <div className={`${styles.cards} ${styles.pricingCards}`}>
@@ -106,9 +106,9 @@ export default function IntelligencePage() {
             <p>We select a high-opportunity product and prepare a complete evidence-backed report with no artificial laboratory cap.</p>
             <strong>Free</strong>
           </div>
-          {foundingPackages.map(({ key, name, scope, price }) => (
+          {launchPackages.map(({ key, name, scope, price }) => (
             <a className={styles.card} key={key} href={`/intelligence/buy?package=${key}`} aria-label={`Buy the ${name} Intelligence package`}>
-              <small>{name}</small>
+              <small>{name} · Launch discount</small>
               <h3>{scope}</h3>
               <p>Complete product opportunity analyses using the same research, verification and evidence standard as the demonstration report.</p>
               <strong>{price} · Buy securely →</strong>
@@ -132,9 +132,9 @@ export default function IntelligencePage() {
       </section>
 
       <section className={styles.final}>
-        <p className={styles.label}>First five paying customers</p>
+        <p className={styles.label}>Launch discount</p>
         <h2>Ready to expand across your portfolio?</h2>
-        <p>Founding 5 pricing is reserved for the first five LabNarrative Intelligence customers. Paid packages start with 5 complete product analyses for $399. No subscription is required during the launch phase.</p>
+        <p>Introductory launch pricing is currently available across all paid LabNarrative Intelligence packages. Packages start with 5 complete product analyses for $399. No subscription is required during the launch phase.</p>
         <a href="/intelligence/buy">CHOOSE A PACKAGE & PAY SECURELY →</a>
       </section>
 
