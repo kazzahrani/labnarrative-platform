@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import brand from "../brand.module.css";
+import brand from "../../brand.module.css";
 import styles from "./workspace.module.css";
 import IntelligenceWorkspace from "./IntelligenceWorkspace";
 
