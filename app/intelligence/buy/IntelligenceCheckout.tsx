@@ -125,7 +125,7 @@ export default function IntelligenceCheckout() {
             const result = await callProvider("capture", { orderId });
             if (!result.paid) throw new Error("The payment was not completed.");
             const workspaceUrl = String(result.workspaceUrl || "");
-            if (!workspaceUrl.startsWith("https://labnarrative.com/intelligence/workspace")) throw new Error("Payment succeeded, but the client workspace could not be opened.");
+            if (!workspaceUrl.startsWith("https://labnarrative.com/intelligence/workspace")) throw new Error("Payment succeeded, but the client account activation link could not be opened.");
             setSuccess({
               captureId: String(result.captureId || ""),
               purchaseId: String(result.purchaseId || ""),
@@ -157,16 +157,16 @@ export default function IntelligenceCheckout() {
     return (
       <section className={styles.success} aria-live="polite">
         <p className={styles.kicker}>Payment confirmed</p>
-        <h2>Your Intelligence workspace is ready.</h2>
+        <h2>Your Intelligence client account is ready to activate.</h2>
         <p>
-          PayPal confirmed the <strong>{success.packageName}</strong> purchase. Continue to your private workspace to add company details, submit your products and follow every analysis through research, scientific review and delivery.
+          PayPal confirmed the <strong>{success.packageName}</strong> purchase. Create your password once, then use your secure Client Portal to start product analyses whenever you need them, monitor progress and retrieve validated reports.
         </p>
         <div className={styles.receipt}>
           <span>Payment reference</span>
           <strong>{success.captureId || success.purchaseId}</strong>
-          {success.payerEmail ? <small>Receipt identity: {success.payerEmail}</small> : null}
+          {success.payerEmail ? <small>Account email: {success.payerEmail}</small> : null}
         </div>
-        <a className={styles.primaryButton} href={success.workspaceUrl}>OPEN YOUR CLIENT WORKSPACE →</a>
+        <a className={styles.primaryButton} href={success.workspaceUrl}>CREATE YOUR CLIENT ACCOUNT →</a>
       </section>
     );
   }
@@ -203,8 +203,8 @@ export default function IntelligenceCheckout() {
           <div><span>Complete analyses</span><strong>{selected.products} products</strong></div>
           <div className={styles.total}><span>Total</span><strong>{selected.price} USD</strong></div>
         </div>
-        <p className={styles.checkoutCopy}>One-time introductory launch price. No subscription. After payment, your private client workspace opens immediately.</p>
-        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary report will also be carried into the workspace as your first Intelligence reference.</p> : null}
+        <p className={styles.checkoutCopy}>One-time introductory launch price. No subscription. After payment, activate your secure Client Portal and use your product analyses whenever you need them.</p>
+        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary report will be carried into your Client Portal as your first Intelligence reference.</p> : null}
         {loading ? <div className={styles.loading}>Connecting secure checkout…</div> : null}
         {!loading && provider.verified && provider.clientId ? <div ref={buttonRef} className={styles.paypalSlot} /> : null}
         {!loading && !provider.verified ? <div className={styles.error}>{provider.authError || "PayPal checkout is temporarily unavailable."}</div> : null}
