@@ -107,12 +107,13 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // /admin/websites is the Websites branch root and leads into the existing
-  // Sites workspace.
+  // /admin/websites is the new company-focused Websites acquisition workspace.
+  // Legacy PI tools remain available below /admin/websites/* via the existing
+  // namespace rewrite, but the branch root itself must resolve to its real page.
   if (isAdminHost && (request.nextUrl.pathname === "/admin/websites" || request.nextUrl.pathname === "/admin/websites/")) {
-    const sitesUrl = request.nextUrl.clone();
-    sitesUrl.pathname = "/admin/websites/sites";
-    return NextResponse.redirect(sitesUrl, 307);
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+    return response;
   }
 
   // Give Websites a clean top-level outreach route while retaining the current
@@ -124,7 +125,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.rewrite(outreachUrl);
   }
 
-  // LabNarrative Websites lives under /admin/websites/*.
+  // LabNarrative Websites legacy tools live under /admin/websites/*.
   if (isAdminHost && request.nextUrl.pathname.startsWith("/admin/websites/")) {
     const internalUrl = request.nextUrl.clone();
     internalUrl.pathname = `/admin/${request.nextUrl.pathname.slice("/admin/websites/".length)}`;
