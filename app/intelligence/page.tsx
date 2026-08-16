@@ -99,7 +99,7 @@ export default function IntelligencePage() {
           <p className={styles.label}>Founding 5 pricing</p>
           <h2>See the complete work first. Then expand across your portfolio.</h2>
         </div>
-        <div className={styles.cards}>
+        <div className={`${styles.cards} ${styles.pricingCards}`}>
           <div className={styles.card}>
             <small>Complimentary demonstration</small>
             <h3>1 product</h3>
