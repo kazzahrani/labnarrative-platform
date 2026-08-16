@@ -95,4 +95,18 @@ for (const [path, from, to] of routePatches) {
   fs.writeFileSync(path, source);
 }
 
-console.log("Prepared unified Systems Home and native /admin/systems/acquire workspace navigation.");
+const simplePanelPath = "app/admin/SystemsSimpleOutreachPanel.tsx";
+let simplePanel = fs.readFileSync(simplePanelPath, "utf8");
+simplePanel = replaceIfPresent(
+  simplePanel,
+  'const note = noteFor(contact);',
+  'const note = noteFor(contact); const noteAr = contact.linkedin_note_ar || "";'
+);
+simplePanel = replaceIfPresent(
+  simplePanel,
+  'disabled={!note}>Copy</button>',
+  'disabled={!note}>EN</button><button type="button" onClick={() => void copyText(noteAr, `${contact.name}\'s Arabic LinkedIn note copied.`)} disabled={!noteAr}>AR</button>'
+);
+fs.writeFileSync(simplePanelPath, simplePanel);
+
+console.log("Prepared unified Systems Home, native Acquisition navigation, and EN/AR LinkedIn copy actions.");
