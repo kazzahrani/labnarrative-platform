@@ -306,6 +306,7 @@ export default function IntelligenceWorkspace() {
             const locked = item.status !== "awaiting_product";
             const prepared = hasProductIdentity(item);
             const visibleStatus = item.status === "awaiting_product" && prepared ? "Draft" : statusLabel[item.status] || item.status;
+            const isStarting = submittingPosition === item.position;
             return (
               <article className={styles.productCard} key={item.id}>
                 <header>
@@ -332,8 +333,10 @@ export default function IntelligenceWorkspace() {
                     </footer>
                     {item.status === "awaiting_product" && prepared ? (
                       <div className={styles.productAction}>
-                        <span>{companyReady ? "Starts this product only. Your other slots stay available." : "Complete the required client details before starting."}</span>
-                        <button type="button" onClick={() => submitProduct(item.position)} disabled={!companyReady || saving || submittingPosition !== null}>{submittingPosition === item.position ? "STARTING…" : "START THIS ANALYSIS →"}</button>
+                        <span>{isStarting ? "Creating the secure research job…" : companyReady ? "Starts this product only. Your other slots stay available." : "Complete the required client details before starting."}</span>
+                        <button type="button" onClick={() => submitProduct(item.position)} disabled={!companyReady || saving || submittingPosition !== null} aria-busy={isStarting}>
+                          {isStarting ? <><span className={styles.spinner} aria-hidden="true" />STARTING ANALYSIS…</> : "START THIS ANALYSIS →"}
+                        </button>
                       </div>
                     ) : null}
                   </>
