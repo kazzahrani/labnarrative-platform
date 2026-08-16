@@ -28,9 +28,9 @@ declare global {
 }
 
 const packages: PackageOption[] = [
-  { key: "starter", name: "Starter", products: 5, price: "$399", amount: 399, note: "A focused first expansion across five products." },
-  { key: "portfolio", name: "Portfolio", products: 10, price: "$699", amount: 699, note: "Broader coverage for an active scientific portfolio." },
-  { key: "portfolio_plus", name: "Portfolio Plus", products: 20, price: "$1,190", amount: 1190, note: "The strongest launch value for a larger portfolio." },
+  { key: "starter", name: "Starter", products: 5, price: "$389", amount: 389, note: "A focused first expansion across five products." },
+  { key: "portfolio", name: "Portfolio", products: 10, price: "$689", amount: 689, note: "Broader coverage for an active scientific portfolio." },
+  { key: "portfolio_plus", name: "Portfolio Plus", products: 20, price: "$1,189", amount: 1189, note: "The strongest launch value for a larger portfolio." },
 ];
 
 function loadPayPalSdk(clientId: string, currency: string) {
