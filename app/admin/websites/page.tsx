@@ -48,9 +48,9 @@ const pipeline = [
   ["01", "Discover", "Strong B2B companies whose current website undersells the real business."],
   ["02", "Qualify", "Score business quality, website opportunity, reachability and commercial value."],
   ["03", "Audit", "Document concrete weaknesses, missed conversion paths and high-value improvements."],
-  ["04", "Concept", "Build a focused visual preview only for the strongest qualified opportunities."],
-  ["05", "Outreach", "Separate Websites messaging, contacts and human-gated LinkedIn/email activity."],
-  ["06", "Sales", "Replies, meetings, proposals, wins and later cross-sell opportunities."],
+  ["04", "Concept", "Build a focused visual preview only after a human presses Build Concept."],
+  ["05", "Review", "Approve, return or block the concept before any outreach preparation can begin."],
+  ["06", "Outreach", "Separate Websites messaging and a later human send gate."],
 ] as const;
 
 function dateLabel(value: string | null) {
@@ -149,7 +149,7 @@ export default function WebsitesCompanyHome() {
   const metrics = useMemo(() => ({
     total: prospects.length,
     qualified: prospects.filter((p) => ["qualified", "concept_ready", "ready_to_send"].includes(p.status)).length,
-    concepts: prospects.filter((p) => ["ready", "building", "brief_ready"].includes(p.concept_status)).length,
+    concepts: prospects.filter((p) => ["brief_ready", "requested", "building", "review", "approved", "revision_requested"].includes(p.concept_status)).length,
     ready: prospects.filter((p) => p.status === "ready_to_send").length,
     conversations: prospects.filter((p) => ["replied", "interested", "proposal", "won"].includes(p.status)).length,
     won: prospects.filter((p) => p.status === "won").length,
@@ -194,6 +194,7 @@ export default function WebsitesCompanyHome() {
           <Link href="/admin" className={styles.wordmark}><Wordmark /></Link>
           <span className={styles.branch}>WEBSITES</span>
           <div className={styles.topActions}>
+            <Link href="/admin/websites/concepts" className={styles.secondaryLink}>Concept Review</Link>
             <Link href="/admin/websites/sites" className={styles.secondaryLink}>Legacy PI archive</Link>
             <button onClick={() => session && void load(session)} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
           </div>
@@ -213,7 +214,7 @@ export default function WebsitesCompanyHome() {
         <section className={styles.metrics}>
           <article><span>Companies</span><strong>{metrics.total}</strong><small>new Websites pipeline</small></article>
           <article><span>Qualified</span><strong>{metrics.qualified}</strong><small>strong opportunities</small></article>
-          <article><span>Concepts</span><strong>{metrics.concepts}</strong><small>brief / build / ready</small></article>
+          <article><span>Concepts</span><strong>{metrics.concepts}</strong><small>brief / request / review</small></article>
           <article><span>Ready</span><strong>{metrics.ready}</strong><small>human outreach gate</small></article>
           <article><span>Conversations</span><strong>{metrics.conversations}</strong><small>reply or later</small></article>
           <article><span>Won</span><strong>{metrics.won}</strong><small>website clients</small></article>
@@ -241,19 +242,19 @@ export default function WebsitesCompanyHome() {
           </article>
 
           <article className={styles.strategyCard}>
-            <div className={styles.cardKicker}>NON-INTERFERENCE RULE</div>
-            <h2>One company, one cold approach.</h2>
-            <p>If Systems is already working a company, Websites must not independently cold-contact it. Cross-sell happens only after a real relationship exists.</p>
-            <div className={styles.guardLine}><span className={styles.dot} />Systems outreach remains untouched</div>
-            <div className={styles.guardLine}><span className={styles.dot} />Websites has separate contacts and copy</div>
-            <div className={styles.guardLine}><span className={styles.dot} />No dual demo links in cold outreach</div>
+            <div className={styles.cardKicker}>PRODUCTION POLICY</div>
+            <h2>Human-triggered concepts only.</h2>
+            <p>Discovery stops at a structured brief. A concept is not produced until you choose the company and press Build Concept in the review workspace.</p>
+            <div className={styles.guardLine}><span className={styles.dot} />No automatic mass concept production</div>
+            <div className={styles.guardLine}><span className={styles.dot} />Focused preview, not a full free website</div>
+            <div className={styles.guardLine}><span className={styles.dot} />Approval does not unlock outreach automatically</div>
           </article>
         </section>
 
         <section className={styles.pipelineSection}>
           <div className={styles.sectionHead}>
             <div><p className={styles.eyebrow}>OPERATING MODEL</p><h2>Sales first. Production second.</h2></div>
-            <p>We no longer measure success by how many complete concepts are manufactured. The funnel is built around qualified opportunities, conversations and customers.</p>
+            <p>We no longer measure success by how many complete concepts are manufactured. The funnel is built around qualified opportunities, reviewed concepts, conversations and customers.</p>
           </div>
           <div className={styles.pipeline}>
             {pipeline.map(([number, title, description]) => (
@@ -274,19 +275,19 @@ export default function WebsitesCompanyHome() {
 
           {prospects.length === 0 ? (
             <div className={styles.emptyState}>
-              <div><span>NEW FOUNDATION READY</span><h3>No company prospects have been added yet.</h3><p>The old PI production engine is frozen. The next step is to connect a dedicated company-discovery worker to this clean Websites pipeline without touching Systems acquisition.</p></div>
+              <div><span>FOUNDATION READY</span><h3>Waiting for the first qualified company.</h3><p>The company Discovery worker is active. New companies will appear here only after the business-quality, website-opportunity and Systems-guard checks pass.</p></div>
               <div className={styles.emptyChecklist}>
                 <p><b>01</b> Discover commercially strong companies</p>
                 <p><b>02</b> Check the Systems guard before admission</p>
                 <p><b>03</b> Audit and score the current website</p>
                 <p><b>04</b> Find 2–3 decision-makers</p>
-                <p><b>05</b> Build only the strongest concepts</p>
+                <p><b>05</b> You choose which concept gets built</p>
               </div>
             </div>
           ) : (
             <div className={styles.tableWrap}>
               <table>
-                <thead><tr><th>Company</th><th>Website</th><th>Business</th><th>Systems</th><th>Contacts</th><th>Stage</th><th>Updated</th></tr></thead>
+                <thead><tr><th>Company</th><th>Website</th><th>Business</th><th>Systems</th><th>Contacts</th><th>Stage</th><th>Review</th></tr></thead>
                 <tbody>
                   {visibleProspects.map((prospect) => (
                     <tr key={prospect.id}>
@@ -296,13 +297,18 @@ export default function WebsitesCompanyHome() {
                       <td><b>{prospect.systems_potential_score}</b><small>internal signal only</small></td>
                       <td><b>{contactCounts.get(prospect.id) ?? 0}</b><small>decision-makers</small></td>
                       <td><span className={styles.stage}>{prospect.status.replaceAll("_", " ")}</span></td>
-                      <td><small>{dateLabel(prospect.updated_at)}</small></td>
+                      <td><Link href="/admin/websites/concepts" className={styles.stage}>Open →</Link></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
+        </section>
+
+        <section className={styles.legacyStrip}>
+          <div><span>CONCEPT REVIEW</span><h3>The new production gate is ready.</h3><p>Audit qualified companies, request only the concepts you want, inspect the preview and approve, revise or block it before outreach.</p></div>
+          <Link href="/admin/websites/concepts">Open Concept Review →</Link>
         </section>
 
         <section className={styles.legacyStrip}>
