@@ -90,6 +90,14 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
+function formatMoney(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD", maximumFractionDigits: 0 }).format(amount);
+  } catch {
+    return `$${amount}`;
+  }
+}
+
 export default function IntelligenceWorkspace() {
   const [token, setToken] = useState("");
   const [data, setData] = useState<WorkspacePayload | null>(null);
@@ -210,6 +218,7 @@ export default function IntelligenceWorkspace() {
             <span>Purchased package</span>
             <strong>{data.purchase.packageName}</strong>
             <div><b>{data.purchase.productCount}</b> product analyses</div>
+            <div className={styles.paymentLine}><b>{formatMoney(data.purchase.amount, data.purchase.currency)}</b><span>{data.purchase.currency}</span></div>
             <small>{data.purchase.paidAt ? `Paid ${formatDate(data.purchase.paidAt)}` : "Payment confirmed"}</small>
           </div>
         </div>
