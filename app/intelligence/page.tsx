@@ -24,9 +24,7 @@ const deliverables = [
 ];
 
 const foundingPackages = [
-  ["Single", "1 additional product", "$99"],
-  ["Starter", "3 products", "$249"],
-  ["Growth", "5 products", "$399"],
+  ["Starter", "5 products", "$399"],
   ["Portfolio", "10 products", "$699"],
   ["Portfolio Plus", "20 products", "$1,190"],
 ];
@@ -136,7 +134,7 @@ export default function IntelligencePage() {
       <section className={styles.final}>
         <p className={styles.label}>First five paying customers</p>
         <h2>Start with a complete report at no cost.</h2>
-        <p>Founding 5 pricing is reserved for the first five LabNarrative Intelligence customers. No subscription is required during the launch phase.</p>
+        <p>Founding 5 pricing is reserved for the first five LabNarrative Intelligence customers. Paid packages start with 5 complete product analyses for $399. No subscription is required during the launch phase.</p>
         <a href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20analysis">REQUEST A COMPLIMENTARY ANALYSIS →</a>
       </section>
 
