@@ -11,6 +11,7 @@ function cors(origin: string | null) { const a = allowedOrigin(origin); return {
 function json(body: unknown, status = 200, origin: string | null = null) { return new Response(JSON.stringify(body), { status, headers: { ...cors(origin), "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } }); }
 function isUuid(v: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v); }
 function normalizePriority(v: unknown) { const s = text(v, 20); return ["high", "normal", "low"].includes(s) ? s : "normal"; }
+function object(v: unknown): Record<string, any> { return v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, any> : {}; }
 async function bridge(action:string, token:string){const r=await fetch(PORTFOLIO_BRIDGE_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,token}),cache:"no-store"});const p=await r.json().catch(()=>({})) as any;if(!r.ok)throw new Error(String(p.error||"Intelligence fulfillment bridge failed."));return p}
 
 Deno.serve(async (req: Request) => {
@@ -29,7 +30,7 @@ Deno.serve(async (req: Request) => {
   async function loadWorkspace() {
     const { data: workspace, error: workspaceError } = await db.from("intelligence_client_workspaces").select("*").eq("access_token", token).maybeSingle();
     if (workspaceError || !workspace) return { ok: false as const, status: 404, error: "Workspace not found." };
-    const { data: purchase, error: purchaseError } = await db.from("intelligence_package_purchases").select("id,package_key,package_name,product_count,amount,currency,status,payer_name,payer_email,paid_at,source_report_id").eq("id", workspace.purchase_id).maybeSingle();
+    const { data: purchase, error: purchaseError } = await db.from("intelligence_package_purchases").select("id,package_key,package_name,product_count,amount,currency,status,payer_name,payer_email,paid_at,source_report_id,provider_metadata").eq("id", workspace.purchase_id).maybeSingle();
     if (purchaseError || !purchase || purchase.status !== "paid") return { ok: false as const, status: 403, error: "This workspace is not active." };
 
     let { data: productRows } = await db.from("intelligence_product_requests").select("*").eq("workspace_id", workspace.id).order("position");
@@ -41,10 +42,15 @@ Deno.serve(async (req: Request) => {
     }
 
     let sourceReport: any = null;
-    if (purchase.source_report_id) { try { const r = await fetch(`https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-report-summary?report_id=${encodeURIComponent(purchase.source_report_id)}`, { headers: { accept: "application/json" }, cache: "no-store" }); if (r.ok) { const payload = await r.json(); sourceReport = payload.report || null; } } catch {} }
+    const snapshot = object(object(purchase.provider_metadata).source_report_snapshot);
+    if (purchase.source_report_id && snapshot.id === purchase.source_report_id) sourceReport = snapshot;
+    else if (purchase.source_report_id) { try { const r = await fetch(`https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-report-summary?report_id=${encodeURIComponent(purchase.source_report_id)}`, { headers: { accept: "application/json" }, cache: "no-store" }); if (r.ok) { const payload = await r.json(); sourceReport = payload.report || null; } } catch {} }
 
     const live = new Map<string, any>();
-    try { const statusPayload = await bridge("status", token); for (const item of Array.isArray(statusPayload.jobs) ? statusPayload.jobs : []) if (item?.sourceProductRequestId) live.set(item.sourceProductRequestId, item); } catch (e) { console.error("portfolio status bridge", e); }
+    const fulfillmentStarted = ["in_progress", "complete"].includes(String(workspace.onboarding_status || "")) || productRows.some((p:any) => ["queued","researching","scientific_review","complete","blocked"].includes(String(p.status || "")));
+    if (fulfillmentStarted) {
+      try { const statusPayload = await bridge("status", token); for (const item of Array.isArray(statusPayload.jobs) ? statusPayload.jobs : []) if (item?.sourceProductRequestId) live.set(item.sourceProductRequestId, item); } catch (e) { console.error("portfolio status bridge", e); }
+    }
 
     const products = productRows.map((p: any) => { const remote = live.get(p.id); return {
       id: p.id, position: p.position, productName: p.product_name || "", catalogNumber: p.catalog_number || "", productUrl: p.product_url || "", priority: p.priority || "normal", clientNotes: p.client_notes || "",
