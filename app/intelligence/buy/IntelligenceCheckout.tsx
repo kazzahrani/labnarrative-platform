@@ -59,10 +59,11 @@ function validPackage(value: string | null): value is PackageKey {
 
 export default function IntelligenceCheckout() {
   const [selectedKey, setSelectedKey] = useState<PackageKey>("portfolio");
+  const [sourceReportId, setSourceReportId] = useState("");
   const [provider, setProvider] = useState<ProviderStatus>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState<{ captureId: string; purchaseId: string; packageName: string; payerEmail: string } | null>(null);
+  const [success, setSuccess] = useState<{ captureId: string; purchaseId: string; packageName: string; payerEmail: string; workspaceUrl: string } | null>(null);
   const buttonRef = useRef<HTMLDivElement | null>(null);
   const functionUrl = `${String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "")}/functions/v1/intelligence-checkout`;
   const selected = useMemo(() => packages.find((item) => item.key === selectedKey) || packages[1], [selectedKey]);
@@ -80,8 +81,11 @@ export default function IntelligenceCheckout() {
   }
 
   useEffect(() => {
-    const query = new URLSearchParams(window.location.search).get("package");
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("package");
     if (validPackage(query)) setSelectedKey(query);
+    const report = String(params.get("report") || "").trim();
+    if (/^[0-9a-f-]{36}$/i.test(report)) setSourceReportId(report);
     void callProvider("status")
       .then((result) => {
         setProvider({
@@ -110,7 +114,7 @@ export default function IntelligenceCheckout() {
         buttonRef.current.innerHTML = "";
         buttons = window.paypal.Buttons({
           createOrder: async () => {
-            const result = await callProvider("create_order", { packageKey: selected.key });
+            const result = await callProvider("create_order", { packageKey: selected.key, sourceReportId: sourceReportId || undefined });
             const orderId = String(result.orderId || "");
             if (!orderId) throw new Error("Secure payment order could not be created.");
             return orderId;
@@ -120,11 +124,14 @@ export default function IntelligenceCheckout() {
             if (!orderId) throw new Error("Payment order is missing.");
             const result = await callProvider("capture", { orderId });
             if (!result.paid) throw new Error("The payment was not completed.");
+            const workspaceUrl = String(result.workspaceUrl || "");
+            if (!workspaceUrl.startsWith("https://labnarrative.com/intelligence/workspace")) throw new Error("Payment succeeded, but the client workspace could not be opened.");
             setSuccess({
               captureId: String(result.captureId || ""),
               purchaseId: String(result.purchaseId || ""),
               packageName: String(result.packageName || selected.name),
               payerEmail: String(result.payerEmail || ""),
+              workspaceUrl,
             });
           },
           onCancel: () => setError("PayPal checkout was cancelled. No payment was recorded."),
@@ -144,24 +151,22 @@ export default function IntelligenceCheckout() {
       if (buttonRef.current) buttonRef.current.innerHTML = "";
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provider.clientId, provider.currency, provider.verified, selected.key, success]);
+  }, [provider.clientId, provider.currency, provider.verified, selected.key, sourceReportId, success]);
 
   if (success) {
-    const subject = encodeURIComponent(`LabNarrative Intelligence - ${success.packageName} product list`);
-    const body = encodeURIComponent(`Hello LabNarrative,\n\nI have completed payment for the ${success.packageName} package.\nPayment reference: ${success.captureId}\n\nHere are the products I would like analyzed:\n\n1. \n2. \n3. \n\nCompany:\nContact name:\n`);
     return (
       <section className={styles.success} aria-live="polite">
         <p className={styles.kicker}>Payment confirmed</p>
-        <h2>Your Intelligence package is secured.</h2>
+        <h2>Your Intelligence workspace is ready.</h2>
         <p>
-          PayPal confirmed the <strong>{success.packageName}</strong> purchase. Send the product list now so the analyses can be prepared against the products you want prioritized.
+          PayPal confirmed the <strong>{success.packageName}</strong> purchase. Continue to your private workspace to add company details, submit your products and follow every analysis through research, scientific review and delivery.
         </p>
         <div className={styles.receipt}>
           <span>Payment reference</span>
           <strong>{success.captureId || success.purchaseId}</strong>
           {success.payerEmail ? <small>Receipt identity: {success.payerEmail}</small> : null}
         </div>
-        <a className={styles.primaryButton} href={`mailto:hello@labnarrative.com?subject=${subject}&body=${body}`}>SEND YOUR PRODUCT LIST →</a>
+        <a className={styles.primaryButton} href={success.workspaceUrl}>OPEN YOUR CLIENT WORKSPACE →</a>
       </section>
     );
   }
@@ -198,7 +203,8 @@ export default function IntelligenceCheckout() {
           <div><span>Complete analyses</span><strong>{selected.products} products</strong></div>
           <div className={styles.total}><span>Total</span><strong>{selected.price} USD</strong></div>
         </div>
-        <p className={styles.checkoutCopy}>One-time introductory launch price. No subscription. The amount is fixed on the server and captured only after PayPal confirms the transaction.</p>
+        <p className={styles.checkoutCopy}>One-time introductory launch price. No subscription. After payment, your private client workspace opens immediately.</p>
+        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary report will also be carried into the workspace as your first Intelligence reference.</p> : null}
         {loading ? <div className={styles.loading}>Connecting secure checkout…</div> : null}
         {!loading && provider.verified && provider.clientId ? <div ref={buttonRef} className={styles.paypalSlot} /> : null}
         {!loading && !provider.verified ? <div className={styles.error}>{provider.authError || "PayPal checkout is temporarily unavailable."}</div> : null}
