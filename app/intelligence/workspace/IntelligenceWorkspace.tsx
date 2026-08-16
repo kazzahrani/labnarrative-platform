@@ -68,7 +68,7 @@ const statusLabel: Record<string, string> = {
 const workspaceStatusLabel: Record<string, string> = {
   awaiting_details: "Onboarding",
   collecting_products: "Portfolio setup",
-  ready_for_research: "Ready for research",
+  ready_for_research: "Starting research",
   in_progress: "In progress",
   complete: "Complete",
 };
@@ -98,16 +98,21 @@ function formatMoney(amount: number, currency: string) {
   }
 }
 
+function hasProductIdentity(item: ProductRow) {
+  return Boolean(item.productName.trim() || item.catalogNumber.trim() || item.productUrl.trim());
+}
+
 export default function IntelligenceWorkspace() {
   const [token, setToken] = useState("");
   const [data, setData] = useState<WorkspacePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [submittingPosition, setSubmittingPosition] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const endpoint = `${String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "")}/functions/v1/intelligence-workspace`;
 
-  async function callWorkspace(action: "load" | "save", payload: Record<string, unknown> = {}) {
+  async function callWorkspace(action: "load" | "save" | "submit_product", payload: Record<string, unknown> = {}) {
     if (!endpoint.startsWith("https://")) throw new Error("Workspace service is unavailable.");
     const response = await fetch(endpoint, {
       method: "POST",
@@ -117,6 +122,26 @@ export default function IntelligenceWorkspace() {
     const result = await response.json().catch(() => ({})) as Record<string, unknown>;
     if (!response.ok) throw new Error(String(result.error || "Workspace request failed."));
     return result as unknown as WorkspacePayload;
+  }
+
+  function workspacePayload() {
+    if (!data) return {};
+    return {
+      companyName: data.workspace.companyName,
+      companyWebsite: data.workspace.companyWebsite,
+      contactName: data.workspace.contactName,
+      contactEmail: data.workspace.contactEmail,
+      targetGeography: data.workspace.targetGeography,
+      clientNotes: data.workspace.clientNotes,
+      products: data.products.map((item) => ({
+        position: item.position,
+        productName: item.productName,
+        catalogNumber: item.catalogNumber,
+        productUrl: item.productUrl,
+        priority: item.priority,
+        clientNotes: item.clientNotes,
+      })),
+    };
   }
 
   useEffect(() => {
@@ -138,7 +163,7 @@ export default function IntelligenceWorkspace() {
   }, [token]);
 
   const submittedCount = useMemo(() => data?.products.filter((item) => item.status !== "awaiting_product").length || 0, [data]);
-  const filledDraftCount = useMemo(() => data?.products.filter((item) => Boolean(item.productName.trim() || item.catalogNumber.trim() || item.productUrl.trim())).length || 0, [data]);
+  const preparedCount = useMemo(() => data?.products.filter(hasProductIdentity).length || 0, [data]);
   const completedCount = useMemo(() => data?.products.filter((item) => item.status === "complete").length || 0, [data]);
   const researchCount = useMemo(() => data?.products.filter((item) => ["researching", "scientific_review"].includes(item.status)).length || 0, [data]);
 
@@ -161,28 +186,29 @@ export default function IntelligenceWorkspace() {
     setSaved(false);
     setError("");
     try {
-      const refreshed = await callWorkspace("save", {
-        companyName: data.workspace.companyName,
-        companyWebsite: data.workspace.companyWebsite,
-        contactName: data.workspace.contactName,
-        contactEmail: data.workspace.contactEmail,
-        targetGeography: data.workspace.targetGeography,
-        clientNotes: data.workspace.clientNotes,
-        products: data.products.map((item) => ({
-          position: item.position,
-          productName: item.productName,
-          catalogNumber: item.catalogNumber,
-          productUrl: item.productUrl,
-          priority: item.priority,
-          clientNotes: item.clientNotes,
-        })),
-      });
+      const refreshed = await callWorkspace("save", workspacePayload());
       setData(refreshed);
       setSaved(true);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Workspace could not be saved.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function submitProduct(position: number) {
+    if (!data) return;
+    setSubmittingPosition(position);
+    setSaved(false);
+    setError("");
+    try {
+      const refreshed = await callWorkspace("submit_product", { ...workspacePayload(), position });
+      setData(refreshed);
+      setSaved(true);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "This product could not be started.");
+    } finally {
+      setSubmittingPosition(null);
     }
   }
 
@@ -203,8 +229,8 @@ export default function IntelligenceWorkspace() {
 
   if (!data) return null;
 
-  const companyReady = Boolean(data.workspace.companyName && data.workspace.contactName && data.workspace.contactEmail);
-  const portfolioReady = companyReady && filledDraftCount === data.purchase.productCount;
+  const companyReady = Boolean(data.workspace.companyName.trim() && data.workspace.contactName.trim() && data.workspace.contactEmail.trim());
+  const remainingCount = Math.max(0, data.purchase.productCount - submittedCount);
   const liveWorkspaceStatus = workspaceStatusLabel[data.workspace.onboardingStatus] || "Active";
 
   return (
@@ -270,19 +296,21 @@ export default function IntelligenceWorkspace() {
         <div className={styles.sectionHead}>
           <div>
             <p className={styles.eyebrow}>02 · Product portfolio</p>
-            <h2>Choose the products we should analyze.</h2>
+            <h2>Use your analyses when you need them.</h2>
           </div>
-          <p>You can use a product name, catalogue number, direct product URL, or all three. Submitted products become the queue for the Intelligence team.</p>
+          <p>Start one product now or add the rest later. Each product is submitted independently, and unused package slots remain available in this workspace.</p>
         </div>
 
         <div className={styles.productList}>
           {data.products.map((item) => {
-            const locked = !["awaiting_product", "submitted"].includes(item.status);
+            const locked = item.status !== "awaiting_product";
+            const prepared = hasProductIdentity(item);
+            const visibleStatus = item.status === "awaiting_product" && prepared ? "Draft" : statusLabel[item.status] || item.status;
             return (
               <article className={styles.productCard} key={item.id}>
                 <header>
                   <div><span className={styles.productNumber}>{String(item.position).padStart(2, "0")}</span><strong>Product analysis</strong></div>
-                  <span className={`${styles.status} ${styles[`status_${item.status}`] || ""}`}>{statusLabel[item.status] || item.status}</span>
+                  <span className={`${styles.status} ${prepared && !locked ? styles.statusDraft : ""} ${styles[`status_${item.status}`] || ""}`}>{visibleStatus}</span>
                 </header>
                 <div className={styles.productFields}>
                   <label><span>Product name</span><input disabled={locked} value={item.productName} onChange={(e) => updateProduct(item.position, "productName", e.target.value)} placeholder="Product name" /></label>
@@ -291,15 +319,24 @@ export default function IntelligenceWorkspace() {
                   <label><span>Priority</span><select disabled={locked} value={item.priority} onChange={(e) => updateProduct(item.position, "priority", e.target.value)}><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
                   <label className={styles.notesField}><span>Notes</span><input disabled={locked} value={item.clientNotes} onChange={(e) => updateProduct(item.position, "clientNotes", e.target.value)} placeholder="Optional application, market or positioning note" /></label>
                 </div>
+
                 {item.status === "complete" ? (
                   <footer className={styles.reportActions}>
                     {item.webReportUrl ? <a href={item.webReportUrl} target="_blank" rel="noreferrer">VIEW WEB REPORT →</a> : null}
                     {item.pdfReportUrl ? <a href={item.pdfReportUrl} target="_blank" rel="noreferrer">DOWNLOAD PDF →</a> : null}
                   </footer>
                 ) : (
-                  <footer className={styles.stageLine}>
-                    {['Submitted','AI discovery','Scientific validation','Delivery'].map((label, index) => <span key={label} className={stageIndex[item.status] >= index + 1 ? styles.stageActive : ""}>{label}</span>)}
-                  </footer>
+                  <>
+                    <footer className={styles.stageLine}>
+                      {['Submitted','AI discovery','Scientific validation','Delivery'].map((label, index) => <span key={label} className={stageIndex[item.status] >= index + 1 ? styles.stageActive : ""}>{label}</span>)}
+                    </footer>
+                    {item.status === "awaiting_product" && prepared ? (
+                      <div className={styles.productAction}>
+                        <span>{companyReady ? "Starts this product only. Your other slots stay available." : "Complete the required client details before starting."}</span>
+                        <button type="button" onClick={() => submitProduct(item.position)} disabled={!companyReady || saving || submittingPosition !== null}>{submittingPosition === item.position ? "STARTING…" : "START THIS ANALYSIS →"}</button>
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </article>
             );
@@ -308,12 +345,12 @@ export default function IntelligenceWorkspace() {
 
         <div className={styles.saveBar}>
           <div>
-            <strong>{filledDraftCount} of {data.purchase.productCount} product slots filled</strong>
-            <span>{!companyReady ? "Complete company name, contact name and email" : portfolioReady ? "All products ready to submit" : "Save progress and return anytime"}</span>
+            <strong>{preparedCount} of {data.purchase.productCount} product slots prepared</strong>
+            <span>{submittedCount} submitted · {remainingCount} remaining · unused slots stay available</span>
           </div>
-          <button type="button" onClick={saveWorkspace} disabled={saving}>{saving ? "SAVING…" : portfolioReady ? "SUBMIT PORTFOLIO →" : "SAVE PROGRESS →"}</button>
+          <button type="button" onClick={saveWorkspace} disabled={saving || submittingPosition !== null}>{saving ? "SAVING…" : "SAVE PROGRESS →"}</button>
         </div>
-        {saved ? <p className={styles.saved}>{data.workspace.onboardingStatus === "in_progress" ? "Submitted. Your products are now queued in the Intelligence engagement." : "Saved. Your workspace details are up to date."}</p> : null}
+        {saved ? <p className={styles.saved}>Saved. You can return to this private workspace anytime to use the remaining product analyses.</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
       </section>
 
