@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ThemeToggle from "../ThemeToggle";
 import ActivateClient from "./ActivateClient";
 
 export const metadata: Metadata = {
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <ActivateClient />;
+  return <><ThemeToggle variant="auth" /><ActivateClient /></>;
 }
