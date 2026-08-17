@@ -48,6 +48,7 @@ import "./blue-theme-lock.css";
 import "./platform-list-pagination.css";
 import "./engine-v3-final-review-theme.css";
 import "./labnarrative-modern-theme.css";
+import "./public-fashion-refresh.css";
 
 export const metadata: Metadata = {
   title: {
