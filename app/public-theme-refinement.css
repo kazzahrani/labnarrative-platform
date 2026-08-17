@@ -1,0 +1,415 @@
+/* Final LabNarrative public-theme refinements.
+   Loaded last so the new colorful brand wins over legacy green styles. */
+
+:root {
+  --ln-brand-violet: #5d52e7;
+  --ln-brand-violet-2: #766cf2;
+  --ln-brand-ink: #242331;
+  --ln-brand-muted: #666878;
+  --ln-brand-paper: #f7f5f0;
+  --ln-brand-lavender: #ddd7ff;
+  --ln-brand-blue: #d9e9ff;
+  --ln-brand-mint: #d2f1df;
+  --ln-brand-lime: #e8f7a8;
+  --ln-brand-peach: #ffd9c7;
+  --ln-brand-yellow: #fff0ae;
+  --ln-brand-pink: #f7d8eb;
+}
+
+/* --------------------------------------------------------------------------
+   Brand wordmark: retire the old green identity on all public surfaces.
+   -------------------------------------------------------------------------- */
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="brand-module__"],
+  main[class*="process-module__"],
+  main[class*="auth-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+) [class*="wordmark"] {
+  color: var(--ln-brand-ink) !important;
+}
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="brand-module__"],
+  main[class*="process-module__"],
+  main[class*="auth-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+) [class*="wordmark"] > span:first-child,
+.lnWebsitesPublic [class*="logoLab"],
+.lnSystemsPublic [class*="logoLab"] {
+  color: var(--ln-brand-violet) !important;
+}
+.lnWebsitesPublic [class*="logoNarrative"],
+.lnSystemsPublic [class*="logoNarrative"] {
+  color: var(--ln-brand-ink) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Flagship homepage: colorful intelligence cards + clean lead copy.
+   -------------------------------------------------------------------------- */
+main[class*="labnarrative-module__"] [class*="darkLead"] {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: rgba(255,255,255,.78) !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"] {
+  color: var(--ln-brand-ink) !important;
+  border: 1px solid rgba(255,255,255,.65) !important;
+  box-shadow: 0 14px 34px rgba(23,20,58,.12) !important;
+  backdrop-filter: none !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"]:nth-child(1) {
+  background: var(--ln-brand-peach) !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"]:nth-child(2) {
+  background: var(--ln-brand-mint) !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"]:nth-child(3) {
+  background: var(--ln-brand-blue) !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"]:nth-child(4) {
+  background: var(--ln-brand-lavender) !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"] span {
+  color: var(--ln-brand-violet) !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"] h3 {
+  color: var(--ln-brand-ink) !important;
+}
+main[class*="labnarrative-module__"] [class*="featureGrid"] [class*="featureCard"] p {
+  color: #666878 !important;
+}
+
+/* --------------------------------------------------------------------------
+   LabNarrative Websites — decisive public redesign.
+   -------------------------------------------------------------------------- */
+.lnWebsitesPublic {
+  --green: var(--ln-brand-violet) !important;
+  --green-dark: #3b347f !important;
+  --lime: var(--ln-brand-lime) !important;
+  --paper: var(--ln-brand-paper) !important;
+  --ink: var(--ln-brand-ink) !important;
+  --muted: var(--ln-brand-muted) !important;
+  background: var(--ln-brand-paper) !important;
+  color: var(--ln-brand-ink) !important;
+}
+.lnWebsitesPublic > header {
+  width: calc(100% - clamp(28px,5vw,76px)) !important;
+  min-height: 72px !important;
+  margin: 18px auto 0 !important;
+  padding: 0 clamp(18px,2.4vw,34px) !important;
+  border: 1px solid rgba(255,255,255,.86) !important;
+  border-radius: 24px !important;
+  background: rgba(255,253,249,.86) !important;
+  backdrop-filter: blur(18px) saturate(150%) !important;
+  box-shadow: 0 14px 44px rgba(45,40,70,.09) !important;
+}
+.lnWebsitesPublic > section {
+  width: calc(100% - clamp(28px,5vw,76px)) !important;
+  margin: 18px auto !important;
+  border: 1px solid rgba(255,255,255,.76) !important;
+  border-radius: clamp(28px,3.2vw,48px) !important;
+  overflow: hidden !important;
+  box-shadow: 0 18px 54px rgba(45,40,70,.055) !important;
+}
+.lnWebsitesPublic [class*="hero"] {
+  background: linear-gradient(135deg,#f7d8eb 0%,#ddd7ff 52%,#d9e9ff 100%) !important;
+}
+.lnWebsitesPublic [class*="heroAside"] {
+  background: rgba(255,253,249,.72) !important;
+  border: 1px solid rgba(255,255,255,.8) !important;
+  border-radius: 28px !important;
+  padding: 28px !important;
+  box-shadow: 0 18px 46px rgba(60,51,125,.08) !important;
+}
+.lnWebsitesPublic [class*="heroAside"] a,
+.lnWebsitesPublic [class*="headerCta"],
+.lnWebsitesPublic [class*="emailButton"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  padding: 13px 17px !important;
+  background: linear-gradient(135deg,var(--ln-brand-violet),var(--ln-brand-violet-2)) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 28px rgba(93,82,231,.22) !important;
+}
+.lnWebsitesPublic [class*="eyebrow"],
+.lnWebsitesPublic [class*="sectionLabel"],
+.lnWebsitesPublic [class*="number"] {
+  color: var(--ln-brand-violet) !important;
+}
+.lnWebsitesPublic [class*="approachSection"] {
+  background: #fffdf9 !important;
+}
+.lnWebsitesPublic [class*="approachGrid"] {
+  gap: 16px !important;
+}
+.lnWebsitesPublic [class*="approachGrid"] article {
+  border: 1px solid rgba(255,255,255,.8) !important;
+  border-radius: 28px !important;
+  padding: clamp(28px,3vw,42px) !important;
+  box-shadow: 0 16px 38px rgba(45,40,70,.06) !important;
+}
+.lnWebsitesPublic [class*="approachGrid"] article:nth-child(1) { background: var(--ln-brand-peach) !important; }
+.lnWebsitesPublic [class*="approachGrid"] article:nth-child(2) { background: var(--ln-brand-mint) !important; }
+.lnWebsitesPublic [class*="approachGrid"] article:nth-child(3) { background: var(--ln-brand-blue) !important; }
+.lnWebsitesPublic [class*="workSection"] {
+  background: linear-gradient(135deg,#f1ecff,#ddd7ff) !important;
+}
+.lnWebsitesPublic [class*="processSection"] {
+  background: linear-gradient(135deg,#edf6ff,#d9e9ff 56%,#e5f6ee) !important;
+}
+.lnWebsitesPublic [class*="processGrid"] {
+  gap: 14px !important;
+}
+.lnWebsitesPublic [class*="processGrid"] article {
+  border: 1px solid rgba(255,255,255,.78) !important;
+  border-radius: 26px !important;
+  box-shadow: 0 15px 34px rgba(45,40,70,.05) !important;
+}
+.lnWebsitesPublic [class*="processGrid"] article:nth-child(1) { background: var(--ln-brand-yellow) !important; }
+.lnWebsitesPublic [class*="processGrid"] article:nth-child(2) { background: var(--ln-brand-pink) !important; }
+.lnWebsitesPublic [class*="processGrid"] article:nth-child(3) { background: var(--ln-brand-mint) !important; }
+.lnWebsitesPublic [class*="processGrid"] article:nth-child(4) { background: var(--ln-brand-lavender) !important; }
+.lnWebsitesPublic #after-launch {
+  background: linear-gradient(135deg,#3b347f,#5d52a6) !important;
+  color: #fff !important;
+}
+.lnWebsitesPublic #after-launch [class*="sectionLabel"] { color: var(--ln-brand-lime) !important; }
+.lnWebsitesPublic #after-launch p { color: rgba(255,255,255,.78) !important; }
+.lnWebsitesPublic [class*="pricingSection"] {
+  background: linear-gradient(135deg,#fff7cf,#fff0ae) !important;
+}
+.lnWebsitesPublic [class*="pricingGrid"] article {
+  border-radius: 28px !important;
+  border: 1px solid rgba(255,255,255,.75) !important;
+  box-shadow: 0 16px 38px rgba(80,64,20,.055) !important;
+}
+.lnWebsitesPublic [class*="pricingGrid"] article:nth-child(1) { background: #fffdf9 !important; }
+.lnWebsitesPublic [class*="pricingGrid"] article:nth-child(2) { background: var(--ln-brand-lavender) !important; }
+.lnWebsitesPublic [class*="pricingGrid"] article:nth-child(3) { background: var(--ln-brand-blue) !important; }
+.lnWebsitesPublic [class*="badge"] {
+  background: var(--ln-brand-violet) !important;
+  color: #fff !important;
+}
+.lnWebsitesPublic [class*="founderSection"] {
+  background: linear-gradient(135deg,#d9e9ff,#e9f2ff) !important;
+}
+.lnWebsitesPublic [class*="finalCta"] {
+  background: linear-gradient(135deg,#d2f1df 0%,#ddd7ff 52%,#f7d8eb 100%) !important;
+  color: var(--ln-brand-ink) !important;
+}
+.lnWebsitesPublic > footer {
+  width: calc(100% - clamp(28px,5vw,76px)) !important;
+  margin: 18px auto !important;
+  padding: 26px 30px !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: #fffdf9 !important;
+  color: #737482 !important;
+  box-shadow: 0 12px 34px rgba(45,40,70,.06) !important;
+}
+
+/* --------------------------------------------------------------------------
+   LabNarrative Systems — remove legacy green/dark treatment from public page.
+   -------------------------------------------------------------------------- */
+.lnSystemsPublic > main {
+  --paper: var(--ln-brand-paper) !important;
+  --white: #fffdf9 !important;
+  --ink: var(--ln-brand-ink) !important;
+  --muted: var(--ln-brand-muted) !important;
+  --green: var(--ln-brand-violet) !important;
+  --green-soft: var(--ln-brand-lavender) !important;
+  --green-dark: #3b347f !important;
+  --lime: var(--ln-brand-lime) !important;
+  background: var(--ln-brand-paper) !important;
+  color: var(--ln-brand-ink) !important;
+}
+.lnSystemsPublic > main > header {
+  width: calc(100% - clamp(28px,5vw,76px)) !important;
+  min-height: 72px !important;
+  margin: 18px auto 0 !important;
+  padding: 0 clamp(18px,2.4vw,34px) !important;
+  border: 1px solid rgba(255,255,255,.86) !important;
+  border-radius: 24px !important;
+  background: rgba(255,253,249,.86) !important;
+  backdrop-filter: blur(18px) saturate(150%) !important;
+  box-shadow: 0 14px 44px rgba(45,40,70,.09) !important;
+}
+.lnSystemsPublic > main > section {
+  width: calc(100% - clamp(28px,5vw,76px)) !important;
+  margin: 18px auto !important;
+  border: 1px solid rgba(255,255,255,.76) !important;
+  border-radius: clamp(28px,3.2vw,48px) !important;
+  overflow: hidden !important;
+  box-shadow: 0 18px 54px rgba(45,40,70,.055) !important;
+}
+.lnSystemsPublic > main [class*="hero"] {
+  background: linear-gradient(135deg,#d9e9ff 0%,#d2f1df 54%,#e8f7a8 100%) !important;
+}
+.lnSystemsPublic > main [class*="eyebrow"],
+.lnSystemsPublic > main [class*="sectionLabel"],
+.lnSystemsPublic > main [class*="number"] {
+  color: var(--ln-brand-violet) !important;
+}
+.lnSystemsPublic > main [class*="headerCta"],
+.lnSystemsPublic > main [class*="heroAside"] a,
+.lnSystemsPublic > main [class*="finalCta"] > a {
+  display: inline-flex !important;
+  align-items: center !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  padding: 13px 17px !important;
+  background: linear-gradient(135deg,var(--ln-brand-violet),var(--ln-brand-violet-2)) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 28px rgba(93,82,231,.22) !important;
+}
+.lnSystemsPublic > main [class*="heroAside"] {
+  background: rgba(255,253,249,.72) !important;
+  border-radius: 28px !important;
+  padding: 28px !important;
+  border: 1px solid rgba(255,255,255,.8) !important;
+}
+
+/* Product-demo mockup becomes a light, colorful product surface. */
+.lnSystemsPublic > main [class*="demoShell"] {
+  border: 1px solid rgba(93,82,231,.12) !important;
+  background: #fffdf9 !important;
+  box-shadow: 0 30px 72px rgba(45,40,70,.12) !important;
+}
+.lnSystemsPublic > main [class*="demoRail"] {
+  background: #eeeaff !important;
+  border-color: rgba(93,82,231,.12) !important;
+  color: #716d85 !important;
+}
+.lnSystemsPublic > main [class*="demoMark"] {
+  background: var(--ln-brand-violet) !important;
+  color: #fff !important;
+}
+.lnSystemsPublic > main [class*="railActive"] {
+  background: var(--ln-brand-lime) !important;
+  color: #39336f !important;
+}
+.lnSystemsPublic > main [class*="demoMain"] { background: #fffdf9 !important; }
+.lnSystemsPublic > main [class*="demoTopbar"] { border-color: rgba(45,40,70,.1) !important; }
+.lnSystemsPublic > main [class*="demoTopbar"] strong { color: var(--ln-brand-ink) !important; }
+.lnSystemsPublic > main [class*="demoEyebrow"],
+.lnSystemsPublic > main [class*="liveBadge"] { color: #767486 !important; }
+.lnSystemsPublic > main [class*="metricGrid"] {
+  gap: 12px !important;
+  background: transparent !important;
+}
+.lnSystemsPublic > main [class*="metricGrid"] article {
+  border: 1px solid rgba(255,255,255,.8) !important;
+  border-radius: 22px !important;
+}
+.lnSystemsPublic > main [class*="metricGrid"] article:nth-child(1) { background: var(--ln-brand-peach) !important; }
+.lnSystemsPublic > main [class*="metricGrid"] article:nth-child(2) { background: var(--ln-brand-mint) !important; }
+.lnSystemsPublic > main [class*="metricGrid"] article:nth-child(3) { background: var(--ln-brand-blue) !important; }
+.lnSystemsPublic > main [class*="metricGrid"] :is(span,strong,small) { color: var(--ln-brand-ink) !important; }
+.lnSystemsPublic > main [class*="pipelineCard"],
+.lnSystemsPublic > main [class*="automationCard"] {
+  background: #f5f2ff !important;
+  border-color: rgba(93,82,231,.12) !important;
+  color: var(--ln-brand-ink) !important;
+}
+.lnSystemsPublic > main [class*="cardHead"] strong,
+.lnSystemsPublic > main [class*="pipelineRow"] div strong { color: var(--ln-brand-ink) !important; }
+.lnSystemsPublic > main [class*="cardHead"] span,
+.lnSystemsPublic > main [class*="pipelineRow"],
+.lnSystemsPublic > main [class*="pipelineRow"] div small,
+.lnSystemsPublic > main [class*="pipelineRow"] em { color: #777586 !important; }
+.lnSystemsPublic > main [class*="pipelineRow"] { border-color: rgba(93,82,231,.11) !important; }
+.lnSystemsPublic > main [class*="pipelineRow"] b { background: #e6e2ff !important; color: #514a9e !important; }
+.lnSystemsPublic > main [class*="scoreHigh"] { background: var(--ln-brand-lime) !important; color: #37315f !important; }
+.lnSystemsPublic > main [class*="flowStep"] {
+  border-color: rgba(93,82,231,.12) !important;
+  color: var(--ln-brand-ink) !important;
+  background: #fffdf9 !important;
+}
+.lnSystemsPublic > main [class*="flowStep"] i { background: var(--ln-brand-lavender) !important; color: var(--ln-brand-violet) !important; }
+.lnSystemsPublic > main [class*="flowLine"] { background: rgba(93,82,231,.16) !important; }
+
+.lnSystemsPublic > main [class*="problemSection"] { background: var(--ln-brand-peach) !important; }
+.lnSystemsPublic > main [class*="outcomeSection"] { background: #fffdf9 !important; }
+.lnSystemsPublic > main [class*="outcomeGrid"] {
+  gap: 14px !important;
+}
+.lnSystemsPublic > main [class*="outcomeGrid"] article {
+  padding: clamp(28px,3vw,42px) !important;
+  border: 1px solid rgba(255,255,255,.8) !important;
+  border-radius: 28px !important;
+}
+.lnSystemsPublic > main [class*="outcomeGrid"] article:nth-child(1) { background: var(--ln-brand-yellow) !important; }
+.lnSystemsPublic > main [class*="outcomeGrid"] article:nth-child(2) { background: var(--ln-brand-mint) !important; }
+.lnSystemsPublic > main [class*="outcomeGrid"] article:nth-child(3) { background: var(--ln-brand-blue) !important; }
+.lnSystemsPublic > main [class*="moduleBand"] span {
+  background: #f1edff !important;
+  border-color: rgba(93,82,231,.12) !important;
+  color: #514a9e !important;
+}
+.lnSystemsPublic > main [class*="useCaseSection"] {
+  background: linear-gradient(135deg,#3b347f,#5b529c) !important;
+  color: #fff !important;
+}
+.lnSystemsPublic > main [class*="sectionToplineDark"] { border-color: rgba(255,255,255,.17) !important; color: rgba(255,255,255,.65) !important; }
+.lnSystemsPublic > main [class*="sectionToplineDark"] [class*="sectionLabel"] { color: var(--ln-brand-lime) !important; }
+.lnSystemsPublic > main [class*="useCaseGrid"] {
+  gap: 14px !important;
+  background: transparent !important;
+}
+.lnSystemsPublic > main [class*="useCaseGrid"] article {
+  border: 1px solid rgba(255,255,255,.7) !important;
+  border-radius: 28px !important;
+  color: var(--ln-brand-ink) !important;
+}
+.lnSystemsPublic > main [class*="useCaseGrid"] article:nth-child(1) { background: var(--ln-brand-peach) !important; }
+.lnSystemsPublic > main [class*="useCaseGrid"] article:nth-child(2) { background: var(--ln-brand-blue) !important; }
+.lnSystemsPublic > main [class*="useCaseGrid"] article:nth-child(3) { background: var(--ln-brand-lavender) !important; }
+.lnSystemsPublic > main [class*="useCaseGrid"] article > span { color: var(--ln-brand-violet) !important; }
+.lnSystemsPublic > main [class*="useCaseGrid"] article p { color: #676879 !important; }
+.lnSystemsPublic > main [class*="buildSection"] { background: var(--ln-brand-yellow) !important; }
+.lnSystemsPublic > main [class*="pricingSection"] { background: linear-gradient(135deg,#e9f8ef,#d2f1df) !important; }
+.lnSystemsPublic > main [class*="pricingGrid"] article {
+  border-radius: 28px !important;
+  border-color: rgba(255,255,255,.75) !important;
+  box-shadow: 0 16px 38px rgba(45,40,70,.055) !important;
+}
+.lnSystemsPublic > main [class*="pricingGrid"] article:nth-child(1) { background: #fffdf9 !important; }
+.lnSystemsPublic > main [class*="pricingGrid"] article:nth-child(2) { background: var(--ln-brand-lavender) !important; }
+.lnSystemsPublic > main [class*="pricingGrid"] article:nth-child(3) { background: var(--ln-brand-blue) !important; }
+.lnSystemsPublic > main [class*="recommended"] { border-color: rgba(93,82,231,.28) !important; }
+.lnSystemsPublic > main [class*="badge"] { background: var(--ln-brand-violet) !important; color: #fff !important; }
+.lnSystemsPublic > main [class*="finalCta"] {
+  background: linear-gradient(135deg,#d2f1df 0%,#ddd7ff 52%,#f7d8eb 100%) !important;
+  color: var(--ln-brand-ink) !important;
+}
+.lnSystemsPublic > main > footer {
+  width: calc(100% - clamp(28px,5vw,76px)) !important;
+  margin: 18px auto !important;
+  padding: 26px 30px !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: #fffdf9 !important;
+  color: #737482 !important;
+  box-shadow: 0 12px 34px rgba(45,40,70,.06) !important;
+}
+
+@media (max-width: 760px) {
+  .lnWebsitesPublic > header,
+  .lnWebsitesPublic > section,
+  .lnWebsitesPublic > footer,
+  .lnSystemsPublic > main > header,
+  .lnSystemsPublic > main > section,
+  .lnSystemsPublic > main > footer {
+    width: calc(100% - 24px) !important;
+    margin-left: 12px !important;
+    margin-right: 12px !important;
+    border-radius: 26px !important;
+  }
+}
