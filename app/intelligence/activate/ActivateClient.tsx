@@ -74,15 +74,15 @@ export default function ActivateClient() {
       await authCall("activate", { password, fullName: name });
       const signed = await intelligenceAuth.auth.signInWithPassword({ email: invite.email, password });
       if (signed.error) throw signed.error;
-      window.location.href = "/intelligence/client";
+      window.location.href = "/client";
     } catch (e) {
       const err = e as Error & { payload?: Record<string, any> };
       if (err.payload?.error === "account_exists") {
-        window.location.href = `/intelligence/login?claim=${encodeURIComponent(token)}&email=${encodeURIComponent(invite.email)}`;
+        window.location.href = `/login?claim=${encodeURIComponent(token)}&email=${encodeURIComponent(invite.email)}`;
         return;
       }
       if (err.payload?.error === "already_activated") {
-        window.location.href = "/intelligence/login";
+        window.location.href = "/login";
         return;
       }
       setError(err.message || "Account activation failed.");
@@ -94,22 +94,22 @@ export default function ActivateClient() {
   return (
     <main className={styles.page}>
       <section className={styles.brandPane}>
-        <div className={styles.wordmark}><span>Lab</span>Narrative Intelligence</div>
+        <div className={styles.wordmark}><span>Lab</span>Narrative</div>
         <div>
           <p className={styles.eyebrow}>Client portal</p>
-          <h1>Your Intelligence account,<br /><em>ready to work.</em></h1>
-          <p>Create your password once. After that, your analyses, reports, billing and company profile live in one secure client portal.</p>
+          <h1>Your LabNarrative account,<br /><em>ready to work.</em></h1>
+          <p>Create your password once. After that, your product analyses, reports, billing and company profile live in one secure client portal.</p>
         </div>
-        <div className={styles.brandFoot}><span>AI-powered</span><span>Scientist-validated</span><span>Private client access</span></div>
+        <div className={styles.brandFoot}><span>Scientific intelligence</span><span>Scientist-validated</span><span>Private client access</span></div>
       </section>
       <section className={styles.formPane}>
         <div className={styles.card}>
-          {loading ? <p className={styles.loading}>Opening your paid Intelligence account…</p> : null}
+          {loading ? <p className={styles.loading}>Opening your paid LabNarrative account…</p> : null}
           {!loading && invite ? (
             <>
               <p className={styles.eyebrow}>Activate your portal</p>
               <h2>{invite.activated ? "Your account is already active." : "Create your client account."}</h2>
-              <p>{invite.activated ? "Sign in to continue to your LabNarrative Intelligence workspace." : "Your paid package is already attached. Set a password to secure your account."}</p>
+              <p>{invite.activated ? "Sign in to continue to your LabNarrative workspace." : "Your paid package is already attached. Set a password to secure your account."}</p>
               <div className={styles.summary}>
                 <div><span>Package</span><strong>{invite.packageName}</strong></div>
                 <div><span>Analyses</span><strong>{invite.productCount}</strong></div>
@@ -117,7 +117,7 @@ export default function ActivateClient() {
                 <div><span>Company</span><strong>{invite.companyName || "Your company"}</strong></div>
               </div>
               {invite.activated ? (
-                <a className={styles.button} href="/intelligence/login" style={{display:"block",textAlign:"center",textDecoration:"none"}}>SIGN IN TO CLIENT PORTAL →</a>
+                <a className={styles.button} href="/login" style={{display:"block",textAlign:"center",textDecoration:"none"}}>SIGN IN TO CLIENT PORTAL →</a>
               ) : (
                 <div className={styles.form}>
                   <label><span>Full name</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" /></label>
@@ -132,7 +132,7 @@ export default function ActivateClient() {
             </>
           ) : null}
           {error ? <p className={styles.error}>{error}</p> : null}
-          {!loading && !invite ? <a className={styles.secondary} href="/intelligence/login">Go to client sign in →</a> : null}
+          {!loading && !invite ? <a className={styles.secondary} href="/login">Go to client sign in →</a> : null}
         </div>
       </section>
     </main>
