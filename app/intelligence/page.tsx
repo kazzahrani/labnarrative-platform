@@ -23,44 +23,6 @@ const deliverables = [
   "Commercial pipeline, activity history and full web + PDF reporting",
 ];
 
-const subscriptionPlans = [
-  {
-    key: "starter",
-    name: "Starter",
-    scope: "5 active products",
-    monthly: "$249/mo",
-    annual: "$199/mo billed annually",
-    annualTotal: "$2,388/year",
-    saving: "Save $600/year",
-    description: "A focused continuous intelligence program for a small priority product set.",
-  },
-  {
-    key: "growth",
-    name: "Growth",
-    scope: "15 active products",
-    monthly: "$489/mo",
-    annual: "$389/mo billed annually",
-    annualTotal: "$4,668/year",
-    saving: "Save $1,200/year",
-    description: "Continuous scientific opportunity intelligence for a serious commercial program.",
-  },
-  {
-    key: "pro",
-    name: "Pro",
-    scope: "40 active products",
-    monthly: "$889/mo",
-    annual: "$709/mo billed annually",
-    annualTotal: "$8,508/year",
-    saving: "Save $2,160/year",
-    description: "Broader portfolio coverage for larger commercial teams and multiple campaigns.",
-  },
-];
-
-const managedPilots = [
-  { key: "portfolio", name: "10-Product Managed Pilot", scope: "10 products", price: "$489 once" },
-  { key: "portfolio_plus", name: "20-Product Managed Pilot", scope: "20 products", price: "$789 once" },
-];
-
 function Wordmark() {
   return <><span>Lab</span>Narrative <span className={styles.product}>Intelligence</span></>;
 }
@@ -73,7 +35,7 @@ export default function IntelligencePage() {
         <nav className={styles.nav} aria-label="Primary navigation">
           <a href="#how">How it works</a>
           <a href="#report">What you receive</a>
-          <a href="#pricing">Pricing</a>
+          <a href="/intelligence/plans">Plans</a>
           <a href="/intelligence/login">Client sign in</a>
         </nav>
         <a className={styles.cta} href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20product%20experience">Request a free product experience ↗</a>
@@ -127,53 +89,15 @@ export default function IntelligencePage() {
         </div>
       </section>
 
-      <section className={styles.products} id="pricing">
+      <section className={styles.products}>
         <div className={styles.sectionHead}>
-          <p className={styles.label}>Introductory subscription pricing</p>
-          <h2>Experience one product free. Pay only when you want continuous coverage.</h2>
-        </div>
-        <div className={`${styles.cards} ${styles.pricingCards}`}>
-          <div className={styles.card}>
-            <small>Free Product Proof</small>
-            <h3>1 product</h3>
-            <p>The complete Intelligence workflow on one real product: opportunities, evidence, contacts, outreach preparation, pipeline and full reporting.</p>
-            <strong>$0</strong>
-          </div>
-          {subscriptionPlans.map((plan) => (
-            <div className={styles.card} key={plan.key}>
-              <small>{plan.name}</small>
-              <h3>{plan.scope}</h3>
-              <p>{plan.description}</p>
-              <strong>{plan.monthly}</strong>
-              <p><b>{plan.annual}</b><br />{plan.annualTotal} · {plan.saving}</p>
-            </div>
-          ))}
-          <div className={styles.card}>
-            <small>Enterprise</small>
-            <h3>Custom portfolio</h3>
-            <p>For larger suppliers, broader catalogues, multiple commercial teams, territories or integration requirements.</p>
-            <strong>Custom</strong>
-          </div>
-        </div>
-        <p>Annual plans are always cheaper than paying month-to-month and are charged as one annual payment.</p>
-      </section>
-
-      <section className={styles.dark}>
-        <div className={styles.darkGrid}>
+          <p className={styles.label}>Plans</p>
           <div>
-            <p className={styles.label}>Optional done-for-you service</p>
-            <h2>Managed Commercial Pilot</h2>
-            <p>Prefer LabNarrative to run the commercial experiment for you first? Choose a one-time managed pilot. This is separate from the recurring subscription plans.</p>
-          </div>
-          <div className={`${styles.cards} ${styles.pricingCards}`}>
-            {managedPilots.map(({ key, name, scope, price }) => (
-              <a className={styles.card} key={key} href={`/intelligence/buy?package=${key}`} aria-label={`Buy the ${name}`}>
-                <small>{name}</small>
-                <h3>{scope}</h3>
-                <p>LabNarrative prioritizes the products, runs the complete intelligence workflow, prepares the commercial campaign and organizes the resulting pipeline.</p>
-                <strong>{price} · Start securely →</strong>
-              </a>
-            ))}
+            <h2>Start free. Scale only when the system proves useful.</h2>
+            <p style={{maxWidth:760, marginTop:28, color:"var(--muted)", lineHeight:1.75}}>
+              Your first product is free. When you want continuous coverage, choose the product capacity that fits your commercial team — or ask LabNarrative to run a Managed Commercial Pilot for you.
+            </p>
+            <a href="/intelligence/plans" style={{display:"inline-block", marginTop:28, paddingBottom:5, borderBottom:"1px solid var(--green)", color:"var(--green)", fontSize:".75rem", fontWeight:800}}>VIEW PLANS →</a>
           </div>
         </div>
       </section>
@@ -183,7 +107,7 @@ export default function IntelligencePage() {
           <p className={styles.label}>The recurring value</p>
           <h2>What changed since the last scan?</h2>
         </div>
-        <p>
+        <p style={{maxWidth:760, marginTop:32, color:"var(--muted)", lineHeight:1.75}}>
           Subscriptions keep selected products under continuous surveillance for newly relevant labs, stronger scientific signals, contact changes and new evidence. Monitoring findings remain behind scientific review until validated.
         </p>
       </section>
