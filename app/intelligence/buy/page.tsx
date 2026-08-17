@@ -4,25 +4,27 @@ import styles from "./buy.module.css";
 import IntelligenceCheckout from "./IntelligenceCheckout";
 
 export const metadata: Metadata = {
-  title: "LabNarrative Intelligence — Managed Commercial Pilot",
+  title: "LabNarrative — Managed Commercial Pilot",
   description: "Choose a one-time done-for-you Managed Commercial Pilot across 10 or 20 products.",
 };
 
 function Wordmark() {
-  return <><span>Lab</span>Narrative <span className={brand.product}>Intelligence</span></>;
+  return <><span>Lab</span>Narrative</>;
 }
 
-export default function IntelligenceBuyPage() {
+export default function LabNarrativeBuyPage() {
   return (
     <main className={`${brand.page} ${styles.buyPage}`}>
       <header className={brand.header}>
         <a className={brand.wordmark} href="/" aria-label="LabNarrative home"><Wordmark /></a>
         <nav className={brand.nav} aria-label="Primary navigation">
-          <a href="/intelligence">Intelligence</a>
-          <a href="/intelligence#report">What you receive</a>
-          <a href="/intelligence/plans">Plans</a>
+          <a href="/">LabNarrative</a>
+          <a href="/#product">Platform</a>
+          <a href="/plans">Plans</a>
+          <a href="/websites">Websites</a>
+          <a href="/systems">Systems</a>
         </nav>
-        <a className={brand.cta} href="/intelligence/plans">Back to Plans ↗</a>
+        <a className={brand.cta} href="/plans">Back to Plans ↗</a>
       </header>
 
       <section className={styles.hero}>
@@ -31,7 +33,7 @@ export default function IntelligenceBuyPage() {
           <h1>You have seen the platform.<br /><em>Now let us run it for you.</em></h1>
           <div className={styles.heroAside}>
             <p>
-              A Managed Commercial Pilot is separate from the recurring Starter, Growth and Pro subscriptions. LabNarrative prioritizes the selected products, runs the complete Intelligence workflow and organizes the resulting commercial pipeline for you.
+              A Managed Commercial Pilot is separate from the recurring Starter, Growth and Pro subscriptions. LabNarrative prioritizes the selected products, runs the complete scientific revenue workflow and organizes the resulting commercial pipeline for you.
             </p>
             <strong>10 products $489 · 20 products $789 · One-time payment</strong>
           </div>
