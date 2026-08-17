@@ -29,7 +29,7 @@ const FETCH_BRIDGE = `<script>(function(){
 })();</script><style>[data-x-convert-main]{display:none!important}</style>`;
 
 // Keep the classic Client Portal proportions, with moderate sidebar compaction and page-specific polish.
-const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-sidebar-compact.css?v=20260817-4" /><link rel="stylesheet" href="/experience-opportunities-polish.css?v=20260817-1" /><script defer src="/experience-client-portal.js?v=20260817-1"></script><script defer src="/experience-opportunities-polish.js?v=20260817-1"></script>`;
+const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-sidebar-compact.css?v=20260817-4" /><link rel="stylesheet" href="/experience-opportunities-polish.css?v=20260817-1" /><link rel="stylesheet" href="/experience-monitoring-minimal.css?v=20260817-1" /><script defer src="/experience-client-portal.js?v=20260817-1"></script><script defer src="/experience-opportunities-polish.js?v=20260817-1"></script>`;
 
 function assetUrl(path: string) {
   return `/api/experience-asset?path=${encodeURIComponent(path)}`;
