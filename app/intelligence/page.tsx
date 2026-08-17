@@ -4,7 +4,7 @@ import styles from "../brand.module.css";
 export const metadata: Metadata = {
   title: "LabNarrative Intelligence — Scientific Revenue Intelligence",
   description:
-    "See the complete LabNarrative Intelligence workflow on one real product for free, then expand across your portfolio with a paid Pilot.",
+    "Experience the complete LabNarrative Intelligence workflow on one real product for free, then continue with a subscription or an optional managed commercial pilot.",
 };
 
 const steps = [
@@ -23,9 +23,42 @@ const deliverables = [
   "Commercial pipeline, activity history and full web + PDF reporting",
 ];
 
-const launchPackages = [
-  { key: "portfolio", name: "Portfolio Pilot", scope: "10 additional products", price: "$689" },
-  { key: "portfolio_plus", name: "Portfolio Plus", scope: "20 additional products", price: "$1,189" },
+const subscriptionPlans = [
+  {
+    key: "starter",
+    name: "Starter",
+    scope: "5 active products",
+    monthly: "$249/mo",
+    annual: "$199/mo billed annually",
+    annualTotal: "$2,388/year",
+    saving: "Save $600/year",
+    description: "A focused continuous intelligence program for a small priority product set.",
+  },
+  {
+    key: "growth",
+    name: "Growth",
+    scope: "15 active products",
+    monthly: "$489/mo",
+    annual: "$389/mo billed annually",
+    annualTotal: "$4,668/year",
+    saving: "Save $1,200/year",
+    description: "Continuous scientific opportunity intelligence for a serious commercial program.",
+  },
+  {
+    key: "pro",
+    name: "Pro",
+    scope: "40 active products",
+    monthly: "$889/mo",
+    annual: "$709/mo billed annually",
+    annualTotal: "$8,508/year",
+    saving: "Save $2,160/year",
+    description: "Broader portfolio coverage for larger commercial teams and multiple campaigns.",
+  },
+];
+
+const managedPilots = [
+  { key: "portfolio", name: "10-Product Managed Pilot", scope: "10 products", price: "$489 once" },
+  { key: "portfolio_plus", name: "20-Product Managed Pilot", scope: "20 products", price: "$789 once" },
 ];
 
 function Wordmark() {
@@ -40,7 +73,7 @@ export default function IntelligencePage() {
         <nav className={styles.nav} aria-label="Primary navigation">
           <a href="#how">How it works</a>
           <a href="#report">What you receive</a>
-          <a href="#pricing">Pilot pricing</a>
+          <a href="#pricing">Pricing</a>
           <a href="/intelligence/login">Client sign in</a>
         </nav>
         <a className={styles.cta} href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20product%20experience">Request a free product experience ↗</a>
@@ -85,7 +118,7 @@ export default function IntelligencePage() {
       <section className={styles.deliver} id="report">
         <div className={styles.deliverGrid}>
           <div>
-            <p className={styles.label}>The complimentary product experience</p>
+            <p className={styles.label}>Free Product Proof</p>
             <h2>Not a teaser. The actual platform.</h2>
           </div>
           <ul className={styles.list}>
@@ -96,46 +129,70 @@ export default function IntelligencePage() {
 
       <section className={styles.products} id="pricing">
         <div className={styles.sectionHead}>
-          <p className={styles.label}>Introductory Pilot pricing</p>
-          <h2>Free proves the machine. Paid increases coverage.</h2>
+          <p className={styles.label}>Introductory subscription pricing</p>
+          <h2>Experience one product free. Pay only when you want continuous coverage.</h2>
         </div>
         <div className={`${styles.cards} ${styles.pricingCards}`}>
           <div className={styles.card}>
-            <small>Complimentary Product Experience</small>
+            <small>Free Product Proof</small>
             <h3>1 product</h3>
-            <p>The full Intelligence workflow on a real product: opportunities, evidence, contacts, outreach preparation, pipeline and complete reporting.</p>
-            <strong>Free</strong>
+            <p>The complete Intelligence workflow on one real product: opportunities, evidence, contacts, outreach preparation, pipeline and full reporting.</p>
+            <strong>$0</strong>
           </div>
-          {launchPackages.map(({ key, name, scope, price }) => (
-            <a className={styles.card} key={key} href={`/intelligence/buy?package=${key}`} aria-label={`Buy the ${name}`}>
-              <small>{name} · One-time introductory price</small>
-              <h3>{scope}</h3>
-              <p>Apply the same complete Intelligence workflow across more of your portfolio. Your complimentary product remains available and is not counted in the paid slots.</p>
-              <strong>{price} · Start securely →</strong>
-            </a>
+          {subscriptionPlans.map((plan) => (
+            <div className={styles.card} key={plan.key}>
+              <small>{plan.name}</small>
+              <h3>{plan.scope}</h3>
+              <p>{plan.description}</p>
+              <strong>{plan.monthly}</strong>
+              <p><b>{plan.annual}</b><br />{plan.annualTotal} · {plan.saving}</p>
+            </div>
           ))}
+          <div className={styles.card}>
+            <small>Enterprise</small>
+            <h3>Custom portfolio</h3>
+            <p>For larger suppliers, broader catalogues, multiple commercial teams, territories or integration requirements.</p>
+            <strong>Custom</strong>
+          </div>
         </div>
+        <p>Annual plans are always cheaper than paying month-to-month and are charged as one annual payment.</p>
       </section>
 
       <section className={styles.dark}>
         <div className={styles.darkGrid}>
           <div>
-            <p className={styles.label}>The recurring value</p>
-            <h2>What changed since the last scan?</h2>
+            <p className={styles.label}>Optional done-for-you service</p>
+            <h2>Managed Commercial Pilot</h2>
+            <p>Prefer LabNarrative to run the commercial experiment for you first? Choose a one-time managed pilot. This is separate from the recurring subscription plans.</p>
           </div>
-          <div>
-            <p>
-              After the Portfolio Pilot, continuous monitoring can keep selected products under surveillance for newly relevant labs, stronger scientific signals, contact changes and new evidence. Monitoring findings remain behind scientific review until validated.
-            </p>
+          <div className={`${styles.cards} ${styles.pricingCards}`}>
+            {managedPilots.map(({ key, name, scope, price }) => (
+              <a className={styles.card} key={key} href={`/intelligence/buy?package=${key}`} aria-label={`Buy the ${name}`}>
+                <small>{name}</small>
+                <h3>{scope}</h3>
+                <p>LabNarrative prioritizes the products, runs the complete intelligence workflow, prepares the commercial campaign and organizes the resulting pipeline.</p>
+                <strong>{price} · Start securely →</strong>
+              </a>
+            ))}
           </div>
         </div>
       </section>
 
+      <section className={styles.products}>
+        <div className={styles.sectionHead}>
+          <p className={styles.label}>The recurring value</p>
+          <h2>What changed since the last scan?</h2>
+        </div>
+        <p>
+          Subscriptions keep selected products under continuous surveillance for newly relevant labs, stronger scientific signals, contact changes and new evidence. Monitoring findings remain behind scientific review until validated.
+        </p>
+      </section>
+
       <section className={styles.final}>
-        <p className={styles.label}>Portfolio Pilot</p>
-        <h2>Seen enough from the free product?</h2>
-        <p>Expand the complete workflow across 10 additional products for a one-time introductory price of $689. No feature unlocking, no artificial laboratory quota — simply more portfolio coverage.</p>
-        <a href="/intelligence/buy?package=portfolio">START THE $689 PORTFOLIO PILOT →</a>
+        <p className={styles.label}>Start free</p>
+        <h2>See the complete system on one real product.</h2>
+        <p>No feature-limited trial. We demonstrate the full LabNarrative Intelligence workflow first, then you decide whether to subscribe or ask us to run a managed pilot.</p>
+        <a href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20product%20experience">REQUEST THE FREE PRODUCT PROOF →</a>
       </section>
 
       <footer className={styles.footer}>
