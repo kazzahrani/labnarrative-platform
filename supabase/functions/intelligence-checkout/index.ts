@@ -2,13 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 type J = Record<string, unknown>;
-type PackageKey = "starter" | "portfolio" | "portfolio_plus";
+type PackageKey = "portfolio" | "portfolio_plus";
 const PORTFOLIO_BRIDGE_URL = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-portfolio-bridge";
 const REPORT_SUMMARY_URL = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v1/client-report-summary";
 const PACKAGES: Record<PackageKey, { name: string; products: number; amount: number }> = {
-  starter: { name: "Starter", products: 5, amount: 389 },
-  portfolio: { name: "Portfolio", products: 10, amount: 689 },
-  portfolio_plus: { name: "Portfolio Plus", products: 20, amount: 1189 },
+  portfolio: { name: "10-Product Managed Commercial Pilot", products: 10, amount: 489 },
+  portfolio_plus: { name: "20-Product Managed Commercial Pilot", products: 20, amount: 789 },
 };
 
 function allowedOrigin(origin: string | null) {
@@ -184,7 +183,7 @@ Deno.serve(async (req: Request) => {
         headers: { "PayPal-Request-Id": `intelligence-${purchase.id}-v2` },
         body: JSON.stringify({
           intent: "CAPTURE",
-          purchase_units: [{ reference_id: purchase.id, custom_id: purchase.id, description: `LabNarrative Intelligence - ${selected.name} - ${selected.products} product analyses`.slice(0, 127), amount: { currency_code: "USD", value: amount } }],
+          purchase_units: [{ reference_id: purchase.id, custom_id: purchase.id, description: `LabNarrative Intelligence - ${selected.name} - ${selected.products} products`.slice(0, 127), amount: { currency_code: "USD", value: amount } }],
           application_context: { brand_name: "LabNarrative Intelligence", shipping_preference: "NO_SHIPPING", user_action: "PAY_NOW" },
         }),
       });
