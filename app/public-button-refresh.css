@@ -1,0 +1,151 @@
+/* Public CTA refresh — retire legacy forest-green buttons. */
+
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="auth-module__"],
+  main[class*="brand-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnSystemsPublic > main
+) {
+  --green: #5d52e7 !important;
+  --green2: #766cf2 !important;
+  --dark: #322c78 !important;
+  --ln-action: #5d52e7;
+  --ln-action-2: #766cf2;
+  --ln-action-dark: #322c78;
+  --ln-action-soft: #e6e2ff;
+  --ln-action-highlight: #e8f7a8;
+}
+
+/* Main public CTA family */
+main[class*="labnarrative-module__"] :is(
+  [class*="headerCta"],
+  [class*="primary"],
+  [class*="proofAside"] > a
+),
+main[class*="process-module__"] :is(
+  [class*="cta"],
+  [class*="primary"]
+),
+main[class*="brand-module__"] :is(
+  [class*="cta"],
+  [class*="planButton"],
+  [class*="primaryButton"],
+  [class*="checkoutButton"]
+),
+main[class*="websites-colorful-module__"] :is(
+  [class*="cta"],
+  [class*="primary"],
+  [class*="buttonPrimary"]
+),
+.lnSystemsPublic > main :is(
+  [class*="cta"],
+  [class*="primary"],
+  [class*="buttonPrimary"]
+) {
+  background: linear-gradient(135deg, var(--ln-action), var(--ln-action-2)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 28px rgba(93, 82, 231, .22) !important;
+}
+
+main[class*="labnarrative-module__"] :is(
+  [class*="headerCta"],
+  [class*="primary"],
+  [class*="proofAside"] > a
+):hover,
+main[class*="process-module__"] :is([class*="cta"], [class*="primary"]):hover,
+main[class*="brand-module__"] :is([class*="cta"], [class*="planButton"], [class*="primaryButton"], [class*="checkoutButton"]):hover,
+main[class*="websites-colorful-module__"] :is([class*="cta"], [class*="primary"], [class*="buttonPrimary"]):hover,
+.lnSystemsPublic > main :is([class*="cta"], [class*="primary"], [class*="buttonPrimary"]):hover {
+  background: linear-gradient(135deg, #4f45d4, #6c61ee) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 15px 34px rgba(93, 82, 231, .28) !important;
+}
+
+/* Homepage plans box sits on purple: use a light fashionable CTA instead of green. */
+main[class*="labnarrative-module__"] [class*="plansBox"] > a {
+  background: var(--ln-action-highlight) !important;
+  color: var(--ln-action-dark) !important;
+  border: 1px solid rgba(50, 44, 120, .08) !important;
+  box-shadow: 0 10px 24px rgba(50, 44, 120, .14) !important;
+}
+
+/* Plans: standard plan CTAs are violet. */
+main[class*="brand-module__"][class*="plans-module__"] [class*="planButton"] {
+  background: linear-gradient(135deg, var(--ln-action), var(--ln-action-2)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+/* Featured Growth CTA intentionally stays light so it pops from the violet card. */
+main[class*="brand-module__"][class*="plans-module__"] [class*="planCard"][class*="featured"] [class*="planButton"] {
+  background: var(--ln-action-highlight) !important;
+  color: var(--ln-action-dark) !important;
+  box-shadow: 0 12px 28px rgba(232, 247, 168, .18) !important;
+}
+main[class*="brand-module__"][class*="plans-module__"] [class*="planCard"][class*="featured"] [class*="planButton"]:hover {
+  background: #f2ffc4 !important;
+  color: #28225f !important;
+}
+
+/* Free proof CTA */
+main[class*="brand-module__"][class*="plans-module__"] [class*="freeBanner"] > a {
+  background: linear-gradient(135deg, var(--ln-action), var(--ln-action-2)) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 28px rgba(93,82,231,.2) !important;
+}
+
+/* Managed pilot cards: make action text violet rather than old green. */
+main[class*="brand-module__"][class*="plans-module__"] [class*="pilotCard"] b,
+main[class*="brand-module__"][class*="plans-module__"] [class*="pilotCard"] > span:last-child {
+  color: var(--ln-action-dark) !important;
+}
+
+/* Brand-module legacy hard-coded green CTA surfaces. */
+main[class*="brand-module__"] [class*="final"] a,
+main[class*="brand-module__"] [class*="heroAside"] a {
+  background: linear-gradient(135deg, var(--ln-action), var(--ln-action-2)) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 28px rgba(93,82,231,.18) !important;
+}
+
+/* Auth submit buttons. */
+main[class*="auth-module__"] button[type="submit"],
+main[class*="auth-module__"] button[class*="primary"] {
+  background: linear-gradient(135deg, var(--ln-action), var(--ln-action-2)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 28px rgba(93,82,231,.2) !important;
+}
+
+/* Checkout / buy buttons and package selection actions. */
+main[class*="buy-module__"] button,
+main[class*="buy-module__"] a[class*="button" i],
+main[class*="buy-module__"] a[class*="cta" i] {
+  background: linear-gradient(135deg, var(--ln-action), var(--ln-action-2)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+/* Keep secondary controls soft/light instead of green. */
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="brand-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnSystemsPublic > main
+) :is([class*="secondary"], [class*="ghostButton"], [class*="buttonSecondary"]) {
+  background: rgba(255,253,249,.88) !important;
+  color: var(--ln-action-dark) !important;
+  border-color: rgba(93,82,231,.16) !important;
+}
+
+/* Pills/toggles that previously inherited green now use violet selection. */
+main[class*="brand-module__"] :is([class*="toggleActive"], [aria-pressed="true"]),
+main[class*="process-module__"] :is([class*="toggleActive"], [aria-pressed="true"]) {
+  background: var(--ln-action) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
