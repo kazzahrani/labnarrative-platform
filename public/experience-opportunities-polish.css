@@ -1,0 +1,52 @@
+/* Opportunities page: credible terminology, quieter contact state, clearer drill-in action. */
+#content .opp-card{
+  cursor:pointer;
+}
+
+#content .opp-meta{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  flex-wrap:wrap!important;
+}
+
+#content .badge.contacts-verifying{
+  background:transparent!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+  color:var(--muted)!important;
+  padding-left:1px!important;
+  padding-right:1px!important;
+  font-weight:600!important;
+  opacity:.86;
+}
+
+#content .opp-view{
+  margin-left:auto;
+  color:var(--accent)!important;
+  font-size:10.5px;
+  line-height:1.2;
+  font-weight:750;
+  white-space:nowrap;
+  opacity:.72;
+  transition:opacity .16s ease,transform .16s ease;
+}
+
+#content .opp-card:hover .opp-view,
+#content .opp-card:focus-visible .opp-view{
+  opacity:1;
+  transform:translateX(2px);
+}
+
+#content .opp-card:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);
+  outline-offset:2px;
+}
+
+@media(max-width:760px){
+  #content .opp-view{
+    width:100%;
+    margin-left:0;
+    text-align:right;
+  }
+}
