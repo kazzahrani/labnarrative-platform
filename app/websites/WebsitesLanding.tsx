@@ -24,7 +24,7 @@ function Wordmark() { return <><span className={styles.logoLab}>Lab</span><span 
 
 export default function WebsitesLanding() {
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} lnWebsitesPublic`}>
       <LabNarrativeScrollPanels />
       <header className={styles.header}>
         <a className={styles.wordmark} href="/" aria-label="LabNarrative home"><Wordmark /></a>
