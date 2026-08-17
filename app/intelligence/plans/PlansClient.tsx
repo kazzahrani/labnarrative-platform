@@ -77,9 +77,9 @@ export default function PlansClient() {
           <div>
             <span className={styles.freeBadge}>Free Product Proof</span>
             <h3>1 complete product. $0.</h3>
-            <p>Experience the full platform — opportunities, evidence, contacts, outreach preparation, follow-ups, pipeline and reporting — before paying anything.</p>
+            <p>Experience the full LabNarrative platform — opportunities, evidence, contacts, outreach preparation, follow-ups, pipeline and reporting — before paying anything.</p>
           </div>
-          <a href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20product%20experience">START FREE →</a>
+          <a href="mailto:hello@labnarrative.com?subject=Free%20LabNarrative%20product%20proof">START FREE →</a>
         </div>
 
         <div className={styles.planGrid}>
@@ -135,17 +135,17 @@ export default function PlansClient() {
           <p>A separate one-time, done-for-you service for companies that want LabNarrative to run the commercial experiment before committing to ongoing platform use.</p>
         </div>
         <div className={styles.pilotGrid}>
-          <a className={styles.pilotCard} href="/buy?package=portfolio">
+          <a className={styles.pilotCard} href="/intelligence/buy?package=portfolio">
             <span>Managed Pilot</span>
             <h3>10 products</h3>
-            <p>LabNarrative prioritizes the products, runs the complete intelligence workflow and organizes the resulting commercial pipeline.</p>
+            <p>LabNarrative prioritizes the products, runs the complete scientific revenue workflow and organizes the resulting commercial pipeline.</p>
             <strong>$489 once</strong>
             <b>Start pilot →</b>
           </a>
-          <a className={styles.pilotCard} href="/buy?package=portfolio_plus">
+          <a className={styles.pilotCard} href="/intelligence/buy?package=portfolio_plus">
             <span>Managed Pilot Plus</span>
             <h3>20 products</h3>
-            <p>A broader portfolio proof with the same done-for-you intelligence, opportunity and commercial workflow.</p>
+            <p>A broader portfolio proof with the same done-for-you opportunity, evidence and commercial workflow.</p>
             <strong>$789 once</strong>
             <b>Start pilot →</b>
           </a>
