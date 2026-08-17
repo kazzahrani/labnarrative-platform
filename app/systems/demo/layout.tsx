@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function SystemsDemoLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return children;
+  return <div className="lnSystemsDemoScope">{children}</div>;
 }
