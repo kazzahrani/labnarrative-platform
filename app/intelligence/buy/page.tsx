@@ -20,9 +20,9 @@ export default function IntelligenceBuyPage() {
         <nav className={brand.nav} aria-label="Primary navigation">
           <a href="/intelligence">Intelligence</a>
           <a href="/intelligence#report">What you receive</a>
-          <a href="/intelligence#pricing">Pricing</a>
+          <a href="/intelligence/plans">Plans</a>
         </nav>
-        <a className={brand.cta} href="/intelligence">Back to Intelligence ↗</a>
+        <a className={brand.cta} href="/intelligence/plans">Back to Plans ↗</a>
       </header>
 
       <section className={styles.hero}>
