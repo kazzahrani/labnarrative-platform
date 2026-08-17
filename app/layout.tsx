@@ -52,6 +52,7 @@ import "./public-fashion-refresh.css";
 import "./public-button-refresh.css";
 import "./public-theme-refinement.css";
 import "./systems-public-contrast-fix.css";
+import "./labnarrative-logo-refresh.css";
 
 export const metadata: Metadata = {
   title: {
