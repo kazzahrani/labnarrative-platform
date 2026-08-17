@@ -28,7 +28,7 @@ const FETCH_BRIDGE = `<script>(function(){
   };
 })();</script><style>[data-x-convert-main]{display:none!important}</style>`;
 
-const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-sidebar-compact.css?v=20260817-2" /><script defer src="/experience-client-portal.js?v=20260817-1"></script>`;
+const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-sidebar-compact.css?v=20260817-3" /><script defer src="/experience-client-portal.js?v=20260817-1"></script>`;
 
 function assetUrl(path: string) {
   return `/api/experience-asset?path=${encodeURIComponent(path)}`;
@@ -44,9 +44,6 @@ export async function GET(_req: NextRequest) {
       return `${attr}="${assetUrl(`/${path}`)}"`;
     });
 
-    // The legacy shell lazily injects enhancement scripts after the core workspace becomes visible.
-    // Rewrite those string-literal paths too, otherwise the new LabNarrative domain would request
-    // non-existent root files such as /experience-conversion.js.
     html = html.replace(/inject\('([^']+)'\s*,/g, (_match, path) => {
       const originalPath = String(path || "");
       return `inject('${assetUrl(originalPath)}',`;
