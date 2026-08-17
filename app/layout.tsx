@@ -52,7 +52,7 @@ import "./public-fashion-refresh.css";
 import "./public-button-refresh.css";
 import "./public-theme-refinement.css";
 import "./systems-public-contrast-fix.css";
-// Official LabNarrative wordmark is loaded last so no legacy brand treatment can override it.
+// Canonical LabNarrative wordmark is loaded last across every public/client surface.
 import "./labnarrative-logo-refresh.css";
 
 export const metadata: Metadata = {
