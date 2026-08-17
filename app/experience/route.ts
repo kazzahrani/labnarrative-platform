@@ -29,7 +29,9 @@ const FETCH_BRIDGE = `<script>(function(){
 })();</script><style>[data-x-convert-main]{display:none!important}</style>`;
 
 // Keep the classic Client Portal proportions, with moderate sidebar compaction and page-specific polish.
-const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-sidebar-compact.css?v=20260817-4" /><link rel="stylesheet" href="/experience-opportunities-polish.css?v=20260817-1" /><link rel="stylesheet" href="/experience-monitoring-minimal.css?v=20260817-1" /><script defer src="/experience-client-portal.js?v=20260817-1"></script><script defer src="/experience-opportunities-polish.js?v=20260817-1"></script>`;
+// Outreach is loaded locally and directly so the client controls are available even when the upstream
+// delayed enhancement loader is skipped by the proxied workspace shell.
+const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-sidebar-compact.css?v=20260817-4" /><link rel="stylesheet" href="/experience-opportunities-polish.css?v=20260817-1" /><link rel="stylesheet" href="/experience-monitoring-minimal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-outreach-client.css?v=20260817-1" /><script defer src="/experience-client-portal.js?v=20260817-1"></script><script defer src="/experience-opportunities-polish.js?v=20260817-1"></script><script defer src="/experience-outreach-client.js?v=20260817-1"></script>`;
 
 function assetUrl(path: string) {
   return `/api/experience-asset?path=${encodeURIComponent(path)}`;
@@ -40,6 +42,10 @@ export async function GET(_req: NextRequest) {
     const res = await fetch(UPSTREAM, { cache: "no-store" });
     if (!res.ok) return new Response("Workspace shell unavailable", { status: res.status });
     let html = await res.text();
+
+    // The LabNarrative shell owns Outreach enhancement loading. Remove the delayed upstream copy so
+    // only one controller can observe and render the page.
+    html = html.replace(/\s*inject\('\/experience-outreach-controls\.js[^']*'\s*,\s*\d+\);?/g, "");
 
     html = html.replace(/(src|href)="\/([^\"]+)"/g, (_match, attr, path) => {
       return `${attr}="${assetUrl(`/${path}`)}"`;
