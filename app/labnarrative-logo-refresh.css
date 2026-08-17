@@ -4,6 +4,7 @@
 :root {
   --ln-logo-lab: #5b53df;
   --ln-logo-narrative: #242330;
+  --ln-logo-narrative-on-dark: #f6f3ee;
 }
 
 /* Shared public wordmarks. */
@@ -52,6 +53,19 @@ a[aria-label="LabNarrative home"]:focus-visible {
 [class*="wordmark"]:focus-visible > span:first-child,
 a[aria-label="LabNarrative home"]:hover > span:first-child,
 a[aria-label="LabNarrative home"]:focus-visible > span:first-child {
+  color: var(--ln-logo-lab) !important;
+}
+
+/* Dark footer treatment: keep Lab violet and make Narrative off-white. */
+[class*="labnarrative-module__"][class*="footer"] [class*="wordmark"],
+[class*="labnarrative-module__"][class*="footer"] [class*="wordmark"]:hover,
+[class*="labnarrative-module__"][class*="footer"] [class*="wordmark"]:focus-visible {
+  color: var(--ln-logo-narrative-on-dark) !important;
+}
+
+[class*="labnarrative-module__"][class*="footer"] [class*="wordmark"] > span:first-child,
+[class*="labnarrative-module__"][class*="footer"] [class*="wordmark"]:hover > span:first-child,
+[class*="labnarrative-module__"][class*="footer"] [class*="wordmark"]:focus-visible > span:first-child {
   color: var(--ln-logo-lab) !important;
 }
 
