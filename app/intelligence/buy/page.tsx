@@ -4,8 +4,8 @@ import styles from "./buy.module.css";
 import IntelligenceCheckout from "./IntelligenceCheckout";
 
 export const metadata: Metadata = {
-  title: "Buy LabNarrative Intelligence — Launch Packages",
-  description: "Choose a LabNarrative Intelligence portfolio package and pay securely through the connected PayPal checkout.",
+  title: "LabNarrative Intelligence — Portfolio Pilot",
+  description: "Expand from the complimentary one-product Intelligence experience into a paid multi-product Portfolio Pilot.",
 };
 
 function Wordmark() {
@@ -26,14 +26,14 @@ export default function IntelligenceBuyPage() {
       </header>
 
       <section className={styles.hero}>
-        <p className={brand.eyebrow}>Launch discount checkout</p>
+        <p className={brand.eyebrow}>Portfolio Pilot · introductory pricing</p>
         <div className={styles.heroGrid}>
-          <h1>Choose your portfolio <em>package.</em></h1>
+          <h1>You have seen one product.<br /><em>Now scale the system.</em></h1>
           <div className={styles.heroAside}>
             <p>
-              You have already seen the evidence standard in the complimentary report. Choose how many additional products you want LabNarrative Intelligence to analyze with the same comprehensive, source-backed workflow.
+              Your complimentary product already demonstrated the complete LabNarrative Intelligence workflow. The paid step does not unlock missing features — it expands the same workflow across more of your portfolio.
             </p>
-            <strong>Launch discount · One-time payment · No subscription</strong>
+            <strong>Portfolio Pilot from $689 · One-time payment · Secure Client Portal</strong>
           </div>
         </div>
       </section>
@@ -44,15 +44,15 @@ export default function IntelligenceBuyPage() {
 
       <section className={styles.below}>
         <div className={styles.belowGrid}>
-          <div><span>Complete analyses</span><p>Each purchased product receives the same full opportunity analysis standard shown in the complimentary report.</p></div>
-          <div><span>No artificial lab cap</span><p>The scientific search is not stopped because a report has reached an arbitrary row quota.</p></div>
-          <div><span>Secure capture</span><p>PayPal creates and captures the transaction against the server-locked package amount. No shipping information is required.</p></div>
+          <div><span>Same complete workflow</span><p>Every paid product receives the same opportunity, evidence, account, contact, outreach and reporting standard used in the free product experience.</p></div>
+          <div><span>Your free product stays yours</span><p>The complimentary product remains the reference case and is not deducted from the paid product count.</p></div>
+          <div><span>Secure handoff</span><p>After PayPal confirms payment, the Client Portal opens immediately for product submission and fulfillment tracking.</p></div>
         </div>
       </section>
 
       <footer className={brand.footer}>
         <a className={brand.wordmark} href="/"><span>Lab</span>Narrative</a>
-        <span>Product opportunity intelligence</span>
+        <span>Scientific revenue intelligence</span>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
       </footer>
     </main>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./buy.module.css";
 
-type PackageKey = "starter" | "portfolio" | "portfolio_plus";
+type PackageKey = "portfolio" | "portfolio_plus";
 type PackageOption = {
   key: PackageKey;
   name: string;
@@ -22,15 +22,12 @@ type ProviderStatus = {
 };
 
 declare global {
-  interface Window {
-    paypal?: any;
-  }
+  interface Window { paypal?: any; }
 }
 
 const packages: PackageOption[] = [
-  { key: "starter", name: "Starter", products: 5, price: "$389", amount: 389, note: "A focused first expansion across five products." },
-  { key: "portfolio", name: "Portfolio", products: 10, price: "$689", amount: 689, note: "Broader coverage for an active scientific portfolio." },
-  { key: "portfolio_plus", name: "Portfolio Plus", products: 20, price: "$1,189", amount: 1189, note: "The strongest launch value for a larger portfolio." },
+  { key: "portfolio", name: "Portfolio Pilot", products: 10, price: "$689", amount: 689, note: "The first paid step: expand the complete Intelligence workflow across ten additional products." },
+  { key: "portfolio_plus", name: "Portfolio Plus", products: 20, price: "$1,189", amount: 1189, note: "A larger one-time launch for suppliers ready to analyze a broader product set." },
 ];
 
 function loadPayPalSdk(clientId: string, currency: string) {
@@ -54,7 +51,7 @@ function loadPayPalSdk(clientId: string, currency: string) {
 }
 
 function validPackage(value: string | null): value is PackageKey {
-  return value === "starter" || value === "portfolio" || value === "portfolio_plus";
+  return value === "portfolio" || value === "portfolio_plus";
 }
 
 export default function IntelligenceCheckout() {
@@ -66,15 +63,11 @@ export default function IntelligenceCheckout() {
   const [success, setSuccess] = useState<{ captureId: string; purchaseId: string; packageName: string; payerEmail: string; workspaceUrl: string } | null>(null);
   const buttonRef = useRef<HTMLDivElement | null>(null);
   const functionUrl = `${String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "")}/functions/v1/intelligence-checkout`;
-  const selected = useMemo(() => packages.find((item) => item.key === selectedKey) || packages[1], [selectedKey]);
+  const selected = useMemo(() => packages.find((item) => item.key === selectedKey) || packages[0], [selectedKey]);
 
   async function callProvider(action: string, extra: Record<string, unknown> = {}) {
     if (!functionUrl.startsWith("https://")) throw new Error("Secure payment service is unavailable.");
-    const response = await fetch(functionUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, ...extra }),
-    });
+    const response = await fetch(functionUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
     const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
     if (!response.ok) throw new Error(String(payload.error || "Payment provider request failed."));
     return payload;
@@ -87,15 +80,7 @@ export default function IntelligenceCheckout() {
     const report = String(params.get("report") || "").trim();
     if (/^[0-9a-f-]{36}$/i.test(report)) setSourceReportId(report);
     void callProvider("status")
-      .then((result) => {
-        setProvider({
-          configured: Boolean(result.configured),
-          verified: Boolean(result.verified),
-          clientId: String(result.clientId || ""),
-          currency: String(result.currency || "USD"),
-          authError: String(result.authError || ""),
-        });
-      })
+      .then((result) => setProvider({ configured: Boolean(result.configured), verified: Boolean(result.verified), clientId: String(result.clientId || ""), currency: String(result.currency || "USD"), authError: String(result.authError || "") }))
       .catch((statusError: unknown) => setError(statusError instanceof Error ? statusError.message : "Secure checkout could not be opened."))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,13 +111,7 @@ export default function IntelligenceCheckout() {
             if (!result.paid) throw new Error("The payment was not completed.");
             const workspaceUrl = String(result.workspaceUrl || "");
             if (!workspaceUrl.startsWith("https://labnarrative.com/intelligence/workspace")) throw new Error("Payment succeeded, but the client account activation link could not be opened.");
-            setSuccess({
-              captureId: String(result.captureId || ""),
-              purchaseId: String(result.purchaseId || ""),
-              packageName: String(result.packageName || selected.name),
-              payerEmail: String(result.payerEmail || ""),
-              workspaceUrl,
-            });
+            setSuccess({ captureId: String(result.captureId || ""), purchaseId: String(result.purchaseId || ""), packageName: selected.name, payerEmail: String(result.payerEmail || ""), workspaceUrl });
           },
           onCancel: () => setError("PayPal checkout was cancelled. No payment was recorded."),
           onError: (checkoutError: unknown) => setError(checkoutError instanceof Error ? checkoutError.message : "Payment could not be completed."),
@@ -143,13 +122,8 @@ export default function IntelligenceCheckout() {
         if (!cancelled) setError(setupError instanceof Error ? setupError.message : "Secure PayPal checkout could not load.");
       }
     };
-
     void setup();
-    return () => {
-      cancelled = true;
-      try { buttons?.close?.(); } catch {}
-      if (buttonRef.current) buttonRef.current.innerHTML = "";
-    };
+    return () => { cancelled = true; try { buttons?.close?.(); } catch {} if (buttonRef.current) buttonRef.current.innerHTML = ""; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider.clientId, provider.currency, provider.verified, selected.key, sourceReportId, success]);
 
@@ -157,13 +131,10 @@ export default function IntelligenceCheckout() {
     return (
       <section className={styles.success} aria-live="polite">
         <p className={styles.kicker}>Payment confirmed</p>
-        <h2>Your Intelligence client account is ready to activate.</h2>
-        <p>
-          PayPal confirmed the <strong>{success.packageName}</strong> purchase. Create your password once, then use your secure Client Portal to start product analyses whenever you need them, monitor progress and retrieve validated reports.
-        </p>
+        <h2>Your {success.packageName} is ready to activate.</h2>
+        <p>PayPal confirmed your purchase. Create your password once, then use the secure Client Portal to submit products, monitor Intelligence progress and retrieve validated web + PDF reports.</p>
         <div className={styles.receipt}>
-          <span>Payment reference</span>
-          <strong>{success.captureId || success.purchaseId}</strong>
+          <span>Payment reference</span><strong>{success.captureId || success.purchaseId}</strong>
           {success.payerEmail ? <small>Account email: {success.payerEmail}</small> : null}
         </div>
         <a className={styles.primaryButton} href={success.workspaceUrl}>CREATE YOUR CLIENT ACCOUNT →</a>
@@ -177,18 +148,9 @@ export default function IntelligenceCheckout() {
         {packages.map((item) => {
           const active = item.key === selected.key;
           return (
-            <button
-              type="button"
-              key={item.key}
-              className={`${styles.packageCard} ${active ? styles.packageCardActive : ""}`}
-              onClick={() => setSelectedKey(item.key)}
-              aria-pressed={active}
-            >
-              <div>
-                <span className={styles.packageName}>{item.name}</span>
-                {item.key === "portfolio" ? <span className={styles.recommended}>Recommended</span> : null}
-              </div>
-              <strong>{item.products} products</strong>
+            <button type="button" key={item.key} className={`${styles.packageCard} ${active ? styles.packageCardActive : ""}`} onClick={() => setSelectedKey(item.key)} aria-pressed={active}>
+              <div><span className={styles.packageName}>{item.name}</span>{item.key === "portfolio" ? <span className={styles.recommended}>Start here</span> : null}</div>
+              <strong>{item.products} additional products</strong>
               <p>{item.note}</p>
               <footer><b>{item.price}</b><span>{active ? "Selected" : "Choose"}</span></footer>
             </button>
@@ -200,11 +162,11 @@ export default function IntelligenceCheckout() {
         <p className={styles.kicker}>Secure checkout</p>
         <div className={styles.orderSummary}>
           <div><span>Package</span><strong>{selected.name}</strong></div>
-          <div><span>Complete analyses</span><strong>{selected.products} products</strong></div>
+          <div><span>Additional analyses</span><strong>{selected.products} products</strong></div>
           <div className={styles.total}><span>Total</span><strong>{selected.price} USD</strong></div>
         </div>
-        <p className={styles.checkoutCopy}>One-time introductory launch price. No subscription. After payment, activate your secure Client Portal and use your product analyses whenever you need them.</p>
-        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary report will be carried into your Client Portal as your first Intelligence reference.</p> : null}
+        <p className={styles.checkoutCopy}>One-time introductory price. Your complimentary product remains fully available and is not counted among these paid product slots.</p>
+        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary Intelligence report will be carried into the Client Portal as the reference case that started this portfolio.</p> : null}
         {loading ? <div className={styles.loading}>Connecting secure checkout…</div> : null}
         {!loading && provider.verified && provider.clientId ? <div ref={buttonRef} className={styles.paypalSlot} /> : null}
         {!loading && !provider.verified ? <div className={styles.error}>{provider.authError || "PayPal checkout is temporarily unavailable."}</div> : null}
