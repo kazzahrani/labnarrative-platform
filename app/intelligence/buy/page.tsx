@@ -5,7 +5,7 @@ import IntelligenceCheckout from "./IntelligenceCheckout";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Managed Commercial Pilot",
-  description: "Choose a one-time done-for-you Managed Commercial Pilot across 10 or 20 products.",
+  description: "Choose a one-time done-for-you LabNarrative Managed Commercial Pilot across 10 or 20 products.",
 };
 
 function Wordmark() {
@@ -16,21 +16,20 @@ export default function LabNarrativeBuyPage() {
   return (
     <main className={`${brand.page} ${styles.buyPage}`}>
       <header className={brand.header}>
-        <a className={brand.wordmark} href="/" aria-label="LabNarrative home"><Wordmark /></a>
+        <a className={brand.wordmark} href="/intelligence" aria-label="LabNarrative home"><Wordmark /></a>
         <nav className={brand.nav} aria-label="Primary navigation">
-          <a href="/">LabNarrative</a>
-          <a href="/#product">Platform</a>
-          <a href="/plans">Plans</a>
-          <a href="/websites">Websites</a>
-          <a href="/systems">Systems</a>
+          <a href="/intelligence">Platform</a>
+          <a href="/intelligence#how">How it works</a>
+          <a href="/intelligence/plans">Plans</a>
+          <a href="/intelligence/login">Client sign in</a>
         </nav>
-        <a className={brand.cta} href="/plans">Back to Plans ↗</a>
+        <a className={brand.cta} href="/intelligence/plans">Back to Plans ↗</a>
       </header>
 
       <section className={styles.hero}>
         <p className={brand.eyebrow}>Managed Commercial Pilot · optional done-for-you service</p>
         <div className={styles.heroGrid}>
-          <h1>You have seen the platform.<br /><em>Now let us run it for you.</em></h1>
+          <h1>You have seen LabNarrative.<br /><em>Now let us run it for you.</em></h1>
           <div className={styles.heroAside}>
             <p>
               A Managed Commercial Pilot is separate from the recurring Starter, Growth and Pro subscriptions. LabNarrative prioritizes the selected products, runs the complete scientific revenue workflow and organizes the resulting commercial pipeline for you.
@@ -47,14 +46,15 @@ export default function LabNarrativeBuyPage() {
       <section className={styles.below}>
         <div className={styles.belowGrid}>
           <div><span>Done for you</span><p>LabNarrative runs product intelligence, opportunity discovery, evidence review, account/contact intelligence and campaign preparation across the selected pilot scope.</p></div>
-          <div><span>Your free product stays yours</span><p>The complimentary one-product proof remains your reference case and is not deducted from the 10- or 20-product managed pilot.</p></div>
-          <div><span>Subscriptions remain separate</span><p>After the pilot, choose Starter, Growth, Pro or Enterprise if you want continuous monitoring and ongoing use of the platform.</p></div>
+          <div><span>Your free product stays yours</span><p>The free one-product proof remains your reference case and is not deducted from the 10- or 20-product managed pilot.</p></div>
+          <div><span>Subscriptions remain separate</span><p>After the pilot, choose Starter, Growth, Pro or Enterprise if you want continuous monitoring and ongoing platform use.</p></div>
         </div>
       </section>
 
       <footer className={brand.footer}>
-        <a className={brand.wordmark} href="/"><span>Lab</span>Narrative</a>
+        <a className={brand.wordmark} href="/intelligence"><span>Lab</span>Narrative</a>
         <span>Scientific revenue intelligence</span>
+        <a href="/intelligence/login">Client Portal</a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
       </footer>
     </main>
