@@ -97,7 +97,7 @@ export default function IntelligencePage() {
             <p style={{maxWidth:760, marginTop:28, color:"var(--muted)", lineHeight:1.75}}>
               Your first product is free. When you want broader and continuous coverage, choose the product capacity that fits your team — or ask us to run a Managed Commercial Pilot.
             </p>
-            <a href="/intelligence/plans" style={{display:"inline-block", marginTop:28, padding:"12px 16px", borderRadius:14, background:"var(--primary)", color:"#fff", fontSize:".72rem", fontWeight:850}}>VIEW PLANS →</a>
+            <a href="/intelligence/plans" style={{display:"inline-block", marginTop:28, padding:"12px 16px", borderRadius:999, background:"var(--dark)", color:"#fff", fontSize:".72rem", fontWeight:850}}>VIEW PLANS →</a>
           </div>
         </div>
       </section>
