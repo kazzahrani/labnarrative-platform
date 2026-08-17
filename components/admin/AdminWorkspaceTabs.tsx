@@ -22,13 +22,34 @@ const LEGACY_WEBSITE_PREFIXES = [
   "/admin/linkedin",
 ] as const;
 
+const LEGACY_NAMESPACED_WEBSITE_PREFIXES = [
+  "/admin/websites/sites",
+  "/admin/websites/discovery",
+  "/admin/websites/review",
+  "/admin/websites/sales",
+  "/admin/websites/outreach",
+  "/admin/websites/care",
+  "/admin/websites/linkedin",
+  "/admin/websites/preview",
+  "/admin/websites/recovery",
+] as const;
+
+function matchesPrefix(path: string, prefix: string) {
+  return path === prefix || path.startsWith(`${prefix}/`);
+}
+
 function isWebsiteWorkspacePath(path: string) {
-  if (path.startsWith("/admin/websites/")) return true;
-  return LEGACY_WEBSITE_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+  // The company Websites workspace (/admin/websites and /admin/websites/concepts)
+  // is a separate acquisition product. Never inject the retired PI navigation
+  // into it. Keep the old tab strip only for explicitly retained legacy PI tools.
+  if (LEGACY_NAMESPACED_WEBSITE_PREFIXES.some((prefix) => matchesPrefix(path, prefix))) {
+    return true;
+  }
+  return LEGACY_WEBSITE_PREFIXES.some((prefix) => matchesPrefix(path, prefix));
 }
 
 function normalizedWebsitePath(path: string) {
-  if (path.startsWith("/admin/websites/")) return path;
+  if (LEGACY_NAMESPACED_WEBSITE_PREFIXES.some((prefix) => matchesPrefix(path, prefix))) return path;
   if (path === "/admin/sites-v3" || path.startsWith("/admin/sites-v3/")) {
     return path.replace("/admin/sites-v3", "/admin/websites/sites");
   }
