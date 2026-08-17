@@ -1,0 +1,105 @@
+/* Shared LabNarrative visual language — modern, rounded, colorful, premium. */
+:root{
+  --ln-ink:#112019;
+  --ln-green:#17382d;
+  --ln-green-2:#24533f;
+  --ln-lime:#dfff7a;
+  --ln-mint:#78e3d5;
+  --ln-blue:#9ac8ff;
+  --ln-violet:#c9b8ff;
+  --ln-paper:#f2f5f0;
+  --ln-card:#fbfcf9;
+  --ln-line:rgba(27,57,45,.12);
+  --ln-shadow:0 18px 48px rgba(23,56,45,.08);
+}
+
+body{background:var(--ln-paper)}
+
+/* Legacy platform/public surfaces */
+.platform-home{
+  background:
+    radial-gradient(circle at 88% 4%,rgba(120,227,213,.25),transparent 28%),
+    radial-gradient(circle at 16% 22%,rgba(223,255,122,.20),transparent 26%),
+    var(--ln-paper);
+}
+.platform-card,.content-card,.pi-card{
+  border-radius:24px;
+  border-color:var(--ln-line);
+  box-shadow:var(--ln-shadow);
+  overflow:hidden;
+}
+.platform-grid .platform-card:nth-child(3n+1){background:linear-gradient(145deg,#fbfcf9,#eef9f4)}
+.platform-grid .platform-card:nth-child(3n+2){background:linear-gradient(145deg,#fbfcf9,#f1efff)}
+.platform-grid .platform-card:nth-child(3n){background:linear-gradient(145deg,#fbfcf9,#edf6ff)}
+.status-pill,.focus-list span{border-radius:999px;background:rgba(255,255,255,.64);backdrop-filter:blur(10px)}
+
+/* Admin shell: keep the information density, remove the forum feel. */
+.admin-shell{
+  background:
+    radial-gradient(circle at 95% 0%,rgba(120,227,213,.14),transparent 27%),
+    radial-gradient(circle at 12% 18%,rgba(223,255,122,.10),transparent 24%),
+    #edf2ed;
+}
+.admin-topbar{
+  min-height:68px;
+  margin:12px 14px 0;
+  border:1px solid rgba(31,71,54,.11);
+  border-radius:18px;
+  background:rgba(251,253,250,.90);
+  box-shadow:0 12px 32px rgba(25,53,41,.07);
+}
+.admin-layout{gap:12px;padding:12px 14px 14px;min-height:calc(100vh - 80px)}
+.admin-sidebar{
+  padding:24px 16px;
+  border:1px solid rgba(31,71,54,.10);
+  border-radius:22px;
+  background:linear-gradient(180deg,rgba(251,253,250,.96),rgba(239,246,241,.96));
+  box-shadow:0 14px 36px rgba(24,49,38,.06);
+}
+.admin-site-list button,
+.admin-sidebar button,
+.admin-topbar button,
+.admin-topbar a,
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea{
+  border-radius:12px;
+}
+.admin-site-list button{border:1px solid transparent;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+.admin-site-list button:hover{background:#eef8f2;border-color:rgba(36,83,63,.10);transform:translateX(2px)}
+.admin-sidebar-heading button,.admin-list-heading button{background:#fff;border-color:rgba(31,71,54,.14);box-shadow:0 6px 18px rgba(23,56,45,.04)}
+.admin-shell input,.admin-shell select,.admin-shell textarea{border-color:rgba(31,71,54,.14)!important;background:rgba(255,255,255,.88)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.admin-shell input:focus,.admin-shell select:focus,.admin-shell textarea:focus{outline:none!important;border-color:#3f735e!important;box-shadow:0 0 0 3px rgba(120,227,213,.16)!important}
+.admin-shell button{transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
+.admin-shell button:hover{transform:translateY(-1px)}
+.admin-shell :is(.admin-card,.admin-panel,.metric-card,.stats-card,.table-card){border-radius:20px!important;box-shadow:0 14px 36px rgba(25,53,41,.055)!important}
+
+/* Make common admin content blocks more dimensional without changing data structure. */
+.admin-shell main > section,
+.admin-shell main > article{
+  border-radius:22px;
+}
+
+/* Authentication and account surfaces */
+.admin-auth-page,.admin-loading{
+  background:
+    radial-gradient(circle at 12% 8%,rgba(223,255,122,.24),transparent 30%),
+    radial-gradient(circle at 90% 10%,rgba(120,227,213,.20),transparent 30%),
+    #edf3ee;
+}
+.admin-auth-card{border-radius:28px;border-color:rgba(31,71,54,.12);box-shadow:0 28px 80px rgba(23,56,45,.12)}
+
+/* Public site cards should feel like one family. */
+.site-theme{background:linear-gradient(180deg,var(--site-background),color-mix(in srgb,var(--site-background) 88%,white))}
+.site-header{margin:12px clamp(12px,2vw,30px) 0;border:1px solid color-mix(in srgb,var(--site-foreground) 12%,transparent);border-radius:18px;background:color-mix(in srgb,var(--site-surface) 92%,transparent);backdrop-filter:blur(14px)}
+.site-theme .content-card,.site-theme .pi-card{border-radius:24px;box-shadow:0 18px 44px color-mix(in srgb,var(--site-foreground) 7%,transparent)}
+.site-theme .content-card:nth-child(3n+1){background:color-mix(in srgb,var(--site-surface) 86%,#dff7ed)}
+.site-theme .content-card:nth-child(3n+2){background:color-mix(in srgb,var(--site-surface) 88%,#eee8ff)}
+.site-theme .content-card:nth-child(3n){background:color-mix(in srgb,var(--site-surface) 88%,#e5f3ff)}
+
+@media(max-width:860px){
+  .admin-topbar{margin:8px 8px 0}
+  .admin-layout{padding:8px;gap:8px}
+  .admin-sidebar{border-radius:18px}
+  .site-header{margin:8px}
+}
