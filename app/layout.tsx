@@ -47,14 +47,15 @@ import "./bourdon-simple-header.css";
 import "./blue-theme-lock.css";
 import "./platform-list-pagination.css";
 import "./engine-v3-final-review-theme.css";
+import "./labnarrative-modern-theme.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "LabNarrative — Scientific Laboratory Websites",
+    default: "LabNarrative — Scientific Revenue Intelligence",
     template: "%s | LabNarrative",
   },
   description:
-    "LabNarrative researches, writes, designs and launches modern websites for scientific laboratories.",
+    "LabNarrative identifies scientifically credible buying opportunities for life-science suppliers and turns them into commercial action.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
