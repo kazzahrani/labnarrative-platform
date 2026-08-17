@@ -3,7 +3,7 @@ import ThemeToggle from "../ThemeToggle";
 import ActivateClient from "./ActivateClient";
 
 export const metadata: Metadata = {
-  title: "Activate Client Portal — LabNarrative Intelligence",
+  title: "Activate Client Portal — LabNarrative",
   robots: { index: false, follow: false },
 };
 
