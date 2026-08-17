@@ -36,7 +36,7 @@ async function forward(req: NextRequest) {
     cache: "no-store",
     redirect: "manual",
   };
-  if (!/[G|H]ET/.test(req.method)) {
+  if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = await req.arrayBuffer();
   }
 
