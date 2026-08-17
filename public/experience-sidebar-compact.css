@@ -1,147 +1,85 @@
 /* Compact LabNarrative workspace sidebar spacing.
-   Loaded after the classic portal theme. Selectors intentionally match/exceed
-   the portal theme specificity so compact rules win even against !important. */
+   Keeps the classic Client Portal look while fitting the full Intelligence navigation on shorter screens. */
 
-html[data-theme="light"] .sidebar,
-html[data-theme="dark"] .sidebar{
+.sidebar{
   overflow-y:auto!important;
   overflow-x:hidden!important;
-  scrollbar-width:thin!important;
-  padding:14px 14px!important;
+  scrollbar-width:thin;
+  padding:16px 14px!important;
 }
 
-html[data-theme="light"] .sidebar .brand,
-html[data-theme="dark"] .sidebar .brand{
-  padding:2px 6px 10px!important;
+.brand{
+  padding:2px 6px 12px!important;
 }
 
-html[data-theme="light"] .sidebar .experience-tag,
-html[data-theme="dark"] .sidebar .experience-tag{
-  margin:0 0 8px!important;
-  min-height:68px!important;
-  padding:9px 11px!important;
+.experience-tag{
+  margin:0 0 10px!important;
+  min-height:76px!important;
+  padding:11px 12px!important;
 }
 
-html[data-theme="light"] .portal-account-copy small,
-html[data-theme="dark"] .portal-account-copy small{font-size:8px!important}
-html[data-theme="light"] .portal-account-copy strong,
-html[data-theme="dark"] .portal-account-copy strong{margin:3px 0 2px!important;font-size:13px!important}
-html[data-theme="light"] .portal-account-copy span,
-html[data-theme="dark"] .portal-account-copy span{font-size:9px!important}
+.portal-account-copy small{font-size:8px!important}
+.portal-account-copy strong{margin:4px 0 3px!important;font-size:13px!important}
+.portal-account-copy span{font-size:9px!important}
 
-/* The important part: remove inherited vertical distribution/gaps completely. */
-html[data-theme="light"] .sidebar nav,
-html[data-theme="dark"] .sidebar nav{
-  display:flex!important;
-  flex-direction:column!important;
-  justify-content:flex-start!important;
-  align-items:stretch!important;
-  align-content:flex-start!important;
-  gap:0!important;
-  row-gap:0!important;
-  column-gap:0!important;
-  height:auto!important;
-  min-height:0!important;
-  flex:0 0 auto!important;
-  margin:0!important;
-  padding:0!important;
+nav{
+  gap:1px!important;
 }
 
-html[data-theme="light"] .sidebar nav button,
-html[data-theme="dark"] .sidebar nav button{
-  box-sizing:border-box!important;
-  flex:0 0 30px!important;
-  height:30px!important;
-  min-height:30px!important;
-  max-height:30px!important;
-  margin:0!important;
-  padding:4px 9px!important;
-  border-radius:9px!important;
-  font-size:11.5px!important;
-  line-height:1!important;
-  gap:7px!important;
-}
-
-html[data-theme="light"] .sidebar nav button + button,
-html[data-theme="dark"] .sidebar nav button + button{
-  margin-top:1px!important;
-}
-
-html[data-theme="light"] .sidebar .nav-icon,
-html[data-theme="dark"] .sidebar .nav-icon{
-  width:14px!important;
-  min-width:14px!important;
-  font-size:10px!important;
-  line-height:1!important;
-}
-
-html[data-theme="light"] .sidebar-bottom,
-html[data-theme="dark"] .sidebar-bottom{
-  gap:4px!important;
-  padding:8px 6px 2px!important;
-}
-
-html[data-theme="light"] .coverage-mini strong,
-html[data-theme="dark"] .coverage-mini strong{
-  margin:2px 0 4px!important;
-}
-
-html[data-theme="light"] .coverage-mini span,
-html[data-theme="light"] .coverage-mini small,
-html[data-theme="dark"] .coverage-mini span,
-html[data-theme="dark"] .coverage-mini small{
-  font-size:9px!important;
+nav button{
+  min-height:34px!important;
+  padding:7px 10px!important;
+  border-radius:10px!important;
+  font-size:12px!important;
   line-height:1.15!important;
+  gap:8px!important;
 }
 
-html[data-theme="light"] .coverage-bar,
-html[data-theme="dark"] .coverage-bar{
-  margin-bottom:3px!important;
+.nav-icon{
+  width:15px!important;
+  font-size:11px!important;
 }
 
-html[data-theme="light"] .theme-button,
-html[data-theme="dark"] .theme-button{
-  padding:2px 0!important;
-  font-size:10.5px!important;
+.sidebar-bottom{
+  gap:6px!important;
+  padding:10px 6px 2px!important;
 }
 
-html[data-theme="light"] .x-convert-side,
-html[data-theme="dark"] .x-convert-side{
-  margin:0 0 1px!important;
+.coverage-mini strong{
+  margin:3px 0 5px!important;
 }
 
-html[data-theme="light"] .x-convert-side .x-upgrade-only,
-html[data-theme="dark"] .x-convert-side .x-upgrade-only{
-  min-height:32px!important;
-  height:32px!important;
+.coverage-mini span,
+.coverage-mini small{
+  font-size:9px!important;
+  line-height:1.2!important;
+}
+
+.coverage-bar{
+  margin-bottom:4px!important;
+}
+
+.theme-button{
+  padding:3px 0!important;
+  font-size:11px!important;
+}
+
+.x-convert-side{
+  margin:0 0 2px!important;
+}
+
+.x-convert-side .x-upgrade-only{
+  min-height:34px!important;
   font-size:10px!important;
 }
 
 @media(max-height:780px) and (min-width:981px){
-  html[data-theme="light"] .sidebar,
-  html[data-theme="dark"] .sidebar{padding-top:10px!important;padding-bottom:8px!important}
-
-  html[data-theme="light"] .sidebar .brand,
-  html[data-theme="dark"] .sidebar .brand{padding-bottom:7px!important}
-
-  html[data-theme="light"] .sidebar .brand-mark,
-  html[data-theme="dark"] .sidebar .brand-mark{width:34px!important;height:34px!important}
-
-  html[data-theme="light"] .sidebar .brand strong,
-  html[data-theme="dark"] .sidebar .brand strong{font-size:14px!important}
-
-  html[data-theme="light"] .sidebar .brand span,
-  html[data-theme="dark"] .sidebar .brand span{font-size:9px!important}
-
-  html[data-theme="light"] .sidebar .experience-tag,
-  html[data-theme="dark"] .sidebar .experience-tag{min-height:60px!important;padding:8px 9px!important;margin-bottom:5px!important}
-
-  html[data-theme="light"] .sidebar nav button,
-  html[data-theme="dark"] .sidebar nav button{
-    flex-basis:27px!important;height:27px!important;min-height:27px!important;max-height:27px!important;
-    padding:3px 8px!important;font-size:10.5px!important;
-  }
-
-  html[data-theme="light"] .sidebar-bottom,
-  html[data-theme="dark"] .sidebar-bottom{padding-top:5px!important;gap:3px!important}
+  .sidebar{padding-top:12px!important;padding-bottom:10px!important}
+  .brand{padding-bottom:8px!important}
+  .brand-mark{width:36px!important;height:36px!important}
+  .brand strong{font-size:15px!important}
+  .brand span{font-size:10px!important}
+  .experience-tag{min-height:68px!important;padding:9px 10px!important;margin-bottom:7px!important}
+  nav button{min-height:31px!important;padding:6px 9px!important;font-size:11px!important}
+  .sidebar-bottom{padding-top:7px!important;gap:4px!important}
 }
