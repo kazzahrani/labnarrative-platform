@@ -1,0 +1,37 @@
+/* Systems public-page contrast guard.
+   Loaded after all public theme layers so legacy dark-section typography
+   cannot leave white text on light backgrounds. */
+
+.lnSystemsPublic > main [class*="useCaseSection"] {
+  background: linear-gradient(135deg, #f3efff 0%, #eee9ff 50%, #f9f6ef 100%) !important;
+  color: #242331 !important;
+}
+
+.lnSystemsPublic > main [class*="useCaseSection"] [class*="sectionToplineDark"] {
+  border-color: rgba(36, 35, 49, .12) !important;
+  color: #777586 !important;
+}
+
+.lnSystemsPublic > main [class*="useCaseSection"] [class*="sectionToplineDark"] [class*="sectionLabel"] {
+  color: #5d52e7 !important;
+}
+
+.lnSystemsPublic > main [class*="useCaseSection"] [class*="useCaseIntro"] h2 {
+  color: #242331 !important;
+}
+
+.lnSystemsPublic > main [class*="useCaseGrid"] article {
+  color: #242331 !important;
+}
+
+.lnSystemsPublic > main [class*="useCaseGrid"] article h3 {
+  color: #242331 !important;
+}
+
+.lnSystemsPublic > main [class*="useCaseGrid"] article p {
+  color: #666878 !important;
+}
+
+.lnSystemsPublic > main [class*="useCaseGrid"] article > span {
+  color: #5d52e7 !important;
+}
