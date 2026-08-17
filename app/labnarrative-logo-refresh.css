@@ -92,3 +92,5 @@ a[aria-label="LabNarrative home"]:focus-visible > span:first-child {
   color: var(--ln-logo-lab) !important;
   font-weight: 500 !important;
 }
+
+/* deployment marker: dark-footer wordmark contrast */
