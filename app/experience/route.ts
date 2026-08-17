@@ -28,6 +28,8 @@ const FETCH_BRIDGE = `<script>(function(){
   };
 })();</script><style>[data-x-convert-main]{display:none!important}</style>`;
 
+const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><script defer src="/experience-client-portal.js?v=20260817-1"></script>`;
+
 function assetUrl(path: string) {
   return `/api/experience-asset?path=${encodeURIComponent(path)}`;
 }
@@ -50,8 +52,9 @@ export async function GET(_req: NextRequest) {
       return `inject('${assetUrl(originalPath)}',`;
     });
 
-    if (html.includes("</head>")) html = html.replace("</head>", `${FETCH_BRIDGE}</head>`);
-    else html = FETCH_BRIDGE + html;
+    const injected = `${FETCH_BRIDGE}${PORTAL_THEME}`;
+    if (html.includes("</head>")) html = html.replace("</head>", `${injected}</head>`);
+    else html = injected + html;
 
     return new Response(html, {
       status: 200,
