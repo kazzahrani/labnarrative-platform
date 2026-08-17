@@ -16,7 +16,7 @@ export default function LoginClient() {
     setEmail(params.get("email") || "");
     setClaimToken(params.get("claim") || "");
     void intelligenceAuth.auth.getSession().then(({ data }) => {
-      if (data.session && !params.get("claim")) window.location.href = "/client";
+      if (data.session && !params.get("claim")) window.location.href = "/intelligence/client";
     });
   }, []);
 
@@ -35,7 +35,7 @@ export default function LoginClient() {
         const payload = await claim.json().catch(() => ({}));
         if (!claim.ok) throw new Error(String(payload.error || "This purchase could not be linked to your account."));
       }
-      window.location.href = "/client";
+      window.location.href = "/intelligence/client";
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign in failed.");
     } finally {
@@ -52,7 +52,7 @@ export default function LoginClient() {
           <h1>Your products.<br />Your opportunities.<br /><em>One account.</em></h1>
           <p>Return whenever you need to start another product analysis, monitor progress, or retrieve a completed LabNarrative report.</p>
         </div>
-        <div className={styles.brandFoot}><span>Scientific intelligence</span><span>Scientist-validated</span><span>Secure client access</span></div>
+        <div className={styles.brandFoot}><span>Scientific revenue intelligence</span><span>Scientist-validated</span><span>Secure client access</span></div>
       </section>
       <section className={styles.formPane}>
         <div className={styles.card}>

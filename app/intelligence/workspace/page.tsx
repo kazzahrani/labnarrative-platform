@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 export default async function LabNarrativeWorkspacePage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const params = await searchParams;
   const token = String(params?.token || "").trim();
-  redirect(token ? `/activate?token=${encodeURIComponent(token)}` : "/login");
+  redirect(token ? `/intelligence/activate?token=${encodeURIComponent(token)}` : "/intelligence/login");
 }
