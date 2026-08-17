@@ -110,8 +110,8 @@ export default function IntelligenceCheckout() {
             const result = await callProvider("capture", { orderId });
             if (!result.paid) throw new Error("The payment was not completed.");
             const rawWorkspaceUrl = String(result.workspaceUrl || "");
-            const workspaceUrl = rawWorkspaceUrl.replace("https://labnarrative.com/intelligence/workspace", "https://labnarrative.com/workspace");
-            if (!workspaceUrl.startsWith("https://labnarrative.com/workspace")) throw new Error("Payment succeeded, but the client account activation link could not be opened.");
+            const workspaceUrl = rawWorkspaceUrl.replace("https://labnarrative.com/workspace", "https://labnarrative.com/intelligence/workspace");
+            if (!workspaceUrl.startsWith("https://labnarrative.com/intelligence/workspace")) throw new Error("Payment succeeded, but the client account activation link could not be opened.");
             setSuccess({ captureId: String(result.captureId || ""), purchaseId: String(result.purchaseId || ""), packageName: selected.name, payerEmail: String(result.payerEmail || ""), workspaceUrl });
           },
           onCancel: () => setError("PayPal checkout was cancelled. No payment was recorded."),
@@ -133,7 +133,7 @@ export default function IntelligenceCheckout() {
       <section className={styles.success} aria-live="polite">
         <p className={styles.kicker}>Payment confirmed</p>
         <h2>Your {success.packageName} is ready to activate.</h2>
-        <p>PayPal confirmed your purchase. Create your password once, then use the secure Client Portal to submit products, monitor LabNarrative progress and retrieve validated web + PDF reports.</p>
+        <p>PayPal confirmed your purchase. Create your password once, then use the secure LabNarrative Client Portal to submit products, monitor progress and retrieve validated web + PDF reports.</p>
         <div className={styles.receipt}>
           <span>Payment reference</span><strong>{success.captureId || success.purchaseId}</strong>
           {success.payerEmail ? <small>Account email: {success.payerEmail}</small> : null}
@@ -167,7 +167,7 @@ export default function IntelligenceCheckout() {
           <div className={styles.total}><span>Total</span><strong>{selected.price} USD</strong></div>
         </div>
         <p className={styles.checkoutCopy}>One-time introductory Managed Commercial Pilot price. This is a done-for-you engagement and is separate from the recurring Starter, Growth and Pro subscriptions.</p>
-        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary LabNarrative report will be carried into the Client Portal as the reference case that started this commercial program.</p> : null}
+        {sourceReportId ? <p className={styles.checkoutCopy}>Your LabNarrative Free Product Proof will be carried into the Client Portal as the reference case that started this commercial program.</p> : null}
         {loading ? <div className={styles.loading}>Connecting secure checkout…</div> : null}
         {!loading && provider.verified && provider.clientId ? <div ref={buttonRef} className={styles.paypalSlot} /> : null}
         {!loading && !provider.verified ? <div className={styles.error}>{provider.authError || "PayPal checkout is temporarily unavailable."}</div> : null}
