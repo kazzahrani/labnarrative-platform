@@ -32,9 +32,6 @@ export function proxy(request: NextRequest) {
     host === LEGACY_PLATFORM_HOST ||
     host === "localhost";
 
-  // Engine v4 machine renderer capability URLs are short-lived private
-  // verification surfaces. Prevent the token in the query string from being
-  // forwarded as a Referer to remote portrait hosts or indexed/cached.
   if (request.nextUrl.pathname.startsWith("/engine-v4/render/")) {
     const response = NextResponse.next();
     response.headers.set("Referrer-Policy", "no-referrer");
@@ -43,8 +40,6 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // labnarrative.com is the single canonical browser origin for the primary
-  // administrator session. Vercel aliases never keep a separate auth copy.
   if (request.nextUrl.pathname.startsWith("/admin") && PLATFORM_ALIAS_HOSTS.has(host)) {
     const canonicalUrl = request.nextUrl.clone();
     canonicalUrl.protocol = "https:";
@@ -53,9 +48,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(canonicalUrl, 307);
   }
 
-  // Preserve platform.labnarrative.com only long enough to hand an existing
-  // browser session to labnarrative.com. Every legacy admin URL enters the
-  // transfer page first so the requested destination can be restored exactly.
   if (host === LEGACY_PLATFORM_HOST && request.nextUrl.pathname.startsWith("/admin")) {
     if (request.nextUrl.pathname === "/admin/session-transfer") {
       const response = NextResponse.next();
@@ -84,8 +76,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(transferUrl, 307);
   }
 
-  // /admin is the LabNarrative Control Center and shared login gate. Keep it
-  // uncached so authentication state can never be hidden behind a stale page.
   if (isAdminHost && request.nextUrl.pathname === "/admin") {
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
@@ -94,8 +84,6 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // Session import/transfer are shared authentication infrastructure, not a
-  // Websites namespace. Keep them directly addressable at top-level /admin.
   if (
     (host === rootDomain || host === `www.${rootDomain}` || host === "localhost") &&
     (request.nextUrl.pathname === "/admin/session-import" || request.nextUrl.pathname === "/admin/session-transfer")
@@ -107,33 +95,24 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // /admin/websites is the new company-focused Websites acquisition workspace.
-  // Legacy PI tools remain available below /admin/websites/* via the existing
-  // namespace rewrite, but the branch root itself must resolve to its real page.
   if (isAdminHost && (request.nextUrl.pathname === "/admin/websites" || request.nextUrl.pathname === "/admin/websites/")) {
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
     return response;
   }
 
-  // Give Websites a clean top-level outreach route while retaining the current
-  // outreach setup implementation. Run-specific outreach URLs continue to map
-  // through /admin/websites/outreach/[runId].
   if (isAdminHost && request.nextUrl.pathname === "/admin/websites/outreach") {
     const outreachUrl = request.nextUrl.clone();
     outreachUrl.pathname = "/admin/outreach-setup";
     return NextResponse.rewrite(outreachUrl);
   }
 
-  // LabNarrative Websites legacy tools live under /admin/websites/*.
   if (isAdminHost && request.nextUrl.pathname.startsWith("/admin/websites/")) {
     const internalUrl = request.nextUrl.clone();
     internalUrl.pathname = `/admin/${request.nextUrl.pathname.slice("/admin/websites/".length)}`;
     return NextResponse.rewrite(internalUrl);
   }
 
-  // Redirect legacy top-level Websites admin URLs on the public root into the
-  // Websites namespace. Session routes were deliberately removed from this set.
   if (
     (host === rootDomain || host === `www.${rootDomain}` || host === "localhost") &&
     request.nextUrl.pathname.startsWith("/admin/")
@@ -147,27 +126,12 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // API routes are platform infrastructure and must remain addressable from
-  // every custom laboratory subdomain without being rewritten as site pages.
   if (request.nextUrl.pathname === "/api" || request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  // The root LabNarrative brand acts as an umbrella for the businesses.
-  if (
-    request.nextUrl.pathname === "/" &&
-    (
-      host === rootDomain ||
-      host === `www.${rootDomain}` ||
-      host === "localhost" ||
-      host.endsWith(".vercel.app")
-    )
-  ) {
-    const umbrellaUrl = request.nextUrl.clone();
-    umbrellaUrl.pathname = "/umbrella";
-    return NextResponse.rewrite(umbrellaUrl);
-  }
-
+  // labnarrative.com is now the canonical flagship LabNarrative revenue-intelligence experience.
+  // The former umbrella page remains available explicitly at /umbrella but no longer owns the root URL.
   if (
     !host ||
     host === rootDomain ||
