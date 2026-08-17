@@ -3,7 +3,7 @@ import ThemeToggle from "../ThemeToggle";
 import LoginClient from "./LoginClient";
 
 export const metadata: Metadata = {
-  title: "Client Sign In — LabNarrative Intelligence",
+  title: "Client Sign In — LabNarrative",
   robots: { index: false, follow: false },
 };
 
