@@ -26,8 +26,8 @@ declare global {
 }
 
 const packages: PackageOption[] = [
-  { key: "portfolio", name: "Portfolio Pilot", products: 10, price: "$689", amount: 689, note: "The first paid step: expand the complete Intelligence workflow across ten additional products." },
-  { key: "portfolio_plus", name: "Portfolio Plus", products: 20, price: "$1,189", amount: 1189, note: "A larger one-time launch for suppliers ready to analyze a broader product set." },
+  { key: "portfolio", name: "10-Product Managed Commercial Pilot", products: 10, price: "$489", amount: 489, note: "A one-time done-for-you commercial experiment across ten products, run by LabNarrative." },
+  { key: "portfolio_plus", name: "20-Product Managed Commercial Pilot", products: 20, price: "$789", amount: 789, note: "A broader one-time managed commercial experiment across twenty products." },
 ];
 
 function loadPayPalSdk(clientId: string, currency: string) {
@@ -150,7 +150,7 @@ export default function IntelligenceCheckout() {
           return (
             <button type="button" key={item.key} className={`${styles.packageCard} ${active ? styles.packageCardActive : ""}`} onClick={() => setSelectedKey(item.key)} aria-pressed={active}>
               <div><span className={styles.packageName}>{item.name}</span>{item.key === "portfolio" ? <span className={styles.recommended}>Start here</span> : null}</div>
-              <strong>{item.products} additional products</strong>
+              <strong>{item.products} products</strong>
               <p>{item.note}</p>
               <footer><b>{item.price}</b><span>{active ? "Selected" : "Choose"}</span></footer>
             </button>
@@ -161,12 +161,12 @@ export default function IntelligenceCheckout() {
       <aside className={styles.checkoutCard}>
         <p className={styles.kicker}>Secure checkout</p>
         <div className={styles.orderSummary}>
-          <div><span>Package</span><strong>{selected.name}</strong></div>
-          <div><span>Additional analyses</span><strong>{selected.products} products</strong></div>
+          <div><span>Managed pilot</span><strong>{selected.name}</strong></div>
+          <div><span>Products</span><strong>{selected.products}</strong></div>
           <div className={styles.total}><span>Total</span><strong>{selected.price} USD</strong></div>
         </div>
-        <p className={styles.checkoutCopy}>One-time introductory price. Your complimentary product remains fully available and is not counted among these paid product slots.</p>
-        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary Intelligence report will be carried into the Client Portal as the reference case that started this portfolio.</p> : null}
+        <p className={styles.checkoutCopy}>One-time introductory Managed Commercial Pilot price. This is a done-for-you engagement and is separate from the recurring Starter, Growth and Pro subscriptions.</p>
+        {sourceReportId ? <p className={styles.checkoutCopy}>Your complimentary Intelligence report will be carried into the Client Portal as the reference case that started this commercial program.</p> : null}
         {loading ? <div className={styles.loading}>Connecting secure checkout…</div> : null}
         {!loading && provider.verified && provider.clientId ? <div ref={buttonRef} className={styles.paypalSlot} /> : null}
         {!loading && !provider.verified ? <div className={styles.error}>{provider.authError || "PayPal checkout is temporarily unavailable."}</div> : null}
