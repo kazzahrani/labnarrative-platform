@@ -1,0 +1,194 @@
+/* LabNarrative primary identity — keep the modern pastel system, restore the original dark-green core. */
+:root{
+  --ln-logo-lab:#24533f;
+  --ln-brand-violet:#24533f;
+  --ln-brand-violet-2:#17382d;
+}
+
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="auth-module__"],
+  main[class*="brand-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+){
+  --green:#24533f!important;
+  --green2:#17382d!important;
+  --dark:#17382d!important;
+  --ln-purple:#24533f!important;
+  --ln-purple-dark:#17382d!important;
+  --ln-action:#17382d!important;
+  --ln-action-2:#24533f!important;
+  --ln-action-dark:#17382d!important;
+  --ln-action-soft:#dff5ec!important;
+}
+
+/* Canonical wordmark: bring the Lab accent back to the established LabNarrative green. */
+[class*="wordmark"]>span:first-child,
+a[aria-label="LabNarrative home"]>span:first-child,
+a[aria-label*="LabNarrative"][href="/"]>span:first-child,
+[class*="logoLab"],
+.lnWebsitesPublic [class*="logoLab"],
+.lnSystemsPublic [class*="logoLab"]{
+  color:#24533f!important;
+}
+
+/* Strong typography accents should read as brand green, while lavender remains a soft background accent. */
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="brand-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+) :is(h1,h2) em,
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="brand-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+) :is([class*="eyebrow"],[class*="kicker"],[class*="sectionLabel"],[class*="label"],[class*="number"]){
+  color:#24533f!important;
+}
+
+/* Primary buttons and actions. */
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="brand-module__"],
+  main[class*="auth-module__"],
+  main[class*="buy-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+) :is(
+  [class*="headerCta"],
+  [class*="primary"],
+  [class*="planButton"],
+  [class*="primaryButton"],
+  [class*="checkoutButton"],
+  [class*="emailButton"]
+),
+main[class*="brand-module__"] [class*="freeBanner"]>a,
+main[class*="brand-module__"] [class*="final"] a,
+main[class*="brand-module__"] [class*="heroAside"] a,
+main[class*="auth-module__"] button[type="submit"],
+main[class*="buy-module__"] button{
+  background:linear-gradient(135deg,#17382d,#24533f)!important;
+  color:#fff!important;
+  border-color:transparent!important;
+  box-shadow:0 12px 28px rgba(23,56,45,.18)!important;
+}
+
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="brand-module__"],
+  main[class*="auth-module__"],
+  main[class*="buy-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+) :is(
+  [class*="headerCta"],
+  [class*="primary"],
+  [class*="planButton"],
+  [class*="primaryButton"],
+  [class*="checkoutButton"],
+  [class*="emailButton"]
+):hover{
+  background:linear-gradient(135deg,#102b22,#1d4938)!important;
+  box-shadow:0 15px 34px rgba(23,56,45,.24)!important;
+}
+
+/* Plans — make the popular Growth card the recognizable dark-green anchor. */
+main[class*="brand-module__"][class*="plans-module__"] [class*="planGrid"] article:nth-child(2),
+main[class*="brand-module__"][class*="plans-module__"] [class*="planCard"][class*="featured"]{
+  background:linear-gradient(145deg,#24533f,#17382d)!important;
+  color:#fff!important;
+  box-shadow:0 28px 60px rgba(23,56,45,.19)!important;
+}
+main[class*="brand-module__"][class*="plans-module__"] [class*="planHead"]>span,
+main[class*="brand-module__"][class*="plans-module__"] [class*="freeBadge"],
+main[class*="brand-module__"][class*="plans-module__"] [class*="pilotCard"]>span,
+main[class*="brand-module__"][class*="plans-module__"] [class*="pilotCard"]::after,
+main[class*="brand-module__"][class*="plans-module__"] [class*="pilotCard"] b{
+  color:#24533f!important;
+}
+main[class*="brand-module__"][class*="plans-module__"] [class*="planCard"] li::before{
+  color:#24533f!important;
+}
+main[class*="brand-module__"][class*="plans-module__"] [class*="planCard"][class*="featured"] :is([class*="planHead"]>span,[class*="description"],[class*="priceRow"] span,[class*="billingNote"],li){
+  color:rgba(255,255,255,.82)!important;
+}
+main[class*="brand-module__"][class*="plans-module__"] [class*="planCard"][class*="featured"] li::before{
+  color:#dfff7a!important;
+}
+main[class*="brand-module__"][class*="plans-module__"] [class*="planCard"][class*="featured"] [class*="planButton"]{
+  background:#dfff7a!important;
+  color:#17382d!important;
+  box-shadow:0 12px 28px rgba(223,255,122,.16)!important;
+}
+main[class*="brand-module__"][class*="plans-module__"] [class*="popular"]{
+  background:#dfff7a!important;
+  color:#17382d!important;
+}
+main[class*="brand-module__"][class*="plans-module__"] :is([class*="toggleActive"],[aria-pressed="true"]){
+  background:#17382d!important;
+  color:#fff!important;
+  box-shadow:0 10px 22px rgba(23,56,45,.16)!important;
+}
+
+/* Homepage: use green for the large solid brand surfaces instead of saturated purple. */
+main[class*="labnarrative-module__"] [class*="heroMetrics"] article:nth-child(1),
+main[class*="labnarrative-module__"] [class*="plansBox"]{
+  background:linear-gradient(145deg,#24533f,#17382d)!important;
+  color:#fff!important;
+}
+main[class*="labnarrative-module__"] [class*="__dark"]{
+  background:linear-gradient(140deg,#17382d,#24533f 62%,#315f4c)!important;
+  color:#fff!important;
+}
+
+/* Keep light secondary controls neutral but tie their text/borders to green. */
+:is(
+  main[class*="labnarrative-module__"],
+  main[class*="process-module__"],
+  main[class*="brand-module__"],
+  main[class*="websites-colorful-module__"],
+  .lnWebsitesPublic,
+  .lnSystemsPublic > main
+) :is([class*="secondary"],[class*="ghostButton"],[class*="buttonSecondary"]){
+  color:#17382d!important;
+  border-color:rgba(36,83,63,.16)!important;
+}
+
+/* Websites / Systems: retain their colorful pastel layouts, but make strong accents unmistakably LabNarrative green. */
+.lnWebsitesPublic,
+.lnSystemsPublic>main{
+  --green:#24533f!important;
+  --green-dark:#17382d!important;
+}
+.lnWebsitesPublic :is([class*="headerCta"],[class*="heroAside"] a,[class*="emailButton"]),
+.lnSystemsPublic>main :is([class*="headerCta"],[class*="heroAside"] a,[class*="finalCta"]>a){
+  background:linear-gradient(135deg,#17382d,#24533f)!important;
+  box-shadow:0 12px 28px rgba(23,56,45,.18)!important;
+}
+.lnWebsitesPublic [class*="badge"]{
+  background:#24533f!important;
+  color:#fff!important;
+}
+.lnWebsitesPublic #after-launch{
+  background:linear-gradient(135deg,#17382d,#24533f)!important;
+  color:#fff!important;
+}
+
+/* Authentication uses the same primary color, while its pastel illustration remains colorful. */
+main[class*="auth-module__"] button{
+  background:#17382d!important;
+  color:#fff!important;
+}
