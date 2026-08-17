@@ -1,19 +1,19 @@
-/* LabNarrative wordmark — colorful, light-weight identity.
-   Loaded last so legacy black/dark-green logo styling cannot survive. */
+/* Official LabNarrative wordmark — single canonical treatment everywhere.
+   Reference: Lab #5B53DF, Narrative #242330, regular/medium weight, text-only. */
 
 :root {
-  --ln-logo-lab: #6757f5;
-  --ln-logo-narrative: #ef7f9a;
-  --ln-logo-lab-hover: #7567ff;
-  --ln-logo-narrative-hover: #f28da6;
+  --ln-logo-lab: #5b53df;
+  --ln-logo-narrative: #242330;
 }
 
+/* Shared public wordmarks. */
 [class*="wordmark"],
 a[aria-label="LabNarrative home"],
 a[aria-label*="LabNarrative"][href="/"] {
   color: var(--ln-logo-narrative) !important;
   font-weight: 500 !important;
   letter-spacing: -0.045em !important;
+  opacity: 1 !important;
 }
 
 [class*="wordmark"] > span:first-child,
@@ -29,21 +29,33 @@ a[aria-label*="LabNarrative"][href="/"] > span:first-child,
   font-weight: 500 !important;
 }
 
+/* The logo never changes color on hover/focus. */
+[class*="wordmark"]:hover,
+[class*="wordmark"]:focus-visible,
+a[aria-label="LabNarrative home"]:hover,
+a[aria-label="LabNarrative home"]:focus-visible,
+[class*="wordmark"]:hover > span:first-child,
+[class*="wordmark"]:focus-visible > span:first-child,
+a[aria-label="LabNarrative home"]:hover > span:first-child,
+a[aria-label="LabNarrative home"]:focus-visible > span:first-child {
+  opacity: 1 !important;
+}
+
 [class*="wordmark"]:hover,
 [class*="wordmark"]:focus-visible,
 a[aria-label="LabNarrative home"]:hover,
 a[aria-label="LabNarrative home"]:focus-visible {
-  color: var(--ln-logo-narrative-hover) !important;
-  opacity: 1 !important;
+  color: var(--ln-logo-narrative) !important;
 }
 
 [class*="wordmark"]:hover > span:first-child,
 [class*="wordmark"]:focus-visible > span:first-child,
 a[aria-label="LabNarrative home"]:hover > span:first-child,
 a[aria-label="LabNarrative home"]:focus-visible > span:first-child {
-  color: var(--ln-logo-lab-hover) !important;
+  color: var(--ln-logo-lab) !important;
 }
 
+/* Branch-specific wordmarks. */
 .lnWebsitesPublic [class*="logoLab"],
 .lnSystemsPublic [class*="logoLab"] {
   color: var(--ln-logo-lab) !important;
@@ -56,7 +68,7 @@ a[aria-label="LabNarrative home"]:focus-visible > span:first-child {
   font-weight: 500 !important;
 }
 
-/* Systems demos use a separate brand class. Keep the wordmark light here too. */
+/* Systems demo wordmark uses the same canonical treatment. */
 .lnSystemsDemoScope [class*="brand"] {
   color: var(--ln-logo-narrative) !important;
   font-weight: 500 !important;
