@@ -42,7 +42,7 @@ const OUTREACH_ROW_FALLBACK = `<style>#content .list-row{cursor:pointer}</style>
   const arr=v=>Array.isArray(v)?v:[];
   const esc=(v='')=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const title=v=>String(v||'').replaceAll('_',' ').replace(/\\b\\w/g,c=>c.toUpperCase());
-  const active=()=>/\/\\s*Outreach\\s*$/.test(String(document.getElementById('crumb')?.textContent||''));
+  const active=()=>String(document.getElementById('crumb')?.textContent||'').trim().endsWith('/ Outreach');
   async function snapshot(){
     const token=sessionStorage.getItem('li_x_token')||'';if(!token)throw new Error('Workspace token unavailable.');
     const r=await fetch(END,{method:'POST',headers:{'content-type':'application/json','x-workspace-token':token},body:JSON.stringify({action:'snapshot'}),cache:'no-store'});
