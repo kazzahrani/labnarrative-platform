@@ -1,1 +1,1 @@
-export { default } from "../intelligence/workspace/page";
+export { default, metadata } from "../intelligence/workspace/page";
