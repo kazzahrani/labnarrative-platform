@@ -1,0 +1,55 @@
+/* LabNarrative wordmark refresh — colorful public identity.
+   Loaded last so no legacy black/dark-green wordmark survives. */
+
+:root {
+  --ln-logo-lab: #6a58f4;
+  --ln-logo-narrative: #5876d9;
+  --ln-logo-lab-hover: #7a68ff;
+  --ln-logo-narrative-hover: #6888eb;
+}
+
+/* Generic LabNarrative wordmarks used across flagship, Plans, auth, Websites and Systems. */
+[class*="wordmark"],
+a[aria-label="LabNarrative home"],
+a[aria-label*="LabNarrative"][href="/"] {
+  color: var(--ln-logo-narrative) !important;
+}
+
+[class*="wordmark"] > span:first-child,
+a[aria-label="LabNarrative home"] > span:first-child,
+a[aria-label*="LabNarrative"][href="/"] > span:first-child,
+[class*="logoLab"] {
+  color: var(--ln-logo-lab) !important;
+}
+
+[class*="logoNarrative"] {
+  color: var(--ln-logo-narrative) !important;
+}
+
+/* Keep the mark colorful rather than reverting on hover/focus. */
+[class*="wordmark"]:hover,
+[class*="wordmark"]:focus-visible,
+a[aria-label="LabNarrative home"]:hover,
+a[aria-label="LabNarrative home"]:focus-visible {
+  color: var(--ln-logo-narrative-hover) !important;
+  opacity: 1 !important;
+}
+
+[class*="wordmark"]:hover > span:first-child,
+[class*="wordmark"]:focus-visible > span:first-child,
+a[aria-label="LabNarrative home"]:hover > span:first-child,
+a[aria-label="LabNarrative home"]:focus-visible > span:first-child,
+[class*="logoLab"]:hover {
+  color: var(--ln-logo-lab-hover) !important;
+}
+
+/* Public branch marks occasionally expose the two halves directly. */
+.lnWebsitesPublic [class*="logoLab"],
+.lnSystemsPublic [class*="logoLab"] {
+  color: var(--ln-logo-lab) !important;
+}
+
+.lnWebsitesPublic [class*="logoNarrative"],
+.lnSystemsPublic [class*="logoNarrative"] {
+  color: var(--ln-logo-narrative) !important;
+}
