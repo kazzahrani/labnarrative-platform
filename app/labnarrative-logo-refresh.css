@@ -53,3 +53,12 @@ a[aria-label="LabNarrative home"]:focus-visible > span:first-child,
 .lnSystemsPublic [class*="logoNarrative"] {
   color: var(--ln-logo-narrative) !important;
 }
+
+/* Systems interactive demos use a different brand class rather than wordmark. */
+.lnSystemsDemoScope [class*="brand"] {
+  color: var(--ln-logo-narrative) !important;
+}
+
+.lnSystemsDemoScope [class*="brand"] > span:first-child {
+  color: var(--ln-logo-lab) !important;
+}
