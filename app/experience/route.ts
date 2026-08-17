@@ -28,6 +28,10 @@ const FETCH_BRIDGE = `<script>(function(){
   };
 })();</script><style>[data-x-convert-main]{display:none!important}</style>`;
 
+function assetUrl(path: string) {
+  return `/api/experience-asset?path=${encodeURIComponent(path)}`;
+}
+
 export async function GET(_req: NextRequest) {
   try {
     const res = await fetch(UPSTREAM, { cache: "no-store" });
@@ -35,8 +39,15 @@ export async function GET(_req: NextRequest) {
     let html = await res.text();
 
     html = html.replace(/(src|href)="\/([^\"]+)"/g, (_match, attr, path) => {
-      const originalPath = `/${path}`;
-      return `${attr}="/api/experience-asset?path=${encodeURIComponent(originalPath)}"`;
+      return `${attr}="${assetUrl(`/${path}`)}"`;
+    });
+
+    // The legacy shell lazily injects enhancement scripts after the core workspace becomes visible.
+    // Rewrite those string-literal paths too, otherwise the new LabNarrative domain would request
+    // non-existent root files such as /experience-conversion.js.
+    html = html.replace(/inject\('([^']+)'\s*,/g, (_match, path) => {
+      const originalPath = String(path || "");
+      return `inject('${assetUrl(originalPath)}',`;
     });
 
     if (html.includes("</head>")) html = html.replace("</head>", `${FETCH_BRIDGE}</head>`);
