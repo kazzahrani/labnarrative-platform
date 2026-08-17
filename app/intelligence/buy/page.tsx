@@ -8,22 +8,20 @@ export const metadata: Metadata = {
   description: "Choose a one-time done-for-you LabNarrative Managed Commercial Pilot across 10 or 20 products.",
 };
 
-function Wordmark() {
-  return <><span>Lab</span>Narrative</>;
-}
+function Wordmark() { return <><span>Lab</span>Narrative</>; }
 
 export default function LabNarrativeBuyPage() {
   return (
     <main className={`${brand.page} ${styles.buyPage}`}>
       <header className={brand.header}>
-        <a className={brand.wordmark} href="/intelligence" aria-label="LabNarrative home"><Wordmark /></a>
+        <a className={brand.wordmark} href="/" aria-label="LabNarrative home"><Wordmark /></a>
         <nav className={brand.nav} aria-label="Primary navigation">
-          <a href="/intelligence">Platform</a>
-          <a href="/intelligence#how">How it works</a>
-          <a href="/intelligence/plans">Plans</a>
-          <a href="/intelligence/login">Client sign in</a>
+          <a href="/">Platform</a>
+          <a href="/#how-it-works">How it works</a>
+          <a href="/plans">Plans</a>
+          <a href="/login">Client sign in</a>
         </nav>
-        <a className={brand.cta} href="/intelligence/plans">Back to Plans ↗</a>
+        <a className={brand.cta} href="/plans">Back to Plans ↗</a>
       </header>
 
       <section className={styles.hero}>
@@ -31,17 +29,13 @@ export default function LabNarrativeBuyPage() {
         <div className={styles.heroGrid}>
           <h1>You have seen LabNarrative.<br /><em>Now let us run it for you.</em></h1>
           <div className={styles.heroAside}>
-            <p>
-              A Managed Commercial Pilot is separate from the recurring Starter, Growth and Pro subscriptions. LabNarrative prioritizes the selected products, runs the complete scientific revenue workflow and organizes the resulting commercial pipeline for you.
-            </p>
+            <p>A Managed Commercial Pilot is separate from the recurring Starter, Growth and Pro subscriptions. LabNarrative prioritizes the selected products, runs the complete scientific revenue workflow and organizes the resulting commercial pipeline for you.</p>
             <strong>10 products $489 · 20 products $789 · One-time payment</strong>
           </div>
         </div>
       </section>
 
-      <div className={styles.checkoutWrap}>
-        <IntelligenceCheckout />
-      </div>
+      <div className={styles.checkoutWrap}><IntelligenceCheckout /></div>
 
       <section className={styles.below}>
         <div className={styles.belowGrid}>
@@ -52,9 +46,9 @@ export default function LabNarrativeBuyPage() {
       </section>
 
       <footer className={brand.footer}>
-        <a className={brand.wordmark} href="/intelligence"><span>Lab</span>Narrative</a>
+        <a className={brand.wordmark} href="/"><span>Lab</span>Narrative</a>
         <span>Scientific revenue intelligence</span>
-        <a href="/intelligence/login">Client Portal</a>
+        <a href="/login">Client Portal</a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
       </footer>
     </main>
