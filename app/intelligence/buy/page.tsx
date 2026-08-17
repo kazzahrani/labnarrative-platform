@@ -4,8 +4,8 @@ import styles from "./buy.module.css";
 import IntelligenceCheckout from "./IntelligenceCheckout";
 
 export const metadata: Metadata = {
-  title: "LabNarrative Intelligence — Portfolio Pilot",
-  description: "Expand from the complimentary one-product Intelligence experience into a paid multi-product Portfolio Pilot.",
+  title: "LabNarrative Intelligence — Managed Commercial Pilot",
+  description: "Choose a one-time done-for-you Managed Commercial Pilot across 10 or 20 products.",
 };
 
 function Wordmark() {
@@ -26,14 +26,14 @@ export default function IntelligenceBuyPage() {
       </header>
 
       <section className={styles.hero}>
-        <p className={brand.eyebrow}>Portfolio Pilot · introductory pricing</p>
+        <p className={brand.eyebrow}>Managed Commercial Pilot · optional done-for-you service</p>
         <div className={styles.heroGrid}>
-          <h1>You have seen one product.<br /><em>Now scale the system.</em></h1>
+          <h1>You have seen the platform.<br /><em>Now let us run it for you.</em></h1>
           <div className={styles.heroAside}>
             <p>
-              Your complimentary product already demonstrated the complete LabNarrative Intelligence workflow. The paid step does not unlock missing features — it expands the same workflow across more of your portfolio.
+              A Managed Commercial Pilot is separate from the recurring Starter, Growth and Pro subscriptions. LabNarrative prioritizes the selected products, runs the complete Intelligence workflow and organizes the resulting commercial pipeline for you.
             </p>
-            <strong>Portfolio Pilot from $689 · One-time payment · Secure Client Portal</strong>
+            <strong>10 products $489 · 20 products $789 · One-time payment</strong>
           </div>
         </div>
       </section>
@@ -44,9 +44,9 @@ export default function IntelligenceBuyPage() {
 
       <section className={styles.below}>
         <div className={styles.belowGrid}>
-          <div><span>Same complete workflow</span><p>Every paid product receives the same opportunity, evidence, account, contact, outreach and reporting standard used in the free product experience.</p></div>
-          <div><span>Your free product stays yours</span><p>The complimentary product remains the reference case and is not deducted from the paid product count.</p></div>
-          <div><span>Secure handoff</span><p>After PayPal confirms payment, the Client Portal opens immediately for product submission and fulfillment tracking.</p></div>
+          <div><span>Done for you</span><p>LabNarrative runs product intelligence, opportunity discovery, evidence review, account/contact intelligence and campaign preparation across the selected pilot scope.</p></div>
+          <div><span>Your free product stays yours</span><p>The complimentary one-product proof remains your reference case and is not deducted from the 10- or 20-product managed pilot.</p></div>
+          <div><span>Subscriptions remain separate</span><p>After the pilot, choose Starter, Growth, Pro or Enterprise if you want continuous monitoring and ongoing use of the platform.</p></div>
         </div>
       </section>
 
