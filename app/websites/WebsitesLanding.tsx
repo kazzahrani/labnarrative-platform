@@ -1,5 +1,5 @@
 import LabNarrativeScrollPanels from "@/components/LabNarrativeScrollPanels";
-import styles from "../page.module.css";
+import styles from "./websites-colorful.module.css";
 
 const approach = [
   { number: "01", title: "We understand the science", copy: "We read your publications and translate the work into a clear, accurate research story—without asking you to write the website yourself." },
