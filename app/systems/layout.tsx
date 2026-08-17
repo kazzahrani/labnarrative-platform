@@ -5,7 +5,7 @@ import "./typography.css";
 
 export default function SystemsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="lnSystemsTypography">
+    <div className="lnSystemsTypography lnSystemsPublic">
       <DefaultLightTheme />
       <ArabicDigitLocalizer />
       {children}
