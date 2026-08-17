@@ -48,7 +48,10 @@ function patchText(root: ParentNode) {
       .replaceAll("LabNarrative Intelligence", "LabNarrative")
       .replace("Opening your Intelligence client portal", "Opening your LabNarrative client portal")
       .replace("Approved Intelligence reports", "Approved LabNarrative reports")
-      .replace("Your scientific commercial intelligence in one place.", "Your scientific revenue intelligence in one place.");
+      .replace("Your scientific commercial intelligence in one place.", "Your scientific revenue intelligence in one place.")
+      .replaceAll("COMPLIMENTARY REPORT", "FREE PRODUCT PROOF")
+      .replaceAll("complimentary report", "free product proof")
+      .replaceAll("complimentary one-product", "free one-product");
     if (next !== value) node.nodeValue = next;
   }
 }
@@ -77,6 +80,7 @@ export default function ClientBrandPatch() {
     }
     const apply = () => {
       document.title = "LabNarrative — Client Portal";
+      document.querySelectorAll('[class*="logo"]').forEach((el) => { if ((el.textContent || "").trim() === "LI") el.textContent = "LN"; });
       patchText(document.body);
       patchLinks(document.body);
     };
