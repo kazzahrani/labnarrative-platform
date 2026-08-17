@@ -16,13 +16,13 @@ export default function LabNarrativePlansPage() {
   return (
     <main className={`${brand.page} ${styles.page}`}>
       <header className={brand.header}>
-        <a className={brand.wordmark} href="/intelligence" aria-label="LabNarrative home"><Wordmark /></a>
+        <a className={brand.wordmark} href="/" aria-label="LabNarrative home"><Wordmark /></a>
         <nav className={brand.nav} aria-label="Primary navigation">
-          <a href="/intelligence">Platform</a>
-          <a href="/intelligence#how">How it works</a>
-          <a href="/intelligence#report">Free Product Proof</a>
-          <a href="/intelligence/plans">Plans</a>
-          <a href="/intelligence/login">Client sign in</a>
+          <a href="/">Platform</a>
+          <a href="/#how-it-works">How it works</a>
+          <a href="/#products">Products</a>
+          <a href="/plans">Plans</a>
+          <a href="/login">Client sign in</a>
         </nav>
         <a className={brand.cta} href="mailto:hello@labnarrative.com?subject=Free%20LabNarrative%20product%20proof">Start free ↗</a>
       </header>
@@ -38,9 +38,9 @@ export default function LabNarrativePlansPage() {
       <PlansClient />
 
       <footer className={brand.footer}>
-        <a className={brand.wordmark} href="/intelligence"><span>Lab</span>Narrative</a>
+        <a className={brand.wordmark} href="/"><span>Lab</span>Narrative</a>
         <span>Scientific revenue intelligence</span>
-        <a href="/intelligence/login">Client Portal</a>
+        <a href="/login">Client Portal</a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
       </footer>
     </main>

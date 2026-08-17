@@ -3,12 +3,13 @@
 import { useEffect } from "react";
 
 const routeMap: Array<[string, string]> = [
-  ["/login", "/intelligence/login"],
-  ["/client", "/intelligence/client"],
-  ["/workspace", "/intelligence/workspace"],
-  ["/plans", "/intelligence/plans"],
-  ["/buy", "/intelligence/buy"],
-  ["/activate", "/intelligence/activate"],
+  ["/intelligence/login", "/login"],
+  ["/intelligence/client", "/client"],
+  ["/intelligence/workspace", "/workspace"],
+  ["/intelligence/plans", "/plans"],
+  ["/intelligence/buy", "/buy"],
+  ["/intelligence/activate", "/activate"],
+  ["/intelligence", "/"],
 ];
 
 const modernTheme = `
@@ -61,7 +62,7 @@ function patchLinks(root: ParentNode) {
     const a = anchor as HTMLAnchorElement;
     const href = a.getAttribute("href") || "";
     for (const [oldPath, newPath] of routeMap) {
-      if (href === oldPath || href.startsWith(`${oldPath}?`)) {
+      if (href === oldPath || href.startsWith(`${oldPath}?`) || href.startsWith(`${oldPath}#`)) {
         a.setAttribute("href", href.replace(oldPath, newPath));
         break;
       }
