@@ -2,31 +2,30 @@ import type { Metadata } from "next";
 import styles from "../brand.module.css";
 
 export const metadata: Metadata = {
-  title: "LabNarrative Intelligence — Product Opportunity Intelligence",
+  title: "LabNarrative Intelligence — Scientific Revenue Intelligence",
   description:
-    "Comprehensive, evidence-backed product opportunity intelligence for life-science suppliers. Start with one complimentary product analysis.",
+    "See the complete LabNarrative Intelligence workflow on one real product for free, then expand across your portfolio with a paid Pilot.",
 };
 
 const steps = [
-  ["01", "Choose the right product", "We scan the portfolio and prioritize products with strong research activity, clear experimental use and the potential for a large credible laboratory opportunity pool."],
-  ["02", "Research the full landscape", "We search recent scientific activity broadly instead of stopping after an arbitrary number of laboratories."],
-  ["03", "Verify every opportunity", "Each included laboratory must have source-backed scientific evidence, a defensible product fit and an active research lead."],
-  ["04", "Turn it into commercial intelligence", "We rank the verified laboratories, explain the experimental fit and deliver a polished web + PDF opportunity map for your commercial team."],
+  ["01", "Understand the product", "We model the target, applications, experimental context and scientific use cases that define a credible commercial opportunity."],
+  ["02", "Discover and verify opportunities", "We identify relevant laboratories, verify current scientific evidence and score product fit without presenting scientific relevance as confirmed purchase intent."],
+  ["03", "Map the account and contacts", "The system turns each laboratory into a commercial account and identifies source-backed scientific or operational contact routes where available."],
+  ["04", "Prepare the revenue workflow", "Opportunity intelligence, evidence, outreach preparation, follow-ups, pipeline tracking and reporting live in one connected workspace."],
 ];
 
 const deliverables = [
-  "No artificial cap on verified laboratory opportunities",
-  "Principal investigator, institution and country",
-  "Recent relevant publications and source links",
-  "Experimental methods and product-fit rationale",
-  "Conservative fit scoring and evidence audit",
-  "Commercial interpretation without claiming purchase intent",
+  "Complete one-product platform experience — not a feature-limited demo",
+  "Verified laboratory opportunities with conservative fit scoring",
+  "Recent publications, methods, activity signals and source links",
+  "Account intelligence and multiple verified contact routes where available",
+  "Evidence-specific email / LinkedIn preparation with a human send gate",
+  "Commercial pipeline, activity history and full web + PDF reporting",
 ];
 
 const launchPackages = [
-  { key: "starter", name: "Starter", scope: "5 products", price: "$389" },
-  { key: "portfolio", name: "Portfolio", scope: "10 products", price: "$689" },
-  { key: "portfolio_plus", name: "Portfolio Plus", scope: "20 products", price: "$1,189" },
+  { key: "portfolio", name: "Portfolio Pilot", scope: "10 additional products", price: "$689" },
+  { key: "portfolio_plus", name: "Portfolio Plus", scope: "20 additional products", price: "$1,189" },
 ];
 
 function Wordmark() {
@@ -41,36 +40,36 @@ export default function IntelligencePage() {
         <nav className={styles.nav} aria-label="Primary navigation">
           <a href="#how">How it works</a>
           <a href="#report">What you receive</a>
-          <a href="#pricing">Launch pricing</a>
+          <a href="#pricing">Pilot pricing</a>
           <a href="/intelligence/login">Client sign in</a>
         </nav>
-        <a className={styles.cta} href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20analysis">Request a free analysis ↗</a>
+        <a className={styles.cta} href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20product%20experience">Request a free product experience ↗</a>
       </header>
 
       <section className={styles.hero}>
-        <p className={styles.eyebrow}>Product opportunity intelligence for life-science suppliers</p>
+        <p className={styles.eyebrow}>Scientific revenue intelligence for life-science suppliers</p>
         <div className={styles.heroGrid}>
-          <h1>One product.<br />The strongest labs<br /><em>we can verify.</em></h1>
+          <h1>One real product.<br />The complete system.<br /><em>Free.</em></h1>
           <div className={styles.heroAside}>
             <p>
-              LabNarrative Intelligence maps a scientific product against current research and builds a comprehensive verified opportunity report. We do not stop at 5, 20 or 40 laboratories simply because a package has reached a quota.
+              LabNarrative Intelligence identifies scientifically credible product opportunities, explains why they matter, maps relevant contacts and turns the evidence into a commercial workflow. Your first product receives the complete experience — not a shortened teaser.
             </p>
-            <a href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20analysis">Get one complete report free ↗</a>
+            <a href="mailto:hello@labnarrative.com?subject=Complimentary%20LabNarrative%20Intelligence%20product%20experience">Experience Intelligence on one product ↗</a>
           </div>
         </div>
       </section>
 
       <section className={styles.strip} aria-label="Intelligence principles">
-        <div><span>Comprehensive search</span></div>
-        <div><span>Evidence-backed</span></div>
-        <div><span>No artificial lab cap</span></div>
+        <div><span>Product → opportunities</span></div>
+        <div><span>Evidence → contacts</span></div>
+        <div><span>Outreach → pipeline</span></div>
       </section>
 
       <section className={styles.dark} id="how">
         <div className={styles.darkGrid}>
           <div>
             <p className={styles.label}>How it works</p>
-            <h2>Start with the product that can reveal the biggest credible opportunity.</h2>
+            <h2>From scientific product fit to commercial action.</h2>
           </div>
           <div className={styles.steps}>
             {steps.map(([number, title, copy]) => (
@@ -86,8 +85,8 @@ export default function IntelligencePage() {
       <section className={styles.deliver} id="report">
         <div className={styles.deliverGrid}>
           <div>
-            <p className={styles.label}>The complete product report</p>
-            <h2>Not a teaser. A useful opportunity map.</h2>
+            <p className={styles.label}>The complimentary product experience</p>
+            <h2>Not a teaser. The actual platform.</h2>
           </div>
           <ul className={styles.list}>
             {deliverables.map((item) => <li key={item}>{item}</li>)}
@@ -97,22 +96,22 @@ export default function IntelligencePage() {
 
       <section className={styles.products} id="pricing">
         <div className={styles.sectionHead}>
-          <p className={styles.label}>Launch discount pricing</p>
-          <h2>See the complete work first. Then expand across your portfolio.</h2>
+          <p className={styles.label}>Introductory Pilot pricing</p>
+          <h2>Free proves the machine. Paid increases coverage.</h2>
         </div>
         <div className={`${styles.cards} ${styles.pricingCards}`}>
           <div className={styles.card}>
-            <small>Complimentary demonstration</small>
+            <small>Complimentary Product Experience</small>
             <h3>1 product</h3>
-            <p>We select a high-opportunity product and prepare a complete evidence-backed report with no artificial laboratory cap.</p>
+            <p>The full Intelligence workflow on a real product: opportunities, evidence, contacts, outreach preparation, pipeline and complete reporting.</p>
             <strong>Free</strong>
           </div>
           {launchPackages.map(({ key, name, scope, price }) => (
-            <a className={styles.card} key={key} href={`/intelligence/buy?package=${key}`} aria-label={`Buy the ${name} Intelligence package`}>
-              <small>{name} · Launch discount</small>
+            <a className={styles.card} key={key} href={`/intelligence/buy?package=${key}`} aria-label={`Buy the ${name}`}>
+              <small>{name} · One-time introductory price</small>
               <h3>{scope}</h3>
-              <p>Complete product opportunity analyses using the same research, verification and evidence standard as the demonstration report.</p>
-              <strong>{price} · Buy securely →</strong>
+              <p>Apply the same complete Intelligence workflow across more of your portfolio. Your complimentary product remains available and is not counted in the paid slots.</p>
+              <strong>{price} · Start securely →</strong>
             </a>
           ))}
         </div>
@@ -121,27 +120,27 @@ export default function IntelligencePage() {
       <section className={styles.dark}>
         <div className={styles.darkGrid}>
           <div>
-            <p className={styles.label}>What “comprehensive” means</p>
-            <h2>No invented completeness. No arbitrary quota.</h2>
+            <p className={styles.label}>The recurring value</p>
+            <h2>What changed since the last scan?</h2>
           </div>
           <div>
             <p>
-              We research until the defined search space is reasonably exhausted and weak or unverifiable matches are removed. A report may contain 28, 67 or 140+ verified opportunities depending on the product and available scientific literature. Scientific relevance is not buyer intent, budget or a confirmed product need.
+              After the Portfolio Pilot, continuous monitoring can keep selected products under surveillance for newly relevant labs, stronger scientific signals, contact changes and new evidence. Monitoring findings remain behind scientific review until validated.
             </p>
           </div>
         </div>
       </section>
 
       <section className={styles.final}>
-        <p className={styles.label}>Launch discount</p>
-        <h2>Ready to expand across your portfolio?</h2>
-        <p>Introductory launch pricing is currently available across all paid LabNarrative Intelligence packages. Packages start with 5 complete product analyses for $389. No subscription is required during the launch phase.</p>
-        <a href="/intelligence/buy">CHOOSE A PACKAGE & PAY SECURELY →</a>
+        <p className={styles.label}>Portfolio Pilot</p>
+        <h2>Seen enough from the free product?</h2>
+        <p>Expand the complete workflow across 10 additional products for a one-time introductory price of $689. No feature unlocking, no artificial laboratory quota — simply more portfolio coverage.</p>
+        <a href="/intelligence/buy?package=portfolio">START THE $689 PORTFOLIO PILOT →</a>
       </section>
 
       <footer className={styles.footer}>
         <a className={styles.wordmark} href="/"><span>Lab</span>Narrative</a>
-        <span>Product opportunity intelligence</span>
+        <span>Scientific revenue intelligence</span>
         <a href="/intelligence/login">Client Portal</a>
         <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
       </footer>
