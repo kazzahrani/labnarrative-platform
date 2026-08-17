@@ -7,7 +7,7 @@
 
   function apply(){
     queued=false;
-    document.title='LabNarrative — Client Workspace';
+    if(document.title!=='LabNarrative — Client Workspace')document.title='LabNarrative — Client Workspace';
 
     const brandSubtitle=document.querySelector('.brand span');
     if(brandSubtitle)setText(brandSubtitle,'Client Portal');
@@ -19,7 +19,8 @@
       section=(raw.split('/').pop()||'').trim();
       const next=section?`LabNarrative / ${section}`:'LabNarrative';
       setText(crumb,next);
-      document.body.dataset.workspaceSection=section.toLowerCase().replace(/\s+/g,'-');
+      const sectionKey=section.toLowerCase().replace(/\s+/g,'-');
+      if(document.body.dataset.workspaceSection!==sectionKey)document.body.dataset.workspaceSection=sectionKey;
     }
 
     const hero=document.querySelector('.content > .hero');
@@ -48,15 +49,11 @@
       }
       const strong=tag.querySelector('strong');
       setText(strong,accountName);
-      tag.title=accountName;
+      if(tag.getAttribute('title')!==accountName)tag.setAttribute('title',accountName);
     }
 
     const coverage=document.querySelector('.coverage-mini small');
     if(coverage)setText(coverage,productName?'Complete workflow · single product':'Complete workflow · one product');
-
-    document.querySelectorAll('.section-title').forEach(function(el){
-      if((el.textContent||'').trim()==='Highest-priority opportunities')el.textContent='Highest-priority opportunities';
-    });
   }
 
   function schedule(){
