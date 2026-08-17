@@ -52,8 +52,9 @@ import "./public-fashion-refresh.css";
 import "./public-button-refresh.css";
 import "./public-theme-refinement.css";
 import "./systems-public-contrast-fix.css";
-// Canonical LabNarrative wordmark is loaded last across every public/client surface.
 import "./labnarrative-logo-refresh.css";
+// Preserve the lighter modern system while restoring LabNarrative's established dark-green primary identity.
+import "./labnarrative-green-identity.css";
 
 export const metadata: Metadata = {
   title: {
