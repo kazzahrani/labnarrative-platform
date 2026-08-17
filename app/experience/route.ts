@@ -28,6 +28,7 @@ const FETCH_BRIDGE = `<script>(function(){
   };
 })();</script><style>[data-x-convert-main]{display:none!important}</style>`;
 
+// v4 restores the moderate sidebar spacing after the over-tight v3 experiment.
 const PORTAL_THEME = `<link rel="stylesheet" href="/experience-client-portal.css?v=20260817-1" /><link rel="stylesheet" href="/experience-sidebar-compact.css?v=20260817-4" /><script defer src="/experience-client-portal.js?v=20260817-1"></script>`;
 
 function assetUrl(path: string) {
