@@ -8,6 +8,7 @@ import SystemsContactSearchEnhancer from "./SystemsContactSearchEnhancer";
 import SystemsSimpleOutreachPanel from "./SystemsSimpleOutreachPanel";
 import SystemsThemeToggle from "./SystemsThemeToggle";
 import SystemsPlatformNav from "./SystemsPlatformNav";
+import WebsitesLinkedInBatchLauncher from "./WebsitesLinkedInBatchLauncher";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <SystemsContactSearchEnhancer />
       <SystemsSimpleOutreachPanel />
       <SystemsLinkedInBatchLauncher />
+      <WebsitesLinkedInBatchLauncher />
     </>
   );
 }
