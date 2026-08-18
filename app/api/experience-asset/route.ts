@@ -8,6 +8,7 @@ const ALLOWED = new Set([
   "/experience-v2.css",
   "/experience-v2-communications.css",
   "/experience-v2.js",
+  "/experience-v2-linkedin.js",
   "/experience.css",
   "/experience-outreach-controls.css",
   "/experience-activity.css",
