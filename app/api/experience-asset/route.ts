@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 const UPSTREAM = "https://labintelligence-production-v2-lab-narrative.vercel.app";
 const ALLOWED = new Set([
   "/experience-v2.css",
+  "/experience-v2-communications.css",
   "/experience-v2.js",
   "/experience.css",
   "/experience-outreach-controls.css",
