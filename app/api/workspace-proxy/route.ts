@@ -10,6 +10,8 @@ const ALLOWED = new Set([
   "client-conversion",
   "client-monitoring",
   "client-activity",
+  "client-mailbox",
+  "contact-enrichment-worker",
 ]);
 
 async function forward(req: NextRequest) {
@@ -46,6 +48,8 @@ async function forward(req: NextRequest) {
     const outHeaders = new Headers();
     outHeaders.set("content-type", res.headers.get("content-type") || "application/json; charset=utf-8");
     outHeaders.set("cache-control", "no-store");
+    const location = res.headers.get("location");
+    if (location) outHeaders.set("location", location);
     return new Response(body, { status: res.status, headers: outHeaders });
   } catch (error) {
     console.error("workspace proxy failed", error);
