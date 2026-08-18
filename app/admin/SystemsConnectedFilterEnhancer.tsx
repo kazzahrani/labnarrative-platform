@@ -3,13 +3,20 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-const SYSTEMS_PATHS = new Set(["/admin/systems", "/admin/systems-outreach"]);
+const SYSTEMS_PATHS = new Set(["/admin/systems", "/admin/systems/acquire", "/admin/systems-outreach"]);
 
 function normalizeLinkedInStatus(value: string) {
   const text = value.trim().toLowerCase();
   if (!text) return value;
+
+  // Keep the negative state stable. This check MUST come before the generic
+  // "contacted" match because "not contacted" contains the word "contacted".
+  // Without this guard the MutationObserver would turn:
+  // Ready -> Not contacted -> Contacted on its second pass.
+  if (text === "not contacted" || text.includes("not contacted")) return "Not contacted";
+
   if (text.includes("replied")) return "Replied";
-  if (text.includes("sent") || text.includes("connected") || text.includes("follow-up") || text.includes("contacted")) return "Contacted";
+  if (text.includes("sent") || text.includes("connected") || text.includes("follow-up") || text === "contacted") return "Contacted";
   if (text.includes("ready") || text.includes("draft") || text.includes("no target")) return "Not contacted";
   return value;
 }
