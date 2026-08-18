@@ -33,10 +33,11 @@ type Contact = {
   linkedin_request_sent_at: string | null;
 };
 
-type CompanyQueueItem = {
+type ContactQueueItem = {
   prospect: Prospect;
-  contacts: Contact[];
-  pendingCount: number;
+  contact: Contact;
+  noteEn: string;
+  noteAr: string;
 };
 
 const supabase = createClient(
@@ -54,7 +55,9 @@ export default function SystemsLinkedInBatchLauncher() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
-  const [recordingContacts, setRecordingContacts] = useState<Set<string>>(() => new Set());
+  const [initialCount, setInitialCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [busyContact, setBusyContact] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async (activeSession: Session) => {
@@ -109,30 +112,24 @@ export default function SystemsLinkedInBatchLauncher() {
     return () => subscription.unsubscribe();
   }, [isSystemsRoute, load]);
 
-  const queue = useMemo<CompanyQueueItem[]>(() => {
+  const queue = useMemo<ContactQueueItem[]>(() => {
     return prospects.flatMap((prospect) => {
       if (!eligibleStatuses.has(prospect.status)) return [];
       if (prospect.linkedin_connected_at || prospect.linkedin_reply_at) return [];
 
-      const companyContacts = contacts
-        .filter((contact) => contact.prospect_id === prospect.id && Boolean(contact.linkedin_url))
-        .sort((a, b) => a.priority - b.priority);
-
-      const preparedContacts = companyContacts.filter((contact) => {
-        const noteEn = contact.linkedin_note || prospect.linkedin_note;
-        const noteAr = contact.linkedin_note_ar || prospect.linkedin_note_ar;
-        return Boolean(noteEn || noteAr);
-      });
-      const pendingCount = preparedContacts.filter((contact) => !contact.linkedin_request_sent_at).length;
-      if (!pendingCount) return [];
-      return [{ prospect, contacts: preparedContacts, pendingCount }];
+      return contacts
+        .filter((contact) => contact.prospect_id === prospect.id && Boolean(contact.linkedin_url) && !contact.linkedin_request_sent_at)
+        .sort((a, b) => a.priority - b.priority)
+        .flatMap((contact) => {
+          const noteEn = contact.linkedin_note || prospect.linkedin_note || "";
+          const noteAr = contact.linkedin_note_ar || prospect.linkedin_note_ar || "";
+          if (!noteEn && !noteAr) return [];
+          return [{ prospect, contact, noteEn, noteAr }];
+        });
     });
   }, [prospects, contacts]);
 
-  const pendingContactCount = useMemo(
-    () => queue.reduce((sum, item) => sum + item.pendingCount, 0),
-    [queue],
-  );
+  const pendingContactCount = queue.length;
 
   useEffect(() => {
     if (!open) return;
@@ -142,10 +139,6 @@ export default function SystemsLinkedInBatchLauncher() {
     }
     if (index >= queue.length) setIndex(queue.length - 1);
   }, [open, queue.length, index]);
-
-  useEffect(() => {
-    setNotice("");
-  }, [index]);
 
   useEffect(() => {
     if (!open) return;
@@ -160,67 +153,64 @@ export default function SystemsLinkedInBatchLauncher() {
 
   const item = queue[index] ?? null;
 
-  const noteFor = (contact: Contact, language: "en" | "ar") => {
-    if (!item) return "";
-    return language === "ar"
-      ? contact.linkedin_note_ar || item.prospect.linkedin_note_ar || ""
-      : contact.linkedin_note || item.prospect.linkedin_note || "";
-  };
-
   const openBatch = () => {
     setIndex(0);
+    setInitialCount(queue.length);
+    setCompletedCount(0);
     setNotice("");
     setOpen(true);
   };
 
-  const copyNote = async (contact: Contact, language: "en" | "ar") => {
-    const text = noteFor(contact, language);
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setNotice(`${language === "ar" ? "AR" : "EN"} note copied for ${contact.name}.`);
-    } catch {
-      setNotice("Copy failed.");
-    }
-  };
-
-  const openLinkedIn = (contact: Contact) => {
-    if (!contact.linkedin_url) return;
-    window.open(contact.linkedin_url, "_blank", "noopener,noreferrer");
-  };
-
-  const nextCompany = () => {
-    if (!queue.length) return;
+  const skip = () => {
+    if (queue.length < 2 || busyContact) return;
     setNotice("");
     setIndex((current) => (current + 1) % queue.length);
   };
 
-  const previousCompany = () => {
-    if (!queue.length) return;
+  const back = () => {
+    if (queue.length < 2 || busyContact) return;
     setNotice("");
     setIndex((current) => (current - 1 + queue.length) % queue.length);
   };
 
-  const startRecording = (contactId: string) => {
-    setRecordingContacts((current) => {
-      const next = new Set(current);
-      next.add(contactId);
-      return next;
-    });
-  };
+  const runOneClickOutreach = async (language: "en" | "ar") => {
+    if (!item || !session || busyContact) return;
 
-  const stopRecording = (contactId: string) => {
-    setRecordingContacts((current) => {
-      const next = new Set(current);
-      next.delete(contactId);
-      return next;
-    });
-  };
+    const { contact, prospect } = item;
+    const note = language === "ar" ? item.noteAr : item.noteEn;
+    if (!note) {
+      setNotice(`${language.toUpperCase()} draft is not available for ${contact.name}.`);
+      return;
+    }
+    if (!contact.linkedin_url) {
+      setNotice(`LinkedIn URL is missing for ${contact.name}.`);
+      return;
+    }
 
-  const recordSent = async (contact: Contact) => {
-    if (!item || !session || recordingContacts.has(contact.id) || contact.linkedin_request_sent_at) return;
-    startRecording(contact.id);
+    // Open LinkedIn synchronously from the user's click so browsers do not treat
+    // it as an async popup. Marking sent happens only after the copy succeeds.
+    const linkedinTab = window.open(contact.linkedin_url, "_blank");
+    if (!linkedinTab) {
+      setNotice("LinkedIn was blocked by the browser. Allow pop-ups and try again; this contact was not marked sent.");
+      return;
+    }
+    try {
+      linkedinTab.opener = null;
+    } catch {
+      // Some browsers do not allow changing opener after navigation; harmless.
+    }
+
+    setBusyContact(contact.id);
     setNotice("");
+
+    try {
+      await navigator.clipboard.writeText(note);
+    } catch {
+      setNotice(`Could not copy the ${language.toUpperCase()} draft. ${contact.name} was not marked sent.`);
+      setBusyContact(null);
+      return;
+    }
+
     const now = new Date().toISOString();
 
     try {
@@ -232,16 +222,13 @@ export default function SystemsLinkedInBatchLauncher() {
           updated_at: now,
         })
         .eq("id", contact.id)
-        .eq("prospect_id", item.prospect.id);
+        .eq("prospect_id", prospect.id);
 
-      if (contactError) {
-        setNotice(contactError.message);
-        return;
-      }
+      if (contactError) throw contactError;
 
       const prospectPatch: Record<string, unknown> = { updated_at: now };
-      if (!item.prospect.linkedin_request_sent_at) prospectPatch.linkedin_request_sent_at = now;
-      if (item.prospect.status === "ready_to_send") {
+      if (!prospect.linkedin_request_sent_at) prospectPatch.linkedin_request_sent_at = now;
+      if (prospect.status === "ready_to_send") {
         prospectPatch.status = "contacted";
         prospectPatch.contacted_at = now;
       }
@@ -249,20 +236,15 @@ export default function SystemsLinkedInBatchLauncher() {
       const { error: prospectError } = await supabase
         .from("systems_outreach_prospects")
         .update(prospectPatch)
-        .eq("id", item.prospect.id);
+        .eq("id", prospect.id);
 
-      if (prospectError) {
-        setNotice(prospectError.message);
-        return;
-      }
+      if (prospectError) throw prospectError;
 
-      // The durable writes succeeded. Reflect that immediately instead of
-      // holding the button in "Saving…" while a full refresh completes.
       setContacts((current) => current.map((row) => (
         row.id === contact.id ? { ...row, linkedin_request_sent_at: now } : row
       )));
       setProspects((current) => current.map((row) => (
-        row.id === item.prospect.id
+        row.id === prospect.id
           ? {
               ...row,
               linkedin_request_sent_at: row.linkedin_request_sent_at || now,
@@ -270,24 +252,27 @@ export default function SystemsLinkedInBatchLauncher() {
             }
           : row
       )));
-      setNotice(`${contact.name} marked as Contacted.`);
+      setCompletedCount((current) => current + 1);
+      setNotice(`${language.toUpperCase()} copied · LinkedIn opened · ${contact.name} marked sent. Next contact ready.`);
 
-      // Event history and reconciliation are secondary to the button response.
-      // Keep them asynchronous so a slow refresh cannot leave the UI stuck.
       void supabase.from("systems_outreach_events").insert({
-        prospect_id: item.prospect.id,
+        prospect_id: prospect.id,
         channel: "linkedin",
         event_type: "linkedin_connection_request_sent",
         status: "recorded",
-        content: `Administrator confirmed the LinkedIn connection request was manually sent to ${contact.name} (${contact.title}).`,
+        content: `Administrator used the ${language.toUpperCase()} one-click LinkedIn action for ${contact.name} (${contact.title}); draft copied, LinkedIn opened, and the request was recorded as manually sent.`,
       });
       void load(session);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not record LinkedIn contact. Please try again.");
     } finally {
-      stopRecording(contact.id);
+      setBusyContact(null);
     }
   };
+
+  const progressTotal = Math.max(initialCount, completedCount + queue.length, 1);
+  const progressDone = Math.min(completedCount, progressTotal);
+  const progressPercent = (progressDone / progressTotal) * 100;
 
   return (
     <>
@@ -301,7 +286,7 @@ export default function SystemsLinkedInBatchLauncher() {
           className={styles.backdrop}
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
+            if (event.target === event.currentTarget && !busyContact) setOpen(false);
           }}
         >
           <section className={styles.modal} role="dialog" aria-modal="true" aria-label="All LinkedIn Outreach">
@@ -309,23 +294,22 @@ export default function SystemsLinkedInBatchLauncher() {
               <div>
                 <span className={styles.eyebrow}>LinkedIn Outreach</span>
                 <h2>All LinkedIn Outreach</h2>
-                <p>One company at a time. All prepared contacts stay together in one compact window.</p>
+                <p>One contact at a time. Choose a language and the rest happens in one click.</p>
               </div>
-              <button className={styles.close} onClick={() => setOpen(false)} aria-label="Close">×</button>
+              <button className={styles.close} onClick={() => setOpen(false)} disabled={Boolean(busyContact)} aria-label="Close">×</button>
             </header>
 
             {item ? (
               <>
                 <div className={styles.summary}>
-                  <span>Company {index + 1} of {queue.length}</span>
-                  <span>{item.contacts.length} contacts</span>
-                  <span>{item.pendingCount} not contacted</span>
+                  <span>{queue.length} remaining</span>
+                  <span>{completedCount} completed</span>
                   <span>Fit {item.prospect.fit_score}/100</span>
-                  <span>Manual send gate</span>
+                  <span>Manual LinkedIn send</span>
                 </div>
 
                 <div className={styles.progressTrack}>
-                  <span style={{ width: `${((index + 1) / queue.length) * 100}%` }} />
+                  <span style={{ width: `${progressPercent}%` }} />
                 </div>
 
                 <div className={styles.companyHead}>
@@ -336,64 +320,49 @@ export default function SystemsLinkedInBatchLauncher() {
                   </div>
                 </div>
 
-                <div className={styles.tableWrap}>
-                  <table className={styles.routeTable}>
-                    <thead>
-                      <tr>
-                        <th>Contact</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {item.contacts.map((contact) => {
-                        const en = noteFor(contact, "en");
-                        const ar = noteFor(contact, "ar");
-                        const contacted = Boolean(contact.linkedin_request_sent_at);
-                        const saving = recordingContacts.has(contact.id);
-                        return (
-                          <tr key={contact.id}>
-                            <td className={styles.contactCell}>
-                              <strong>{contact.name}</strong>
-                              <small>{contact.title}</small>
-                            </td>
-                            <td>
-                              <span className={contacted ? styles.contactedStatus : styles.pendingStatus}>
-                                {contacted ? "Contacted" : "Not contacted"}
-                              </span>
-                            </td>
-                            <td>
-                              <div className={styles.rowActions}>
-                                <button className={styles.secondaryAction} onClick={() => void copyNote(contact, "en")} disabled={!en}>EN</button>
-                                <button className={styles.secondaryAction} onClick={() => void copyNote(contact, "ar")} disabled={!ar}>AR</button>
-                                <button className={styles.secondaryAction} onClick={() => openLinkedIn(contact)} disabled={!contact.linkedin_url}>Open LinkedIn ↗</button>
-                                <button className={contacted ? styles.contactedAction : styles.primaryAction} onClick={() => void recordSent(contact)} disabled={contacted || saving}>
-                                  {saving ? "Saving…" : contacted ? "✓ Contacted" : "Sent"}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className={styles.contactCard}>
+                  <span className={styles.contactLabel}>Contact</span>
+                  <h3>{item.contact.name}</h3>
+                  <p>{item.contact.title}</p>
+                  <span className={styles.pendingStatus}>Not contacted</span>
+                </div>
+
+                <div className={styles.oneClickHint}>Copy draft → open LinkedIn → mark sent → next contact</div>
+
+                <div className={styles.primaryActions}>
+                  <button
+                    className={styles.flowAction}
+                    onClick={() => void runOneClickOutreach("en")}
+                    disabled={Boolean(busyContact) || !item.noteEn}
+                    title="English: copy, open LinkedIn, mark sent, next"
+                  >
+                    {busyContact === item.contact.id ? "…" : "EN"}
+                  </button>
+                  <button
+                    className={styles.flowAction}
+                    onClick={() => void runOneClickOutreach("ar")}
+                    disabled={Boolean(busyContact) || !item.noteAr}
+                    title="Arabic: copy, open LinkedIn, mark sent, next"
+                  >
+                    {busyContact === item.contact.id ? "…" : "AR"}
+                  </button>
                 </div>
 
                 {notice ? <div className={styles.notice}>{notice}</div> : null}
 
                 <div className={styles.footer}>
                   <div className={styles.secondaryActions}>
-                    <button onClick={previousCompany} disabled={queue.length < 2}>← Previous company</button>
-                    <button onClick={nextCompany} disabled={queue.length < 2}>Next company →</button>
+                    <button onClick={back} disabled={queue.length < 2 || Boolean(busyContact)}>Back</button>
+                    <button onClick={skip} disabled={queue.length < 2 || Boolean(busyContact)}>Skip</button>
                   </div>
-                  <span>EN and AR copy the prepared note. LinkedIn stays manual. Sent records only that contact.</span>
+                  <span>EN or AR performs the full platform workflow. You still send the actual connection request manually inside LinkedIn.</span>
                 </div>
               </>
             ) : (
               <div className={styles.complete}>
                 <span>✓</span>
                 <h3>LinkedIn queue is clear.</h3>
-                <p>No prepared connection requests are waiting right now.</p>
+                <p>All prepared connection requests in this batch are recorded.</p>
                 <button onClick={() => setOpen(false)}>Close</button>
               </div>
             )}
