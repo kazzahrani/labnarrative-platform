@@ -7,6 +7,7 @@ const SUPABASE_FUNCTIONS = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v
 const ALLOWED = new Set([
   "client-experience",
   "client-experience-preview",
+  "client-opportunity-v3",
   "client-conversion",
   "client-monitoring",
   "client-activity",
