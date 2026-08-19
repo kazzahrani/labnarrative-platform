@@ -10,6 +10,7 @@ const ALLOWED = new Set([
   "/experience-v2-commercial.css",
   "/experience-v2.js",
   "/experience-v2-commercial.js",
+  "/experience-v2-commercial-datafix.js",
   "/experience-v2-linkedin.js",
   "/experience-v2-research.js",
   "/experience-v2-mailbox-policy.js",
