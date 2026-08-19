@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api", "tenders"]);
+const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api", "tenders", "app"]);
 const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform.vercel.app",
   "labnarrative-platform-lab-narrative.vercel.app",
@@ -32,6 +32,7 @@ export function proxy(request: NextRequest) {
     host === LEGACY_PLATFORM_HOST ||
     host === "localhost";
   const isTendersHost = host === `tenders.${rootDomain}`;
+  const isSaasHost = host === `app.${rootDomain}`;
 
   if (request.nextUrl.pathname.startsWith("/engine-v4/render/")) {
     const response = NextResponse.next();
@@ -131,16 +132,23 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Give the Saudi tender product its own clean hostname while keeping the
-  // implementation isolated under /tenders in the shared Next.js codebase.
+  // The canonical SaaS application hostname. The product is LabNarrative;
+  // /platform is only the internal shared-codebase route.
+  if (isSaasHost && request.nextUrl.pathname === "/") {
+    const appUrl = request.nextUrl.clone();
+    appUrl.pathname = "/platform";
+    return NextResponse.rewrite(appUrl);
+  }
+
+  // Legacy tender product surface retained while the new SaaS is introduced.
   if (isTendersHost && request.nextUrl.pathname === "/") {
     const tendersUrl = request.nextUrl.clone();
     tendersUrl.pathname = "/tenders";
     return NextResponse.rewrite(tendersUrl);
   }
 
-  // labnarrative.com is now the canonical flagship LabNarrative revenue-intelligence experience.
-  // The former umbrella page remains available explicitly at /umbrella but no longer owns the root URL.
+  // labnarrative.com currently remains the flagship revenue-intelligence experience.
+  // The SaaS application is available independently at app.labnarrative.com.
   if (
     !host ||
     host === rootDomain ||
