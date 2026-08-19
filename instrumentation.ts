@@ -2,7 +2,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
   const canvas = await import("@napi-rs/canvas");
-  const globals = globalThis as typeof globalThis & Record<string, unknown>;
+  const globals = globalThis as unknown as Record<string, unknown>;
 
   if (typeof globals.DOMMatrix === "undefined") globals.DOMMatrix = canvas.DOMMatrix;
   if (typeof globals.ImageData === "undefined") globals.ImageData = canvas.ImageData;
