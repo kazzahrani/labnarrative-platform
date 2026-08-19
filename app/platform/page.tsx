@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PlatformClient from "./PlatformClient";
+import AutomaticTenderFeed from "./AutomaticTenderFeed";
 import TenderIntelligenceLauncher from "./TenderIntelligenceLauncher";
 
 export const metadata: Metadata = {
@@ -9,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function LabNarrativePlatformPage() {
-  return <><PlatformClient /><TenderIntelligenceLauncher /></>;
+  return <><PlatformClient /><AutomaticTenderFeed /><TenderIntelligenceLauncher /></>;
 }
