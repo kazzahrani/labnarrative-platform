@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
   async redirects() {
     return [
       { source: "/intelligence", destination: "/", permanent: true },
