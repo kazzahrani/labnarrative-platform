@@ -304,7 +304,7 @@ function parseDelimitedText(text: string) {
         source_sheet: "text",
       } satisfies ExtractedItem;
     })
-    .filter((item): item is ExtractedItem => Boolean(item))
+    .filter((item): item is NonNullable<typeof item> => item !== null)
     .slice(0, MAX_ITEMS);
 }
 
