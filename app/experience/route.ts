@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const UPSTREAM = "https://labintelligence-production-v2-lab-narrative.vercel.app/experience-v2";
+const UPSTREAM = "https://labintelligence-production-v2-lab-narrative.vercel.app/experience-v3";
 
 function assetUrl(path: string) {
   return `/api/experience-asset?path=${encodeURIComponent(path)}`;
@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("experience V2 shell proxy failed", error);
+    console.error("experience V3 shell proxy failed", error);
     return new Response("LabNarrative workspace is temporarily unavailable.", {
       status: 502,
     });
