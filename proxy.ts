@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api"]);
+const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api", "tenders"]);
 const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform.vercel.app",
   "labnarrative-platform-lab-narrative.vercel.app",
@@ -31,6 +31,7 @@ export function proxy(request: NextRequest) {
     host === `www.${rootDomain}` ||
     host === LEGACY_PLATFORM_HOST ||
     host === "localhost";
+  const isTendersHost = host === `tenders.${rootDomain}`;
 
   if (request.nextUrl.pathname.startsWith("/engine-v4/render/")) {
     const response = NextResponse.next();
@@ -128,6 +129,14 @@ export function proxy(request: NextRequest) {
 
   if (request.nextUrl.pathname === "/api" || request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next();
+  }
+
+  // Give the Saudi tender product its own clean hostname while keeping the
+  // implementation isolated under /tenders in the shared Next.js codebase.
+  if (isTendersHost && request.nextUrl.pathname === "/") {
+    const tendersUrl = request.nextUrl.clone();
+    tendersUrl.pathname = "/tenders";
+    return NextResponse.rewrite(tendersUrl);
   }
 
   // labnarrative.com is now the canonical flagship LabNarrative revenue-intelligence experience.
