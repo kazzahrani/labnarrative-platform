@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PlatformClient from "./PlatformClient";
+import TenderIntelligenceLauncher from "./TenderIntelligenceLauncher";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Operating System",
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function LabNarrativePlatformPage() {
-  return <PlatformClient />;
+  return <><PlatformClient /><TenderIntelligenceLauncher /></>;
 }
