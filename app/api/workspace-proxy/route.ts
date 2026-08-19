@@ -12,6 +12,7 @@ const ALLOWED = new Set([
   "client-activity",
   "client-mailbox",
   "contact-enrichment-worker",
+  "commercial-intelligence-worker",
 ]);
 
 async function forward(req: NextRequest) {
