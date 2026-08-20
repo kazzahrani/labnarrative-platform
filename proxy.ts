@@ -136,7 +136,7 @@ export function proxy(request: NextRequest) {
   // Personal Career Agent application on its dedicated LabNarrative hostname.
   if (isCareerHost && request.nextUrl.pathname === "/") {
     const careerUrl = request.nextUrl.clone();
-    careerUrl.pathname = "/career-agent.html";
+    careerUrl.pathname = "/api/career/page";
     return NextResponse.rewrite(careerUrl);
   }
 
