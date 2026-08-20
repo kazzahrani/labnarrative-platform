@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { Workbook } from "exceljs";
 import { PDFParse } from "pdf-parse";
+import { parseNupcoItemList } from "../../../../../lib/tenders/nupco-item-parser";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
-const MAX_ITEMS = 250;
+const MAX_ITEMS = 2000;
 
 type ExtractedItem = {
   line_number: number;
@@ -145,7 +146,10 @@ function rowsToItems(rows: string[][], sourceSheet?: string) {
   return items;
 }
 
-function parseDelimitedText(text: string) {
+function parseDelimitedText(text: string): ExtractedItem[] {
+  const nupcoItems = parseNupcoItemList(text, MAX_ITEMS);
+  if (nupcoItems.length) return nupcoItems;
+
   const lines = text.split(/\r?\n/).filter((line) => line.trim());
   const sample = lines.slice(0, 10).join("\n");
   const candidates = ["\t", ",", ";", "|"];
