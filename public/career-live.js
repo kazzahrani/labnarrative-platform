@@ -32,7 +32,7 @@
   }
 
   function sourceMeta(job){
-    const type=job.type==='Open vacancy'?'Official vacancy':'Strategic target';
+    const type=job.type==='Open vacancy'?'Verified vacancy':'Strategic target';
     const verified=job.verifiedAt?`Checked ${toDate(job.verifiedAt)}`:'Source recorded';
     return `<div class="live-meta"><span class="pill ${job.type==='Open vacancy'?'good':'blue'}">${type}</span><span class="pill">${verified}</span>${job.datePosted?`<span class="pill">Posted ${job.datePosted}</span>`:''}</div>`
   }
@@ -47,7 +47,7 @@
       const body=activityCard.querySelector('.card-body');
       const run=data.discovery;
       const sourceErrors=(data.sources||[]).filter(s=>s.last_error);
-      body.innerHTML=`<div class="activity"><span class="dot"></span><div><b>Live opportunity store connected</b><p>${jobs.length} active opportunities are available from the Career database.</p></div></div><div class="activity"><span class="dot ${run&&run.status==='failed'?'error-dot':''}"></span><div><b>Last discovery: ${run?run.status:'not run yet'}</b><p>${run&&run.finished_at?toDate(run.finished_at):'A scheduled official-source scan is ready.'}</p></div></div><div class="activity"><span class="dot ${sourceErrors.length?'error-dot':''}"></span><div><b>Source health</b><p>${sourceErrors.length?`${sourceErrors.length} source${sourceErrors.length===1?'':'s'} need retry; existing verified records remain clearly labeled.`:'All configured sources currently report no stored error.'}</p></div></div>`;
+      body.innerHTML=`<div class="activity"><span class="dot"></span><div><b>Live opportunity store connected</b><p>${jobs.length} high-fit or strategic opportunities are currently surfaced.</p></div></div><div class="activity"><span class="dot ${run&&run.status==='failed'?'error-dot':''}"></span><div><b>Last discovery: ${run?run.status:'not run yet'}</b><p>${run&&run.finished_at?toDate(run.finished_at):'A scheduled source scan is ready.'}</p></div></div><div class="activity"><span class="dot ${sourceErrors.length?'error-dot':''}"></span><div><b>Source health</b><p>${sourceErrors.length?`${sourceErrors.length} source${sourceErrors.length===1?'':'s'} need retry; existing verified records remain clearly labeled.`:'All configured sources currently report no stored error.'}</p></div></div>`;
     }
   }
 
@@ -68,7 +68,7 @@
     const actions=document.querySelector('#drawerWrap .drawer-body > .actions');
     if(actions){
       const old=actions.querySelector('.source-link');if(old)old.remove();
-      if(job.sourceUrl){const a=document.createElement('a');a.className='btn source-link';a.href=job.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent=job.type==='Open vacancy'?'Open official posting':'Open institution';actions.prepend(a)}
+      if(job.sourceUrl){const a=document.createElement('a');a.className='btn source-link';a.href=job.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent=job.type==='Open vacancy'?'Open source posting':'Open institution';actions.prepend(a)}
     }
   };
 
@@ -77,7 +77,7 @@
     if(!response.ok)throw new Error('Opportunity API returned '+response.status);
     const data=await response.json();
     if(!data.ok)throw new Error(data.error||'Opportunity API unavailable');
-    const mapped=(data.opportunities||[]).map(mapOpportunity);
+    const mapped=(data.opportunities||[]).map(mapOpportunity).filter(j=>j.type==='Hidden opportunity'||j.fit>=82);
     if(mapped.length){
       jobs.splice(0,jobs.length,...mapped);
       const firstOpen=jobs.find(j=>j.type==='Open vacancy')||jobs[0];
@@ -88,6 +88,9 @@
       activeDraft='cv';
       renderJobs();renderApps();renderPipeline();
       const ready=document.getElementById('readyCount');if(ready)ready.textContent='1';
+    }else{
+      jobs.splice(0,jobs.length);
+      renderJobs();
     }
     refreshDashboard(data);renderSourceHealth(data);
     return data;
@@ -101,7 +104,7 @@
       const result=await response.json();
       if(!response.ok||result.ok===false)throw new Error(result.error||'Scan failed');
       await loadLive();
-      const note=result.skipped?'A recent scan already exists; the latest verified results are loaded.':`${result.opportunities_upserted||0} official vacancy records refreshed across ${result.sources_scanned||0} sources.`;
+      const note=result.skipped?'A recent scan already exists; the latest verified results are loaded.':`${result.opportunities_upserted||0} vacancy records refreshed across ${result.sources_scanned||0} sources.`;
       toast('Opportunity scan complete',note);
     }catch(error){toast('Scan needs attention',error instanceof Error?error.message:'The live scan could not complete.');}
     finally{scan.disabled=false;scan.textContent=old;}
