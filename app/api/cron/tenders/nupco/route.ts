@@ -1,16 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { authorizeTenderAutomation } from "../../../../../lib/tenders/automation-auth";
 import { ingestNupcoPublicTenders } from "../../../../../lib/tenders/nupco-official";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-function authorized(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -20,9 +15,13 @@ function adminClient() {
 }
 
 export async function GET(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   try {
-    const result = await ingestNupcoPublicTenders(adminClient());
+    const supabase = adminClient();
+    if (!(await authorizeTenderAutomation(request, supabase))) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
+    const result = await ingestNupcoPublicTenders(supabase);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     console.error("NUPCO public tender ingestion failed", error);
