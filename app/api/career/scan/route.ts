@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { runCareerDiscovery } from "../../../../lib/career/discovery";
+const EDGE_URL = "https://umhkpflyzlifiufvejwr.supabase.co/functions/v1/career-agent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -12,12 +11,25 @@ function allowedHost(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!allowedHost(request)) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!allowedHost(request)) return Response.json({ error: "Not found." }, { status: 404 });
   try {
-    const result = await runCareerDiscovery({ force: false });
-    return NextResponse.json(result, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
+    const response = await fetch(EDGE_URL, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ action: "scan" }),
+      signal: AbortSignal.timeout(55_000),
+    });
+    const body = await response.text();
+    return new Response(body, {
+      status: response.status,
+      headers: {
+        "Content-Type": response.headers.get("content-type") || "application/json",
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    });
   } catch (error) {
-    console.error("manual career discovery failed", error);
-    return NextResponse.json({ ok: false, error: "Opportunity scan failed." }, { status: 500 });
+    console.error("career scan proxy failed", error);
+    return Response.json({ ok: false, error: "Opportunity scan failed." }, { status: 502 });
   }
 }

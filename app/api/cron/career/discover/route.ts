@@ -1,22 +1,30 @@
-import { NextResponse } from "next/server";
-import { careerAdminClient } from "../../../../../lib/career/admin";
-import { authorizeCareerAutomation } from "../../../../../lib/career/automation-auth";
-import { runCareerDiscovery } from "../../../../../lib/career/discovery";
+const EDGE_URL = "https://umhkpflyzlifiufvejwr.supabase.co/functions/v1/career-agent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
+  const authorization = request.headers.get("authorization")?.trim();
+  if (!authorization) return Response.json({ error: "Unauthorized." }, { status: 401 });
   try {
-    const supabase = careerAdminClient();
-    if (!(await authorizeCareerAutomation(request, supabase))) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
-    const result = await runCareerDiscovery({ force: true });
-    return NextResponse.json(result, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
+    const response = await fetch(EDGE_URL, {
+      method: "POST",
+      cache: "no-store",
+      headers: { Authorization: authorization, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ action: "scheduled_scan" }),
+      signal: AbortSignal.timeout(55_000),
+    });
+    const body = await response.text();
+    return new Response(body, {
+      status: response.status,
+      headers: {
+        "Content-Type": response.headers.get("content-type") || "application/json",
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    });
   } catch (error) {
-    console.error("scheduled career discovery failed", error);
-    return NextResponse.json({ ok: false, error: "Scheduled opportunity scan failed." }, { status: 500 });
+    console.error("scheduled career proxy failed", error);
+    return Response.json({ ok: false, error: "Scheduled opportunity scan failed." }, { status: 502 });
   }
 }
