@@ -19,10 +19,12 @@ export type NupcoItemListPage = {
 
 const rowStart = /^\d{1,6}\s+[A-Z]{2,}[A-Z0-9-]*\s+\d{8,16}\s+/i;
 const genericCodedRowStart = /^(\d{1,6})\s+(\d{13})(?:\s+.*)?$/i;
+const codeFirstRowStart = /^(\d{13})(?:\s+.*)?$/i;
 const units = [
   "EACH", "EA", "PCS", "PC", "PIECE", "PIECES", "BOX", "PACK", "PK", "KIT", "SET", "PAIR",
   "ROLL", "BOTTLE", "VIAL", "BAG", "CAN", "TUBE", "CARTRIDGE", "TEST", "DOSE", "UNIT", "UNITS",
-  "LTR", "LITER", "LITRE", "ML", "KG", "GM", "G", "METER", "METRE",
+  "LTR", "LITER", "LITRE", "ML", "KG", "GM", "G", "METER", "METRE", "CANISTER", "SACHET", "AMP",
+  "TAB", "PFS", "BT", "CAP", "TUB", "VIA", "AMPOULE", "SYRINGE", "STRIP",
 ];
 const unitPattern = units.join("|");
 
@@ -35,12 +37,16 @@ function isBoilerplate(line: string) {
   if (!value) return true;
   if (/^www\.nupco\.\s*com(?:\s+Page\s+\d+\s+of\s+\d+)?$/i.test(value)) return true;
   if (/^--\s*\d+\s+of\s+\d+\s*--$/i.test(value)) return true;
+  if (/^\d+\s+of\s+\d+$/i.test(value)) return true;
   if (/^\d{1,2}[.\-][A-Z]{3}[.\-]\d{4}$/i.test(value)) return true;
+  if (/^[A-Z][a-z]+\s+\d{1,2},\s+\d{4}$/i.test(value)) return true;
+  if (/^NUPCO\s+TENDER:\s*NPT\s*\d+\s*\/\s*\d+$/i.test(value)) return true;
   if (/^(LABORATORY|ITEM LIST)$/i.test(value)) return true;
   if (/^SN\s+ITEM NO\s+NUPCO CODE\s+ITEM DESCRIPTION\s+UOM\s+QTY\s+GROUPS$/i.test(value)) return true;
   if (/^SN\s+NUPCO(?:\s+GENERIC)?(?:\s+CODE)?(?:\s+GENERIC)?(?:\s+ITEM)?\s*$/i.test(value)) return true;
   if (/^SN\s+NUPCO\s+CODE\s+DESCRIPTION\s+UOM\s+ITEMIZED\s+INITIAL\s+QTY$/i.test(value)) return true;
   if (/^SN\s+NUPCO\s+GENERIC\s+CODE\s+LONG\s+DESCRIPTION\s+UOM\s+GROUP\/ITMZ\s+QTY$/i.test(value)) return true;
+  if (/^NUPCO\s+CODE\s+ITEM\s+DESCRIPTION\s+UOM\s+(?:INITIAL\s+QUANTITY|QTY)$/i.test(value)) return true;
   if (/^CODE\s+GENERIC\s+ITEM\s+DESCRIPTION\.?\s+UOM\s+CORRECTED\s+UOM\s+GROUP\s*\/?$/i.test(value)) return true;
   if (/^ITEMIZED\s+INITT?IAL\s+QTY$/i.test(value)) return true;
   if (/^OPEN\s+FRAMEWORK\s+AGREEMENT\s+FOR$/i.test(value)) return true;
@@ -92,6 +98,25 @@ function collectGenericCodedRows(text: string) {
   return rows;
 }
 
+function collectCodeFirstRows(text: string) {
+  if (!/NUPCO\s+CODE\s+ITEM\s+DESCRIPTION\s+UOM\s+(?:INITIAL\s+QUANTITY|QTY)/i.test(text)) return [] as string[];
+  const lines = text.split(/\r?\n/).map(clean).filter(Boolean);
+  const rows: string[] = [];
+  let current = "";
+
+  for (const line of lines) {
+    if (isBoilerplate(line)) continue;
+    if (codeFirstRowStart.test(line)) {
+      if (current) rows.push(current);
+      current = line;
+      continue;
+    }
+    if (current) current = `${current} ${line}`;
+  }
+  if (current) rows.push(current);
+  return rows;
+}
+
 function parseRow(raw: string, globalLineNumber: number): NupcoExtractedItem | null {
   const match = raw.match(/^(\d{1,6})\s+([A-Z]{2,}[A-Z0-9-]*)\s+(\d{8,16})\s+(.+)$/i);
   if (!match) return null;
@@ -124,8 +149,6 @@ function parseRow(raw: string, globalLineNumber: number): NupcoExtractedItem | n
 
   if (description.length < 4 || !/[A-Za-z\u0600-\u06ff]/.test(description)) return null;
   return {
-    // NUPCO's printed SN resets in sections of large documents, so it is not a stable unique key.
-    // Use the global parsed-row ordinal for persistence and keep the printed serial in raw evidence.
     line_number: globalLineNumber,
     item_code: nupcoCode,
     description,
@@ -167,7 +190,6 @@ function parseGenericCodedRow(raw: string, globalLineNumber: number): NupcoExtra
     }
   }
 
-  // Remove repeated table-control language from the product description while retaining it in raw evidence.
   description = clean(description)
     .replace(/\s+(?:ITEMIZED|ITMZ)\s*$/i, "")
     .replace(/\s+CORRECTED\s+UOM\s*$/i, "")
@@ -188,6 +210,38 @@ function parseGenericCodedRow(raw: string, globalLineNumber: number): NupcoExtra
   };
 }
 
+function parseCodeFirstRow(raw: string, globalLineNumber: number): NupcoExtractedItem | null {
+  const match = raw.match(/^(\d{13})\s+(.+)$/i);
+  if (!match) return null;
+
+  const nupcoCode = match[1];
+  const combined = clean(match[2]);
+  let description = combined;
+  let quantity: number | null = null;
+  let unit: string | null = null;
+  let confidence = 0.86;
+
+  const structuredTail = combined.match(new RegExp(`^(.*?)\\s+(${unitPattern})\\s+([0-9][0-9,.]*)\\s*$`, "i"));
+  if (structuredTail) {
+    description = clean(structuredTail[1]);
+    unit = structuredTail[2].toUpperCase();
+    quantity = parseQuantity(structuredTail[3]);
+    confidence = 0.97;
+  }
+
+  if (description.length < 4 || !/[A-Za-z\u0600-\u06ff]/.test(description)) return null;
+  return {
+    line_number: globalLineNumber,
+    item_code: nupcoCode,
+    description,
+    quantity,
+    unit,
+    raw_text: [nupcoCode, combined].join(" | "),
+    extraction_confidence: confidence,
+    source_sheet: null,
+  };
+}
+
 export function parseNupcoItemListPage(text: string, offset = 0, limit = 2000): NupcoItemListPage {
   const safeOffset = Math.max(0, Math.floor(offset || 0));
   const safeLimit = Math.max(1, Math.floor(limit || 1));
@@ -196,11 +250,19 @@ export function parseNupcoItemListPage(text: string, offset = 0, limit = 2000): 
     .map((row, index) => parseRow(row, index + 1))
     .filter((item): item is NupcoExtractedItem => item !== null);
 
-  const parsed = structured.length
-    ? structured
+  const genericCoded = structured.length
+    ? []
     : collectGenericCodedRows(text)
         .map((row, index) => parseGenericCodedRow(row, index + 1))
         .filter((item): item is NupcoExtractedItem => item !== null);
+
+  const parsed = structured.length
+    ? structured
+    : genericCoded.length
+      ? genericCoded
+      : collectCodeFirstRows(text)
+          .map((row, index) => parseCodeFirstRow(row, index + 1))
+          .filter((item): item is NupcoExtractedItem => item !== null);
 
   const totalDetected = parsed.length;
   const items = parsed.slice(safeOffset, safeOffset + safeLimit);
