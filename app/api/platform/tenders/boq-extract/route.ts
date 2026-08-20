@@ -25,6 +25,7 @@ type ExtractedItem = {
 type ParseMeta = {
   pages?: number | null;
   sheets?: string[];
+  excluded_sheets?: string[];
   structured_source?: "nupco_item_list" | "workbook" | "delimited_text";
   total_detected_items?: number;
   offset?: number;
@@ -58,6 +59,11 @@ function normalise(value: string) {
     .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isNonItemWorkbookSheet(name: string) {
+  const value = normalise(name);
+  return value === "delivery address" || value === "delivery addresses" || value === normalise("توزيع المناطق");
 }
 
 function asCellText(value: unknown) {
@@ -241,9 +247,15 @@ async function parseWorkbook(buffer: ArrayBuffer, offset: number, limit: number)
   await workbook.xlsx.load(Buffer.from(buffer) as never);
   const allItems: ExtractedItem[] = [];
   const sheets: string[] = [];
+  const excludedSheets: string[] = [];
 
   workbook.eachSheet((worksheet) => {
     sheets.push(worksheet.name);
+    if (isNonItemWorkbookSheet(worksheet.name)) {
+      excludedSheets.push(worksheet.name);
+      return;
+    }
+
     const rows: string[][] = [];
     worksheet.eachRow({ includeEmpty: false }, (row) => {
       const values = Array.isArray(row.values) ? row.values.slice(1) : [];
@@ -266,6 +278,7 @@ async function parseWorkbook(buffer: ArrayBuffer, offset: number, limit: number)
   return {
     items,
     sheets,
+    excludedSheets,
     meta: {
       structured_source: "workbook" as const,
       total_detected_items: totalDetected,
@@ -309,7 +322,7 @@ export async function POST(request: Request) {
       parser = "exceljs";
       const parsed = await parseWorkbook(buffer, offset, limit);
       extracted = parsed.items;
-      parseMeta = { sheets: parsed.sheets, ...parsed.meta };
+      parseMeta = { sheets: parsed.sheets, excluded_sheets: parsed.excludedSheets, ...parsed.meta };
     } else if (["csv", "txt", "tsv"].includes(extension) || file.type.startsWith("text/")) {
       const parsed = parseText(new TextDecoder().decode(buffer), offset, limit);
       extracted = parsed.items;
