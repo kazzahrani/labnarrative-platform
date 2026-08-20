@@ -2,15 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": true
-  },
-  "crons": [
-    {
-      "path": "/api/cron/tenders/nupco",
-      "schedule": "20 10 * * *"
-    },
-    {
-      "path": "/api/cron/tenders/match",
-      "schedule": "25 10 * * *"
-    }
-  ]
+  }
 }

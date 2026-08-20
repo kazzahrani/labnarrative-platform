@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { authorizeTenderAutomation } from "../../../../../lib/tenders/automation-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -48,11 +49,6 @@ function adminClient() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || process.env.SUPABASE_SERVICE_ROLE?.trim();
   if (!url || !serviceKey) throw new Error("Supabase service configuration is missing for tender matching.");
   return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-}
-
-function authorized(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  return Boolean(secret && request.headers.get("authorization") === `Bearer ${secret}`);
 }
 
 function normalize(value: string) {
@@ -152,9 +148,12 @@ async function ensureMetadataRequirements(supabase: ReturnType<typeof adminClien
 }
 
 export async function GET(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   try {
     const supabase = adminClient();
+    if (!(await authorizeTenderAutomation(request, supabase))) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
     const [{ data: orgRows, error: orgError }, { data: productRows, error: productError }, { data: tenderRows, error: tenderError }] = await Promise.all([
       supabase.from("ln_organizations").select("id,onboarding_status").neq("onboarding_status", "paused"),
       supabase.from("ln_products").select("id,org_id,sku,name,category,brand,stock_qty,reserved_qty").eq("active", true),
