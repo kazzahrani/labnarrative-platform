@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Workbook } from "exceljs";
 import { PDFParse } from "pdf-parse";
-import { parseNupcoItemList } from "../../../../../lib/tenders/nupco-item-parser";
+import { parseNupcoItemListPage } from "../../../../../lib/tenders/nupco-item-parser";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -20,6 +20,16 @@ type ExtractedItem = {
   extraction_confidence: number;
   source_page?: number | null;
   source_sheet?: string | null;
+};
+
+type ParseMeta = {
+  pages?: number | null;
+  sheets?: string[];
+  structured_source?: "nupco_item_list";
+  total_detected_items?: number;
+  offset?: number;
+  limit?: number;
+  truncated?: boolean;
 };
 
 const descriptionHeaders = [
@@ -146,10 +156,7 @@ function rowsToItems(rows: string[][], sourceSheet?: string) {
   return items;
 }
 
-function parseDelimitedText(text: string): ExtractedItem[] {
-  const nupcoItems = parseNupcoItemList(text, MAX_ITEMS);
-  if (nupcoItems.length) return nupcoItems;
-
+function parseGenericDelimitedText(text: string) {
   const lines = text.split(/\r?\n/).filter((line) => line.trim());
   const sample = lines.slice(0, 10).join("\n");
   const candidates = ["\t", ",", ";", "|"];
@@ -185,11 +192,39 @@ function parseDelimitedText(text: string): ExtractedItem[] {
     .slice(0, MAX_ITEMS);
 }
 
-async function parsePdf(buffer: ArrayBuffer) {
+function parseText(text: string, offset: number, limit: number) {
+  const nupco = parseNupcoItemListPage(text, offset, limit);
+  if (nupco.totalDetected > 0) {
+    return {
+      items: nupco.items,
+      meta: {
+        structured_source: "nupco_item_list" as const,
+        total_detected_items: nupco.totalDetected,
+        offset: nupco.offset,
+        limit: nupco.limit,
+        truncated: nupco.truncated,
+      } satisfies ParseMeta,
+    };
+  }
+
+  const items = parseGenericDelimitedText(text);
+  return {
+    items,
+    meta: {
+      total_detected_items: items.length,
+      offset: 0,
+      limit: MAX_ITEMS,
+      truncated: items.length >= MAX_ITEMS,
+    } satisfies ParseMeta,
+  };
+}
+
+async function parsePdf(buffer: ArrayBuffer, offset: number, limit: number) {
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const result = await parser.getText();
-    return { items: parseDelimitedText(result.text ?? "").map((item) => ({ ...item, source_sheet: null })), pages: result.total ?? null };
+    const parsed = parseText(result.text ?? "", offset, limit);
+    return { items: parsed.items.map((item) => ({ ...item, source_sheet: null })), pages: result.total ?? null, meta: parsed.meta };
   } finally {
     await parser.destroy();
   }
@@ -213,6 +248,13 @@ async function parseWorkbook(buffer: ArrayBuffer) {
   return { items, sheets };
 }
 
+function boundedInteger(value: FormDataEntryValue | null, fallback: number, min: number, max: number) {
+  if (typeof value !== "string" || !value.trim()) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(parsed)));
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -221,39 +263,61 @@ export async function POST(request: Request) {
     if (file.size <= 0) return NextResponse.json({ error: "The uploaded file is empty." }, { status: 400 });
     if (file.size > MAX_FILE_BYTES) return NextResponse.json({ error: "Tender files must be 4 MB or smaller." }, { status: 413 });
 
+    const offset = boundedInteger(formData.get("offset"), 0, 0, 1_000_000);
+    const limit = boundedInteger(formData.get("limit"), MAX_ITEMS, 1, MAX_ITEMS);
     const filename = file.name || "tender-document";
     const extension = filename.toLowerCase().split(".").pop() ?? "";
     const buffer = await file.arrayBuffer();
     let extracted: ExtractedItem[] = [];
-    let parseMeta: Record<string, unknown> = {};
+    let parseMeta: ParseMeta = {};
     let parser = "text";
 
     if (file.type === "application/pdf" || extension === "pdf") {
       parser = "pdf-parse";
-      const parsed = await parsePdf(buffer);
+      const parsed = await parsePdf(buffer, offset, limit);
       extracted = parsed.items;
-      parseMeta = { pages: parsed.pages };
+      parseMeta = { pages: parsed.pages, ...parsed.meta };
     } else if (extension === "xlsx" || file.type.includes("spreadsheetml")) {
       parser = "exceljs";
       const parsed = await parseWorkbook(buffer);
       extracted = parsed.items;
-      parseMeta = { sheets: parsed.sheets };
+      parseMeta = { sheets: parsed.sheets, total_detected_items: parsed.items.length, offset: 0, limit: MAX_ITEMS, truncated: parsed.items.length >= MAX_ITEMS };
     } else if (["csv", "txt", "tsv"].includes(extension) || file.type.startsWith("text/")) {
-      extracted = parseDelimitedText(new TextDecoder().decode(buffer));
+      const parsed = parseText(new TextDecoder().decode(buffer), offset, limit);
+      extracted = parsed.items;
+      parseMeta = parsed.meta;
     } else {
       return NextResponse.json({ error: "Unsupported file type. Use PDF, XLSX, CSV, TSV or TXT." }, { status: 415 });
     }
 
-    if (!extracted.length) {
+    const totalDetected = parseMeta.total_detected_items ?? extracted.length;
+    const effectiveOffset = parseMeta.offset ?? 0;
+    const effectiveLimit = parseMeta.limit ?? MAX_ITEMS;
+    const truncated = parseMeta.truncated ?? (effectiveOffset + extracted.length < totalDetected);
+
+    if (!extracted.length && totalDetected === 0) {
       return NextResponse.json({ error: "No line items could be extracted automatically. Try an XLSX/CSV BoQ export or a text-based PDF.", parser }, { status: 422 });
     }
 
-    const extractionQuality = Math.round((extracted.reduce((sum, item) => sum + item.extraction_confidence, 0) / extracted.length) * 100);
+    const extractionQuality = extracted.length
+      ? Math.round((extracted.reduce((sum, item) => sum + item.extraction_confidence, 0) / extracted.length) * 100)
+      : null;
+
     return NextResponse.json({
       document: { filename, mime_type: file.type || null, file_size_bytes: file.size, parser, ...parseMeta },
-      summary: { total_items: extracted.length, extraction_quality: extractionQuality },
+      summary: {
+        total_items: extracted.length,
+        returned_items: extracted.length,
+        total_detected_items: totalDetected,
+        offset: effectiveOffset,
+        limit: effectiveLimit,
+        truncated,
+        extraction_quality: extractionQuality,
+      },
       items: extracted,
-      caveat: "Extraction only. Matching is performed against the authenticated organization product catalog in LabNarrative.",
+      caveat: truncated
+        ? "Extraction returned one safe chunk of the document. Request the next offset to continue before treating coverage as complete."
+        : "Extraction complete for the detected item list. Matching is performed against the authenticated organization product catalog in LabNarrative.",
     });
   } catch (error) {
     console.error("platform tender BoQ extraction failed", error);
