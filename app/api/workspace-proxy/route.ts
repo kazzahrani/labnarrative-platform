@@ -4,6 +4,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SUPABASE_FUNCTIONS = "https://pryezqkkildppjxbdrsj.supabase.co/functions/v1";
+const WORKSPACE_COOKIE = "__Host-ln_workspace_token";
+const COOKIE_MARKER = "__cookie__";
 const ALLOWED = new Set([
   "client-experience",
   "client-experience-preview",
@@ -30,7 +32,9 @@ async function forward(req: NextRequest) {
 
   const headers = new Headers();
   const contentType = req.headers.get("content-type");
-  const token = req.headers.get("x-workspace-token");
+  const headerToken = String(req.headers.get("x-workspace-token") || "").trim();
+  const cookieToken = String(req.cookies.get(WORKSPACE_COOKIE)?.value || "").trim();
+  const token = !headerToken || headerToken === COOKIE_MARKER ? cookieToken : headerToken;
   if (contentType) headers.set("content-type", contentType);
   if (token) headers.set("x-workspace-token", token);
 
