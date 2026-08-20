@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PlatformClient from "./PlatformClient";
 import AutomaticTenderFeed from "./AutomaticTenderFeed";
 import TenderIntelligenceLauncher from "./TenderIntelligenceLauncher";
+import CatalogIntelligenceLauncher from "./CatalogIntelligenceLauncher";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Operating System",
@@ -10,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function LabNarrativePlatformPage() {
-  return <><PlatformClient /><AutomaticTenderFeed /><TenderIntelligenceLauncher /></>;
+  return <><PlatformClient /><AutomaticTenderFeed /><TenderIntelligenceLauncher /><CatalogIntelligenceLauncher /></>;
 }
