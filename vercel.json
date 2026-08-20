@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/tenders/ingest",
       "schedule": "20 3 * * *"
+    },
+    {
+      "path": "/api/cron/tenders/match",
+      "schedule": "40 3 * * *"
     }
   ]
 }
