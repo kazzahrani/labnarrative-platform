@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api", "tenders", "app"]);
+const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api", "tenders", "app", "career"]);
 const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform.vercel.app",
   "labnarrative-platform-lab-narrative.vercel.app",
@@ -33,6 +33,7 @@ export function proxy(request: NextRequest) {
     host === "localhost";
   const isTendersHost = host === `tenders.${rootDomain}`;
   const isSaasHost = host === `app.${rootDomain}`;
+  const isCareerHost = host === `career.${rootDomain}`;
 
   if (request.nextUrl.pathname.startsWith("/engine-v4/render/")) {
     const response = NextResponse.next();
@@ -130,6 +131,13 @@ export function proxy(request: NextRequest) {
 
   if (request.nextUrl.pathname === "/api" || request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.next();
+  }
+
+  // Personal Career Agent application on its dedicated LabNarrative hostname.
+  if (isCareerHost && request.nextUrl.pathname === "/") {
+    const careerUrl = request.nextUrl.clone();
+    careerUrl.pathname = "/career-agent.html";
+    return NextResponse.rewrite(careerUrl);
   }
 
   // The canonical SaaS application hostname. The product is LabNarrative;
