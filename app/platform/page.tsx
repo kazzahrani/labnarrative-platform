@@ -3,6 +3,7 @@ import PlatformClient from "./PlatformClient";
 import AutomaticTenderFeed from "./AutomaticTenderFeed";
 import TenderIntelligenceLauncher from "./TenderIntelligenceLauncher";
 import CatalogIntelligenceLauncher from "./CatalogIntelligenceLauncher";
+import BidReviewWorkspace from "./BidReviewWorkspace";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Operating System",
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function LabNarrativePlatformPage() {
-  return <><PlatformClient /><AutomaticTenderFeed /><TenderIntelligenceLauncher /><CatalogIntelligenceLauncher /></>;
+  return <><PlatformClient /><AutomaticTenderFeed /><TenderIntelligenceLauncher /><CatalogIntelligenceLauncher /><BidReviewWorkspace /></>;
 }
