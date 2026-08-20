@@ -18,19 +18,6 @@ function workspaceCookie(token: string, maxAge = COOKIE_MAX_AGE) {
 export async function GET(req: NextRequest) {
   const suppliedToken = String(req.nextUrl.searchParams.get("token") || "").trim();
 
-  // A private access link establishes a secure browser session and immediately
-  // removes the credential from the visible URL/history.
-  if (suppliedToken) {
-    const cleanUrl = req.nextUrl.clone();
-    cleanUrl.searchParams.delete("token");
-    const headers = new Headers({
-      location: cleanUrl.toString(),
-      "cache-control": "no-store",
-      "set-cookie": workspaceCookie(suppliedToken),
-    });
-    return new Response(null, { status: 302, headers });
-  }
-
   try {
     const res = await fetch(UPSTREAM, { cache: "no-store" });
     if (!res.ok) {
@@ -43,24 +30,30 @@ export async function GET(req: NextRequest) {
       return `${attr}="${assetUrl(`/${path}`)}"`;
     });
 
-    // V3 still uses a browser-side presence check before its first API call.
-    // Only expose an opaque marker; the real workspace token remains HttpOnly
-    // and is resolved by the same-origin workspace proxy.
-    if (req.cookies.get(WORKSPACE_COOKIE)?.value) {
+    // Important: when a private link contains ?token=..., serve the V3 shell on
+    // this same response. V3 reads the token from location.href, stores it in
+    // first-party sessionStorage, and then removes it from the visible URL with
+    // history.replaceState. Do not redirect first: some browsers may reject the
+    // Set-Cookie on that redirect, which would otherwise lose the workspace.
+    //
+    // If no token is present but a secure session cookie already exists, expose
+    // only an opaque marker so the same-origin workspace proxy resolves the real
+    // token server-side.
+    if (!suppliedToken && req.cookies.get(WORKSPACE_COOKIE)?.value) {
       html = html.replace(
         "</head>",
         '<script>try{sessionStorage.setItem("li_x_token","__cookie__")}catch(e){}</script></head>',
       );
     }
 
-    return new Response(html, {
-      status: 200,
-      headers: {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "no-store",
-        "x-robots-tag": "noindex, nofollow",
-      },
+    const headers = new Headers({
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "x-robots-tag": "noindex, nofollow",
     });
+    if (suppliedToken) headers.set("set-cookie", workspaceCookie(suppliedToken));
+
+    return new Response(html, { status: 200, headers });
   } catch (error) {
     console.error("experience V3 shell proxy failed", error);
     return new Response("LabNarrative workspace is temporarily unavailable.", {
