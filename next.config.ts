@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
+  outputFileTracingIncludes: {
+    "/api/platform/tenders/boq-extract": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
+    "/api/tenders/boq-analyze": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
+  },
   async redirects() {
     return [
       { source: "/intelligence", destination: "/", permanent: true },
