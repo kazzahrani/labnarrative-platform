@@ -25,7 +25,7 @@ type ExtractedItem = {
 type ParseMeta = {
   pages?: number | null;
   sheets?: string[];
-  structured_source?: "nupco_item_list";
+  structured_source?: "nupco_item_list" | "workbook" | "delimited_text";
   total_detected_items?: number;
   offset?: number;
   limit?: number;
@@ -112,12 +112,12 @@ function meaningfulDescription(value: string) {
   return true;
 }
 
-function rowsToItems(rows: string[][], sourceSheet?: string) {
+function rowsToItems(rows: string[][], sourceSheet?: string, maxItems = MAX_ITEMS) {
   const items: ExtractedItem[] = [];
   const map = headerMap(rows);
   const start = map ? map.rowIndex + 1 : 0;
 
-  for (let index = start; index < rows.length && items.length < MAX_ITEMS; index += 1) {
+  for (let index = start; index < rows.length && items.length < maxItems; index += 1) {
     const row = rows[index].map((cell) => cell.trim());
     if (!row.some(Boolean)) continue;
 
@@ -165,7 +165,11 @@ function parseGenericDelimitedText(text: string) {
     .sort((a, b) => b.count - a.count)[0];
 
   if (delimiter && delimiter.count >= Math.max(2, lines.length / 3)) {
-    return rowsToItems(lines.map((line) => line.split(delimiter.candidate).map((cell) => cell.trim())), "text");
+    return rowsToItems(
+      lines.map((line) => line.split(delimiter.candidate).map((cell) => cell.trim())),
+      "text",
+      Number.MAX_SAFE_INTEGER,
+    );
   }
 
   return lines
@@ -188,8 +192,7 @@ function parseGenericDelimitedText(text: string) {
         source_sheet: "text",
       } satisfies ExtractedItem;
     })
-    .filter((item): item is NonNullable<typeof item> => item !== null)
-    .slice(0, MAX_ITEMS);
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 }
 
 function parseText(text: string, offset: number, limit: number) {
@@ -207,14 +210,17 @@ function parseText(text: string, offset: number, limit: number) {
     };
   }
 
-  const items = parseGenericDelimitedText(text);
+  const allItems = parseGenericDelimitedText(text).map((item, index) => ({ ...item, line_number: index + 1 }));
+  const totalDetected = allItems.length;
+  const items = allItems.slice(offset, offset + limit);
   return {
     items,
     meta: {
-      total_detected_items: items.length,
-      offset: 0,
-      limit: MAX_ITEMS,
-      truncated: items.length >= MAX_ITEMS,
+      structured_source: "delimited_text" as const,
+      total_detected_items: totalDetected,
+      offset,
+      limit,
+      truncated: offset + items.length < totalDetected,
     } satisfies ParseMeta,
   };
 }
@@ -230,22 +236,44 @@ async function parsePdf(buffer: ArrayBuffer, offset: number, limit: number) {
   }
 }
 
-async function parseWorkbook(buffer: ArrayBuffer) {
+async function parseWorkbook(buffer: ArrayBuffer, offset: number, limit: number) {
   const workbook = new Workbook();
   await workbook.xlsx.load(Buffer.from(buffer) as never);
-  const items: ExtractedItem[] = [];
+  const allItems: ExtractedItem[] = [];
   const sheets: string[] = [];
+
   workbook.eachSheet((worksheet) => {
-    if (items.length >= MAX_ITEMS) return;
     sheets.push(worksheet.name);
     const rows: string[][] = [];
     worksheet.eachRow({ includeEmpty: false }, (row) => {
       const values = Array.isArray(row.values) ? row.values.slice(1) : [];
       rows.push(values.map(asCellText));
     });
-    items.push(...rowsToItems(rows, worksheet.name).slice(0, MAX_ITEMS - items.length));
+
+    const sheetItems = rowsToItems(rows, worksheet.name, Number.MAX_SAFE_INTEGER);
+    for (const item of sheetItems) {
+      const localLine = item.line_number;
+      allItems.push({
+        ...item,
+        line_number: allItems.length + 1,
+        raw_text: `[${worksheet.name} row ${localLine}] ${item.raw_text}`,
+      });
+    }
   });
-  return { items, sheets };
+
+  const totalDetected = allItems.length;
+  const items = allItems.slice(offset, offset + limit);
+  return {
+    items,
+    sheets,
+    meta: {
+      structured_source: "workbook" as const,
+      total_detected_items: totalDetected,
+      offset,
+      limit,
+      truncated: offset + items.length < totalDetected,
+    } satisfies ParseMeta,
+  };
 }
 
 function boundedInteger(value: FormDataEntryValue | null, fallback: number, min: number, max: number) {
@@ -279,9 +307,9 @@ export async function POST(request: Request) {
       parseMeta = { pages: parsed.pages, ...parsed.meta };
     } else if (extension === "xlsx" || file.type.includes("spreadsheetml")) {
       parser = "exceljs";
-      const parsed = await parseWorkbook(buffer);
+      const parsed = await parseWorkbook(buffer, offset, limit);
       extracted = parsed.items;
-      parseMeta = { sheets: parsed.sheets, total_detected_items: parsed.items.length, offset: 0, limit: MAX_ITEMS, truncated: parsed.items.length >= MAX_ITEMS };
+      parseMeta = { sheets: parsed.sheets, ...parsed.meta };
     } else if (["csv", "txt", "tsv"].includes(extension) || file.type.startsWith("text/")) {
       const parsed = parseText(new TextDecoder().decode(buffer), offset, limit);
       extracted = parsed.items;
