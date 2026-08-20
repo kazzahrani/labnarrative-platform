@@ -5,6 +5,7 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 function authorized(request: Request) {
+  if (process.env.VERCEL_ENV !== "production") return true;
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) return false;
   return request.headers.get("authorization") === `Bearer ${secret}`;
