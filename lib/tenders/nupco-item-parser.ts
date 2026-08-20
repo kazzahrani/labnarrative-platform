@@ -64,11 +64,11 @@ function collectRows(text: string) {
   return rows;
 }
 
-function parseRow(raw: string, fallbackLine: number): NupcoExtractedItem | null {
+function parseRow(raw: string, globalLineNumber: number): NupcoExtractedItem | null {
   const match = raw.match(/^(\d{1,6})\s+([A-Z]{2,}[A-Z0-9-]*)\s+(\d{8,16})\s+(.+)$/i);
   if (!match) return null;
 
-  const serial = Number(match[1]);
+  const sourceSerial = Number(match[1]);
   const internalItemNo = match[2];
   const nupcoCode = match[3];
   let description = clean(match[4]).replace(/\s+--\s*\d+\s+of\s+\d+\s*--\s*$/i, "").trim();
@@ -96,12 +96,14 @@ function parseRow(raw: string, fallbackLine: number): NupcoExtractedItem | null 
 
   if (description.length < 4 || !/[A-Za-z\u0600-\u06ff]/.test(description)) return null;
   return {
-    line_number: Number.isFinite(serial) ? serial : fallbackLine,
+    // NUPCO's printed SN resets in sections of large documents, so it is not a stable unique key.
+    // Use the global parsed-row ordinal for persistence and keep the printed serial in raw evidence.
+    line_number: globalLineNumber,
     item_code: nupcoCode,
     description,
     quantity,
     unit,
-    raw_text: [internalItemNo, nupcoCode, description, unit, quantity, group]
+    raw_text: [Number.isFinite(sourceSerial) ? `SN ${sourceSerial}` : null, internalItemNo, nupcoCode, description, unit, quantity, group]
       .filter((value) => value !== null && value !== undefined && value !== "")
       .join(" | "),
     extraction_confidence: confidence,
