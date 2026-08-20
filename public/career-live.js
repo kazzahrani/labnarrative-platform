@@ -1,6 +1,6 @@
 ;(async function(){
   const liveStyle=document.createElement('style');
-  liveStyle.textContent='.source-link{display:inline-flex;align-items:center;text-decoration:none}.live-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}.live-source{font-size:9px;color:#8e9aa7}.live-status{display:flex;gap:8px;align-items:center}.live-status .dot{margin-top:0}.source-health{padding:8px 0;border-bottom:1px solid var(--line)}.source-health:last-child{border-bottom:0}.source-health b{font-size:11px}.source-health p{font-size:10px;color:var(--muted);margin:3px 0 0}.error-dot{background:#e4c26d}.stale-dot{background:#8e9aa7}';
+  liveStyle.textContent='.source-link{display:inline-flex;align-items:center;text-decoration:none}.live-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}.live-source{font-size:9px;color:#8e9aa7}.live-status{display:flex;gap:8px;align-items:center}.live-status .dot{margin-top:0}.source-health{padding:8px 0;border-bottom:1px solid var(--line)}.source-health:last-child{border-bottom:0}.source-health b{font-size:11px}.source-health p{font-size:10px;color:var(--muted);margin:3px 0 0}.error-dot{background:#e4c26d}.stale-dot{background:#8e9aa7}.empty-application{padding:22px 14px;color:var(--muted);font-size:11px;line-height:1.6}';
   document.head.appendChild(liveStyle);
 
   function arr(value){return Array.isArray(value)?value:[]}
@@ -42,6 +42,7 @@
     const high=jobs.filter(j=>j.fit>=threshold).length;
     const highEl=document.getElementById('highCount');if(highEl)highEl.textContent=String(high);
     const metric=highEl&&highEl.parentElement?highEl.parentElement.querySelector('small'):null;if(metric)metric.textContent='Live verified + strategic opportunities';
+    const ready=document.getElementById('readyCount');if(ready)ready.textContent=String(applications.length);
     const activityCard=[...document.querySelectorAll('.card-head h3')].find(x=>x.textContent==='Agent activity')?.closest('.card');
     if(activityCard){
       const body=activityCard.querySelector('.card-body');
@@ -60,6 +61,21 @@
     settings.appendChild(wrap);
   }
 
+  const originalRenderApps=renderApps;
+  renderApps=function(){
+    if(!applications.length){
+      const list=document.getElementById('appList');if(list)list.innerHTML='<div class="empty-application"><b>No application prepared yet.</b><br>Review an opportunity and choose <b>Prepare application</b> when you actually want to work on it.</div>';
+      const draftEl=document.getElementById('draft');if(draftEl){draftEl.value='No application selected.\n\nApplications are never created automatically from discovered opportunities.';draftEl.disabled=true;}
+      const save=document.getElementById('saveBtn');if(save)save.disabled=true;
+      const send=document.getElementById('sendBtn');if(send)send.disabled=true;
+      return;
+    }
+    const draftEl=document.getElementById('draft');if(draftEl)draftEl.disabled=false;
+    const save=document.getElementById('saveBtn');if(save)save.disabled=false;
+    const send=document.getElementById('sendBtn');if(send)send.disabled=false;
+    originalRenderApps();
+  };
+
   const originalReviewJob=reviewJob;
   reviewJob=function(id){
     originalReviewJob(id);
@@ -72,6 +88,20 @@
     }
   };
 
+  const prepare=document.getElementById('prepareBtn');
+  if(prepare)prepare.onclick=()=>{
+    if(!selected)return;
+    if(!applications.some(x=>x.id===selected.id))applications.unshift(selected);
+    activeApp=selected;
+    const existing=pipeline.find(x=>x.id===selected.id);
+    if(existing)existing.status='Application Ready';else pipeline.unshift({id:selected.id,status:'Application Ready'});
+    document.getElementById('drawerWrap').classList.remove('open');
+    const ready=document.getElementById('readyCount');if(ready)ready.textContent=String(applications.length);
+    renderApps();renderPipeline();showPage('applications');
+    toast('Application prepared','This opportunity is now in your application workspace for human review.');
+  };
+
+  let liveInitialized=false;
   async function loadLive(){
     const response=await fetch('/api/career/opportunities',{cache:'no-store'});
     if(!response.ok)throw new Error('Opportunity API returned '+response.status);
@@ -79,19 +109,34 @@
     if(!data.ok)throw new Error(data.error||'Opportunity API unavailable');
     const mapped=(data.opportunities||[]).map(mapOpportunity).filter(j=>j.type==='Hidden opportunity'||j.fit>=82);
     if(mapped.length){
+      const oldStatuses=new Map(pipeline.map(x=>[x.id,x.status]));
+      const preparedIds=new Set(applications.map(x=>x.id));
       jobs.splice(0,jobs.length,...mapped);
       const firstOpen=jobs.find(j=>j.type==='Open vacancy')||jobs[0];
       selected=firstOpen;
-      applications.splice(0,applications.length,firstOpen);
-      activeApp=firstOpen;
-      pipeline.splice(0,pipeline.length,...jobs.slice(0,Math.min(5,jobs.length)).map((j,index)=>({id:j.id,status:index===0?'Application Ready':'Qualified'})));
+
+      if(!liveInitialized){
+        applications.splice(0,applications.length);
+        activeApp=firstOpen;
+        pipeline.splice(0,pipeline.length,...jobs.map(j=>({id:j.id,status:'Qualified'})));
+      }else{
+        const stillPrepared=jobs.filter(j=>preparedIds.has(j.id));
+        applications.splice(0,applications.length,...stillPrepared);
+        if(stillPrepared.length)activeApp=stillPrepared[0];
+        pipeline.splice(0,pipeline.length,...jobs.map(j=>({id:j.id,status:oldStatuses.get(j.id)||'Qualified'})));
+      }
+
       activeDraft='cv';
       renderJobs();renderApps();renderPipeline();
-      const ready=document.getElementById('readyCount');if(ready)ready.textContent='1';
+      const ready=document.getElementById('readyCount');if(ready)ready.textContent=String(applications.length);
     }else{
       jobs.splice(0,jobs.length);
-      renderJobs();
+      applications.splice(0,applications.length);
+      pipeline.splice(0,pipeline.length);
+      renderJobs();renderApps();renderPipeline();
+      const ready=document.getElementById('readyCount');if(ready)ready.textContent='0';
     }
+    liveInitialized=true;
     refreshDashboard(data);renderSourceHealth(data);
     return data;
   }
