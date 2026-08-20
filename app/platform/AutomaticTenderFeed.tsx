@@ -8,9 +8,8 @@ type Org = { id: string; name: string };
 type MatchProduct = { id: string; sku: string; name: string; category: string | null; brand: string | null; available_stock: number };
 type RequirementMatch = {
   requirement_id: string;
+  item_code: string | null;
   requirement: string;
-  confidence: number;
-  possible_match: boolean;
   match_score: number;
   product: MatchProduct | null;
 };
@@ -34,13 +33,17 @@ type FeedOpportunity = {
   catalog_products: number;
   requirement_count: number;
   matched_signal_count: number;
-  metadata_coverage: number;
+  catalog_coverage: number;
+  capability_fit: number;
   score: number;
-  score_components: { metadata_coverage: number; timing_fit: number; source_verification: number; metadata_completeness: number };
+  score_components: { coverage: number; capability_fit: number; timing_fit: number; supply_fit: number; documentation_fit: number };
   recommendation: "BID" | "REVIEW" | "NO-BID";
   decision_basis: string;
+  evidence_level: string;
+  partial_document: boolean;
   reasons: string[];
   requirement_matches: RequirementMatch[];
+  computed_at: string | null;
   source: { name: string; base_url: string; cadence: string | null; attribution_text: string | null } | null;
   saved_opportunity: { id: string; source_tender_id: string | null; status: string } | null;
 };
@@ -56,6 +59,7 @@ type FeedPayload = {
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
 const dateLabel = (value: string | null) => value ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)) : "Verify at source";
+const evidenceLabel = (value: string) => value.replaceAll("_", " ");
 
 export default function AutomaticTenderFeed() {
   const [session, setSession] = useState<Session | null>(null);
@@ -133,13 +137,13 @@ export default function AutomaticTenderFeed() {
       published_at: item.published_at,
       deadline_at: item.deadline_at,
       estimated_value: null,
-      match_score: item.metadata_coverage,
+      match_score: item.catalog_coverage,
       bid_score: item.score,
       matched_items: item.matched_signal_count,
       total_items: item.requirement_count,
       status,
       recommendation: item.recommendation,
-      summary: `${item.metadata_coverage}% public-metadata overlap across ${item.requirement_count} stored requirement signals. BoQ analysis is still required for technical coverage.`,
+      summary: `${item.catalog_coverage}% catalog coverage across ${item.requirement_count} stored tender lines/signals. Evidence: ${evidenceLabel(item.evidence_level)}.`,
       reasons: item.reasons,
     };
   }
@@ -213,8 +217,8 @@ export default function AutomaticTenderFeed() {
         <header className={styles.head}>
           <div>
             <div className={styles.eyebrow}>LabNarrative · Automatic Saudi Tender Intelligence</div>
-            <h2>{feed?.new_matches ? `${feed.new_matches} new opportunities matched to your company` : "Official-source opportunities, matched to your company"}</h2>
-            <p>One shared public tender record can match each LabNarrative organization differently. Scores below use your organization catalog and keep source verification separate from the commercial decision.</p>
+            <h2>{feed?.new_matches ? `${feed.new_matches} new catalog matches found for your company` : "Official-source tenders, evaluated for your company"}</h2>
+            <p>Each public tender is stored once, enriched from available tender documents, then matched independently to your organization. The feed below uses the latest persisted tenant-specific match rather than recalculating a weaker browser-level score.</p>
           </div>
           <button className={styles.close} onClick={() => setOpen(false)}>×</button>
         </header>
@@ -230,7 +234,7 @@ export default function AutomaticTenderFeed() {
           </div>
 
           {error ? <div className={styles.error}>{error}</div> : null}
-          {loading && !feed ? <div className={styles.loading}>Matching official-source records against this organization…</div> : null}
+          {loading && !feed ? <div className={styles.loading}>Loading the latest organization-specific tender intelligence…</div> : null}
           {!loading && feed && !feed.opportunities.length ? <div className={styles.empty}>No shared tender records are available yet. The feed will remain empty rather than generate fictional opportunities.</div> : null}
 
           {feed ? <div className={styles.feed}>
@@ -246,7 +250,7 @@ export default function AutomaticTenderFeed() {
                     <h3>{item.title_en || item.title_ar}</h3>
                     <p>{item.reference_number ? `Ref ${item.reference_number}` : item.tender_number ? `Tender ${item.tender_number}` : "Official source record"} · {item.days_left === null ? "deadline needs verification" : item.days_left < 0 ? "stored deadline passed" : `${item.days_left} days left`}</p>
                   </div>
-                  <div className={styles.coverage}><strong>{item.metadata_coverage}%</strong><span>metadata overlap</span><small>{item.matched_signal_count}/{item.requirement_count} signals</small></div>
+                  <div className={styles.coverage}><strong>{item.catalog_coverage}%</strong><span>catalog coverage</span><small>{item.matched_signal_count}/{item.requirement_count} lines</small></div>
                   <div className={`${styles.decision} ${styles[item.recommendation.replace("-", "").toLowerCase()]}`}>{item.recommendation}</div>
                   <span className={styles.chevron}>{expanded ? "−" : "+"}</span>
                 </button>
@@ -256,14 +260,15 @@ export default function AutomaticTenderFeed() {
                     <div><span>Published</span><strong>{dateLabel(item.published_at)}</strong></div>
                     <div><span>Deadline</span><strong>{dateLabel(item.deadline_at)}</strong></div>
                     <div><span>Source status</span><strong>{item.source_status_text || "Verify at source"}</strong></div>
-                    <div><span>Verification</span><strong>{item.verification_state.replaceAll("_", " ")}</strong></div>
+                    <div><span>Evidence</span><strong>{evidenceLabel(item.evidence_level)}</strong></div>
                   </div>
 
                   <div className={styles.scoreBreakdown}>
-                    <div><span>Catalog metadata</span><strong>{item.score_components.metadata_coverage}%</strong></div>
+                    <div><span>Catalog coverage</span><strong>{item.score_components.coverage}%</strong></div>
+                    <div><span>Capability fit</span><strong>{item.score_components.capability_fit}%</strong></div>
                     <div><span>Preparation window</span><strong>{item.score_components.timing_fit}%</strong></div>
-                    <div><span>Source verification</span><strong>{item.score_components.source_verification}%</strong></div>
-                    <div><span>Metadata completeness</span><strong>{item.score_components.metadata_completeness}%</strong></div>
+                    <div><span>Supply fit</span><strong>{item.score_components.supply_fit}%</strong></div>
+                    <div><span>Technical evidence</span><strong>{item.score_components.documentation_fit}%</strong></div>
                   </div>
 
                   <div className={styles.reasonBox}>
@@ -272,11 +277,11 @@ export default function AutomaticTenderFeed() {
                   </div>
 
                   {item.requirement_matches.length ? <div className={styles.matches}>
-                    <div className={styles.sectionHead}><strong>Public requirement signals</strong><span>Possible product overlap ≠ technical equivalence</span></div>
+                    <div className={styles.sectionHead}><strong>Top catalog candidates</strong><span>Catalog overlap ≠ technical equivalence</span></div>
                     {item.requirement_matches.map((match) => <div className={styles.matchRow} key={match.requirement_id}>
-                      <span className={match.possible_match ? styles.hit : styles.miss}>{match.possible_match ? "✓" : "—"}</span>
-                      <div><strong>{match.requirement}</strong><small>{Math.round(match.confidence * 100)}% source extraction confidence</small></div>
-                      <div>{match.product ? <><strong>{match.product.name}</strong><small>{match.product.sku}{match.product.brand ? ` · ${match.product.brand}` : ""} · available {match.product.available_stock}</small></> : <strong>No catalog signal</strong>}</div>
+                      <span className={styles.hit}>✓</span>
+                      <div><strong>{match.requirement}</strong><small>{match.item_code ? `NUPCO / item code ${match.item_code} · ` : ""}{Math.round(match.match_score * 100)}% match signal</small></div>
+                      <div>{match.product ? <><strong>{match.product.name}</strong><small>{match.product.sku}{match.product.brand ? ` · ${match.product.brand}` : ""} · available {match.product.available_stock}</small></> : <strong>Catalog product unavailable</strong>}</div>
                     </div>)}
                   </div> : null}
 
@@ -284,7 +289,7 @@ export default function AutomaticTenderFeed() {
                     <div className={styles.source}>
                       <span>Provenance</span>
                       <strong>{item.source?.name || "Official tender source"}</strong>
-                      <small>{item.source?.attribution_text || "Source retained by LabNarrative for audit."}</small>
+                      <small>{item.source?.attribution_text || "Source retained by LabNarrative for audit."} · Match engine: {item.decision_basis}</small>
                     </div>
                     <div className={styles.actions}>
                       <a href={item.source_url} target="_blank" rel="noreferrer">Open source ↗</a>

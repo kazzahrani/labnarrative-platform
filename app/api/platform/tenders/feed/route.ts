@@ -29,20 +29,30 @@ type TenderRow = {
   source_status_text: string | null;
   verification_state: string;
   source_url: string;
-  source_indexed_at: string | null;
   published_at: string | null;
   deadline_at: string | null;
-  updated_at: string;
 };
 
-type Requirement = {
-  id: string;
+type MatchRow = {
   tender_id: string;
-  name_en: string;
-  name_ar: string | null;
-  tags: string[];
-  extraction_method: string;
-  confidence: number;
+  matched_count: number;
+  requirement_count: number;
+  coverage: number;
+  capability_fit: number;
+  timing_fit: number;
+  score: number;
+  decision: "BID" | "REVIEW" | "NO-BID";
+  rationale: unknown;
+  exact_count: number;
+  equivalent_count: number;
+  missing_count: number;
+  stock_available_count: number;
+  requires_sourcing_count: number;
+  supply_fit: number;
+  documentation_fit: number;
+  match_version: string;
+  score_components: unknown;
+  computed_at: string;
 };
 
 type SourceRow = {
@@ -59,66 +69,40 @@ type SavedOpportunity = {
   status: string;
 };
 
-const stopTokens = new Set([
-  "the", "and", "or", "for", "with", "from", "into", "of", "to", "in", "a", "an", "supply", "supplies",
-  "item", "items", "product", "products", "laboratory", "lab", "equipment", "materials", "material",
-  "توريد", "تأمين", "و", "او", "أو", "في", "من", "على", "الى", "إلى", "مع", "البند", "الصنف", "مختبر", "مختبرات", "مواد", "اجهزة", "أجهزة",
-]);
+type TopMatch = {
+  requirement_id?: unknown;
+  item_code?: unknown;
+  requested_item?: unknown;
+  product_id?: unknown;
+  sku?: unknown;
+  product_name?: unknown;
+  fit?: unknown;
+  available_stock?: unknown;
+};
 
-function normalize(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u064B-\u065F\u0670]/g, "")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ة/g, "ه")
-    .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
-function tokens(value: string) {
-  return normalize(value)
-    .split(" ")
-    .filter((token) => token.length > 1 && !stopTokens.has(token));
+function asStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
-function fitRequirement(requirement: Requirement, product: Product) {
-  const requested = [requirement.name_en, requirement.name_ar ?? "", ...(requirement.tags ?? [])].filter(Boolean).join(" ");
-  const offered = [product.sku, product.name, product.category ?? "", product.brand ?? ""].filter(Boolean).join(" ");
-  const requestedNorm = normalize(requested);
-  const offeredNorm = normalize(offered);
-  const sku = normalize(product.sku);
-
-  if (sku && requestedNorm.includes(sku)) return 0.98;
-  if (requestedNorm && offeredNorm && (requestedNorm.includes(offeredNorm) || offeredNorm.includes(requestedNorm))) return 0.9;
-
-  const left = new Set(tokens(requested));
-  const right = new Set(tokens(offered));
-  if (!left.size || !right.size) return 0;
-
-  const intersection = [...left].filter((token) => right.has(token)).length;
-  const requestedCoverage = intersection / Math.max(1, Math.min(left.size, 8));
-  const jaccard = intersection / Math.max(1, new Set([...left, ...right]).size);
-  return Math.min(1, requestedCoverage * 0.75 + jaccard * 0.25);
+function numberValue(value: unknown, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function daysUntil(value: string | null) {
   if (!value) return null;
   const time = new Date(value).getTime();
-  if (!Number.isFinite(time)) return null;
-  return Math.ceil((time - Date.now()) / 86_400_000);
-}
-
-function clamp01(value: number) {
-  return Math.max(0, Math.min(1, value));
+  return Number.isFinite(time) ? Math.ceil((time - Date.now()) / 86_400_000) : null;
 }
 
 export async function GET(request: Request) {
   try {
-    const url = new URL(request.url);
-    const orgId = url.searchParams.get("org_id")?.trim() ?? "";
+    const requestUrl = new URL(request.url);
+    const orgId = requestUrl.searchParams.get("org_id")?.trim() ?? "";
     const authorization = request.headers.get("authorization") ?? "";
     if (!orgId) return NextResponse.json({ error: "org_id is required." }, { status: 400 });
     if (!authorization.toLowerCase().startsWith("bearer ")) {
@@ -142,11 +126,10 @@ export async function GET(request: Request) {
       .eq("org_id", orgId)
       .eq("status", "active")
       .maybeSingle();
-
     if (membershipError) throw membershipError;
     if (!membership) return NextResponse.json({ error: "Organization access denied." }, { status: 403 });
 
-    const [{ data: productRows, error: productError }, { data: tenderRows, error: tenderError }, { data: savedRows, error: savedError }] = await Promise.all([
+    const [productResult, tenderResult, savedResult] = await Promise.all([
       supabase
         .from("ln_products")
         .select("id,sku,name,category,brand,stock_qty,reserved_qty")
@@ -155,7 +138,7 @@ export async function GET(request: Request) {
         .order("name"),
       supabase
         .from("tenders")
-        .select("id,source_id,source_record_id,tender_number,reference_number,title_ar,title_en,buyer_ar,buyer_en,purpose_ar,purpose_en,source_status_text,verification_state,source_url,source_indexed_at,published_at,deadline_at,updated_at")
+        .select("id,source_id,source_record_id,tender_number,reference_number,title_ar,title_en,buyer_ar,buyer_en,purpose_ar,purpose_en,source_status_text,verification_state,source_url,published_at,deadline_at")
         .eq("is_public", true)
         .order("published_at", { ascending: false, nullsFirst: false })
         .limit(150),
@@ -166,23 +149,23 @@ export async function GET(request: Request) {
         .not("source_tender_id", "is", null),
     ]);
 
-    if (productError) throw productError;
-    if (tenderError) throw tenderError;
-    if (savedError) throw savedError;
+    if (productResult.error) throw productResult.error;
+    if (tenderResult.error) throw tenderResult.error;
+    if (savedResult.error) throw savedResult.error;
 
-    const products = (productRows ?? []) as Product[];
-    const tenders = (tenderRows ?? []) as TenderRow[];
-    const saved = (savedRows ?? []) as SavedOpportunity[];
+    const products = (productResult.data ?? []) as Product[];
+    const tenders = (tenderResult.data ?? []) as TenderRow[];
+    const saved = (savedResult.data ?? []) as SavedOpportunity[];
     const tenderIds = tenders.map((tender) => tender.id);
     const sourceIds = [...new Set(tenders.map((tender) => tender.source_id))];
 
-    const [{ data: requirementRows, error: requirementError }, { data: sourceRows, error: sourceError }] = await Promise.all([
+    const [matchResult, sourceResult] = await Promise.all([
       tenderIds.length
         ? supabase
-            .from("tender_requirements")
-            .select("id,tender_id,name_en,name_ar,tags,extraction_method,confidence")
+            .from("tender_matches")
+            .select("tender_id,matched_count,requirement_count,coverage,capability_fit,timing_fit,score,decision,rationale,exact_count,equivalent_count,missing_count,stock_available_count,requires_sourcing_count,supply_fit,documentation_fit,match_version,score_components,computed_at")
+            .eq("org_id", orgId)
             .in("tender_id", tenderIds)
-            .order("confidence", { ascending: false })
         : Promise.resolve({ data: [], error: null }),
       sourceIds.length
         ? supabase
@@ -192,66 +175,62 @@ export async function GET(request: Request) {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
-    if (requirementError) throw requirementError;
-    if (sourceError) throw sourceError;
+    if (matchResult.error) throw matchResult.error;
+    if (sourceResult.error) throw sourceResult.error;
 
-    const requirements = (requirementRows ?? []) as Requirement[];
-    const sources = new Map(((sourceRows ?? []) as SourceRow[]).map((source) => [source.id, source]));
+    const matchesByTender = new Map(((matchResult.data ?? []) as MatchRow[]).map((row) => [row.tender_id, row]));
+    const sources = new Map(((sourceResult.data ?? []) as SourceRow[]).map((source) => [source.id, source]));
     const savedByTender = new Map(saved.filter((row) => row.source_tender_id).map((row) => [String(row.source_tender_id), row]));
+    const productById = new Map(products.map((product) => [product.id, product]));
 
     const opportunities = tenders.map((tender) => {
-      const tenderRequirements = requirements.filter((requirement) => requirement.tender_id === tender.id);
-      const requirementMatches = tenderRequirements.map((requirement) => {
-        const ranked = products
-          .map((product) => ({ product, score: fitRequirement(requirement, product) }))
-          .sort((a, b) => b.score - a.score);
-        const best = ranked[0];
-        const possible = Boolean(best && best.score >= 0.34);
+      const match = matchesByTender.get(tender.id) ?? null;
+      const daysLeft = daysUntil(tender.deadline_at);
+      const expired = daysLeft !== null && daysLeft < 0;
+      const closed = tender.verification_state === "closed";
+      const rationale = asRecord(match?.rationale);
+      const rawTopMatches = Array.isArray(rationale.top_matches) ? rationale.top_matches as TopMatch[] : [];
+      const scoreComponents = asRecord(match?.score_components);
+      const evidenceLevel = typeof rationale.evidence_level === "string" ? rationale.evidence_level : "pending";
+      const partialDocument = rationale.partial_document === true;
+      const source = sources.get(tender.source_id) ?? null;
+      const savedOpportunity = savedByTender.get(tender.id) ?? null;
+
+      const requirementMatches = rawTopMatches.slice(0, 12).map((raw) => {
+        const productId = typeof raw.product_id === "string" ? raw.product_id : "";
+        const product = productById.get(productId) ?? null;
         return {
-          requirement_id: requirement.id,
-          requirement: requirement.name_en || requirement.name_ar || "Requirement",
-          confidence: Number(requirement.confidence || 0),
-          possible_match: possible,
-          match_score: Number((best?.score ?? 0).toFixed(3)),
-          product: possible && best ? {
-            id: best.product.id,
-            sku: best.product.sku,
-            name: best.product.name,
-            category: best.product.category,
-            brand: best.product.brand,
-            available_stock: Math.max(0, Number(best.product.stock_qty || 0) - Number(best.product.reserved_qty || 0)),
+          requirement_id: typeof raw.requirement_id === "string" ? raw.requirement_id : `${tender.id}-${String(raw.item_code ?? "match")}`,
+          item_code: typeof raw.item_code === "string" ? raw.item_code : null,
+          requirement: typeof raw.requested_item === "string" ? raw.requested_item : "Tender line item",
+          match_score: numberValue(raw.fit),
+          product: product ? {
+            id: product.id,
+            sku: product.sku,
+            name: product.name,
+            category: product.category,
+            brand: product.brand,
+            available_stock: numberValue(raw.available_stock, Math.max(0, Number(product.stock_qty || 0) - Number(product.reserved_qty || 0))),
+          } : productId ? {
+            id: productId,
+            sku: typeof raw.sku === "string" ? raw.sku : "",
+            name: typeof raw.product_name === "string" ? raw.product_name : "Catalog product",
+            category: null,
+            brand: null,
+            available_stock: numberValue(raw.available_stock),
           } : null,
         };
       });
 
-      const matchedSignals = requirementMatches.filter((match) => match.possible_match).length;
-      const requirementCount = tenderRequirements.length;
-      const metadataCoverage = requirementCount ? matchedSignals / requirementCount : 0;
-      const daysLeft = daysUntil(tender.deadline_at);
-      const timingFit = daysLeft === null ? 0.45 : daysLeft < 0 ? 0 : daysLeft >= 14 ? 1 : daysLeft >= 7 ? 0.82 : daysLeft >= 3 ? 0.55 : 0.25;
-      const sourceFit = tender.verification_state === "verified_metadata" ? 1 : tender.verification_state === "needs_recheck" ? 0.55 : tender.verification_state === "closed" ? 0 : 0.35;
-      const completenessFit = requirementCount >= 4 ? 1 : requirementCount > 0 ? 0.65 : 0.25;
-      const score = Math.round(clamp01(metadataCoverage) * 60 + timingFit * 15 + sourceFit * 15 + completenessFit * 10);
-      const expired = daysLeft !== null && daysLeft < 0;
-      const closed = tender.verification_state === "closed";
+      const fallbackRecommendation: "BID" | "REVIEW" | "NO-BID" = expired || closed ? "NO-BID" : "REVIEW";
+      const reasons = match
+        ? asStringArray(rationale.reasons)
+        : [
+            "Tenant matching has not completed for this newly ingested tender yet.",
+            daysLeft === null ? "Deadline is not normalized yet; verify it at the source." : daysLeft < 0 ? "Stored deadline has passed." : `${daysLeft} days remain to the stored deadline.`,
+            "LabNarrative will keep this record at REVIEW until an organization-specific match is computed.",
+          ];
 
-      let recommendation: "BID" | "REVIEW" | "NO-BID" = "REVIEW";
-      if (expired || closed) recommendation = "NO-BID";
-      else if (tender.verification_state === "verified_metadata" && requirementCount >= 3 && metadataCoverage >= 0.8 && score >= 75 && (daysLeft === null || daysLeft >= 5)) recommendation = "BID";
-
-      const reasons = [
-        requirementCount
-          ? `${matchedSignals} of ${requirementCount} public requirement signals overlap the organization catalog.`
-          : "No bill-of-quantities or structured requirement lines are available in the stored public metadata yet.",
-        daysLeft === null ? "Deadline is not yet normalized; verify it at the source." : daysLeft < 0 ? "Stored deadline has passed." : `${daysLeft} days remain to the stored deadline.`,
-        tender.verification_state === "verified_metadata"
-          ? "Source metadata has been verified in LabNarrative."
-          : "Current source status must be rechecked before a bid decision.",
-        "Metadata overlap is not technical product equivalence. Possible matches require human confirmation and BoQ analysis.",
-      ];
-
-      const source = sources.get(tender.source_id) ?? null;
-      const savedOpportunity = savedByTender.get(tender.id) ?? null;
       return {
         id: tender.id,
         source_record_id: tender.source_record_id,
@@ -270,20 +249,25 @@ export async function GET(request: Request) {
         deadline_at: tender.deadline_at,
         days_left: daysLeft,
         catalog_products: products.length,
-        requirement_count: requirementCount,
-        matched_signal_count: matchedSignals,
-        metadata_coverage: Math.round(metadataCoverage * 100),
-        score,
+        requirement_count: numberValue(match?.requirement_count),
+        matched_signal_count: numberValue(match?.matched_count),
+        catalog_coverage: Math.round(numberValue(match?.coverage) * 100),
+        capability_fit: Math.round(numberValue(match?.capability_fit) * 100),
+        score: numberValue(match?.score),
         score_components: {
-          metadata_coverage: Math.round(metadataCoverage * 100),
-          timing_fit: Math.round(timingFit * 100),
-          source_verification: Math.round(sourceFit * 100),
-          metadata_completeness: Math.round(completenessFit * 100),
+          coverage: numberValue(scoreComponents.coverage, Math.round(numberValue(match?.coverage) * 100)),
+          capability_fit: numberValue(scoreComponents.capability_fit, Math.round(numberValue(match?.capability_fit) * 100)),
+          timing_fit: numberValue(scoreComponents.timing_fit, Math.round(numberValue(match?.timing_fit) * 100)),
+          supply_fit: numberValue(scoreComponents.supply_fit, Math.round(numberValue(match?.supply_fit) * 100)),
+          documentation_fit: numberValue(scoreComponents.documentation_fit, Math.round(numberValue(match?.documentation_fit) * 100)),
         },
-        recommendation,
-        decision_basis: "public_metadata",
+        recommendation: match?.decision ?? fallbackRecommendation,
+        decision_basis: match?.match_version ?? "pending_match",
+        evidence_level: evidenceLevel,
+        partial_document: partialDocument,
         reasons,
         requirement_matches: requirementMatches,
+        computed_at: match?.computed_at ?? null,
         source: source ? {
           name: source.name,
           base_url: source.base_url,
@@ -296,6 +280,10 @@ export async function GET(request: Request) {
       const aExpired = a.days_left !== null && a.days_left < 0;
       const bExpired = b.days_left !== null && b.days_left < 0;
       if (aExpired !== bExpired) return aExpired ? 1 : -1;
+      if (a.recommendation !== b.recommendation) {
+        const rank = { BID: 3, REVIEW: 2, "NO-BID": 1 } as const;
+        return rank[b.recommendation] - rank[a.recommendation];
+      }
       return b.score - a.score;
     });
 
@@ -304,12 +292,12 @@ export async function GET(request: Request) {
       org_id: orgId,
       catalog_products: products.length,
       scanned: opportunities.length,
-      new_matches: opportunities.filter((opportunity) => !opportunity.saved_opportunity && (opportunity.days_left === null || opportunity.days_left >= 0)).length,
+      new_matches: opportunities.filter((opportunity) => !opportunity.saved_opportunity && opportunity.matched_signal_count > 0 && (opportunity.days_left === null || opportunity.days_left >= 0)).length,
       opportunities,
-      caveat: "Automatic feed V1 uses official-source metadata already ingested into LabNarrative. It does not treat metadata overlap as technical equivalence or a substitute for the tender documents / BoQ.",
+      caveat: "Opportunity scores use the latest persisted organization-specific tender match. Document evidence is kept separate from source verification, and lexical/catalog overlap is never treated as technical equivalence without human confirmation.",
     });
   } catch (error) {
     console.error("platform tender feed error", error);
-    return NextResponse.json({ error: "Unable to build the organization tender feed." }, { status: 500 });
+    return NextResponse.json({ error: "Unable to load organization tender intelligence." }, { status: 500 });
   }
 }
