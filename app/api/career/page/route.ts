@@ -6,7 +6,11 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const filePath = path.join(process.cwd(), "public", "career-agent.html");
-  const html = await readFile(filePath, "utf8");
+  const baseHtml = await readFile(filePath, "utf8");
+  const html = baseHtml.replace(
+    "</body>",
+    '<script src="/career-microsoft-ui.js"></script>\n</body>',
+  );
 
   return new Response(html, {
     status: 200,
