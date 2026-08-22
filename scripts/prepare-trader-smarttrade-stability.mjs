@@ -26,6 +26,12 @@ for (const [before, after] of replacements) {
   source = source.replaceAll(before, after);
 }
 
+// Clean up conditional JSX where the original component was already inside {...}.
+source = source.replaceAll(
+  '{positionsOn && {OrdersTable({ compact: true })}}',
+  '{positionsOn && OrdersTable({ compact: true })}'
+);
+
 // Make pair selection happen on pointer-down, before focus can move and before a
 // concurrent market tick has any chance to interfere with the click sequence.
 source = source.replace(
