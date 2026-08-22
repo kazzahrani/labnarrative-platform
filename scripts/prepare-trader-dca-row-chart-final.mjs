@@ -22,7 +22,6 @@ const oldLevels = `return <div className={styles.dealTradeSnapshot}>
       <span className={styles.dealDcaLevel}><b>Next DCA</b>{nextDcaLevel ? money(nextDcaLevel) : "Complete"}</span>
     </div>
   </div>;`;
-
 const newLevels = `return <div className={styles.dealTradeSnapshot}>
     <div className={styles.dealProgress}><i style={{ width: progressWidth }}/></div>
     <div className={styles.dealPriceLine}>
@@ -35,12 +34,33 @@ const newLevels = `return <div className={styles.dealTradeSnapshot}>
   </div>;`;
 source = source.replace(oldLevels, newLevels);
 
-// The earlier chart transform created the chart state correctly but its modal insertion used a fragile formatted </main> match.
-// Repair it here using the final </main> tag so the pair click always has a visible destination.
+// The old chart transform used formatting-sensitive anchors. Build the selected-trade state robustly before the component's main return.
+if (!source.includes('const selectedDcaChartTrade =')) {
+  const mainOpenIndex = source.lastIndexOf('<main className={styles.appShell}>');
+  if (mainOpenIndex < 0) throw new Error('Could not locate trader appShell main element.');
+  const mainReturnIndex = source.lastIndexOf('  return (', mainOpenIndex);
+  if (mainReturnIndex < 0) throw new Error('Could not locate trader component main return.');
+  const chartState = `  const selectedDcaChartTrade = selectedTradeChartId ? dcaTrades.find((trade) => trade.id === selectedTradeChartId) ?? null : null;
+  const selectedDcaChartBot = selectedDcaChartTrade ? dcaBots.find((bot) => bot.id === selectedDcaChartTrade.botId) ?? null : null;
+  const selectedDcaNextAveragingPrice = (() => {
+    if (!selectedDcaChartTrade || !selectedDcaChartBot || selectedDcaChartTrade.status !== "Active" || selectedDcaChartTrade.averagingFilled >= selectedDcaChartTrade.maxAveraging) return null;
+    let cumulativeDeviation = 0;
+    let nextStep = selectedDcaChartBot.deviation;
+    for (let index = 0; index <= selectedDcaChartTrade.averagingFilled; index += 1) {
+      cumulativeDeviation += nextStep;
+      nextStep *= selectedDcaChartBot.stepScale;
+    }
+    return selectedDcaChartTrade.entryPrice * (1 - cumulativeDeviation / 100);
+  })();
+  const selectedDcaTpPrice = selectedDcaChartTrade && selectedDcaChartBot?.takeProfit ? selectedDcaChartTrade.averagePrice * (1 + selectedDcaChartBot.takeProfit / 100) : null;
+  const selectedDcaSlPrice = selectedDcaChartTrade && selectedDcaChartBot?.stopEnabled ? selectedDcaChartTrade.averagePrice * (1 - selectedDcaChartBot.stopPct / 100) : null;
+
+`;
+  source = source.slice(0, mainReturnIndex) + chartState + source.slice(mainReturnIndex);
+}
+
+// Insert the chart modal using the actual final </main> instead of a formatted multiline token.
 if (!source.includes('selectedDcaChartTrade && <DcaTradeChart')) {
-  if (!source.includes('const selectedDcaChartTrade =')) {
-    throw new Error('DCA trade chart state is missing from the final trader source.');
-  }
   const closeMainIndex = source.lastIndexOf('</main>');
   if (closeMainIndex < 0) throw new Error('Could not locate the final trader </main> for DCA chart modal insertion.');
   const modal = `      {selectedDcaChartTrade && <DcaTradeChart
@@ -63,16 +83,11 @@ if (!source.includes('selectedDcaChartTrade && <DcaTradeChart')) {
   source = source.slice(0, closeMainIndex) + modal + source.slice(closeMainIndex);
 }
 
-// Fail the production build if either requested behavior is ever lost by an earlier transform.
-if (!source.includes('setSelectedTradeChartId(trade.id)')) {
-  throw new Error('DCA pair click is not wired to selectedTradeChartId.');
-}
-if (!source.includes('selectedDcaChartTrade && <DcaTradeChart')) {
-  throw new Error('DCA trade chart modal is missing from the final trader source.');
-}
-if (!source.includes('className={styles.dealPriceLine}')) {
-  throw new Error('DCA trade levels were not moved to the inline price line.');
-}
+// Fail the production build if either requested behavior is lost.
+if (!source.includes('setSelectedTradeChartId(trade.id)')) throw new Error('DCA pair click is not wired to selectedTradeChartId.');
+if (!source.includes('const selectedDcaChartTrade =')) throw new Error('DCA selected trade chart state is missing.');
+if (!source.includes('selectedDcaChartTrade && <DcaTradeChart')) throw new Error('DCA trade chart modal is missing.');
+if (!source.includes('className={styles.dealPriceLine}')) throw new Error('DCA trade levels were not moved to the inline price line.');
 
 if (!css.includes('/* DCA final pair-click and inline levels */')) {
   css += `
@@ -94,4 +109,4 @@ if (!css.includes('/* DCA final pair-click and inline levels */')) {
 
 fs.writeFileSync(traderPath, source);
 fs.writeFileSync(cssPath, css);
-console.log("Finalized DCA pair click-to-chart behavior, repaired chart modal insertion, and aligned Buy/MP/Next DCA/TP/SL on one line.");
+console.log("Created robust DCA chart state/modal and aligned Buy/MP/Next DCA/TP/SL on one line.");
