@@ -35,7 +35,35 @@ const newLevels = `return <div className={styles.dealTradeSnapshot}>
   </div>;`;
 source = source.replace(oldLevels, newLevels);
 
-// Fail the production build if the chart wiring is ever lost by an earlier transform.
+// The earlier chart transform created the chart state correctly but its modal insertion used a fragile formatted </main> match.
+// Repair it here using the final </main> tag so the pair click always has a visible destination.
+if (!source.includes('selectedDcaChartTrade && <DcaTradeChart')) {
+  if (!source.includes('const selectedDcaChartTrade =')) {
+    throw new Error('DCA trade chart state is missing from the final trader source.');
+  }
+  const closeMainIndex = source.lastIndexOf('</main>');
+  if (closeMainIndex < 0) throw new Error('Could not locate the final trader </main> for DCA chart modal insertion.');
+  const modal = `      {selectedDcaChartTrade && <DcaTradeChart
+        pair={selectedDcaChartTrade.pair}
+        status={selectedDcaChartTrade.status}
+        entryPrice={selectedDcaChartTrade.entryPrice}
+        averagePrice={selectedDcaChartTrade.averagePrice}
+        createdAt={selectedDcaChartTrade.createdAt}
+        closedAt={selectedDcaChartTrade.closedAt}
+        exitPrice={selectedDcaChartTrade.exitPrice ?? (selectedDcaChartTrade.status === "Closed" ? selectedDcaChartTrade.lastPrice : undefined)}
+        closeReason={selectedDcaChartTrade.closeReason}
+        lastPrice={selectedDcaChartTrade.lastPrice}
+        fills={selectedDcaChartTrade.fills}
+        takeProfitPrice={selectedDcaTpPrice}
+        stopLossPrice={selectedDcaSlPrice}
+        nextAveragingPrice={selectedDcaNextAveragingPrice}
+        onClose={() => setSelectedTradeChartId(null)}
+      />}
+`;
+  source = source.slice(0, closeMainIndex) + modal + source.slice(closeMainIndex);
+}
+
+// Fail the production build if either requested behavior is ever lost by an earlier transform.
 if (!source.includes('setSelectedTradeChartId(trade.id)')) {
   throw new Error('DCA pair click is not wired to selectedTradeChartId.');
 }
@@ -66,4 +94,4 @@ if (!css.includes('/* DCA final pair-click and inline levels */')) {
 
 fs.writeFileSync(traderPath, source);
 fs.writeFileSync(cssPath, css);
-console.log("Finalized DCA pair click-to-chart behavior and inline Buy/MP/Next DCA/TP/SL price levels.");
+console.log("Finalized DCA pair click-to-chart behavior, repaired chart modal insertion, and aligned Buy/MP/Next DCA/TP/SL on one line.");
