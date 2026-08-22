@@ -9,6 +9,7 @@ import {
   HistogramSeries,
   LineStyle,
   type IChartApi,
+  type SeriesMarker,
   type UTCTimestamp,
 } from "lightweight-charts";
 import styles from "./trader.module.css";
@@ -196,14 +197,14 @@ export default function DcaTradeChart({
       color: candle.close >= candle.open ? "rgba(25, 181, 161, 0.55)" : "rgba(218, 87, 104, 0.48)",
     })));
 
-    const markers = chartFills.flatMap((fill, index) => {
+    const markers: SeriesMarker<UTCTimestamp>[] = chartFills.flatMap((fill, index) => {
       const time = nearestCandleTime(candles, new Date(fill.at).getTime());
       if (!time) return [];
       return [{
         time,
-        position: "belowBar" as const,
+        position: "belowBar",
         color: "#11d7c0",
-        shape: "arrowUp" as const,
+        shape: "arrowUp",
         text: fill.kind === "Base" ? "B" : `DCA ${index}`,
       }];
     });
