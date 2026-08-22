@@ -67,9 +67,11 @@ async function fetchBinance(symbol: string): Promise<Candle[]> {
   const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(7000) });
   if (!response.ok) throw new Error(`Binance ${response.status}`);
   const rows = (await response.json()) as unknown[][];
-  return rows.map((row) => ({
+  const candles = rows.map((row) => ({
     time: num(row[0]), open: num(row[1]), high: num(row[2]), low: num(row[3]), close: num(row[4]), volume: num(row[5]),
-  })).filter((c) => c.close > 0);
+  })).filter((c) => c.close > 0 && c.high > 0 && c.low > 0);
+  if (candles.length < 30) throw new Error("Binance returned insufficient weekly history");
+  return candles;
 }
 
 async function fetchStooq(symbol: string): Promise<Candle[]> {
@@ -77,13 +79,17 @@ async function fetchStooq(symbol: string): Promise<Candle[]> {
   const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(7000) });
   if (!response.ok) throw new Error(`Stooq ${response.status}`);
   const text = await response.text();
-  const lines = text.trim().split(/\r?\n/).slice(1);
-  return lines.map((line) => {
+  const normalized = text.trim();
+  if (!normalized.startsWith("Date,Open,High,Low,Close")) throw new Error("Stooq returned a non-CSV response");
+  const lines = normalized.split(/\r?\n/).slice(1);
+  const candles = lines.map((line) => {
     const [date, open, high, low, close, volume] = line.split(",");
     return {
       time: Date.parse(`${date}T00:00:00Z`), open: num(open), high: num(high), low: num(low), close: num(close), volume: num(volume),
     };
-  }).filter((c) => c.close > 0).slice(-520);
+  }).filter((c) => Number.isFinite(c.time) && c.close > 0 && c.high > 0 && c.low > 0).slice(-520);
+  if (candles.length < 30) throw new Error("Stooq returned insufficient weekly history");
+  return candles;
 }
 
 function fallbackCandles(symbol: string): Candle[] {
@@ -144,7 +150,10 @@ function analyze(item: UniverseItem, candles: Candle[], sourceStatus: "live" | "
 
   buildCandidates(lows, "Historical bottom");
   buildCandidates(highs.filter((x) => x.price < price), "Historical top retest");
-  if (!candidates.length) return null;
+  if (!candidates.length) {
+    const recentLow = candles.slice(0, -3).reduce((best, candle, index) => candle.low < best.price ? { price: candle.low, index } : best, { price: candles[0].low, index: 0 });
+    candidates.push({ center: recentLow.price, type: "Historical bottom", touches: 1, reaction: Math.max(0, ((price - recentLow.price) / recentLow.price) * 100) });
+  }
 
   const ranked = candidates.map((c) => {
     const distance = ((price - c.center) / c.center) * 100;
@@ -184,7 +193,9 @@ export async function GET() {
   const results = await Promise.all(UNIVERSE.map(async (item) => {
     try {
       const candles = item.source === "binance" ? await fetchBinance(item.sourceSymbol) : await fetchStooq(item.sourceSymbol);
-      return analyze(item, candles, "live");
+      const analyzed = analyze(item, candles, "live");
+      if (!analyzed) throw new Error("Live feed could not produce a valid weekly zone");
+      return analyzed;
     } catch {
       return analyze(item, fallbackCandles(item.symbol), "fallback");
     }
