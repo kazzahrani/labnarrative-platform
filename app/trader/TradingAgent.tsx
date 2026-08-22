@@ -4,462 +4,481 @@ import { useEffect, useMemo, useState } from "react";
 import TradingViewChart from "./TradingViewChart";
 import styles from "./trader.module.css";
 
-type Candle = { time: number; open: number; high: number; low: number; close: number; volume: number };
-type Zone = {
-  low: number;
-  high: number;
-  center: number;
-  distancePct: number;
-  score: number;
-  type: "Historical bottom" | "Historical top retest" | "Multi-touch support";
-  touches: number;
-  reactionPct: number;
+type Section = "Dashboard" | "My Portfolio" | "Smart Trades" | "DCA bots";
+type SmartView = "list" | "create";
+type DcaView = "list" | "create";
+type ChartInterval = "1" | "5" | "15" | "60" | "240" | "D" | "W" | "M";
+type Market = { symbol: string; label: string; price: number | null };
+type RadarResponse = {
+  opportunities?: Array<{ symbol: string; label: string; kind: string; price: number }>;
 };
-type Breakout = {
-  type: "Downtrend line" | "Horizontal resistance" | "None";
-  status: "Confirmed" | "First close" | "Watching";
-  score: number;
-  level: number | null;
-  firstClose: number | null;
-  confirmationClose: number | null;
-  resistanceTouches: number;
-  lineStartTime: number | null;
-  lineStartPrice: number | null;
-  lineEndTime: number | null;
-  lineEndPrice: number | null;
-};
-type Opportunity = {
-  symbol: string;
-  label: string;
-  kind: "Crypto" | "US Stock" | "ETF" | "Commodity";
-  price: number;
-  sourceStatus: "live" | "fallback";
-  weeklyCandles: Candle[];
-  monthlyCandles: Candle[];
-  weekly: Zone;
-  monthly: Zone;
-  accumulationScore: number;
-  accumulationStatus: "In buying zone" | "Approaching" | "Watch";
-  preferredZoneLow: number;
-  preferredZoneHigh: number;
-  confluence: "Overlap" | "Near" | "Separate";
-  breakout: Breakout;
-};
-type RadarResponse = { generatedAt: string; universe: number; fxIncluded: boolean; opportunities: Opportunity[] };
-type DeskTab = "Terminal" | "Radar" | "Plans" | "Strategy" | "Brokers";
-type SignalMode = "accumulation" | "breakout";
-type MarketFilter = "All" | Opportunity["kind"];
-type Settings = {
-  dcaLevels: number;
-  dcaDropPct: number;
-  maxAllocation: number;
-  allocationMode: "equal" | "deep";
-  actionScore: number;
-  tpTargets: number[];
-  tpSellPcts: number[];
-};
-type PaperPlan = {
+type TakeProfit = { target: number; share: number };
+type SmartTrade = {
   id: string;
-  symbol: string;
-  label: string;
-  strategy: string;
+  pair: string;
+  side: "Buy" | "Sell";
+  orderType: "Market" | "Limit";
+  entryPrice: number;
+  amount: number;
+  takeProfits: TakeProfit[];
+  stopEnabled: boolean;
+  stopPct: number;
+  status: "Active" | "Closed";
   createdAt: string;
-  entry: number;
-  allocation: number;
-  dcaLevels: { level: number; price: number; allocation: number }[];
-  tpLevels: { level: number; targetPct: number; price: number; sellPct: number }[];
+};
+type DcaBot = {
+  id: string;
+  name: string;
+  pair: string;
+  baseOrder: number;
+  safetyOrder: number;
+  maxSafetyOrders: number;
+  deviation: number;
+  stepScale: number;
+  volumeScale: number;
+  takeProfit: number;
+  stopEnabled: boolean;
+  stopPct: number;
+  startCondition: string;
+  status: "Running" | "Stopped";
+  createdAt: string;
 };
 
-const DEFAULT_SETTINGS: Settings = {
-  dcaLevels: 10,
-  dcaDropPct: 3,
-  maxAllocation: 10000,
-  allocationMode: "deep",
-  actionScore: 70,
-  tpTargets: [10, 20, 35, 50, 80],
-  tpSellPcts: [10, 15, 20, 25, 30],
-};
+const NAV: Section[] = ["Dashboard", "My Portfolio", "Smart Trades", "DCA bots"];
+const FALLBACK_MARKETS: Market[] = [
+  { symbol: "BTC", label: "Bitcoin", price: null },
+  { symbol: "ETH", label: "Ethereum", price: null },
+  { symbol: "SOL", label: "Solana", price: null },
+  { symbol: "BNB", label: "BNB", price: null },
+];
+const INTERVALS: ChartInterval[] = ["1", "5", "15", "60", "240", "D", "W", "M"];
 
-const MARKET_FILTERS: MarketFilter[] = ["All", "Crypto", "US Stock", "ETF", "Commodity"];
-const NAV: DeskTab[] = ["Terminal", "Radar", "Plans", "Strategy", "Brokers"];
+function money(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const digits = Math.abs(value) >= 1000 ? 0 : Math.abs(value) >= 1 ? 2 : 4;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+function compactMoney(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function money(value: number | null | undefined) {
-  if (value == null || !Number.isFinite(value)) return "—";
-  const digits = Math.abs(value) >= 1000 ? 0 : Math.abs(value) >= 1 ? 2 : 4;
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: digits }).format(value);
+function tvSymbol(symbol: string) {
+  return `BINANCE:${symbol}USDT`;
 }
 
-function pct(value: number) {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
-
-function tradingViewSymbol(item: Opportunity) {
-  if (item.kind === "Crypto") return `BINANCE:${item.symbol}USDT`;
-  const mapped: Record<string, string> = {
-    AAPL: "NASDAQ:AAPL",
-    MSFT: "NASDAQ:MSFT",
-    NVDA: "NASDAQ:NVDA",
-    AMZN: "NASDAQ:AMZN",
-    META: "NASDAQ:META",
-    SPY: "AMEX:SPY",
-    QQQ: "NASDAQ:QQQ",
-    IWM: "AMEX:IWM",
-    GOLD: "AMEX:GLD",
-    SILVER: "AMEX:SLV",
-    OIL: "AMEX:USO",
-  };
-  return mapped[item.symbol] ?? `NASDAQ:${item.symbol}`;
-}
-
-function buildDca(entry: number, settings: Settings) {
-  const count = clamp(Math.round(settings.dcaLevels), 2, 20);
-  const drop = clamp(settings.dcaDropPct, 0.1, 25) / 100;
-  let weights = Array.from({ length: count }, () => 1);
-  if (settings.allocationMode === "deep") {
-    weights = weights.map((_, index) => 0.65 + (index / Math.max(1, count - 1)) * 0.9);
-  }
-  const total = weights.reduce((sum, value) => sum + value, 0);
-  return weights.map((weight, index) => ({
-    level: index + 1,
-    price: entry * Math.pow(1 - drop, index),
-    allocation: settings.maxAllocation * weight / total,
-  }));
-}
-
-function buildTps(avgEntry: number, settings: Settings) {
-  return settings.tpTargets.map((targetPct, index) => ({
-    level: index + 1,
-    targetPct,
-    price: avgEntry * (1 + targetPct / 100),
-    sellPct: settings.tpSellPcts[index] ?? 0,
-  }));
-}
-
-function statusTone(item: Opportunity, mode: SignalMode) {
-  if (mode === "accumulation") {
-    if (item.accumulationStatus === "In buying zone") return "good";
-    if (item.accumulationStatus === "Approaching") return "warn";
-    return "quiet";
-  }
-  if (item.breakout.status === "Confirmed") return "good";
-  if (item.breakout.status === "First close") return "warn";
-  return "quiet";
-}
-
-function statusText(item: Opportunity, mode: SignalMode) {
-  return mode === "accumulation" ? item.accumulationStatus : item.breakout.status;
+function navGlyph(section: Section) {
+  if (section === "Dashboard") return "▦";
+  if (section === "My Portfolio") return "◫";
+  if (section === "Smart Trades") return "↗";
+  return "◉";
 }
 
 export default function TradingAgent() {
-  const [tab, setTab] = useState<DeskTab>("Terminal");
-  const [mode, setMode] = useState<SignalMode>("accumulation");
-  const [interval, setInterval] = useState<"W" | "M">("W");
-  const [marketFilter, setMarketFilter] = useState<MarketFilter>("All");
-  const [search, setSearch] = useState("");
+  const [section, setSection] = useState<Section>("Dashboard");
+  const [smartView, setSmartView] = useState<SmartView>("list");
+  const [dcaView, setDcaView] = useState<DcaView>("list");
+  const [markets, setMarkets] = useState<Market[]>(FALLBACK_MARKETS);
   const [selectedSymbol, setSelectedSymbol] = useState("BTC");
-  const [radar, setRadar] = useState<RadarResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [paperPlans, setPaperPlans] = useState<PaperPlan[]>([]);
-  const [bottomTab, setBottomTab] = useState<"DCA Ladder" | "Take Profit" | "Paper Plans">("DCA Ladder");
+  const [interval, setInterval] = useState<ChartInterval>("60");
+  const [smartTrades, setSmartTrades] = useState<SmartTrade[]>([]);
+  const [dcaBots, setDcaBots] = useState<DcaBot[]>([]);
   const [notice, setNotice] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
 
-  const loadRadar = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/trader/radar", { cache: "no-store" });
-      if (!response.ok) throw new Error("Radar request failed");
-      const data = await response.json() as RadarResponse;
-      setRadar(data);
-      if (data.opportunities.length && !data.opportunities.some((item) => item.symbol === selectedSymbol)) {
-        setSelectedSymbol(data.opportunities[0].symbol);
-      }
-    } catch {
-      setNotice("Market scan could not refresh. Existing data is preserved if available.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [smartSide, setSmartSide] = useState<"Buy" | "Sell">("Buy");
+  const [smartOrderType, setSmartOrderType] = useState<"Market" | "Limit">("Market");
+  const [smartAmount, setSmartAmount] = useState(100);
+  const [smartPrice, setSmartPrice] = useState(0);
+  const [smartTps, setSmartTps] = useState<TakeProfit[]>([{ target: 3, share: 100 }]);
+  const [smartStopEnabled, setSmartStopEnabled] = useState(false);
+  const [smartStopPct, setSmartStopPct] = useState(5);
+
+  const [botName, setBotName] = useState("My DCA Bot");
+  const [baseOrder, setBaseOrder] = useState(100);
+  const [safetyOrder, setSafetyOrder] = useState(100);
+  const [maxSafetyOrders, setMaxSafetyOrders] = useState(5);
+  const [deviation, setDeviation] = useState(1);
+  const [stepScale, setStepScale] = useState(1);
+  const [volumeScale, setVolumeScale] = useState(1);
+  const [botTakeProfit, setBotTakeProfit] = useState(1.5);
+  const [botStopEnabled, setBotStopEnabled] = useState(false);
+  const [botStopPct, setBotStopPct] = useState(8);
+  const [startCondition, setStartCondition] = useState("Immediately");
 
   useEffect(() => {
-    const savedSettings = localStorage.getItem("trading-agent-settings-v3");
-    const savedPlans = localStorage.getItem("trading-agent-paper-plans-v3");
-    if (savedSettings) {
-      try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) }); } catch {}
-    }
-    if (savedPlans) {
-      try { setPaperPlans(JSON.parse(savedPlans)); } catch {}
-    }
-    void loadRadar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      const savedSmart = localStorage.getItem("labnarrative-smart-trades-v1");
+      const savedBots = localStorage.getItem("labnarrative-dca-bots-v1");
+      if (savedSmart) setSmartTrades(JSON.parse(savedSmart));
+      if (savedBots) setDcaBots(JSON.parse(savedBots));
+    } catch {}
+
+    const loadMarkets = async () => {
+      try {
+        const response = await fetch("/api/trader/radar", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as RadarResponse;
+        const crypto = (data.opportunities ?? [])
+          .filter((item) => item.kind === "Crypto")
+          .map((item) => ({ symbol: item.symbol, label: item.label, price: item.price }));
+        if (crypto.length) setMarkets(crypto);
+      } catch {}
+    };
+    void loadMarkets();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("trading-agent-settings-v3", JSON.stringify(settings));
-  }, [settings]);
+    localStorage.setItem("labnarrative-smart-trades-v1", JSON.stringify(smartTrades));
+  }, [smartTrades]);
 
   useEffect(() => {
-    localStorage.setItem("trading-agent-paper-plans-v3", JSON.stringify(paperPlans));
-  }, [paperPlans]);
+    localStorage.setItem("labnarrative-dca-bots-v1", JSON.stringify(dcaBots));
+  }, [dcaBots]);
 
-  const visible = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const list = (radar?.opportunities ?? []).filter((item) => {
-      const matchesMarket = marketFilter === "All" || item.kind === marketFilter;
-      const matchesSearch = !query || item.symbol.toLowerCase().includes(query) || item.label.toLowerCase().includes(query);
-      return matchesMarket && matchesSearch;
+  const selectedMarket = markets.find((item) => item.symbol === selectedSymbol) ?? markets[0] ?? FALLBACK_MARKETS[0];
+  const selectedPrice = selectedMarket?.price ?? null;
+
+  useEffect(() => {
+    if (selectedPrice && smartOrderType === "Market") setSmartPrice(selectedPrice);
+  }, [selectedPrice, smartOrderType, selectedSymbol]);
+
+  const activeSmart = smartTrades.filter((trade) => trade.status === "Active");
+  const runningBots = dcaBots.filter((bot) => bot.status === "Running");
+  const paperCapital = smartTrades
+    .filter((trade) => trade.status === "Active")
+    .reduce((sum, trade) => sum + trade.amount, 0) + dcaBots
+    .filter((bot) => bot.status === "Running")
+    .reduce((sum, bot) => {
+      const safetyTotal = Array.from({ length: bot.maxSafetyOrders }, (_, index) => bot.safetyOrder * Math.pow(bot.volumeScale, index))
+        .reduce((a, b) => a + b, 0);
+      return sum + bot.baseOrder + safetyTotal;
+    }, 0);
+
+  const dcaPreview = useMemo(() => {
+    const anchor = selectedPrice ?? 0;
+    let cumulativeDeviation = 0;
+    let nextStep = deviation;
+    return Array.from({ length: clamp(Math.round(maxSafetyOrders), 1, 20) }, (_, index) => {
+      cumulativeDeviation += nextStep;
+      const orderAmount = safetyOrder * Math.pow(volumeScale, index);
+      const price = anchor > 0 ? anchor * (1 - cumulativeDeviation / 100) : 0;
+      const row = {
+        index: index + 1,
+        deviation: cumulativeDeviation,
+        price,
+        amount: orderAmount,
+      };
+      nextStep *= stepScale;
+      return row;
     });
-    return [...list].sort((a, b) => {
-      if (mode === "accumulation") {
-        const priority = (status: Opportunity["accumulationStatus"]) => status === "In buying zone" ? 200 : status === "Approaching" ? 100 : 0;
-        return (b.accumulationScore + priority(b.accumulationStatus)) - (a.accumulationScore + priority(a.accumulationStatus));
-      }
-      const priority = (status: Breakout["status"]) => status === "Confirmed" ? 200 : status === "First close" ? 100 : 0;
-      return (b.breakout.score + priority(b.breakout.status)) - (a.breakout.score + priority(a.breakout.status));
-    });
-  }, [radar, marketFilter, search, mode]);
+  }, [selectedPrice, deviation, maxSafetyOrders, safetyOrder, stepScale, volumeScale]);
 
-  const selected = (radar?.opportunities ?? []).find((item) => item.symbol === selectedSymbol) ?? visible[0] ?? radar?.opportunities?.[0];
-  const weekly = selected?.weeklyCandles ?? [];
-  const weeklyChange = weekly.length > 1 ? ((weekly.at(-1)!.close - weekly.at(-2)!.close) / weekly.at(-2)!.close) * 100 : 0;
-  const selectedScore = selected ? (mode === "accumulation" ? selected.accumulationScore : selected.breakout.score) : 0;
-  const selectedStatus = selected ? statusText(selected, mode) : "—";
-  const signalReady = selected ? (mode === "accumulation" ? selected.accumulationStatus !== "Watch" : selected.breakout.status === "Confirmed") : false;
-  const actionable = Boolean(selected && signalReady && selectedScore >= settings.actionScore);
-  const entryAnchor = selected ? (mode === "accumulation"
-    ? selected.preferredZoneHigh
-    : selected.breakout.confirmationClose ?? selected.breakout.level ?? selected.price) : 0;
-  const dca = selected ? buildDca(entryAnchor, settings) : [];
-  const weightedAvg = dca.length
-    ? dca.reduce((sum, row) => sum + row.price * row.allocation, 0) / dca.reduce((sum, row) => sum + row.allocation, 0)
-    : 0;
-  const tps = buildTps(weightedAvg, settings);
+  const dcaTotal = baseOrder + dcaPreview.reduce((sum, row) => sum + row.amount, 0);
 
-  const savePaperPlan = () => {
-    if (!selected || !dca.length) return;
-    const plan: PaperPlan = {
-      id: `${selected.symbol}-${Date.now()}`,
-      symbol: selected.symbol,
-      label: selected.label,
-      strategy: mode === "accumulation" ? "Strategy 1 · Weekly + monthly accumulation" : "Strategy 2 · Confirmed breakout",
-      createdAt: new Date().toISOString(),
-      entry: entryAnchor,
-      allocation: settings.maxAllocation,
-      dcaLevels: dca,
-      tpLevels: tps,
-    };
-    setPaperPlans((current) => [plan, ...current].slice(0, 50));
-    setNotice(`${selected.symbol} paper plan created. No broker order was sent.`);
-    setBottomTab("Paper Plans");
+  const openSection = (next: Section) => {
+    setSection(next);
+    if (next !== "Smart Trades") setSmartView("list");
+    if (next !== "DCA bots") setDcaView("list");
   };
+
+  const createSmartTrade = () => {
+    const entry = smartOrderType === "Market" ? (selectedPrice ?? smartPrice) : smartPrice;
+    if (!entry || smartAmount <= 0) {
+      setNotice("Add a valid amount and price before creating the SmartTrade.");
+      return;
+    }
+    const totalShares = smartTps.reduce((sum, tp) => sum + tp.share, 0);
+    if (Math.abs(totalShares - 100) > 0.01) {
+      setNotice("Take-profit shares must total 100%.");
+      return;
+    }
+    const trade: SmartTrade = {
+      id: `st-${Date.now()}`,
+      pair: `${selectedSymbol}/USDT`,
+      side: smartSide,
+      orderType: smartOrderType,
+      entryPrice: entry,
+      amount: smartAmount,
+      takeProfits: smartTps,
+      stopEnabled: smartStopEnabled,
+      stopPct: smartStopPct,
+      status: "Active",
+      createdAt: new Date().toISOString(),
+    };
+    setSmartTrades((current) => [trade, ...current]);
+    setSmartView("list");
+    setNotice(`${trade.pair} SmartTrade created in paper mode.`);
+  };
+
+  const createDcaBot = () => {
+    if (!botName.trim() || baseOrder <= 0 || safetyOrder <= 0) {
+      setNotice("Add a bot name and valid order amounts.");
+      return;
+    }
+    const bot: DcaBot = {
+      id: `bot-${Date.now()}`,
+      name: botName.trim(),
+      pair: `${selectedSymbol}/USDT`,
+      baseOrder,
+      safetyOrder,
+      maxSafetyOrders,
+      deviation,
+      stepScale,
+      volumeScale,
+      takeProfit: botTakeProfit,
+      stopEnabled: botStopEnabled,
+      stopPct: botStopPct,
+      startCondition,
+      status: "Running",
+      createdAt: new Date().toISOString(),
+    };
+    setDcaBots((current) => [bot, ...current]);
+    setDcaView("list");
+    setNotice(`${bot.name} created and running in paper mode.`);
+  };
+
+  const handleGlobalSearch = (value: string) => {
+    setGlobalSearch(value);
+    const normalized = value.trim().toLowerCase();
+    const sectionMatch = NAV.find((item) => item.toLowerCase().includes(normalized));
+    if (normalized.length >= 3 && sectionMatch) setSection(sectionMatch);
+    const marketMatch = markets.find((item) => item.symbol.toLowerCase() === normalized || item.label.toLowerCase().includes(normalized));
+    if (marketMatch) setSelectedSymbol(marketMatch.symbol);
+  };
+
+  const dashboard = (
+    <div className={styles.pageContent}>
+      <div className={styles.pageHeading}>
+        <div><h1>Dashboard</h1><p>Your trading overview</p></div>
+      </div>
+
+      <div className={styles.heroGrid}>
+        <button className={styles.heroCard} onClick={() => { setSection("Smart Trades"); setSmartView("create"); }}>
+          <div className={styles.heroArt}><span>↗</span><i>+</i></div>
+          <div><small>SMART TRADE</small><h3>Create a SmartTrade</h3><p>Build one trade with entry, multiple take profits and stop loss.</p></div>
+          <b>New SmartTrade →</b>
+        </button>
+        <button className={styles.heroCard} onClick={() => { setSection("DCA bots"); setDcaView("create"); }}>
+          <div className={styles.heroArt}><span>◎</span><i>∞</i></div>
+          <div><small>DCA BOT</small><h3>Automate a DCA strategy</h3><p>Configure base orders, safety orders and profit targets once.</p></div>
+          <b>Create DCA bot →</b>
+        </button>
+      </div>
+
+      <div className={styles.dashboardGrid}>
+        <section className={`${styles.card} ${styles.portfolioOverview}`}>
+          <div className={styles.cardHeader}><div><h2>My portfolio</h2><p>Connected exchange balance</p></div><button onClick={() => setSection("My Portfolio")}>View portfolio</button></div>
+          <div className={styles.balanceRow}>
+            <div><span>Total balance</span><strong>$0.00</strong><small>Connect Binance to see your real portfolio.</small></div>
+            <div><span>Paper capital planned</span><strong>{compactMoney(paperCapital)}</strong><small>SmartTrades + active DCA bots</small></div>
+          </div>
+          <div className={styles.emptyChart}>
+            <svg viewBox="0 0 900 160" aria-hidden="true"><path d="M0 118 C90 110 115 122 170 100 S270 66 330 82 S430 130 500 96 S620 48 690 72 S790 114 900 54"/><line x1="0" y1="138" x2="900" y2="138"/></svg>
+          </div>
+        </section>
+        <div className={styles.sideSummary}>
+          <section className={styles.card}>
+            <div className={styles.summaryTitle}><span className={styles.roundIcon}>↗</span><div><h3>SmartTrades</h3><p>Manual strategy automation</p></div></div>
+            <div className={styles.summaryStats}><div><span>Active</span><strong>{activeSmart.length}</strong></div><div><span>Closed</span><strong>{smartTrades.length - activeSmart.length}</strong></div></div>
+            <button className={styles.linkButton} onClick={() => setSection("Smart Trades")}>Open SmartTrades →</button>
+          </section>
+          <section className={styles.card}>
+            <div className={styles.summaryTitle}><span className={styles.roundIcon}>◎</span><div><h3>DCA bots</h3><p>Automated averaging bots</p></div></div>
+            <div className={styles.summaryStats}><div><span>Running</span><strong>{runningBots.length}</strong></div><div><span>Total</span><strong>{dcaBots.length}</strong></div></div>
+            <button className={styles.linkButton} onClick={() => setSection("DCA bots")}>Open DCA bots →</button>
+          </section>
+        </div>
+      </div>
+
+      <section className={styles.card}>
+        <div className={styles.cardHeader}><div><h2>Recent activity</h2><p>Your latest paper actions</p></div></div>
+        {smartTrades.length || dcaBots.length ? (
+          <div className={styles.activityList}>
+            {[...smartTrades.map((trade) => ({ id: trade.id, title: `${trade.side} ${trade.pair}`, type: "SmartTrade", date: trade.createdAt })), ...dcaBots.map((bot) => ({ id: bot.id, title: bot.name, type: "DCA bot", date: bot.createdAt }))]
+              .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6).map((item) => (
+                <div key={item.id}><span className={styles.activityDot}/><div><strong>{item.title}</strong><small>{item.type} · {new Date(item.date).toLocaleString()}</small></div><span>Paper</span></div>
+              ))}
+          </div>
+        ) : <div className={styles.emptyBlock}><strong>No activity yet</strong><p>Create your first SmartTrade or DCA bot.</p></div>}
+      </section>
+    </div>
+  );
+
+  const portfolio = (
+    <div className={styles.pageContent}>
+      <div className={styles.pageHeading}>
+        <div><h1>My Portfolio</h1><p>Track balances and account performance across connected exchanges.</p></div>
+        <button className={styles.primaryButton} onClick={() => setNotice("Exchange connection will be enabled in the next integration step.")}>+ Connect account</button>
+      </div>
+      <div className={styles.metricGrid}>
+        <section className={styles.metricCard}><span>Total balance</span><strong>$0.00</strong><small>0 connected accounts</small></section>
+        <section className={styles.metricCard}><span>24h change</span><strong>—</strong><small>Connect an exchange to calculate</small></section>
+        <section className={styles.metricCard}><span>Paper capital</span><strong>{compactMoney(paperCapital)}</strong><small>Planned across active strategies</small></section>
+      </div>
+      <div className={styles.portfolioGrid}>
+        <section className={`${styles.card} ${styles.performanceCard}`}>
+          <div className={styles.cardHeader}><div><h2>Portfolio balance</h2><p>Last 30 days</p></div><div className={styles.segmented}><button className={styles.activeSegment}>30D</button><button>90D</button><button>1Y</button></div></div>
+          <div className={styles.emptyPortfolioChart}>
+            <div className={styles.axisLabels}><span>$0</span><span>$0</span><span>$0</span></div>
+            <svg viewBox="0 0 900 260"><line x1="20" y1="215" x2="880" y2="215"/><line x1="20" y1="145" x2="880" y2="145"/><line x1="20" y1="75" x2="880" y2="75"/></svg>
+            <div><strong>No portfolio data yet</strong><p>Connect Binance to begin tracking balances and P&amp;L.</p></div>
+          </div>
+        </section>
+        <section className={`${styles.card} ${styles.allocationCard}`}>
+          <div className={styles.cardHeader}><div><h2>Allocation</h2><p>By asset</p></div></div>
+          <div className={styles.donutEmpty}><div><strong>$0</strong><span>Total</span></div></div>
+          <div className={styles.emptyBlock}><p>No assets to display.</p></div>
+        </section>
+      </div>
+      <section className={styles.card}>
+        <div className={styles.cardHeader}><div><h2>Accounts</h2><p>Exchange API connections</p></div></div>
+        <div className={styles.tableWrap}><table><thead><tr><th>Exchange</th><th>Account</th><th>Balance</th><th>24h P&amp;L</th><th>Status</th></tr></thead><tbody><tr className={styles.emptyRow}><td colSpan={5}>No exchange accounts connected yet.</td></tr></tbody></table></div>
+      </section>
+    </div>
+  );
+
+  const smartList = (
+    <div className={styles.pageContent}>
+      <div className={styles.pageHeading}>
+        <div><h1>SmartTrades</h1><p>Create and manage trades with automated exits.</p></div>
+        <button className={styles.primaryButton} onClick={() => setSmartView("create")}>+ New SmartTrade</button>
+      </div>
+      <div className={styles.metricGrid}>
+        <section className={styles.metricCard}><span>Active trades</span><strong>{activeSmart.length}</strong><small>Currently open</small></section>
+        <section className={styles.metricCard}><span>Total created</span><strong>{smartTrades.length}</strong><small>Paper-mode trades</small></section>
+        <section className={styles.metricCard}><span>Capital in active trades</span><strong>{compactMoney(activeSmart.reduce((sum, trade) => sum + trade.amount, 0))}</strong><small>Paper capital</small></section>
+      </div>
+      <section className={styles.card}>
+        <div className={styles.listToolbar}><div className={styles.tabs}><button className={styles.tabActive}>Active</button><button>History</button></div><div className={styles.toolbarSearch}>⌕ <input placeholder="Search SmartTrades"/></div></div>
+        <div className={styles.tableWrap}><table><thead><tr><th>Pair</th><th>Side</th><th>Entry</th><th>Volume</th><th>Take profit</th><th>Stop loss</th><th>Status</th><th></th></tr></thead><tbody>
+          {activeSmart.length ? activeSmart.map((trade) => <tr key={trade.id}><td><strong>{trade.pair}</strong><small>Binance Spot</small></td><td><span className={trade.side === "Buy" ? styles.greenTag : styles.redTag}>{trade.side}</span></td><td>{money(trade.entryPrice)}</td><td>{compactMoney(trade.amount)}</td><td>{trade.takeProfits.length} target{trade.takeProfits.length > 1 ? "s" : ""}</td><td>{trade.stopEnabled ? `${trade.stopPct}%` : "Off"}</td><td><span className={styles.statusTag}>Active</span></td><td><button className={styles.textAction} onClick={() => setSmartTrades((items) => items.map((item) => item.id === trade.id ? { ...item, status: "Closed" } : item))}>Close</button></td></tr>) : <tr className={styles.emptyRow}><td colSpan={8}>No active SmartTrades. Create your first trade.</td></tr>}
+        </tbody></table></div>
+      </section>
+    </div>
+  );
+
+  const smartCreate = (
+    <div className={styles.terminalPage}>
+      <div className={styles.terminalHeader}>
+        <div><button className={styles.backButton} onClick={() => setSmartView("list")}>←</button><div><h1>SmartTrade</h1><p>Binance Spot · Paper mode</p></div></div>
+        <div className={styles.pairSelector}>{markets.map((market) => <button key={market.symbol} className={selectedSymbol === market.symbol ? styles.pairActive : ""} onClick={() => setSelectedSymbol(market.symbol)}>{market.symbol}/USDT</button>)}</div>
+      </div>
+      <div className={styles.tradeTerminal}>
+        <section className={styles.chartArea}>
+          <div className={styles.chartTopbar}>
+            <div className={styles.instrument}><span className={styles.coinAvatar}>{selectedSymbol.slice(0,2)}</span><div><strong>{selectedSymbol}/USDT</strong><small>BINANCE · Spot</small></div></div>
+            <div className={styles.liveQuote}><strong>{money(selectedPrice)}</strong><span>Live chart by TradingView</span></div>
+            <div className={styles.intervalBar}>{INTERVALS.map((item) => <button key={item} className={interval === item ? styles.intervalActive : ""} onClick={() => setInterval(item)}>{item === "60" ? "1h" : item === "240" ? "4h" : item === "D" ? "1D" : item === "W" ? "1W" : item === "M" ? "1M" : `${item}m`}</button>)}</div>
+          </div>
+          <div className={styles.chartHost}><TradingViewChart symbol={tvSymbol(selectedSymbol)} interval={interval}/></div>
+          <div className={styles.orderTabs}><button className={styles.tabActive}>Open orders</button><button>Trade history</button><button>Notes</button></div>
+          <div className={styles.chartBottomEmpty}>No open exchange orders in paper mode.</div>
+        </section>
+        <aside className={styles.orderPanel}>
+          <div className={styles.sideToggle}><button className={smartSide === "Buy" ? styles.buyActive : ""} onClick={() => setSmartSide("Buy")}>Buy</button><button className={smartSide === "Sell" ? styles.sellActive : ""} onClick={() => setSmartSide("Sell")}>Sell</button></div>
+          <div className={styles.orderTypeTabs}><button className={smartOrderType === "Market" ? styles.tabActive : ""} onClick={() => setSmartOrderType("Market")}>Market</button><button className={smartOrderType === "Limit" ? styles.tabActive : ""} onClick={() => setSmartOrderType("Limit")}>Limit</button></div>
+          <div className={styles.formSection}><h3>Entry order</h3><label><span>Volume</span><div className={styles.inputUnit}><input type="number" min="1" value={smartAmount} onChange={(e) => setSmartAmount(Math.max(1, Number(e.target.value)))}/><b>USDT</b></div></label><label><span>Price</span><div className={styles.inputUnit}><input type="number" step="0.01" disabled={smartOrderType === "Market"} value={smartOrderType === "Market" ? (selectedPrice ?? 0) : smartPrice} onChange={(e) => setSmartPrice(Number(e.target.value))}/><b>USDT</b></div></label></div>
+          <div className={styles.formSection}><div className={styles.sectionTitle}><h3>Take profit</h3><button onClick={() => setSmartTps((items) => [...items, { target: (items.at(-1)?.target ?? 0) + 3, share: 0 }])}>+ Add target</button></div>{smartTps.map((tp, index) => <div key={index} className={styles.tpRow}><span>TP {index + 1}</span><div className={styles.inputUnit}><input type="number" value={tp.target} onChange={(e) => setSmartTps((items) => items.map((item, i) => i === index ? { ...item, target: Number(e.target.value) } : item))}/><b>%</b></div><div className={styles.inputUnit}><input type="number" value={tp.share} onChange={(e) => setSmartTps((items) => items.map((item, i) => i === index ? { ...item, share: Number(e.target.value) } : item))}/><b>% sell</b></div>{smartTps.length > 1 && <button className={styles.removeButton} onClick={() => setSmartTps((items) => items.filter((_, i) => i !== index))}>×</button>}</div>)}</div>
+          <div className={styles.formSection}><label className={styles.switchRow}><div><span>Stop loss</span><small>Close the trade if price moves against you.</small></div><input type="checkbox" checked={smartStopEnabled} onChange={(e) => setSmartStopEnabled(e.target.checked)}/></label>{smartStopEnabled && <label><span>Stop loss deviation</span><div className={styles.inputUnit}><input type="number" value={smartStopPct} onChange={(e) => setSmartStopPct(Number(e.target.value))}/><b>%</b></div></label>}</div>
+          <div className={styles.orderSummary}><div><span>Trade volume</span><strong>{compactMoney(smartAmount)}</strong></div><div><span>Entry</span><strong>{smartOrderType}</strong></div><div><span>Take profits</span><strong>{smartTps.length}</strong></div></div>
+          <button className={smartSide === "Buy" ? styles.buyButton : styles.sellButton} onClick={createSmartTrade}>Create {smartSide} SmartTrade</button>
+          <p className={styles.paperNote}>Paper mode only. No exchange order will be sent.</p>
+        </aside>
+      </div>
+    </div>
+  );
+
+  const dcaList = (
+    <div className={styles.pageContent}>
+      <div className={styles.pageHeading}>
+        <div><h1>DCA bots</h1><p>Create automated averaging strategies for Binance Spot.</p></div>
+        <button className={styles.primaryButton} onClick={() => setDcaView("create")}>+ Create DCA bot</button>
+      </div>
+      <div className={styles.metricGrid}>
+        <section className={styles.metricCard}><span>Running bots</span><strong>{runningBots.length}</strong><small>Paper mode</small></section>
+        <section className={styles.metricCard}><span>Total bots</span><strong>{dcaBots.length}</strong><small>Created strategies</small></section>
+        <section className={styles.metricCard}><span>Planned bot capital</span><strong>{compactMoney(dcaBots.filter((bot) => bot.status === "Running").reduce((sum, bot) => sum + bot.baseOrder + Array.from({length: bot.maxSafetyOrders}, (_, i) => bot.safetyOrder * Math.pow(bot.volumeScale, i)).reduce((a,b) => a+b,0),0))}</strong><small>Maximum configured capital</small></section>
+      </div>
+      <section className={styles.card}>
+        <div className={styles.listToolbar}><div className={styles.tabs}><button className={styles.tabActive}>My bots</button><button>History</button></div><div className={styles.toolbarSearch}>⌕ <input placeholder="Search bots"/></div></div>
+        <div className={styles.tableWrap}><table><thead><tr><th>Bot</th><th>Pair</th><th>Profit target</th><th>Safety orders</th><th>Max capital</th><th>Status</th><th></th></tr></thead><tbody>
+          {dcaBots.length ? dcaBots.map((bot) => {
+            const total = bot.baseOrder + Array.from({length: bot.maxSafetyOrders}, (_, i) => bot.safetyOrder * Math.pow(bot.volumeScale, i)).reduce((a,b) => a+b,0);
+            return <tr key={bot.id}><td><strong>{bot.name}</strong><small>{bot.startCondition}</small></td><td>{bot.pair}<small>Binance Spot</small></td><td>+{bot.takeProfit}%</td><td>{bot.maxSafetyOrders}</td><td>{compactMoney(total)}</td><td><span className={bot.status === "Running" ? styles.statusTag : styles.mutedTag}>{bot.status}</span></td><td><button className={styles.textAction} onClick={() => setDcaBots((items) => items.map((item) => item.id === bot.id ? {...item, status: item.status === "Running" ? "Stopped" : "Running"} : item))}>{bot.status === "Running" ? "Stop" : "Start"}</button></td></tr>;
+          }) : <tr className={styles.emptyRow}><td colSpan={7}>No DCA bots yet. Create your first bot.</td></tr>}
+        </tbody></table></div>
+      </section>
+    </div>
+  );
+
+  const dcaCreate = (
+    <div className={styles.builderPage}>
+      <div className={styles.pageHeading}>
+        <div className={styles.headingWithBack}><button className={styles.backButton} onClick={() => setDcaView("list")}>←</button><div><h1>Create DCA bot</h1><p>Build a long DCA strategy for Binance Spot.</p></div></div>
+        <button className={styles.primaryButton} onClick={createDcaBot}>Create bot</button>
+      </div>
+      <div className={styles.builderGrid}>
+        <section className={styles.builderForm}>
+          <div className={styles.builderSteps}><button className={styles.stepActive}>1 Main settings</button><button>2 Entry order</button><button>3 DCA orders</button><button>4 Take profit</button></div>
+          <div className={styles.builderCard}>
+            <h2>Main settings</h2>
+            <div className={styles.formGrid}><label><span>Bot name</span><input value={botName} onChange={(e) => setBotName(e.target.value)}/></label><label><span>Pair</span><select value={selectedSymbol} onChange={(e) => setSelectedSymbol(e.target.value)}>{markets.map((market) => <option key={market.symbol} value={market.symbol}>{market.symbol}/USDT</option>)}</select></label><label><span>Exchange</span><select><option>Binance Spot</option></select></label><label><span>Strategy</span><select><option>Long</option></select></label></div>
+          </div>
+          <div className={styles.builderCard}>
+            <h2>Entry order</h2>
+            <div className={styles.formGrid}><label><span>Base order size</span><div className={styles.inputUnit}><input type="number" min="1" value={baseOrder} onChange={(e) => setBaseOrder(Math.max(1,Number(e.target.value)))}/><b>USDT</b></div></label><label><span>Start condition</span><select value={startCondition} onChange={(e) => setStartCondition(e.target.value)}><option>Immediately</option><option>TradingView signal</option><option>Manual</option></select></label></div>
+          </div>
+          <div className={styles.builderCard}>
+            <h2>DCA orders</h2>
+            <div className={styles.formGrid}><label><span>Safety order size</span><div className={styles.inputUnit}><input type="number" min="1" value={safetyOrder} onChange={(e) => setSafetyOrder(Math.max(1,Number(e.target.value)))}/><b>USDT</b></div></label><label><span>Max safety orders</span><input type="number" min="1" max="20" value={maxSafetyOrders} onChange={(e) => setMaxSafetyOrders(clamp(Number(e.target.value),1,20))}/></label><label><span>Price deviation</span><div className={styles.inputUnit}><input type="number" min="0.1" step="0.1" value={deviation} onChange={(e) => setDeviation(Math.max(.1,Number(e.target.value)))}/><b>%</b></div></label><label><span>Safety order step scale</span><input type="number" min="0.1" step="0.1" value={stepScale} onChange={(e) => setStepScale(Math.max(.1,Number(e.target.value)))}/></label><label><span>Safety order volume scale</span><input type="number" min="0.1" step="0.1" value={volumeScale} onChange={(e) => setVolumeScale(Math.max(.1,Number(e.target.value)))}/></label></div>
+          </div>
+          <div className={styles.builderCard}>
+            <h2>Take profit &amp; stop loss</h2>
+            <div className={styles.formGrid}><label><span>Take profit</span><div className={styles.inputUnit}><input type="number" min="0.1" step="0.1" value={botTakeProfit} onChange={(e) => setBotTakeProfit(Math.max(.1,Number(e.target.value)))}/><b>%</b></div></label><label className={styles.switchRow}><div><span>Stop loss</span><small>Optional downside protection</small></div><input type="checkbox" checked={botStopEnabled} onChange={(e) => setBotStopEnabled(e.target.checked)}/></label>{botStopEnabled && <label><span>Stop loss</span><div className={styles.inputUnit}><input type="number" min="0.1" value={botStopPct} onChange={(e) => setBotStopPct(Math.max(.1,Number(e.target.value)))}/><b>%</b></div></label>}</div>
+          </div>
+        </section>
+        <aside className={styles.botPreview}>
+          <div className={styles.previewHeader}><div><span className={styles.coinAvatar}>{selectedSymbol.slice(0,2)}</span><div><strong>{selectedSymbol}/USDT</strong><small>Binance Spot</small></div></div><span>Paper</span></div>
+          <div className={styles.previewPrice}><span>Current price</span><strong>{money(selectedPrice)}</strong></div>
+          <div className={styles.previewSummary}><div><span>Base order</span><strong>{compactMoney(baseOrder)}</strong></div><div><span>Safety orders</span><strong>{maxSafetyOrders}</strong></div><div><span>Maximum capital</span><strong>{compactMoney(dcaTotal)}</strong></div><div><span>Take profit</span><strong>+{botTakeProfit}%</strong></div></div>
+          <div className={styles.previewTable}><div className={styles.previewTableHead}><span>Order</span><span>Deviation</span><span>Price</span><span>Volume</span></div><div className={styles.previewRow}><span>Base</span><span>0%</span><span>{money(selectedPrice)}</span><span>{compactMoney(baseOrder)}</span></div>{dcaPreview.map((row) => <div key={row.index} className={styles.previewRow}><span>SO {row.index}</span><span>-{row.deviation.toFixed(2)}%</span><span>{money(row.price)}</span><span>{compactMoney(row.amount)}</span></div>)}</div>
+          <button className={styles.primaryButton} onClick={createDcaBot}>Create DCA bot</button>
+          <p className={styles.paperNote}>The bot will run in paper mode until a Binance API connection is enabled.</p>
+        </aside>
+      </div>
+    </div>
+  );
 
   return (
     <main className={styles.appShell}>
-      <aside className={styles.rail}>
-        <div className={styles.brandMark}>MA</div>
-        <nav className={styles.railNav} aria-label="Trading workspace navigation">
-          {NAV.map((item) => (
-            <button key={item} type="button" className={tab === item ? styles.railActive : ""} onClick={() => setTab(item)}>
-              <span>{item === "Terminal" ? "⌁" : item === "Radar" ? "◫" : item === "Plans" ? "≡" : item === "Strategy" ? "◇" : "⛓"}</span>
-              <small>{item}</small>
-            </button>
-          ))}
-        </nav>
-        <div className={styles.railFooter}><span className={styles.statusDot} />Paper</div>
+      <aside className={styles.sidebar}>
+        <button className={styles.wordmark} onClick={() => openSection("Dashboard")}><span>LN</span><strong>LABNARRATIVE</strong></button>
+        <nav className={styles.nav} aria-label="Main navigation">{NAV.map((item) => <button key={item} className={section === item ? styles.navActive : ""} onClick={() => openSection(item)}><span>{navGlyph(item)}</span>{item}</button>)}</nav>
+        <div className={styles.sidebarBottom}><button onClick={() => setNotice("Binance API connection is the next integration step.")}><span>⊕</span>Connect exchange</button><div><span className={styles.paperDot}/>Paper trading</div></div>
       </aside>
-
-      <section className={styles.desk}>
+      <section className={styles.main}>
         <header className={styles.topbar}>
-          <div className={styles.topbarTitle}>
-            <strong>Market Agent</strong>
-            <span>Personal trading terminal</span>
-          </div>
-          <div className={styles.topbarActions}>
-            <div className={styles.connectionPill}><span className={styles.statusDot} />Market data online</div>
-            <div className={styles.modePill}>PAPER MODE</div>
-            <button type="button" className={styles.refreshButton} onClick={() => void loadRadar()} disabled={loading}>{loading ? "Scanning…" : "Refresh radar"}</button>
-          </div>
+          <label className={styles.globalSearch}><span>⌕</span><input value={globalSearch} onChange={(e) => handleGlobalSearch(e.target.value)} placeholder="Search"/><kbd>⌘ K</kbd></label>
+          <div className={styles.topbarRight}><button className={styles.iconButton}>?</button><button className={styles.iconButton}>♢</button><button className={styles.avatarButton}>K</button></div>
         </header>
-
-        {notice && <button type="button" className={styles.notice} onClick={() => setNotice("")}>{notice}<span>×</span></button>}
-
-        {tab === "Terminal" && selected && (
-          <>
-            <div className={styles.workspace}>
-              <aside className={styles.marketPanel}>
-                <div className={styles.panelHeader}>
-                  <div><strong>Markets</strong><span>{radar?.opportunities.length ?? 0} scanned</span></div>
-                  <span className={styles.liveBadge}>LIVE</span>
-                </div>
-                <label className={styles.searchBox}>
-                  <span>⌕</span>
-                  <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search symbol" />
-                </label>
-                <div className={styles.marketFilters}>
-                  {MARKET_FILTERS.map((filter) => <button key={filter} type="button" className={marketFilter === filter ? styles.filterActive : ""} onClick={() => setMarketFilter(filter)}>{filter === "US Stock" ? "Stocks" : filter}</button>)}
-                </div>
-                <div className={styles.marketList}>
-                  {visible.map((item) => {
-                    const tone = statusTone(item, mode);
-                    const score = mode === "accumulation" ? item.accumulationScore : item.breakout.score;
-                    return (
-                      <button key={item.symbol} type="button" className={`${styles.marketRow} ${selected.symbol === item.symbol ? styles.marketRowActive : ""}`} onClick={() => setSelectedSymbol(item.symbol)}>
-                        <div className={styles.marketIdentity}><strong>{item.symbol}</strong><span>{item.label}</span></div>
-                        <div className={styles.marketNumbers}><strong>{money(item.price)}</strong><span className={styles[`tone_${tone}`]}>{score}</span></div>
-                      </button>
-                    );
-                  })}
-                  {!visible.length && <div className={styles.emptyState}>No markets match this filter.</div>}
-                </div>
-              </aside>
-
-              <section className={styles.chartPanel}>
-                <div className={styles.instrumentBar}>
-                  <div className={styles.instrumentIdentity}>
-                    <div className={styles.symbolAvatar}>{selected.symbol.slice(0, 2)}</div>
-                    <div><div className={styles.symbolLine}><strong>{selected.symbol}</strong><span>{selected.kind}</span></div><small>{selected.label}</small></div>
-                  </div>
-                  <div className={styles.quoteBlock}><strong>{money(selected.price)}</strong><span className={weeklyChange >= 0 ? styles.positive : styles.negative}>{pct(weeklyChange)} weekly</span></div>
-                  <div className={styles.chartTools}>
-                    <button type="button" className={interval === "W" ? styles.toolActive : ""} onClick={() => setInterval("W")}>1W</button>
-                    <button type="button" className={interval === "M" ? styles.toolActive : ""} onClick={() => setInterval("M")}>1M</button>
-                    <span>TradingView</span>
-                  </div>
-                </div>
-
-                <div className={styles.chartWrap}>
-                  <TradingViewChart symbol={tradingViewSymbol(selected)} interval={interval} />
-                </div>
-
-                <div className={styles.signalStrip}>
-                  <button type="button" className={`${styles.strategyCard} ${mode === "accumulation" ? styles.strategyActive : ""}`} onClick={() => setMode("accumulation")}>
-                    <span>STRATEGY 1</span><strong>Accumulation zone</strong><small>Weekly + monthly structure</small>
-                    <div><b>{selected.accumulationScore}</b><em>{selected.accumulationStatus}</em></div>
-                  </button>
-                  <button type="button" className={`${styles.strategyCard} ${mode === "breakout" ? styles.strategyActive : ""}`} onClick={() => setMode("breakout")}>
-                    <span>STRATEGY 2</span><strong>Confirmed breakout</strong><small>Trendline / horizontal + second close</small>
-                    <div><b>{selected.breakout.score}</b><em>{selected.breakout.status}</em></div>
-                  </button>
-                  <div className={styles.structureCard}>
-                    <span>STRUCTURE</span>
-                    {mode === "accumulation" ? (
-                      <><strong>{money(selected.preferredZoneLow)} – {money(selected.preferredZoneHigh)}</strong><small>{selected.confluence} weekly/monthly confluence</small></>
-                    ) : (
-                      <><strong>{selected.breakout.type}</strong><small>Break level {money(selected.breakout.level)}</small></>
-                    )}
-                  </div>
-                </div>
-              </section>
-
-              <aside className={styles.tradePanel}>
-                <div className={styles.tradeTabs}>
-                  <button type="button" className={mode === "accumulation" ? styles.tradeTabActive : ""} onClick={() => setMode("accumulation")}>Accumulation</button>
-                  <button type="button" className={mode === "breakout" ? styles.tradeTabActive : ""} onClick={() => setMode("breakout")}>Breakout</button>
-                </div>
-
-                <div className={styles.tradeTitle}>
-                  <div><span>Signal status</span><strong>{selectedStatus}</strong></div>
-                  <div className={`${styles.scoreRing} ${actionable ? styles.scoreReady : ""}`}>{selectedScore}</div>
-                </div>
-
-                {mode === "accumulation" ? (
-                  <div className={styles.signalFacts}>
-                    <div><span>Weekly zone</span><b>{money(selected.weekly.low)} – {money(selected.weekly.high)}</b></div>
-                    <div><span>Monthly zone</span><b>{money(selected.monthly.low)} – {money(selected.monthly.high)}</b></div>
-                    <div><span>Preferred entry</span><b>{money(entryAnchor)}</b></div>
-                    <div><span>Confluence</span><b>{selected.confluence}</b></div>
-                  </div>
-                ) : (
-                  <div className={styles.signalFacts}>
-                    <div><span>Break type</span><b>{selected.breakout.type}</b></div>
-                    <div><span>Break level</span><b>{money(selected.breakout.level)}</b></div>
-                    <div><span>First close</span><b>{money(selected.breakout.firstClose)}</b></div>
-                    <div><span>Second close</span><b>{money(selected.breakout.confirmationClose)}</b></div>
-                  </div>
-                )}
-
-                <div className={styles.formSection}>
-                  <div className={styles.sectionLabel}><span>DCA order</span><small>No leverage</small></div>
-                  <label><span>Maximum allocation</span><div className={styles.inputAffix}><span>$</span><input type="number" min="100" step="100" value={settings.maxAllocation} onChange={(event) => setSettings((current) => ({ ...current, maxAllocation: clamp(Number(event.target.value) || 0, 100, 10000000) }))} /></div></label>
-                  <div className={styles.formGrid}>
-                    <label><span>DCA lines</span><input type="number" min="2" max="20" value={settings.dcaLevels} onChange={(event) => setSettings((current) => ({ ...current, dcaLevels: clamp(Number(event.target.value) || 2, 2, 20) }))} /></label>
-                    <label><span>Step %</span><input type="number" min="0.1" max="25" step="0.1" value={settings.dcaDropPct} onChange={(event) => setSettings((current) => ({ ...current, dcaDropPct: clamp(Number(event.target.value) || 0.1, 0.1, 25) }))} /></label>
-                  </div>
-                  <div className={styles.allocationToggle}>
-                    <button type="button" className={settings.allocationMode === "equal" ? styles.toggleActive : ""} onClick={() => setSettings((current) => ({ ...current, allocationMode: "equal" }))}>Equal</button>
-                    <button type="button" className={settings.allocationMode === "deep" ? styles.toggleActive : ""} onClick={() => setSettings((current) => ({ ...current, allocationMode: "deep" }))}>Deep weighted</button>
-                  </div>
-                </div>
-
-                <div className={styles.orderSummary}>
-                  <div><span>Entry anchor</span><strong>{money(entryAnchor)}</strong></div>
-                  <div><span>Projected avg.</span><strong>{money(weightedAvg)}</strong></div>
-                  <div><span>Capital</span><strong>{money(settings.maxAllocation)}</strong></div>
-                </div>
-
-                {!actionable && <div className={styles.gateWarning}>Signal is below your action gate. You can still create a paper plan for review.</div>}
-                <button type="button" className={styles.primaryAction} onClick={savePaperPlan}>Create paper DCA plan</button>
-                <button type="button" className={styles.disabledAction} disabled title="Broker execution will be enabled after paper validation">Execute on broker <span>LOCKED</span></button>
-              </aside>
-            </div>
-
-            <section className={styles.bottomDock}>
-              <div className={styles.bottomTabs}>
-                {(["DCA Ladder", "Take Profit", "Paper Plans"] as const).map((item) => <button key={item} type="button" className={bottomTab === item ? styles.bottomTabActive : ""} onClick={() => setBottomTab(item)}>{item}{item === "Paper Plans" && paperPlans.length ? <span>{paperPlans.length}</span> : null}</button>)}
-              </div>
-              {bottomTab === "DCA Ladder" && (
-                <div className={styles.tableWrap}><table><thead><tr><th>Line</th><th>Limit price</th><th>Distance</th><th>Allocation</th><th>Status</th></tr></thead><tbody>{dca.map((row) => <tr key={row.level}><td>DCA {row.level}</td><td>{money(row.price)}</td><td>{row.level === 1 ? "Anchor" : `-${((1 - row.price / entryAnchor) * 100).toFixed(1)}%`}</td><td>{money(row.allocation)}</td><td><span className={styles.pendingTag}>Planned</span></td></tr>)}</tbody></table></div>
-              )}
-              {bottomTab === "Take Profit" && (
-                <div className={styles.tableWrap}><table><thead><tr><th>Target</th><th>Gain</th><th>Price</th><th>Sell share</th></tr></thead><tbody>{tps.map((row) => <tr key={row.level}><td>TP {row.level}</td><td>+{row.targetPct}%</td><td>{money(row.price)}</td><td>{row.sellPct}%</td></tr>)}</tbody></table></div>
-              )}
-              {bottomTab === "Paper Plans" && (
-                <div className={styles.tableWrap}>{paperPlans.length ? <table><thead><tr><th>Asset</th><th>Strategy</th><th>Entry</th><th>Allocation</th><th>Created</th></tr></thead><tbody>{paperPlans.map((plan) => <tr key={plan.id}><td><strong>{plan.symbol}</strong> · {plan.label}</td><td>{plan.strategy}</td><td>{money(plan.entry)}</td><td>{money(plan.allocation)}</td><td>{new Date(plan.createdAt).toLocaleString()}</td></tr>)}</tbody></table> : <div className={styles.emptyState}>No paper plans yet.</div>}</div>
-              )}
-            </section>
-          </>
-        )}
-
-        {tab === "Radar" && (
-          <section className={styles.pagePanel}>
-            <div className={styles.pageHeading}><div><span>ALL MARKETS</span><h1>Opportunity Radar</h1><p>Every scanned asset remains visible. Scores rank signals; they do not hide the universe.</p></div><button type="button" className={styles.refreshButton} onClick={() => void loadRadar()}>Refresh</button></div>
-            <div className={styles.tableWrap}><table><thead><tr><th>Asset</th><th>Market</th><th>Price</th><th>Accumulation</th><th>Weekly zone</th><th>Monthly zone</th><th>Breakout</th><th>Break score</th></tr></thead><tbody>{(radar?.opportunities ?? []).map((item) => <tr key={item.symbol} onClick={() => { setSelectedSymbol(item.symbol); setTab("Terminal"); }} className={styles.clickRow}><td><strong>{item.symbol}</strong><br/><small>{item.label}</small></td><td>{item.kind}</td><td>{money(item.price)}</td><td>{item.accumulationScore} · {item.accumulationStatus}</td><td>{money(item.weekly.low)} – {money(item.weekly.high)}</td><td>{money(item.monthly.low)} – {money(item.monthly.high)}</td><td>{item.breakout.type} · {item.breakout.status}</td><td>{item.breakout.score}</td></tr>)}</tbody></table></div>
-          </section>
-        )}
-
-        {tab === "Plans" && (
-          <section className={styles.pagePanel}>
-            <div className={styles.pageHeading}><div><span>PAPER EXECUTION</span><h1>DCA Plans</h1><p>Saved plans remain local to this browser while broker execution is disabled.</p></div></div>
-            <div className={styles.tableWrap}>{paperPlans.length ? <table><thead><tr><th>Asset</th><th>Strategy</th><th>Entry</th><th>Allocation</th><th>DCA lines</th><th>Created</th></tr></thead><tbody>{paperPlans.map((plan) => <tr key={plan.id}><td><strong>{plan.symbol}</strong> · {plan.label}</td><td>{plan.strategy}</td><td>{money(plan.entry)}</td><td>{money(plan.allocation)}</td><td>{plan.dcaLevels.length}</td><td>{new Date(plan.createdAt).toLocaleString()}</td></tr>)}</tbody></table> : <div className={styles.emptyState}>Create a plan from the Terminal.</div>}</div>
-          </section>
-        )}
-
-        {tab === "Strategy" && (
-          <section className={styles.pagePanel}>
-            <div className={styles.pageHeading}><div><span>RISK & EXECUTION</span><h1>Strategy settings</h1><p>These settings control the DCA ladder and the minimum score used by the action gate.</p></div></div>
-            <div className={styles.settingsGrid}>
-              <label><span>Action score</span><input type="number" min="1" max="100" value={settings.actionScore} onChange={(event) => setSettings((current) => ({ ...current, actionScore: clamp(Number(event.target.value) || 1, 1, 100) }))} /><small>Signals below this score stay review-only.</small></label>
-              <label><span>DCA lines</span><input type="number" min="2" max="20" value={settings.dcaLevels} onChange={(event) => setSettings((current) => ({ ...current, dcaLevels: clamp(Number(event.target.value) || 2, 2, 20) }))} /><small>Default is your preferred 10-line ladder.</small></label>
-              <label><span>DCA step</span><input type="number" min="0.1" max="25" step="0.1" value={settings.dcaDropPct} onChange={(event) => setSettings((current) => ({ ...current, dcaDropPct: clamp(Number(event.target.value) || 0.1, 0.1, 25) }))} /><small>Percentage spacing between successive buys.</small></label>
-              <label><span>Maximum allocation</span><input type="number" min="100" step="100" value={settings.maxAllocation} onChange={(event) => setSettings((current) => ({ ...current, maxAllocation: clamp(Number(event.target.value) || 100, 100, 10000000) }))} /><small>Per-plan capital ceiling.</small></label>
-            </div>
-          </section>
-        )}
-
-        {tab === "Brokers" && (
-          <section className={styles.pagePanel}>
-            <div className={styles.pageHeading}><div><span>CONNECTIONS</span><h1>Brokers & exchanges</h1><p>Connection UX is prepared, but real order execution stays locked during strategy validation.</p></div></div>
-            <div className={styles.brokerGrid}>
-              <div><span>CRYPTO</span><strong>Binance</strong><p>Market data available. Trading permission not connected.</p><button type="button" disabled>Connect after paper validation</button></div>
-              <div><span>MULTI-ASSET</span><strong>Interactive Brokers</strong><p>Planned for stocks, ETFs, futures and FX execution.</p><button type="button" disabled>Connect after paper validation</button></div>
-            </div>
-          </section>
-        )}
+        {notice && <button className={styles.notice} onClick={() => setNotice("")}>{notice}<span>×</span></button>}
+        {section === "Dashboard" && dashboard}
+        {section === "My Portfolio" && portfolio}
+        {section === "Smart Trades" && (smartView === "list" ? smartList : smartCreate)}
+        {section === "DCA bots" && (dcaView === "list" ? dcaList : dcaCreate)}
       </section>
     </main>
   );
