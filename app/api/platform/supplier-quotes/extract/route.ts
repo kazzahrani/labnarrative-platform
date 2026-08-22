@@ -98,11 +98,16 @@ function asNumber(value: unknown) {
 function headerField(cell: string): Field | null {
   const n=normalize(cell);
   if (!n) return null;
-  for (const [field,set] of Object.entries(aliases) as Array<[Field,Set<string>]>) {
-    if (set.has(n)) return field;
-    for (const alias of set) if (alias.length>=5 && n.includes(alias)) return field;
+  const entries=Object.entries(aliases) as Array<[Field,Set<string>]>;
+  for (const [field,set] of entries) if (set.has(n)) return field;
+  let best:{field:Field;length:number}|null=null;
+  for (const [field,set] of entries) {
+    for (const alias of set) {
+      if (alias.length<5 || !n.includes(alias)) continue;
+      if (!best || alias.length>best.length) best={field,length:alias.length};
+    }
   }
-  return null;
+  return best?.field??null;
 }
 
 function detectTable(rows: string[][]) {
@@ -133,11 +138,12 @@ function parseTableRows(rows:string[][],sheet:string|null) {
     const catalog=get(row,"catalog")||null;
     if (!description && !code && !catalog) continue;
     if (unitCost===null && !description) continue;
+    const leadValue=asNumber(get(row,"lead"));
     const confidence=unitCost!==null?(description||code?0.96:0.75):0.58;
     out.push({
       source_row_number:i+1,source_sheet:sheet,source_page:null,raw_text:row.filter(Boolean).join(" | "),
       item_code:code,description,quantity:asNumber(get(row,"quantity")),unit:get(row,"unit")||null,unit_cost:unitCost,
-      moq:asNumber(get(row,"moq")),lead_time_days:asNumber(get(row,"lead"))===null?null:Math.max(0,Math.round(asNumber(get(row,"lead"))!)),
+      moq:asNumber(get(row,"moq")),lead_time_days:leadValue===null?null:Math.max(0,Math.round(leadValue)),
       manufacturer:get(row,"manufacturer")||null,catalog_no:catalog,extraction_confidence:confidence,
     });
   }
@@ -184,7 +190,7 @@ function parsePdfLines(text:string) {
     if (codeMatch) description=description.replace(codeMatch[0]," ");
     for (const m of tail) description=description.replace(m.text," ");
     description=description.replace(/^\s*\d{1,4}[.)-]?\s*/,"").replace(/\s+/g," ").trim();
-    if (description.length<3) description=null as unknown as string;
+    if (description.length<3) description="";
     rows.push({source_row_number:i+1,source_sheet:null,source_page:null,raw_text:line,item_code:codeMatch?.[0]??null,description:description||null,quantity:null,unit:null,unit_cost:unitCostCandidate.value,moq:null,lead_time_days:null,manufacturer:null,catalog_no:null,extraction_confidence:codeMatch?0.72:0.48});
   }
   return rows;
