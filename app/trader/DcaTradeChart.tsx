@@ -139,7 +139,7 @@ function calculateStochastic(candles: Candle[], length = 14, smooth = 3) {
     if (index < smooth - 1) return null;
     const window = values.slice(index - smooth + 1, index + 1);
     if (window.some((value) => value == null)) return null;
-    return window.reduce((sum, value) => sum + (value ?? 0), 0) / smooth;
+    return window.reduce<number>((sum, value) => sum + (value ?? 0), 0) / smooth;
   });
   const k = smoothValues(kRaw);
   const d = smoothValues(k);
@@ -384,7 +384,6 @@ export default function DcaTradeChart({
     if (showRsi && panes[1]) panes[1].setHeight(115);
     if (showStoch && panes[showRsi ? 2 : 1]) panes[showRsi ? 2 : 1].setHeight(125);
 
-    // Load deep history, but start at a useful recent view. Users can pan left or press Full history.
     const recentBars = interval === "1M" ? 120 : interval === "1w" ? 180 : interval === "1d" ? 320 : 420;
     chart.timeScale().setVisibleLogicalRange({
       from: Math.max(0, candles.length - recentBars),
