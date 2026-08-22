@@ -9,6 +9,7 @@ import TenderSourcingWorkspace from "./TenderSourcingWorkspace";
 import SupplierIntelligenceWorkspace from "./SupplierIntelligenceWorkspace";
 import SupplierContactEmailWorkspace from "./SupplierContactEmailWorkspace";
 import SupplierQuoteIntakeWorkspace from "./SupplierQuoteIntakeWorkspace";
+import SupplierQuoteExtractionWorkspace from "./SupplierQuoteExtractionWorkspace";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Operating System",
@@ -17,5 +18,5 @@ export const metadata: Metadata = {
 };
 
 export default function LabNarrativePlatformPage() {
-  return <><PlatformClient /><AutomaticTenderFeed /><TenderIntelligenceLauncher /><CatalogIntelligenceLauncher /><BidReviewWorkspace /><QuotationPricingWorkspace /><TenderSourcingWorkspace /><SupplierIntelligenceWorkspace /><SupplierContactEmailWorkspace /><SupplierQuoteIntakeWorkspace /></>;
+  return <><PlatformClient /><AutomaticTenderFeed /><TenderIntelligenceLauncher /><CatalogIntelligenceLauncher /><BidReviewWorkspace /><QuotationPricingWorkspace /><TenderSourcingWorkspace /><SupplierIntelligenceWorkspace /><SupplierContactEmailWorkspace /><SupplierQuoteIntakeWorkspace /><SupplierQuoteExtractionWorkspace /></>;
 }
