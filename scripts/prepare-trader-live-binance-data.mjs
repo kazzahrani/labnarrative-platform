@@ -198,6 +198,11 @@ source = source.replace(
 
 // Use the full Binance order rules for visual validation too, not only quantity minimums.
 source = source.replaceAll('smartUnits < minUnits', 'unitsTooSmall');
+// The broad visual replacement above must not rewrite the definition of unitsTooSmall itself.
+source = source.replace(
+  'const unitsTooSmall = smartUnits > 0 && ((minUnits > 0 && unitsTooSmall) || (minNotional > 0 && orderTotal < minNotional));',
+  'const unitsTooSmall = smartUnits > 0 && ((minUnits > 0 && smartUnits < minUnits) || (minNotional > 0 && orderTotal < minNotional));'
+);
 
 // Use live best bid/ask rather than echoing last trade price for both sides.
 source = source.replace(
