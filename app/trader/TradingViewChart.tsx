@@ -14,7 +14,6 @@ export default function TradingViewChart({ symbol, interval }: TradingViewChartP
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-
     host.replaceChildren();
 
     const widget = document.createElement("div");
@@ -35,8 +34,8 @@ export default function TradingViewChart({ symbol, interval }: TradingViewChartP
       theme: "dark",
       style: "1",
       locale: "en",
-      backgroundColor: "#121526",
-      gridColor: "rgba(110, 118, 150, 0.08)",
+      backgroundColor: "#0f1d25",
+      gridColor: "rgba(72, 103, 119, 0.13)",
       hide_top_toolbar: false,
       hide_side_toolbar: false,
       hide_legend: false,
@@ -56,11 +55,5 @@ export default function TradingViewChart({ symbol, interval }: TradingViewChartP
     return () => host.replaceChildren();
   }, [symbol, interval]);
 
-  return (
-    <div
-      ref={hostRef}
-      className={`tradingview-widget-container ${styles.tvChart}`}
-      aria-label="TradingView live candlestick chart"
-    />
-  );
+  return <div ref={hostRef} className={`tradingview-widget-container ${styles.tvChart}`} aria-label="TradingView live candlestick chart"/>;
 }
