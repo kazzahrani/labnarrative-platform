@@ -29,7 +29,7 @@ const editor = String.raw`  const DcaConditionEditor = ({ condition, index }: { 
     const unsupported = ["QFL (only long signals)", "CQS Scalping", "TradingView custom signal"].includes(condition.kind);
 
     return <div className={styles.dcaConditionCard}>
-      <div className={styles.dcaConditionTitle}><span>{dcaConditions.length > 1 ? `Condition ${index + 1}` : "Condition"}</span>{dcaConditions.length > 1 && <button onClick={() => setDcaConditions((items) => items.filter((item) => item.id !== condition.id))}>×</button>}</div>
+      <div className={styles.dcaConditionTitle}><span>{dcaConditions.length > 1 ? "Condition " + (index + 1) : "Condition"}</span>{dcaConditions.length > 1 && <button onClick={() => setDcaConditions((items) => items.filter((item) => item.id !== condition.id))}>×</button>}</div>
       <select className={styles.dcaWideSelect} value={condition.kind} onChange={(e) => { const kind = e.target.value; update({ kind, ...defaultsFor(kind) }); }}>{indicators.map((indicator) => <option key={indicator}>{indicator}</option>)}</select>
 
       {condition.kind === "RSI" && <div className={styles.dcaConditionGrid}>
