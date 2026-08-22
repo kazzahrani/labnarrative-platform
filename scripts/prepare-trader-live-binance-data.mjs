@@ -196,12 +196,26 @@ source = source.replace(
   '    if ((minUnits > 0 && smartUnits < minUnits) || (minNotional > 0 && total < minNotional)) { setNotice(`Binance minimum for ${selectedSymbol}/USDT is ${minUnits || "exchange-defined"} ${selectedSymbol} and ${minNotional || "exchange-defined"} USDT notional.`); return; }'
 );
 
-if (!source.includes("LIVE BINANCE")) {
-  source = source.replace(
-    '<div className={styles.smartUtilityToggles}>',
-    '<div className={styles.smartUtilityToggles}><span style={{ color: marketDataLive ? "#20c7b7" : "#ff6b7a", fontSize: 11, fontWeight: 800 }}>{marketDataLive ? "● LIVE BINANCE" : "● MARKET DATA OFFLINE"}</span>'
-  );
-}
+// Use the full Binance order rules for visual validation too, not only quantity minimums.
+source = source.replaceAll('smartUnits < minUnits', 'unitsTooSmall');
+
+// Use live best bid/ask rather than echoing last trade price for both sides.
+source = source.replace(
+  '<p className={styles.bidAsk}><b>Bid:</b> {money(selectedPrice)} <b>Ask:</b> {money(selectedPrice)}</p>',
+  '<p className={styles.bidAsk}><b>Bid:</b> {money(selectedMarket?.bid ?? selectedPrice)} <b>Ask:</b> {money(selectedMarket?.ask ?? selectedPrice)}</p>'
+);
+
+// Make TradingView use the exact Binance exchange symbol returned by exchangeInfo.
+source = source.replace(
+  'symbol={tvSymbol(selectedSymbol)}',
+  'symbol={"BINANCE:" + (selectedMarket?.exchangeSymbol ?? selectedSymbol + "USDT")}'
+);
+
+// Visible live-data state in the SmartTrade utility bar.
+source = source.replace(
+  'const UtilityBar = () => <div className={styles.smartToggleBar}><div>',
+  'const UtilityBar = () => <div className={styles.smartToggleBar}><span title={lastMarketUpdate ? `Last update: ${lastMarketUpdate}` : marketDataSource} style={{ color: marketDataLive ? "#20c7b7" : "#ff6b7a", fontSize: 11, fontWeight: 800, whiteSpace: "nowrap" }}>{marketDataLive ? "● LIVE BINANCE" : "● MARKET DATA OFFLINE"}</span><div>'
+);
 
 fs.writeFileSync(traderPath, source);
 console.log("Prepared live Binance Spot market data integration for trader UI.");
