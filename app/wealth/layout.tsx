@@ -1,3 +1,4 @@
+import WealthArabicNumberNormalizer from "./WealthArabicNumberNormalizer";
 import "./wealth-font.css";
 
 export default function WealthLayout({
@@ -5,5 +6,9 @@ export default function WealthLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <div className="wealth-tahoma">{children}</div>;
+  return (
+    <div className="wealth-tahoma">
+      <WealthArabicNumberNormalizer>{children}</WealthArabicNumberNormalizer>
+    </div>
+  );
 }
