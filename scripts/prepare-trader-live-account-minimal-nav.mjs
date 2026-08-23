@@ -66,6 +66,8 @@ source = source.replaceAll('<div className={styles.cardHeader}><h2>Statistics</h
 source = source.replaceAll('<div className={styles.exchangeCardHead}><span className={styles.exchangeIcon}>◆</span><div><h3>Paper Account 1001863</h3><p>Binance Spot account simulator</p></div><button>↻</button></div>', '<div className={styles.exchangeCardHead}><span className={styles.exchangeIcon}>◆</span><div><h3>Paper Account 1001863</h3><p>Binance Spot account simulator</p></div><button type="button" onClick={() => { void refreshDcaMarketsNow(); }}>↻</button></div>');
 
 // Keep only the four product areas requested by the user in the sidebar.
+// DCA uses exclusive selection: the parent is active only on its main/config/detail views,
+// while Active trades or Closed trades alone are highlighted on their respective pages.
 const sidebarStart = source.indexOf('    <aside className={styles.sidebar}><nav className={styles.nav}>');
 const sidebarEndToken = '</nav><div className={styles.sidebarPromo}>';
 const promoStart = source.indexOf(sidebarEndToken, sidebarStart);
@@ -76,7 +78,7 @@ if (sidebarStart >= 0 && promoStart > sidebarStart && asideEnd > promoStart) {
     '      <button className={section === "Dashboard" ? styles.navActive : ""} onClick={() => openSection("Dashboard")}><span>{navGlyph("Dashboard")}</span>Dashboard</button>',
     '      <button className={section === "My Portfolio" ? styles.navActive : ""} onClick={() => openSection("My Portfolio")}><span>{navGlyph("My Portfolio")}</span>My Portfolio</button>',
     '      <button className={section === "Smart Trades" ? styles.navActive : ""} onClick={() => openSection("Smart Trades")}><span>{navGlyph("Smart Trades")}</span>SmartTrade</button>',
-    '      <button className={section === "DCA bots" ? styles.navActive : ""} onClick={() => openSection("DCA bots")}><span>{navGlyph("DCA bots")}</span>DCA Bot<small>⌄</small></button>',
+    '      <button className={section === "DCA bots" && dcaView !== "active" && dcaView !== "closed" ? styles.navActive : ""} onClick={() => { setSection("DCA bots"); setDcaView("list"); }}><span>{navGlyph("DCA bots")}</span>DCA Bot<small>⌄</small></button>',
     '      {section === "DCA bots" && <div className={styles.dcaSubnav}><button className={dcaView === "active" ? styles.dcaSubnavActive : ""} onClick={() => setDcaView("active")}>Active trades <span>{activeDcaTrades.length}</span></button><button className={dcaView === "closed" ? styles.dcaSubnavActive : ""} onClick={() => setDcaView("closed")}>Closed trades <span>{closedDcaTrades.length}</span></button></div>}',
     '    </nav></aside>',
   ].join('\n');
@@ -89,6 +91,8 @@ if (source.includes('>AI Assistant<') || source.includes('>Strategy gallery<') |
 }
 if (!source.includes('const paperRealizedPnl = dcaRealized;')) throw new Error('Unified live paper account metrics were not installed.');
 if (!source.includes('void refreshDcaMarketsNow();')) throw new Error('Live account refresh handlers are missing.');
+if (!source.includes('setDcaView("list")')) throw new Error('DCA parent navigation does not return to the main bot page.');
+if (!source.includes('dcaView !== "active" && dcaView !== "closed"')) throw new Error('DCA sidebar selection is not exclusive.');
 
 fs.writeFileSync(traderPath, source);
-console.log('Unified live paper account statistics and reduced trader sidebar to Dashboard, Portfolio, SmartTrade and DCA Bot.');
+console.log('Unified live paper account statistics and installed exclusive DCA sidebar navigation.');
