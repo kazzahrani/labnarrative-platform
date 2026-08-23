@@ -97,7 +97,7 @@ function PerformanceChart({ portfolio, benchmarks }: { portfolio: SeriesPoint[];
   if (!portfolio.length || !all.length) return <div className={styles.empty}>لا توجد بيانات تاريخية كافية لهذه الفترة.</div>;
   const width = 920, height = 320, padX = 30, padY = 24;
   const values = all.flatMap((series) => series.map((point) => point.value));
-  const min = Math.min(...values), max = Math.max(...values);
+  const min = Math.min(0, ...values), max = Math.max(0, ...values);
   const span = Math.max(max - min, 1);
   const x = (index: number, length: number) => padX + (index / Math.max(length - 1, 1)) * (width - padX * 2);
   const y = (value: number) => padY + ((max - value) / span) * (height - padY * 2);
@@ -117,9 +117,10 @@ function PerformanceChart({ portfolio, benchmarks }: { portfolio: SeriesPoint[];
     setHover(Math.round(ratio * (portfolio.length - 1)));
   };
   return <div>
-    <div className={styles.chartReadout}><span>{selectedDate ? new Intl.DateTimeFormat("ar-SA-u-nu-arab", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${selectedDate}T12:00:00`)) : "—"}</span><b style={{ color: COLORS.portfolio }}>المحفظة {selectedPortfolio ? fmt(selectedPortfolio, 1) : "—"}</b>{benchmarks.map((benchmark) => <b key={benchmark.key} style={{ color: COLORS[benchmark.key as keyof typeof COLORS] || "#aaa" }}>{benchmark.name} {selectedBenchmark(benchmark) ? fmt(selectedBenchmark(benchmark)!, 1) : "—"}</b>)}</div>
+    <div className={styles.chartReadout}><span>{selectedDate ? new Intl.DateTimeFormat("ar-SA-u-nu-arab", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${selectedDate}T12:00:00`)) : "—"}</span><b style={{ color: COLORS.portfolio }}>المحفظة {selectedPortfolio !== undefined ? pct(selectedPortfolio) : "—"}</b>{benchmarks.map((benchmark) => { const value = selectedBenchmark(benchmark); return <b key={benchmark.key} style={{ color: COLORS[benchmark.key as keyof typeof COLORS] || "#aaa" }}>{benchmark.name} {value !== null ? pct(value) : "—"}</b>; })}</div>
     <svg viewBox={`0 0 ${width} ${height}`} className={styles.performanceChart} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
       {[0, .25, .5, .75, 1].map((fraction) => <line key={fraction} x1={padX} x2={width - padX} y1={padY + fraction * (height - padY * 2)} y2={padY + fraction * (height - padY * 2)} className={styles.gridLine} />)}
+      <line x1={padX} x2={width - padX} y1={y(0)} y2={y(0)} className={styles.gridLine} style={{ opacity: .8, strokeWidth: 1.5 }} />
       <path d={path(portfolio)} className={styles.portfolioLine} />
       {benchmarks.map((benchmark) => benchmark.points.length > 1 && <path key={benchmark.key} d={path(benchmark.points)} className={styles.benchmarkLine} style={{ stroke: COLORS[benchmark.key as keyof typeof COLORS] || "#999" }} />)}
       {hover !== null && <line x1={x(hoverIndex, portfolio.length)} x2={x(hoverIndex, portfolio.length)} y1={padY} y2={height - padY} className={styles.cursorLine} />}
@@ -216,7 +217,7 @@ export default function AnalyticsClient() {
   return <main className={styles.page} dir="rtl">
     <aside className={styles.sidebar}>
       <div><div className={styles.brand}>ثروة</div><div className={styles.brandSub}>{paper ? "محفظة تجريبية" : "إدارة الثروة"}</div></div>
-      <nav className={styles.nav}><Link href={`/wealth${suffix}`} className={styles.navItem}>نظرة عامة</Link><Link href={`/wealth/assets${suffix}`} className={styles.navItem}>الأصول</Link><Link href={`/wealth/income${suffix}`} className={styles.navItem}>الدخل</Link><Link href={`/wealth/analytics${suffix}`} className={`${styles.navItem} ${styles.active}`}>التحليلات</Link><span className={styles.navItem}>الالتزام الشرعي</span><span className={styles.navItem}>الحسابات</span></nav>
+      <nav className={styles.nav}><Link href={`/wealth${suffix}`} className={styles.navItem}>نظرة عامة</Link><Link href={`/wealth/assets${suffix}`} className={styles.navItem}>الأصول</Link><Link href={`/wealth/income${suffix}`} className={styles.navItem}>الدخل</Link><Link href={`/wealth/analytics${suffix}`} className={`${styles.navItem} ${styles.active}`}>التحليلات</Link><Link href={`/wealth/shariah${suffix}`} className={styles.navItem}>الالتزام الشرعي</Link><span className={styles.navItem}>الحسابات</span></nav>
     </aside>
     <section className={styles.workspace}>
       <header className={styles.topbar}><div><p>{paper ? "بيئة الاختبار" : "المحفظة الحقيقية"}</p><h1>التحليلات</h1></div><div className={styles.actions}><Link href={paper ? "/wealth/analytics" : "/wealth/analytics?portfolio=paper"} className={styles.ghost}>{paper ? "محفظتي الحقيقية" : "محفظة تجريبية"}</Link><Link href={paper ? "/wealth/assets?portfolio=paper&manage=1" : "/wealth/assets?manage=1"} className={styles.primary}>إدارة الأصول</Link></div></header>
@@ -233,7 +234,7 @@ export default function AnalyticsClient() {
         <section className={styles.performancePanel}>
           <div className={styles.panelHead}><div><small>الأداء المقارن</small><h2>المحفظة مقابل السوق</h2></div><div className={styles.ranges}>{Object.keys(RANGE_LABELS).map((key) => <button type="button" key={key} onClick={() => setRange(key)} className={range === key ? styles.rangeActive : ""}>{RANGE_LABELS[key]}</button>)}</div></div>
           {analyticsLoading ? <div className={styles.chartLoading}>جاري جلب الأسعار التاريخية…</div> : analytics ? <PerformanceChart portfolio={analytics.portfolio} benchmarks={analytics.benchmarks} /> : <div className={styles.empty}>لا توجد بيانات.</div>}
-          <div className={styles.methodNote}>المقارنة تبدأ من 100. المصدر الحالي: Yahoo Finance historical fallback. مؤشر السوق السعودي يستخدم TASI.</div>
+          <div className={styles.methodNote}>كل السلاسل تبدأ من 0٪، ثم تعرض نسبة التغير منذ بداية الفترة. المصدر الحالي تاريخ سوقي متأخر لأغراض التطوير.</div>
         </section>
 
         <section className={styles.visualGrid}>
