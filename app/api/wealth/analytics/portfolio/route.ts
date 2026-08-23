@@ -74,7 +74,7 @@ async function fetchYahoo(ticker: string, range: string, interval: string): Prom
 function normalizeSeries(points: SeriesPoint[]) {
   if (!points.length || points[0].value <= 0) return [];
   const base = points[0].value;
-  return points.map((point) => ({ date: point.date, value: (point.value / base) * 100 }));
+  return points.map((point) => ({ date: point.date, value: (point.value / base - 1) * 100 }));
 }
 
 function maxDrawdown(points: SeriesPoint[]) {
