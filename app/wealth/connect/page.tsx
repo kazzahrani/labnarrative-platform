@@ -30,8 +30,10 @@ const directSources: SourceCard[] = [
     name: "Binance",
     category: "أصول رقمية",
     status: "ربط مباشر",
-    description: "عرض وتحليل الأصول الرقمية فقط داخل منصة الثروة، دون تداول أو سحب.",
-    methods: ["API قراءة فقط", "CSV"],
+    description: "ربط فعلي لأرصدة Spot بصلاحية قراءة فقط، دون تداول أو سحب أو تحويل.",
+    methods: ["API قراءة فقط", "Vault مشفر"],
+    href: "/wealth/connect/binance",
+    featured: true,
   },
 ];
 
@@ -43,7 +45,6 @@ const importSources: SourceCard[] = [
     description: "ابدأ من محفظتك الحالية في عوائد: أسهم وصناديق ومرابحات ضمن مصدر واحد، مع مسار مخصص للاستيراد والمراجعة.",
     methods: ["كشف / ملف", "إدخال يدوي", "ربط رسمي لاحقًا"],
     href: "/wealth/connect/awaed",
-    featured: true,
   },
   {
     name: "الراجحي المالية",
@@ -134,17 +135,7 @@ const manualSources: SourceCard[] = [
   },
 ];
 
-function SourceSection({
-  eyebrow,
-  title,
-  description,
-  cards,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  cards: SourceCard[];
-}) {
+function SourceSection({ eyebrow, title, description, cards }: { eyebrow: string; title: string; description: string; cards: SourceCard[] }) {
   return (
     <section className={styles.sourceSection}>
       <div className={styles.sectionIntro}>
@@ -156,20 +147,13 @@ function SourceSection({
         {cards.map((card) => (
           <article className={`${styles.sourceCard} ${card.featured ? styles.featuredCard : ""}`} key={card.name}>
             <div className={styles.sourceTop}>
-              <div>
-                <small>{card.category}</small>
-                <h3>{card.name}</h3>
-              </div>
+              <div><small>{card.category}</small><h3>{card.name}</h3></div>
               <span className={styles.status}>{card.status}</span>
             </div>
             <p>{card.description}</p>
-            <div className={styles.methods}>
-              {card.methods.map((method) => <span key={method}>{method}</span>)}
-            </div>
+            <div className={styles.methods}>{card.methods.map((method) => <span key={method}>{method}</span>)}</div>
             {card.href ? (
-              <Link href={card.href} className={`${styles.chooseButton} ${card.featured ? styles.featuredButton : ""}`}>
-                ابدأ بمحفظتي
-              </Link>
+              <Link href={card.href} className={`${styles.chooseButton} ${card.featured ? styles.featuredButton : ""}`}>{card.name === "Binance" ? "ربط Binance" : "فتح"}</Link>
             ) : (
               <button type="button" className={styles.chooseButton}>اختيار</button>
             )}
@@ -181,8 +165,8 @@ function SourceSection({
 }
 
 export const metadata = {
-  title: "إضافة أصل أو حساب — ثروة",
-  description: "أضف حساباتك وأصولك إلى لوحة الثروة السعودية عبر الربط المباشر أو رفع كشف أو الإدخال اليدوي.",
+  title: "إدارة الأصول والحسابات — ثروة",
+  description: "أضف أو اربط حساباتك وأصولك في ثروة.",
 };
 
 export default function WealthConnectPage() {
@@ -192,69 +176,30 @@ export default function WealthConnectPage() {
         <header className={styles.header}>
           <div className={styles.headerLine}>
             <Link href="/wealth" className={styles.back}>العودة إلى لوحة الثروة</Link>
-            <span className={styles.pill}>إضافة أصل أو حساب</span>
+            <span className={styles.pill}>إدارة الأصول</span>
           </div>
-
           <section className={styles.hero}>
             <span className={styles.eyebrow}>ثروة</span>
-            <h1>أضف أصولك وحساباتك بطريقة بسيطة جدًا.</h1>
-            <p>
-              اختر المصدر، ثم استخدم أفضل طريقة متاحة: ربط مباشر، رفع كشف، أو إدخال يدوي.
-              الهدف أن تكتمل صورة ثروتك في مكان واحد دون تعقيد.
-            </p>
-            <div className={styles.heroActions}>
-              <a href="#sources" className={styles.primary}>ابدأ الإضافة</a>
-              <Link href="/wealth" className={styles.secondary}>رجوع إلى المنصة</Link>
-            </div>
+            <h1>اربط حساباتك وأكمل صورة ثروتك.</h1>
+            <p>نبدأ الآن بالروابط الفعلية الآمنة، ونستخدم الكشوف أو الإدخال اليدوي فقط عندما لا يتوفر API مناسب.</p>
+            <div className={styles.heroActions}><a href="#sources" className={styles.primary}>الحسابات والمصادر</a><Link href="/wealth/accounts" className={styles.secondary}>الحسابات</Link></div>
           </section>
         </header>
 
         <section className={styles.flow}>
-          <div className={styles.flowIntro}>
-            <span className={styles.eyebrow}>كيف تعمل التجربة</span>
-            <h2>ثلاث خطوات فقط.</h2>
-            <p>المنصة عملية من اليوم الأول حتى قبل اكتمال كل التكاملات الرسمية مع الجهات.</p>
-          </div>
+          <div className={styles.flowIntro}><span className={styles.eyebrow}>الأساس</span><h2>ربط، مزامنة، ثم تحقق.</h2><p>كل اتصال يدخل عبر محرك واحد مع سجل مزامنة وفصل كامل بين الحسابات.</p></div>
           <div className={styles.steps}>
-            <article><span>٠١</span><h3>اختر المصدر</h3><p>وسيط، صندوق، صك، عقار، نقد، كريبتو أو أصل خاص.</p></article>
-            <article><span>٠٢</span><h3>اختر طريقة الإضافة</h3><p>ربط مباشر حيث يتوفر، أو كشف حساب، أو إدخال يدوي.</p></article>
-            <article><span>٠٣</span><h3>راجع وأضف</h3><p>ستدخل الأصول إلى صافي الثروة والتوزيع والدخل والتحليلات.</p></article>
+            <article><span>٠١</span><h3>اربط المصدر</h3><p>بصلاحيات القراءة فقط عندما يكون الربط المباشر متاحًا.</p></article>
+            <article><span>٠٢</span><h3>زامن البيانات</h3><p>الحساب والأرصدة والأسعار تدخل إلى نفس نموذج البيانات.</p></article>
+            <article><span>٠٣</span><h3>راجع النتيجة</h3><p>أي خطأ أو أصل غير مسعّر يظهر في سجل المزامنة بدل إخفائه.</p></article>
           </div>
         </section>
 
         <div id="sources" className={styles.sections}>
-          <SourceSection
-            eyebrow="ربط مباشر"
-            title="الحسابات التي نبدأ بها أولًا"
-            description="مصادر مناسبة للربط المباشر أو القراءة الآلية في المراحل الأولى."
-            cards={directSources}
-          />
-          <SourceSection
-            eyebrow="رفع كشف"
-            title="أضف محافظك السعودية الحالية الآن"
-            description="لا ننتظر كل APIs الرسمية. الكشف يسمح لنا بإدخال المحفظة ثم متابعة قيمتها."
-            cards={importSources}
-          />
-          <SourceSection
-            eyebrow="إدخال يدوي"
-            title="أكمل بقية صورة ثروتك"
-            description="للأصول الخاصة أو البسيطة التي لا تحتاج اتصالًا تقنيًا مع جهة خارجية."
-            cards={manualSources}
-          />
+          <SourceSection eyebrow="ربط مباشر" title="الروابط الفعلية" description="Binance يعمل الآن؛ بقية الروابط سنفعلها على نفس المحرك بعد ثباته." cards={directSources} />
+          <SourceSection eyebrow="رفع كشف" title="مصادر بدون ربط مباشر حتى الآن" description="نستخدم الكشف أو الإدخال اليدوي فقط كحل مرحلي." cards={importSources} />
+          <SourceSection eyebrow="إدخال يدوي" title="الأصول التي لا تحتاج API" description="للعقار والذهب والسيولة والأصول الخاصة." cards={manualSources} />
         </div>
-
-        <section className={styles.preview}>
-          <div>
-            <span className={styles.eyebrow}>المعاينة</span>
-            <h2>كل مصدر ينتهي في لوحة واحدة.</h2>
-            <p>بعد الإضافة، تظهر الأصول ضمن صافي الثروة وتوزيعها والدخل والسيولة، ثم نضيف لاحقًا طبقة الشرعية والزكاة.</p>
-          </div>
-          <div className={styles.previewList}>
-            <div><strong>عوائد</strong><span>استيراد محفظة</span><b>المصدر الأول</b></div>
-            <div><strong>دراية</strong><span>ربط مباشر</span><b>متصل</b></div>
-            <div><strong>الراجحي المالية</strong><span>كشف PDF</span><b>جاهز للمراجعة</b></div>
-          </div>
-        </section>
       </div>
     </main>
   );
