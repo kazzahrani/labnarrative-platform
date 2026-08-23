@@ -2,6 +2,8 @@
 
 import { browserSupabase } from "@/lib/supabase-browser";
 
+export type PortfolioKind = "real" | "paper";
+
 export type SaudiMarketHolding = {
   id: string;
   asset_type: string | null;
@@ -9,6 +11,7 @@ export type SaudiMarketHolding = {
   quantity: number | string | null;
   unit_price?: number | string | null;
   market_value: number | string | null;
+  portfolio_kind?: PortfolioKind | null;
 };
 
 export type SaudiQuote = {
@@ -50,16 +53,10 @@ function isSaudiListedHolding(holding: SaudiMarketHolding) {
   return (holding.asset_type === "saudi_stock" || holding.asset_type === "reit") && Boolean(normalizeSaudiSymbol(holding.symbol));
 }
 
-export async function refreshSaudiMarketPrices(
-  userId: string,
-  holdings: SaudiMarketHolding[],
-): Promise<SaudiMarketRefreshResult> {
+export async function refreshSaudiMarketPrices(userId: string, holdings: SaudiMarketHolding[]): Promise<SaudiMarketRefreshResult> {
   const candidates = holdings.filter(isSaudiListedHolding);
   const symbols = Array.from(new Set(candidates.map((holding) => normalizeSaudiSymbol(holding.symbol)).filter(Boolean)));
-
-  if (!symbols.length) {
-    return { updated: 0, provider: "none", temporaryFallback: false, quotes: [], refreshedAt: new Date().toISOString() };
-  }
+  if (!symbols.length) return { updated: 0, provider: "none", temporaryFallback: false, quotes: [], refreshedAt: new Date().toISOString() };
 
   const response = await fetch("/api/wealth/market/saudi", {
     method: "POST",
@@ -67,13 +64,9 @@ export async function refreshSaudiMarketPrices(
     body: JSON.stringify({ symbols }),
     cache: "no-store",
   });
-
   if (!response.ok) throw new Error("تعذر جلب أسعار السوق السعودي.");
-  const payload = await response.json() as {
-    quotes?: SaudiQuote[];
-    provider?: string;
-    temporaryFallback?: boolean;
-  };
+
+  const payload = await response.json() as { quotes?: SaudiQuote[]; provider?: string; temporaryFallback?: boolean };
   const quotes = Array.isArray(payload.quotes) ? payload.quotes : [];
   const quoteMap = new Map(quotes.map((quote) => [normalizeSaudiSymbol(quote.symbol), quote]));
 
@@ -90,15 +83,12 @@ export async function refreshSaudiMarketPrices(
     const currentPrice = numeric(holding.unit_price);
     const currentMarketValue = numeric(holding.market_value);
     const changed = Math.abs(currentPrice - price) > 0.000001 || Math.abs(currentMarketValue - marketValue) > 0.000001;
+    const kind: PortfolioKind = holding.portfolio_kind === "paper" ? "paper" : "real";
 
     if (changed) {
       const { error: updateError } = await browserSupabase
         .from("wealth_holdings")
-        .update({
-          unit_price: price,
-          market_value: marketValue,
-          as_of_date: priceDate,
-        })
+        .update({ unit_price: price, market_value: marketValue, as_of_date: priceDate })
         .eq("id", holding.id)
         .eq("user_id", userId);
       if (updateError) throw updateError;
@@ -117,51 +107,34 @@ export async function refreshSaudiMarketPrices(
         is_delayed: Boolean(quote.isDelayed),
         price_date: priceDate,
         observed_at: quote.observedAt || new Date().toISOString(),
-        metadata: {
-          previous_close: quote.previousClose,
-          change_percent: quote.changePercent,
-        },
+        portfolio_kind: kind,
+        metadata: { previous_close: quote.previousClose, change_percent: quote.changePercent },
       }, { onConflict: "user_id,holding_id,price_date" });
     if (historyError) throw historyError;
   }
 
-  if (updated > 0) {
-    const { data: freshHoldings, error: freshError } = await browserSupabase
-      .from("wealth_holdings")
-      .select("market_value,asset_type")
-      .eq("user_id", userId);
-    if (freshError) throw freshError;
+  const { data: freshHoldings, error: freshError } = await browserSupabase
+    .from("wealth_holdings")
+    .select("market_value,asset_type,portfolio_kind")
+    .eq("user_id", userId);
+  if (freshError) throw freshError;
 
-    const rows = freshHoldings ?? [];
+  const today = new Date().toISOString().slice(0, 10);
+  for (const kind of ["real", "paper"] as PortfolioKind[]) {
+    const rows = (freshHoldings ?? []).filter((row) => (row.portfolio_kind === "paper" ? "paper" : "real") === kind);
+    if (!rows.length) continue;
     const netWorth = rows.reduce((sum, row) => sum + numeric(row.market_value), 0);
-    const liquidAssets = rows
-      .filter((row) => row.asset_type === "cash")
-      .reduce((sum, row) => sum + numeric(row.market_value), 0);
+    const liquidAssets = rows.filter((row) => row.asset_type === "cash").reduce((sum, row) => sum + numeric(row.market_value), 0);
     const allocation: Record<string, number> = {};
     for (const row of rows) {
       const key = row.asset_type || "other";
       allocation[key] = (allocation[key] ?? 0) + numeric(row.market_value);
     }
-
-    const today = new Date().toISOString().slice(0, 10);
     const { error: snapshotError } = await browserSupabase
       .from("wealth_snapshots")
-      .upsert({
-        user_id: userId,
-        snapshot_date: today,
-        net_worth: netWorth,
-        liquid_assets: liquidAssets,
-        currency: "SAR",
-        allocation,
-      }, { onConflict: "user_id,snapshot_date" });
+      .upsert({ user_id: userId, snapshot_date: today, net_worth: netWorth, liquid_assets: liquidAssets, currency: "SAR", allocation, portfolio_kind: kind }, { onConflict: "user_id,snapshot_date,portfolio_kind" });
     if (snapshotError) throw snapshotError;
   }
 
-  return {
-    updated,
-    provider: payload.provider || "unknown",
-    temporaryFallback: Boolean(payload.temporaryFallback),
-    quotes,
-    refreshedAt: new Date().toISOString(),
-  };
+  return { updated, provider: payload.provider || "unknown", temporaryFallback: Boolean(payload.temporaryFallback), quotes, refreshedAt: new Date().toISOString() };
 }
