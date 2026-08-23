@@ -22,13 +22,14 @@ function normalizeSymbol(value: unknown) {
   return normalizeDigits(value).trim().toUpperCase().replace(/\.SR$/, "").replace(/[^0-9A-Z.-]/g, "");
 }
 
+function normalizeSymbols(values: unknown[]) {
+  return Array.from(new Set(values.map(normalizeSymbol).filter(Boolean))).slice(0, 30);
+}
+
 async function fetchSahmk(symbol: string, apiKey: string): Promise<Quote | null> {
   try {
     const response = await fetch(`https://api.sahmk.sa/api/v1/quote/${encodeURIComponent(symbol)}/`, {
-      headers: {
-        "X-API-Key": apiKey,
-        Accept: "application/json",
-      },
+      headers: { "X-API-Key": apiKey, Accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
@@ -57,10 +58,7 @@ async function fetchYahooDelayed(symbol: string): Promise<Quote | null> {
     const ticker = `${symbol}.SR`;
     const endpoint = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=5d&includePrePost=false`;
     const response = await fetch(endpoint, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "LabNarrative-Wealth-MVP/0.1",
-      },
+      headers: { Accept: "application/json", "User-Agent": "LabNarrative-Wealth-MVP/0.1" },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
@@ -83,13 +81,36 @@ async function fetchYahooDelayed(symbol: string): Promise<Quote | null> {
       currency: typeof meta?.currency === "string" ? meta.currency : "SAR",
       source: "Yahoo Finance delayed fallback",
       isDelayed: true,
-      observedAt: Number.isFinite(marketTime) && marketTime > 0
-        ? new Date(marketTime * 1000).toISOString()
-        : new Date().toISOString(),
+      observedAt: Number.isFinite(marketTime) && marketTime > 0 ? new Date(marketTime * 1000).toISOString() : new Date().toISOString(),
     };
   } catch {
     return null;
   }
+}
+
+async function quoteResponse(symbols: string[]) {
+  if (!symbols.length) return NextResponse.json({ quotes: [], provider: "none" }, { headers: { "Cache-Control": "no-store" } });
+  const sahmkKey = process.env.SAHMK_API_KEY?.trim();
+  const quotes = await Promise.all(symbols.map(async (symbol) => {
+    if (sahmkKey) {
+      const quote = await fetchSahmk(symbol, sahmkKey);
+      if (quote) return quote;
+    }
+    return fetchYahooDelayed(symbol);
+  }));
+  const validQuotes = quotes.filter((quote): quote is Quote => Boolean(quote));
+  return NextResponse.json({
+    quotes: validQuotes,
+    requested: symbols.length,
+    returned: validQuotes.length,
+    provider: sahmkKey ? "sahmk-with-yahoo-fallback" : "yahoo-delayed-fallback",
+    temporaryFallback: !sahmkKey,
+  }, { headers: { "Cache-Control": "no-store" } });
+}
+
+export async function GET(request: NextRequest) {
+  const symbols = normalizeSymbols((request.nextUrl.searchParams.get("symbols") || "").split(","));
+  return quoteResponse(symbols);
 }
 
 export async function POST(request: NextRequest) {
@@ -99,30 +120,6 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
-
-  const rawSymbols = Array.isArray((body as { symbols?: unknown[] })?.symbols)
-    ? (body as { symbols: unknown[] }).symbols
-    : [];
-  const symbols = Array.from(new Set(rawSymbols.map(normalizeSymbol).filter(Boolean))).slice(0, 30);
-  if (!symbols.length) return NextResponse.json({ quotes: [], provider: "none" });
-
-  const sahmkKey = process.env.SAHMK_API_KEY?.trim();
-  const quotes = await Promise.all(symbols.map(async (symbol) => {
-    if (sahmkKey) {
-      const quote = await fetchSahmk(symbol, sahmkKey);
-      if (quote) return quote;
-    }
-    return fetchYahooDelayed(symbol);
-  }));
-
-  const validQuotes = quotes.filter((quote): quote is Quote => Boolean(quote));
-  return NextResponse.json({
-    quotes: validQuotes,
-    requested: symbols.length,
-    returned: validQuotes.length,
-    provider: sahmkKey ? "sahmk-with-yahoo-fallback" : "yahoo-delayed-fallback",
-    temporaryFallback: !sahmkKey,
-  }, {
-    headers: { "Cache-Control": "no-store" },
-  });
+  const rawSymbols = Array.isArray((body as { symbols?: unknown[] })?.symbols) ? (body as { symbols: unknown[] }).symbols : [];
+  return quoteResponse(normalizeSymbols(rawSymbols));
 }
