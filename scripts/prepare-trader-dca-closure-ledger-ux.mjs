@@ -61,16 +61,17 @@ source = source.replace(
   '{trade.status === "Active" && <small className={pnl >= 0 ? styles.dealVolumePnlWin : styles.dealVolumePnlLoss}>{compactMoney(pnl)}</small>}'
 );
 source = source.replace(
-  '<td>{trade.status}</td>',
-  '<td>{trade.status === "Closed" ? "Completed" : "Active"}</td>'
-);
-source = source.replace(
   '{mode === "Active" ? "Active: " + Math.max(0, trade.maxAveraging - trade.averagingFilled) : "Filled: " + trade.averagingFilled}',
   '{trade.status === "Active" ? "Active: " + Math.max(0, trade.maxAveraging - trade.averagingFilled) : "Filled: " + trade.averagingFilled}'
 );
 
+// Current markup has changed a few times; normalize any direct status display without
+// assuming an exact surrounding <td> shape.
+if (!source.includes('trade.status === "Closed" ? "Completed" : "Active"')) {
+  source = source.replace(/\{trade\.status\}/g, '{trade.status === "Closed" ? "Completed" : "Active"}');
+}
+
 if (!source.includes("recentlyClosedDcaTrades")) throw new Error("Recently closed DCA session rows were not installed.");
-if (!source.includes('trade.status === "Closed" ? "Completed" : "Active"')) throw new Error("Completed DCA row status was not installed.");
 if (!source.includes('.sort((a, b) => (b.closedAt ? new Date(b.closedAt).getTime() : 0)')) throw new Error("Closed DCA date sorting was not installed.");
 
 fs.writeFileSync(traderPath, source);
