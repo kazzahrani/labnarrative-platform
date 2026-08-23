@@ -2,3 +2,59 @@
 .wealth-tahoma * {
   font-family: Tahoma, Arial, sans-serif !important;
 }
+
+/* Tharwa brand mark: dark theme = white tile + dark ث dots. */
+.wealth-brand-with-mark {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 9px;
+  direction: rtl;
+}
+
+.wealth-brand-mark {
+  --wealth-mark-bg: #f7f7f5;
+  --wealth-mark-dot: #222222;
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 7px;
+  background: var(--wealth-mark-bg);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.wealth-brand-mark > i {
+  position: absolute;
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--wealth-mark-dot);
+}
+
+.wealth-brand-mark > i:nth-child(1) {
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.wealth-brand-mark > i:nth-child(2) {
+  top: 17px;
+  left: 8px;
+}
+
+.wealth-brand-mark > i:nth-child(3) {
+  top: 17px;
+  right: 8px;
+}
+
+/* Ready for a future light platform theme: dark tile + white dots. */
+[data-wealth-theme="light"] .wealth-brand-mark,
+.wealth-theme-light .wealth-brand-mark,
+[data-theme="light"] .wealth-tahoma .wealth-brand-mark {
+  --wealth-mark-bg: #222222;
+  --wealth-mark-dot: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
