@@ -3,7 +3,9 @@
 import { useEffect } from "react";
 
 const ROUTES: Record<string, string> = {
+  "الدخل": "/wealth/income",
   "التحليلات": "/wealth/analytics",
+  "الالتزام الشرعي": "/wealth/shariah",
 };
 
 export default function WealthNavEnhancer() {
