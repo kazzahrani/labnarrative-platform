@@ -77,6 +77,53 @@ source = source.replace(
   '            activeKeys.add(key);\n            activeForBot += 1;\n            availableCapital -= bot.baseOrder;'
 );
 
+// IMPORTANT: keep the scanner alive while trade marks and market prices update.
+// Previously the evaluator depended on dcaTrades/markets, so every 5-second mark-to-market
+// update cancelled an in-progress All-coins scan. A closed trade could therefore free a slot
+// while the scanner kept restarting before reaching another qualifying pair.
+if (!source.includes("DCA SCANNER LIVE STATE REFS")) {
+  if (!source.includes("useRef")) {
+    source = source.replace(
+      'import { useEffect, useMemo, useState } from "react";',
+      'import { useEffect, useMemo, useRef, useState } from "react";'
+    );
+  }
+  source = source.replace(
+    '  const [dcaTrades, setDcaTrades] = useState<DcaTrade[]>([]);',
+    '  const [dcaTrades, setDcaTrades] = useState<DcaTrade[]>([]);\n  // DCA SCANNER LIVE STATE REFS\n  const dcaTradesRef = useRef<DcaTrade[]>([]);\n  const dcaMarketsRef = useRef<Market[]>([]);'
+  );
+
+  const persistenceAnchor = '  useEffect(() => { localStorage.setItem("labnarrative-dca-trades-v1", JSON.stringify(dcaTrades)); }, [dcaTrades]);';
+  if (source.includes(persistenceAnchor)) {
+    source = source.replace(
+      persistenceAnchor,
+      persistenceAnchor + '\n  useEffect(() => { dcaTradesRef.current = dcaTrades; }, [dcaTrades]);\n  useEffect(() => { dcaMarketsRef.current = markets; }, [markets]);'
+    );
+  }
+
+  const engineMarker = source.indexOf('  // DCA PAPER ENGINE V1');
+  const evalStart = source.indexOf('  useEffect(() => {', engineMarker);
+  const manageStart = source.indexOf('  useEffect(() => {\n    let cancelled = false;\n    let busy = false;\n    const manageTrades = async () => {', evalStart);
+  if (engineMarker >= 0 && evalStart >= 0 && manageStart > evalStart) {
+    let evaluator = source.slice(evalStart, manageStart);
+    evaluator = evaluator.replaceAll('dcaTrades.filter(', 'dcaTradesRef.current.filter(');
+    evaluator = evaluator.replace(
+      'const pairUniverse = dcaBotPairSymbols(bot).map((symbol) => symbol + "/USDT");',
+      'const pairUniverse = bot.allPairs\n            ? dcaMarketsRef.current.map((market) => market.symbol + "/USDT")\n            : Array.from(new Set((bot.pairs?.length ? bot.pairs : [bot.pair]).map((pair) => pair.includes("/") ? pair : pair + "/USDT")));'
+    );
+    evaluator = evaluator.replace(
+      'let triggerPrice = markets.find((market) => market.symbol === pair.split("/")[0])?.price ?? 0;',
+      'let triggerPrice = dcaMarketsRef.current.find((market) => market.symbol === pair.split("/")[0])?.price ?? 0;'
+    );
+    evaluator = evaluator.replace(
+      'const timer = window.setInterval(() => { void evaluateBots(); }, 8000);',
+      'const timer = window.setInterval(() => { void evaluateBots(); }, 4000);'
+    );
+    evaluator = evaluator.replace('  }, [dcaBots, dcaTrades, markets]);', '  }, [dcaBots]);');
+    source = source.slice(0, evalStart) + evaluator + source.slice(manageStart);
+  }
+}
+
 // DCA bot list: show actual open deals / configured maximum instead of hardcoded 1/1.
 source = source.replace(
   '<td>1 / 1</td>',
@@ -103,6 +150,8 @@ if (!source.includes("Maximum active trades ⓘ")) throw new Error("Maximum acti
 if (!source.includes("maxActiveTrades?: number;")) throw new Error("DCA bot concurrency type was not inserted.");
 if (!source.includes('activeForBot >= botMaxActiveTrades')) throw new Error("DCA scanner concurrency enforcement was not inserted.");
 if (!source.includes('trade.botId === bot.id && trade.status === "Active").length} / {Math.max(1, bot.maxActiveTrades ?? 1)')) throw new Error("DCA bot Active trades counter was not made live.");
+if (!source.includes("DCA SCANNER LIVE STATE REFS")) throw new Error("DCA scanner live state refs were not inserted.");
+if (!source.includes('}, [dcaBots]);')) throw new Error("DCA scanner still restarts on trade/market updates.");
 
 fs.writeFileSync(traderPath, source);
-console.log("Added real maximum-active-trades configuration, enforcement and live DCA bot counters.");
+console.log("Added real maximum-active-trades configuration and persistent post-close DCA re-arming.");
