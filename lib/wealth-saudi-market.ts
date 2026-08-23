@@ -7,6 +7,7 @@ export type SaudiMarketHolding = {
   asset_type: string | null;
   symbol: string | null;
   quantity: number | string | null;
+  unit_price?: number | string | null;
   market_value: number | string | null;
 };
 
@@ -86,17 +87,23 @@ export async function refreshSaudiMarketPrices(
     const quantity = numeric(holding.quantity);
     const marketValue = quantity > 0 ? quantity * price : numeric(holding.market_value);
     const priceDate = new Date(quote.observedAt || Date.now()).toISOString().slice(0, 10);
+    const currentPrice = numeric(holding.unit_price);
+    const currentMarketValue = numeric(holding.market_value);
+    const changed = Math.abs(currentPrice - price) > 0.000001 || Math.abs(currentMarketValue - marketValue) > 0.000001;
 
-    const { error: updateError } = await browserSupabase
-      .from("wealth_holdings")
-      .update({
-        unit_price: price,
-        market_value: marketValue,
-        as_of_date: priceDate,
-      })
-      .eq("id", holding.id)
-      .eq("user_id", userId);
-    if (updateError) throw updateError;
+    if (changed) {
+      const { error: updateError } = await browserSupabase
+        .from("wealth_holdings")
+        .update({
+          unit_price: price,
+          market_value: marketValue,
+          as_of_date: priceDate,
+        })
+        .eq("id", holding.id)
+        .eq("user_id", userId);
+      if (updateError) throw updateError;
+      updated += 1;
+    }
 
     const { error: historyError } = await browserSupabase
       .from("wealth_price_history")
@@ -116,8 +123,6 @@ export async function refreshSaudiMarketPrices(
         },
       }, { onConflict: "user_id,holding_id,price_date" });
     if (historyError) throw historyError;
-
-    updated += 1;
   }
 
   if (updated > 0) {
