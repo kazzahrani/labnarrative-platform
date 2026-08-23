@@ -1,4 +1,4 @@
-import AssetsClientV3 from "./AssetsClientV3";
+import AssetsClientV4 from "./AssetsClientV4";
 
 export const metadata = {
   title: "الأصول — ثروة",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function WealthAssetsPage() {
-  return <AssetsClientV3 />;
+  return <AssetsClientV4 />;
 }
