@@ -7,6 +7,8 @@ type SourceCard = {
   status: "ربط مباشر" | "رفع كشف" | "إدخال يدوي";
   description: string;
   methods: string[];
+  href?: string;
+  featured?: boolean;
 };
 
 const directSources: SourceCard[] = [
@@ -34,6 +36,15 @@ const directSources: SourceCard[] = [
 ];
 
 const importSources: SourceCard[] = [
+  {
+    name: "عوائد",
+    category: "منصة استثمار سعودية",
+    status: "رفع كشف",
+    description: "ابدأ من محفظتك الحالية في عوائد: أسهم وصناديق ومرابحات ضمن مصدر واحد، مع مسار مخصص للاستيراد والمراجعة.",
+    methods: ["كشف / ملف", "إدخال يدوي", "ربط رسمي لاحقًا"],
+    href: "/wealth/connect/awaed",
+    featured: true,
+  },
   {
     name: "الراجحي المالية",
     category: "وسيط سعودي",
@@ -143,7 +154,7 @@ function SourceSection({
       </div>
       <div className={styles.sourceGrid}>
         {cards.map((card) => (
-          <article className={styles.sourceCard} key={card.name}>
+          <article className={`${styles.sourceCard} ${card.featured ? styles.featuredCard : ""}`} key={card.name}>
             <div className={styles.sourceTop}>
               <div>
                 <small>{card.category}</small>
@@ -155,7 +166,13 @@ function SourceSection({
             <div className={styles.methods}>
               {card.methods.map((method) => <span key={method}>{method}</span>)}
             </div>
-            <button type="button" className={styles.chooseButton}>اختيار</button>
+            {card.href ? (
+              <Link href={card.href} className={`${styles.chooseButton} ${card.featured ? styles.featuredButton : ""}`}>
+                ابدأ بمحفظتي
+              </Link>
+            ) : (
+              <button type="button" className={styles.chooseButton}>اختيار</button>
+            )}
           </article>
         ))}
       </div>
@@ -233,9 +250,9 @@ export default function WealthConnectPage() {
             <p>بعد الإضافة، تظهر الأصول ضمن صافي الثروة وتوزيعها والدخل والسيولة، ثم نضيف لاحقًا طبقة الشرعية والزكاة.</p>
           </div>
           <div className={styles.previewList}>
+            <div><strong>عوائد</strong><span>استيراد محفظة</span><b>المصدر الأول</b></div>
             <div><strong>دراية</strong><span>ربط مباشر</span><b>متصل</b></div>
             <div><strong>الراجحي المالية</strong><span>كشف PDF</span><b>جاهز للمراجعة</b></div>
-            <div><strong>عقار استثماري</strong><span>إدخال يدوي</span><b>مضاف</b></div>
           </div>
         </section>
       </div>
