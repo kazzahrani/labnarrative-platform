@@ -11,8 +11,8 @@ const allocation = [
 ];
 
 const accounts = [
+  ["عوائد", "محفظتك الحالية", "—", "بانتظار الاستيراد"],
   ["دراية", "محفظة استثمارية", "٦٨٤٬٣٠٠ ر.س", "متصل"],
-  ["الراجحي المالية", "محفظة محلية", "٥١٢٬٦٠٠ ر.س", "كشف محدث"],
   ["Interactive Brokers", "أسهم عالمية", "٧٨٠٬٠٠٠ ر.س", "متصل"],
   ["Binance", "أصول رقمية", "١٦٨٬٥٠٠ ر.س", "متصل"],
 ];
@@ -51,7 +51,7 @@ export default function WealthPage() {
             <h1>نظرة عامة</h1>
           </div>
           <div className={styles.topActions}>
-            <button className={styles.ghostButton}>الإشعارات</button>
+            <a href="/wealth/connect/awaed" className={styles.ghostButton}>إضافة عوائد</a>
             <a href="/wealth/connect" className={styles.primaryButton}>إضافة أصل أو حساب</a>
           </div>
         </header>
@@ -59,7 +59,7 @@ export default function WealthPage() {
         <div className={styles.content}>
           <section className={styles.heroGrid}>
             <article className={styles.netWorthCard}>
-              <div className={styles.cardHeader}><span>صافي الثروة</span><small>محدّث الآن</small></div>
+              <div className={styles.cardHeader}><span>صافي الثروة</span><small>بيانات تجريبية حتى إضافة محافظك</small></div>
               <div className={styles.netWorth}>٣٬٣٠٧٬٧٠٠ <span>ر.س</span></div>
               <div className={styles.growth}>↑ ٢٦٤٬٨٠٠ ر.س <span>+٨٫٧٪ منذ بداية السنة</span></div>
               <div className={styles.chart} aria-label="منحنى صافي الثروة">
@@ -109,7 +109,7 @@ export default function WealthPage() {
 
           <section className={styles.gridTwoBottom}>
             <article className={styles.panel}>
-              <div className={styles.panelTitle}><div><h2>الحسابات والمحافظ</h2><p>مصادر البيانات المضافة إلى لوحة ثروتك</p></div><span>إدارة</span></div>
+              <div className={styles.panelTitle}><div><h2>الحسابات والمحافظ</h2><p>مصادر البيانات المضافة إلى لوحة ثروتك</p></div><a href="/wealth/connect">إدارة</a></div>
               <div className={styles.accountRows}>
                 {accounts.map(([name, type, value, status]) => (
                   <div className={styles.accountRow} key={name}>
