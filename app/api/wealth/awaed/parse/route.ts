@@ -195,7 +195,7 @@ async function parsePdf(bytes: Uint8Array) {
 
 async function parseWorkbook(bytes: Uint8Array) {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(Buffer.from(bytes));
+  await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
   const holdings: Holding[] = [];
   workbook.eachSheet((sheet) => {
     const rows: unknown[][] = [];
