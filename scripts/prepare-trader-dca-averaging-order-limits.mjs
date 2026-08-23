@@ -89,37 +89,37 @@ if (source.includes(fundsAnchor) && !source.includes('const dcaAveragingOrderPri
   source = source.replace(fundsAnchor, block);
 }
 
+// Inject exchange-style active limit-order execution before the legacy single-order branch,
+// then disable that legacy branch. This preserves surrounding TP/SL safety logic.
 const managerAnchor = '            if (item.averagingFilled < item.maxAveraging) {';
-const managerStart = source.indexOf(managerAnchor);
-if (managerStart >= 0 && !source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) {
-  const returnMarked = source.indexOf('            return marked;', managerStart);
-  if (returnMarked > managerStart) {
-    const replacement = [
-      '            // DCA_ACTIVE_AVERAGING_WINDOW_V1',
-      '            if (item.averagingFilled < item.maxAveraging) {',
-      '              const totalAllowed = Math.max(0, Math.min(item.maxAveraging, bot.maxSafetyOrders));',
-      '              const activePendingAtCycleStart = dcaAveragingOrderLimit(bot, item);',
-      '              let filled = item.averagingFilled;',
-      '              let quantity = item.quantity;',
-      '              let invested = item.invested;',
-      '              let fills = item.fills ?? [];',
-      '              let fillsThisCycle = 0;',
-      '              while (filled < totalAllowed && fillsThisCycle < activePendingAtCycleStart) {',
-      '                const limitPrice = dcaAveragingOrderPrice(bot, item.entryPrice, filled);',
-      '                if (!(limitPrice > 0) || currentPrice > limitPrice) break;',
-      '                const orderAmount = dcaAveragingOrderAmount(bot, filled);',
-      '                const extraQty = orderAmount / limitPrice;',
-      '                quantity += extraQty;',
-      '                invested += orderAmount;',
-      '                fills = [...fills, { kind: "Averaging" as const, price: limitPrice, amount: orderAmount, quantity: extraQty, at: new Date().toISOString() }];',
-      '                filled += 1;',
-      '                fillsThisCycle += 1;',
-      '              }',
-      '              if (filled !== item.averagingFilled) return { ...marked, quantity, invested, averagePrice: invested / quantity, averagingFilled: filled, fills };',
-      '            }',
-    ].join('\n') + '\n';
-    source = source.slice(0, managerStart) + replacement + source.slice(returnMarked);
-  }
+if (source.includes(managerAnchor) && !source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) {
+  const managerLogic = [
+    '            // DCA_ACTIVE_AVERAGING_WINDOW_V1',
+    '            if (item.averagingFilled < item.maxAveraging) {',
+    '              const totalAllowed = Math.max(0, Math.min(item.maxAveraging, bot.maxSafetyOrders));',
+    '              const activePendingAtCycleStart = dcaAveragingOrderLimit(bot, item);',
+    '              let filled = item.averagingFilled;',
+    '              let quantity = item.quantity;',
+    '              let invested = item.invested;',
+    '              let fills = item.fills ?? [];',
+    '              let fillsThisCycle = 0;',
+    '              while (filled < totalAllowed && fillsThisCycle < activePendingAtCycleStart) {',
+    '                const limitPrice = dcaAveragingOrderPrice(bot, item.entryPrice, filled);',
+    '                if (!(limitPrice > 0) || currentPrice > limitPrice) break;',
+    '                const orderAmount = dcaAveragingOrderAmount(bot, filled);',
+    '                const extraQty = orderAmount / limitPrice;',
+    '                quantity += extraQty;',
+    '                invested += orderAmount;',
+    '                fills = [...fills, { kind: "Averaging" as const, price: limitPrice, amount: orderAmount, quantity: extraQty, at: new Date().toISOString() }];',
+    '                filled += 1;',
+    '                fillsThisCycle += 1;',
+    '              }',
+    '              if (filled !== item.averagingFilled) return { ...marked, quantity, invested, averagePrice: invested / quantity, averagingFilled: filled, fills };',
+    '            }',
+    '            // Legacy one-at-a-time averaging is intentionally disabled; the active order window above is authoritative.',
+    '            if (false && item.averagingFilled < item.maxAveraging) {',
+  ].join('\n');
+  source = source.replace(managerAnchor, managerLogic);
 }
 
 source = source.replace(
@@ -133,11 +133,7 @@ if (!css.includes('/* DCA averaging-order tooltips */')) {
 
 if (!source.includes('limitSafetyOrders?: number;')) throw new Error('DCA simultaneous averaging-order limit was not added to the bot type.');
 if (!source.includes('value={limitSafetyOrders}')) throw new Error('Separate Limit averaging orders field was not installed.');
-if (!source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) {
-  const occurrences = [...source.matchAll(/averagingFilled/g)].map((match) => match.index ?? -1).filter((index) => index >= 0);
-  const contexts = occurrences.slice(-10).map((index) => source.slice(Math.max(0, index - 220), Math.min(source.length, index + 520)).replace(/\n/g, '\\n'));
-  throw new Error('Averaging manager shape diagnostics: ' + JSON.stringify({ managerStart, occurrences: occurrences.slice(-10), contexts }));
-}
+if (!source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) throw new Error('Averaging-order execution window was not installed.');
 if (!source.includes('dcaPendingAveragingReserved')) throw new Error('Pending averaging-order capital reservation was not installed.');
 if (!source.includes('dcaAveragingOrderPrice')) throw new Error('Averaging limit-price planner was not installed.');
 
