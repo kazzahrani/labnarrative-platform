@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "@/lib/supabase-browser";
 import styles from "./wealth.module.css";
+import visuals from "./wealth-visuals.module.css";
 
 type WealthAccount = {
   id: string;
@@ -34,6 +35,13 @@ type WealthSnapshot = {
   currency: string | null;
 };
 
+type DonutItem = {
+  key: string;
+  name: string;
+  value: number;
+  color: string;
+};
+
 const typeLabels: Record<string, string> = {
   saudi_stock: "الأسهم السعودية",
   global_stock: "الأسهم العالمية",
@@ -47,6 +55,24 @@ const typeLabels: Record<string, string> = {
   private_asset: "الاستثمارات الخاصة",
   other: "أخرى",
 };
+
+const typeColors: Record<string, string> = {
+  saudi_stock: "#38bdf8",
+  global_stock: "#6366f1",
+  reit: "#f59e0b",
+  fund: "#8b5cf6",
+  sukuk: "#14b8a6",
+  murabaha: "#06b6d4",
+  cash: "#94a3b8",
+  crypto: "#ec4899",
+  real_estate: "#fb923c",
+  private_asset: "#a78bfa",
+  other: "#64748b",
+};
+
+const accountColors = ["#38bdf8", "#8b5cf6", "#f59e0b", "#06b6d4", "#ec4899", "#6366f1", "#14b8a6"];
+const PROFIT = "#22c55e";
+const LOSS = "#ef4444";
 
 function numeric(value: number | string | null | undefined) {
   const parsed = Number(value ?? 0);
@@ -67,6 +93,88 @@ function formatSar(value: number) {
 function formatPercent(value: number) {
   const sign = value > 0 ? "+" : "";
   return `${sign}${formatNumber(value, 1)}٪`;
+}
+
+function pnlTone(value: number | null) {
+  if (value === null || value === 0) return visuals.neutral;
+  return value > 0 ? visuals.profit : visuals.loss;
+}
+
+function DonutChart({
+  items,
+  centerLabel,
+  centerValue,
+}: {
+  items: DonutItem[];
+  centerLabel: string;
+  centerValue: string;
+}) {
+  const positiveItems = items.filter((item) => item.value > 0);
+  const total = positiveItems.reduce((sum, item) => sum + item.value, 0);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const activeItem = positiveItems.find((item) => item.key === activeKey) ?? positiveItems[0];
+
+  if (!positiveItems.length || total <= 0) {
+    return <div className={visuals.emptyChart}>لا توجد بيانات كافية للرسم بعد.</div>;
+  }
+
+  let cursor = 0;
+  const segments = positiveItems.map((item) => {
+    const share = (item.value / total) * 100;
+    const segment = { ...item, share, offset: cursor };
+    cursor += share;
+    return segment;
+  });
+
+  const activeShare = activeItem ? (activeItem.value / total) * 100 : 0;
+
+  return (
+    <div className={visuals.donutLayout}>
+      <div className={visuals.donutWrap}>
+        <svg className={visuals.donut} viewBox="0 0 120 120" role="img" aria-label={centerLabel}>
+          <circle className={visuals.donutTrack} cx="60" cy="60" r="46" pathLength="100" />
+          {segments.map((segment) => (
+            <circle
+              key={segment.key}
+              className={`${visuals.donutSegment} ${activeKey && activeKey !== segment.key ? visuals.donutDim : ""}`}
+              cx="60"
+              cy="60"
+              r="46"
+              pathLength="100"
+              stroke={segment.color}
+              strokeDasharray={`${Math.max(segment.share - 0.8, 0.5)} ${100 - Math.max(segment.share - 0.8, 0.5)}`}
+              strokeDashoffset={-segment.offset}
+              onMouseEnter={() => setActiveKey(segment.key)}
+              onMouseLeave={() => setActiveKey(null)}
+            />
+          ))}
+        </svg>
+        <div className={visuals.donutCenter}>
+          <small>{activeItem ? activeItem.name : centerLabel}</small>
+          <strong>{activeItem ? formatSar(activeItem.value) : centerValue}</strong>
+          <span>{activeItem ? `${formatNumber(activeShare, 1)}٪` : centerLabel}</span>
+        </div>
+      </div>
+
+      <div className={visuals.legend}>
+        {segments.map((segment) => (
+          <button
+            type="button"
+            key={segment.key}
+            className={`${visuals.legendItem} ${activeKey === segment.key ? visuals.legendActive : ""}`}
+            onMouseEnter={() => setActiveKey(segment.key)}
+            onMouseLeave={() => setActiveKey(null)}
+            onFocus={() => setActiveKey(segment.key)}
+            onBlur={() => setActiveKey(null)}
+          >
+            <i style={{ background: segment.color }} />
+            <span><strong>{segment.name}</strong><small>{formatNumber(segment.share, 1)}٪</small></span>
+            <b>{formatSar(segment.value)}</b>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function WealthDashboardClient() {
@@ -155,11 +263,23 @@ export default function WealthDashboardClient() {
 
     const accountTotals = new Map<string, number>();
     for (const holding of holdings) {
-      accountTotals.set(
-        holding.account_id,
-        (accountTotals.get(holding.account_id) ?? 0) + numeric(holding.market_value),
-      );
+      accountTotals.set(holding.account_id, (accountTotals.get(holding.account_id) ?? 0) + numeric(holding.market_value));
     }
+
+    const holdingPerformance = holdings.map((holding) => {
+      const market = numeric(holding.market_value);
+      const cost = holding.cost_basis === null ? null : numeric(holding.cost_basis);
+      const holdingPnl = cost === null ? null : market - cost;
+      const holdingPnlPercent = holdingPnl !== null && cost > 0 ? (holdingPnl / cost) * 100 : null;
+      return { holding, market, cost, pnl: holdingPnl, pnlPercent: holdingPnlPercent };
+    });
+
+    const profitableValue = holdingPerformance
+      .filter((item) => item.pnl !== null && item.pnl >= 0)
+      .reduce((sum, item) => sum + item.market, 0);
+    const losingValue = holdingPerformance
+      .filter((item) => item.pnl !== null && item.pnl < 0)
+      .reduce((sum, item) => sum + item.market, 0);
 
     return {
       totalMarket,
@@ -169,8 +289,30 @@ export default function WealthDashboardClient() {
       liquidity,
       allocation,
       accountTotals,
+      holdingPerformance,
+      profitableValue,
+      losingValue,
     };
   }, [holdings]);
+
+  const allocationItems: DonutItem[] = metrics.allocation.map((item) => ({
+    key: item.type,
+    name: item.name,
+    value: item.value,
+    color: typeColors[item.type] ?? typeColors.other,
+  }));
+
+  const accountItems: DonutItem[] = accounts.map((account, index) => ({
+    key: account.id,
+    name: account.provider || account.account_name || "حساب",
+    value: metrics.accountTotals.get(account.id) ?? 0,
+    color: accountColors[index % accountColors.length],
+  }));
+
+  const performanceItems: DonutItem[] = [
+    { key: "profit", name: "مراكز رابحة", value: metrics.profitableValue, color: PROFIT },
+    { key: "loss", name: "مراكز خاسرة", value: metrics.losingValue, color: LOSS },
+  ];
 
   const today = new Intl.DateTimeFormat("ar-SA-u-nu-arab", {
     weekday: "long",
@@ -251,11 +393,11 @@ export default function WealthDashboardClient() {
                     <small>{accounts.length} حساب · {holdings.length} استثمار</small>
                   </div>
                   <div className={styles.netWorth}>{formatNumber(metrics.totalMarket)} <span>ر.س</span></div>
-                  <div className={styles.growth}>
+                  <div className={`${styles.growth} ${pnlTone(metrics.pnl)}`}>
                     {metrics.pnl !== null ? (
                       <>
                         {metrics.pnl >= 0 ? "↑" : "↓"} {formatSar(Math.abs(metrics.pnl))}
-                        <span>{formatPercent(metrics.pnlPercent ?? 0)} ربح/خسارة غير محققة</span>
+                        <span className={pnlTone(metrics.pnl)}>{formatPercent(metrics.pnlPercent ?? 0)} غير محققة</span>
                       </>
                     ) : (
                       <span>أضف متوسط التكلفة لإظهار الربح والخسارة</span>
@@ -278,8 +420,8 @@ export default function WealthDashboardClient() {
                 <div className={styles.metricStack}>
                   <article className={styles.metric}>
                     <p>الربح / الخسارة غير المحققة</p>
-                    <strong>{metrics.pnl !== null ? formatSar(metrics.pnl) : "—"}</strong>
-                    <small>{metrics.pnlPercent !== null ? formatPercent(metrics.pnlPercent) : "أدخل التكلفة لجميع الأصول"}</small>
+                    <strong className={pnlTone(metrics.pnl)}>{metrics.pnl !== null ? formatSar(metrics.pnl) : "—"}</strong>
+                    <small className={pnlTone(metrics.pnl)}>{metrics.pnlPercent !== null ? formatPercent(metrics.pnlPercent) : "أدخل التكلفة لجميع الأصول"}</small>
                   </article>
                   <article className={styles.metric}>
                     <p>عدد الاستثمارات</p>
@@ -294,17 +436,39 @@ export default function WealthDashboardClient() {
                 </div>
               </section>
 
+              <section className={visuals.visualGrid}>
+                <article className={visuals.chartCard}>
+                  <div className={visuals.chartTitle}><div><small>توزيع الأصول</small><h2>أين توجد ثروتك؟</h2></div><span className={visuals.liveBadge}>LIVE</span></div>
+                  <DonutChart items={allocationItems} centerLabel="إجمالي الأصول" centerValue={formatSar(metrics.totalMarket)} />
+                </article>
+
+                <article className={visuals.chartCard}>
+                  <div className={visuals.chartTitle}><div><small>الحسابات والمحافظ</small><h2>توزيع الثروة حسب المصدر</h2></div><span className={visuals.liveBadge}>LIVE</span></div>
+                  <DonutChart items={accountItems} centerLabel="كل الحسابات" centerValue={formatSar(metrics.totalMarket)} />
+                </article>
+
+                <article className={visuals.chartCard}>
+                  <div className={visuals.chartTitle}><div><small>حالة المراكز</small><h2>رابح مقابل خاسر</h2></div><span className={visuals.liveBadge}>P&L</span></div>
+                  <DonutChart items={performanceItems} centerLabel="المراكز" centerValue={metrics.pnl !== null ? formatSar(metrics.pnl) : "—"} />
+                </article>
+              </section>
+
               <section className={styles.gridTwo}>
                 <article className={styles.panel}>
-                  <div className={styles.panelTitle}><div><h2>توزيع الثروة</h2><p>حسب الأصول المحفوظة حاليًا</p></div></div>
-                  <div className={styles.rows}>
-                    {metrics.allocation.map((item) => (
-                      <div className={styles.assetRow} key={item.type}>
-                        <div className={styles.assetName}>
-                          <i />
-                          <span><strong>{item.name}</strong><small>{formatPercent(item.share).replace("+", "")} من الثروة</small></span>
+                  <div className={styles.panelTitle}><div><h2>أداء الاستثمارات</h2><p>الأرباح بالأخضر والخسائر بالأحمر</p></div></div>
+                  <div className={visuals.performanceRows}>
+                    {metrics.holdingPerformance.map((item) => (
+                      <div className={visuals.performanceRow} key={item.holding.id}>
+                        <div className={visuals.assetIdentity}>
+                          <i style={{ background: typeColors[item.holding.asset_type || "other"] ?? typeColors.other }} />
+                          <span><strong>{item.holding.asset_name}</strong><small>{item.holding.symbol || typeLabels[item.holding.asset_type || "other"] || "أصل"}</small></span>
                         </div>
-                        <strong className={styles.assetValue}>{formatSar(item.value)}</strong>
+                        <div className={visuals.marketValue}><small>القيمة</small><strong>{formatSar(item.market)}</strong></div>
+                        <div className={`${visuals.pnlValue} ${pnlTone(item.pnl)}`}>
+                          <small>الربح / الخسارة</small>
+                          <strong>{item.pnl === null ? "—" : `${item.pnl >= 0 ? "+" : ""}${formatSar(item.pnl)}`}</strong>
+                          <span>{item.pnlPercent === null ? "" : formatPercent(item.pnlPercent)}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -313,27 +477,9 @@ export default function WealthDashboardClient() {
                 <article className={styles.panel}>
                   <div className={styles.panelTitle}><div><h2>مؤشرات تستحق الانتباه</h2><p>مبنية على بياناتك الحقيقية الحالية</p></div></div>
                   <div className={styles.insights}>
-                    <div>
-                      <span>٠١</span>
-                      <section>
-                        <strong>{largestAllocation ? `أكبر تركّز حاليًا: ${largestAllocation.name}` : "توزيع المحفظة"}</strong>
-                        <p>{largestAllocation ? `${formatPercent(largestAllocation.share).replace("+", "")} من الثروة المسجّلة موجودة في هذه الفئة.` : "أضف أصولًا لبدء التحليل."}</p>
-                      </section>
-                    </div>
-                    <div>
-                      <span>٠٢</span>
-                      <section>
-                        <strong>وضع التكلفة والربحية</strong>
-                        <p>{metrics.pnl !== null ? `القيمة الحالية ${formatSar(metrics.totalMarket)} مقابل تكلفة مسجّلة ${formatSar(metrics.totalCost)}.` : "بعض الأصول لا تحتوي على تكلفة شراء، لذلك لن نخمن الربحية."}</p>
-                      </section>
-                    </div>
-                    <div>
-                      <span>٠٣</span>
-                      <section>
-                        <strong>صورة الثروة ما زالت جزئية</strong>
-                        <p>هذه الأرقام تشمل الحسابات التي أضفتها فقط. أضف البنوك، الوسطاء، العقار أو أي أصول أخرى للحصول على صافي ثروة كامل.</p>
-                      </section>
-                    </div>
+                    <div><span>٠١</span><section><strong>{largestAllocation ? `أكبر تركّز حاليًا: ${largestAllocation.name}` : "توزيع المحفظة"}</strong><p>{largestAllocation ? `${formatPercent(largestAllocation.share).replace("+", "")} من الثروة المسجّلة موجودة في هذه الفئة.` : "أضف أصولًا لبدء التحليل."}</p></section></div>
+                    <div><span>٠٢</span><section><strong>وضع التكلفة والربحية</strong><p>{metrics.pnl !== null ? `القيمة الحالية ${formatSar(metrics.totalMarket)} مقابل تكلفة مسجّلة ${formatSar(metrics.totalCost)}.` : "بعض الأصول لا تحتوي على تكلفة شراء، لذلك لن نخمن الربحية."}</p></section></div>
+                    <div><span>٠٣</span><section><strong>صورة الثروة ما زالت جزئية</strong><p>هذه الأرقام تشمل الحسابات التي أضفتها فقط. أضف البنوك، الوسطاء، العقار أو أي أصول أخرى للحصول على صافي ثروة كامل.</p></section></div>
                   </div>
                 </article>
               </section>
