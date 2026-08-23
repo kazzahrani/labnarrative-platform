@@ -23,10 +23,11 @@ function addBrandMark() {
     node.dataset.wealthBrandEnhanced = "1";
     node.classList.add("wealth-brand-with-mark");
 
-    const mark = document.createElement("span");
+    const mark = document.createElement("img");
     mark.className = "wealth-brand-mark";
+    mark.src = "/tharwa-logo-light.svg";
+    mark.alt = "";
     mark.setAttribute("aria-hidden", "true");
-    mark.innerHTML = "<i></i><i></i><i></i>";
     node.prepend(mark);
   });
 }
