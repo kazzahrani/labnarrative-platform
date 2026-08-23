@@ -16,7 +16,7 @@ source = source.replace(
 
 source = source.replace(
   "fs.writeFileSync(traderPath, source);",
-  "console.log('SMARTTRADE_STRUCTURE', JSON.stringify({ dashboard: source.indexOf('  const dashboard = ('), portfolio: source.indexOf('  const portfolio = ('), orders: source.indexOf('  const OrdersTable ='), modeTabs: source.indexOf('  const ModeTabs ='), outerReturn: source.lastIndexOf('  return <main className={styles.appShell}>'), closeMain: source.lastIndexOf('</main>') }));\nfs.writeFileSync(traderPath, source);"
+  "const dashboardAny = source.indexOf('const dashboard = ('); const portfolioAny = source.indexOf('const portfolio = ('); console.log('SMARTTRADE_STRUCTURE', JSON.stringify({ dashboard: source.indexOf('  const dashboard = ('), dashboardAny, dashboardContext: dashboardAny >= 0 ? source.slice(Math.max(0, dashboardAny - 220), dashboardAny + 80) : '', portfolio: source.indexOf('  const portfolio = ('), portfolioAny, portfolioContext: portfolioAny >= 0 ? source.slice(Math.max(0, portfolioAny - 220), portfolioAny + 80) : '', orders: source.indexOf('  const OrdersTable ='), modeTabs: source.indexOf('  const ModeTabs ='), outerReturn: source.lastIndexOf('  return <main className={styles.appShell}>'), closeMain: source.lastIndexOf('</main>') }));\nfs.writeFileSync(traderPath, source);"
 );
 
 if (!source.includes("const closeMain = source.lastIndexOf('</main>');")) {
@@ -25,9 +25,9 @@ if (!source.includes("const closeMain = source.lastIndexOf('</main>');")) {
 if (!source.includes("const smartLedgerPnl = smartPnl + '  const paperRealizedPnl = dcaRealized + smartRealized;")) {
   throw new Error("SmartTrade parity unified-account PnL fix was not applied.");
 }
-if (!source.includes("SMARTTRADE_STRUCTURE")) {
+if (!source.includes("dashboardContext")) {
   throw new Error("SmartTrade structural diagnostics were not installed.");
 }
 
 fs.writeFileSync(scriptPath, source);
-console.log("Fixed SmartTrade parity modal anchor/account PnL and enabled structural diagnostics.");
+console.log("Fixed SmartTrade parity modal anchor/account PnL and enabled nested-scope diagnostics.");
