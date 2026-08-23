@@ -1,10 +1,10 @@
-import AssetsClient from "./AssetsClient";
+import AssetsClientV2 from "./AssetsClientV2";
 
 export const metadata = {
   title: "الأصول — ثروة",
-  description: "استعراض وتحليل جميع الأصول والاستثمارات في منصة ثروة.",
+  description: "استعراض وإدارة جميع الأصول والاستثمارات في منصة ثروة.",
 };
 
 export default function WealthAssetsPage() {
-  return <AssetsClient />;
+  return <AssetsClientV2 />;
 }
