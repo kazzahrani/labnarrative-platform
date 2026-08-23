@@ -1,4 +1,5 @@
 import WealthDashboardClient from "./WealthDashboardClient";
+import DashboardNavEnhancer from "./DashboardNavEnhancer";
 
 export const metadata = {
   title: "ثروة — لوحة الثروة السعودية",
@@ -6,5 +7,10 @@ export const metadata = {
 };
 
 export default function WealthPage() {
-  return <WealthDashboardClient />;
+  return (
+    <>
+      <WealthDashboardClient />
+      <DashboardNavEnhancer />
+    </>
+  );
 }
