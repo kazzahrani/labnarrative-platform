@@ -1,5 +1,5 @@
 import Link from "next/link";
-import ManualAwaedClient from "./ManualAwaedClient";
+import ManualAwaedClientV2 from "./ManualAwaedClientV2";
 import styles from "./awaed.module.css";
 
 export const metadata = {
@@ -33,7 +33,7 @@ export default function AwaedConnectPage() {
           </div>
         </section>
 
-        <ManualAwaedClient />
+        <ManualAwaedClientV2 />
 
         <section className={styles.securityNote}>
           <span>الخصوصية أولًا</span>
