@@ -1,6 +1,7 @@
 import "./wealth-font.css";
 import "./wealth-no-effects.css";
 import WealthSaudiMarketAutoRefresh from "./WealthSaudiMarketAutoRefresh";
+import WealthNavEnhancer from "./WealthNavEnhancer";
 
 export default function WealthLayout({
   children,
@@ -10,6 +11,7 @@ export default function WealthLayout({
   return (
     <div className="wealth-tahoma">
       <WealthSaudiMarketAutoRefresh />
+      <WealthNavEnhancer />
       {children}
     </div>
   );
