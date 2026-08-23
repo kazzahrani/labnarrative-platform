@@ -7,7 +7,8 @@ let source = fs.readFileSync(traderPath, "utf8");
 let css = fs.readFileSync(cssPath, "utf8");
 
 // Build a reconciled live allocation from actual paper cash + open SmartTrade + open DCA positions.
-const allocationAnchor = '  const dcaFundsLocked = activeDcaTrades.reduce((sum, trade) => sum + trade.invested, 0);';
+// This must run after the unified account transform has declared freeCapital.
+const allocationAnchor = '  const freeCapital = Math.max(0, DEMO_BALANCE + paperRealizedPnl - paperCapital);';
 if (source.includes(allocationAnchor) && !source.includes('LIVE PORTFOLIO ALLOCATION V1')) {
   const allocationLines = [
     allocationAnchor,
