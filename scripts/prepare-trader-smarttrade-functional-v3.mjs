@@ -65,9 +65,8 @@ source = source.replaceAll(
 );
 
 if (!source.includes('SMARTTRADE_SIZE_PCT_SYNC_V3')) {
-  const anchor = '  const freeCapital = Math.max(0, paperAvailable);';
-  const fallbackAnchor = '  const freeCapital = Math.max(0, DEMO_BALANCE - paperCapital);';
-  const found = source.includes(anchor) ? anchor : source.includes(fallbackAnchor) ? fallbackAnchor : null;
+  const freeCapitalMatch = source.match(/^  const freeCapital = .*;$/m);
+  const found = freeCapitalMatch?.[0] ?? null;
   if (!found) throw new Error("SmartTrade V3: free capital anchor missing.");
   source = source.replace(found, [
     found,
