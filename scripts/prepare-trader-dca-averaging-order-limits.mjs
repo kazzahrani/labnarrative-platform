@@ -23,7 +23,6 @@ if (!source.includes("const [limitSafetyOrders, setLimitSafetyOrders]")) {
   );
 }
 
-// Restore the exchange-order limit while editing/copying an existing bot.
 if (!source.includes("setLimitSafetyOrders(Math.max(1, Math.min(bot.maxSafetyOrders")) {
   source = source.replace(
     '    setMaxSafetyOrders(bot.maxSafetyOrders);\n    setMaxActiveTrades(Math.max(1, bot.maxActiveTrades ?? 1));',
@@ -31,7 +30,6 @@ if (!source.includes("setLimitSafetyOrders(Math.max(1, Math.min(bot.maxSafetyOrd
   );
 }
 
-// Persist the separate simultaneous-order limit on both create and update paths.
 const creatorStart = source.indexOf('  const createConfiguredDcaBot = () => {');
 const creatorEnd = source.indexOf('  const handleGlobalSearch = (value: string) => {', creatorStart);
 if (creatorStart >= 0 && creatorEnd > creatorStart) {
@@ -43,7 +41,6 @@ if (creatorStart >= 0 && creatorEnd > creatorStart) {
   source = source.slice(0, creatorStart) + creator + source.slice(creatorEnd);
 }
 
-// Replace the two visually identical inputs with independent values and 3Commas-style hover explanations.
 const oldFields = [
   '                <label><span>Averaging orders per trade ⓘ</span><input type="number" value={maxSafetyOrders} onChange={(e) => setMaxSafetyOrders(clamp(Number(e.target.value), 1, 20))}/></label>',
   '                <label><span>Limit averaging orders placed on exchange ⓘ</span><input type="number" value={maxSafetyOrders} onChange={(e) => setMaxSafetyOrders(clamp(Number(e.target.value), 1, 20))}/></label>',
@@ -53,8 +50,6 @@ const newFields = [
   '                <label><span className={styles.dcaTooltipLabel}>Limit averaging orders placed on exchange <i className={styles.dcaInfoIcon}>ⓘ<span className={styles.dcaInfoTooltip + " " + styles.dcaInfoTooltipWide}><strong>Limit averaging orders placed on exchange</strong><span>Defines how many averaging limit orders the bot may keep active simultaneously on the exchange order book.</span><span>A lower number keeps more USDT free. A higher number reserves more funds but keeps more DCA levels ready to fill immediately when price moves.</span><span><b>Example:</b> If a trade allows 7 averaging orders and this limit is 3, only 3 are active at once. When one fills, the next planned averaging order is activated so the bot keeps up to 3 open until all 7 are used.</span></span></i></span><input type="number" min={1} max={maxSafetyOrders} value={limitSafetyOrders} onChange={(e) => setLimitSafetyOrders(clamp(Math.round(Number(e.target.value) || 1), 1, maxSafetyOrders))}/></label>',
 ].join('\n');
 if (source.includes(oldFields)) source = source.replace(oldFields, newFields);
-
-// If another transform reformatted the fields, patch them individually.
 source = source.replace(
   '<label><span>Averaging orders per trade ⓘ</span><input type="number" value={maxSafetyOrders} onChange={(e) => setMaxSafetyOrders(clamp(Number(e.target.value), 1, 20))}/></label>',
   newFields.split('\n')[0]
@@ -64,8 +59,6 @@ source = source.replace(
   newFields.split('\n')[1]
 );
 
-// Helpers model the active pending window exactly. The simultaneous limit controls both
-// the order window and how much quote currency is reserved in open averaging orders.
 const fundsAnchor = '  const dcaFundsLocked = activeDcaTrades.reduce((sum, trade) => sum + trade.invested, 0);';
 if (source.includes(fundsAnchor) && !source.includes('const dcaAveragingOrderPrice =')) {
   const block = [
@@ -96,15 +89,11 @@ if (source.includes(fundsAnchor) && !source.includes('const dcaAveragingOrderPri
   source = source.replace(fundsAnchor, block);
 }
 
-// Replace one-at-a-time market-price averaging with exchange-style active limit orders.
-// On each manager cycle, only the batch that was already active may fill. The next batch
-// is replenished for the following cycle. Fills occur at their planned limit prices.
 const managerAnchor = '            if (item.averagingFilled < item.maxAveraging) {';
 const managerStart = source.indexOf(managerAnchor);
 if (managerStart >= 0 && !source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) {
   const returnMarked = source.indexOf('            return marked;', managerStart);
   if (returnMarked > managerStart) {
-    const oldBlock = source.slice(managerStart, returnMarked);
     const replacement = [
       '            // DCA_ACTIVE_AVERAGING_WINDOW_V1',
       '            if (item.averagingFilled < item.maxAveraging) {',
@@ -126,16 +115,13 @@ if (managerStart >= 0 && !source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) {
       '                filled += 1;',
       '                fillsThisCycle += 1;',
       '              }',
-      '              if (filled !== item.averagingFilled) {',
-      '                return { ...marked, quantity, invested, averagePrice: invested / quantity, averagingFilled: filled, fills };',
-      '              }',
+      '              if (filled !== item.averagingFilled) return { ...marked, quantity, invested, averagePrice: invested / quantity, averagingFilled: filled, fills };',
       '            }',
     ].join('\n') + '\n';
     source = source.slice(0, managerStart) + replacement + source.slice(returnMarked);
   }
 }
 
-// Bot detail/overview can expose the configured simultaneous pending-order cap where possible.
 source = source.replace(
   '<div><span>Max averaging orders</span><strong>{bot.maxSafetyOrders}</strong></div>',
   '<div><span>Max averaging orders</span><strong>{bot.maxSafetyOrders}</strong></div><div><span>Active averaging order limit</span><strong>{Math.max(1, Math.min(bot.maxSafetyOrders, bot.limitSafetyOrders ?? bot.maxSafetyOrders))}</strong></div>'
@@ -147,7 +133,11 @@ if (!css.includes('/* DCA averaging-order tooltips */')) {
 
 if (!source.includes('limitSafetyOrders?: number;')) throw new Error('DCA simultaneous averaging-order limit was not added to the bot type.');
 if (!source.includes('value={limitSafetyOrders}')) throw new Error('Separate Limit averaging orders field was not installed.');
-if (!source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) throw new Error('Averaging-order execution window was not installed.');
+if (!source.includes('DCA_ACTIVE_AVERAGING_WINDOW_V1')) {
+  const occurrences = [...source.matchAll(/averagingFilled/g)].map((match) => match.index ?? -1).filter((index) => index >= 0);
+  const contexts = occurrences.slice(-10).map((index) => source.slice(Math.max(0, index - 220), Math.min(source.length, index + 520)).replace(/\n/g, '\\n'));
+  throw new Error('Averaging manager shape diagnostics: ' + JSON.stringify({ managerStart, occurrences: occurrences.slice(-10), contexts }));
+}
 if (!source.includes('dcaPendingAveragingReserved')) throw new Error('Pending averaging-order capital reservation was not installed.');
 if (!source.includes('dcaAveragingOrderPrice')) throw new Error('Averaging limit-price planner was not installed.');
 
