@@ -14,12 +14,20 @@ source = source.replace(
   "  const smartLedgerPnl = smartPnl + '  const paperRealizedPnl = dcaRealized + smartRealized;\\n  const paperUnrealizedPnl = smartUnrealized + activeDcaUnrealized;\\n';\n  source = source.slice(0, smartPnlStart) + smartLedgerPnl + source.slice(accountStart);"
 );
 
+source = source.replace(
+  "fs.writeFileSync(traderPath, source);",
+  "console.log('SMARTTRADE_STRUCTURE', JSON.stringify({ dashboard: source.indexOf('  const dashboard = ('), portfolio: source.indexOf('  const portfolio = ('), orders: source.indexOf('  const OrdersTable ='), modeTabs: source.indexOf('  const ModeTabs ='), outerReturn: source.lastIndexOf('  return <main className={styles.appShell}>'), closeMain: source.lastIndexOf('</main>') }));\nfs.writeFileSync(traderPath, source);"
+);
+
 if (!source.includes("const closeMain = source.lastIndexOf('</main>');")) {
   throw new Error("SmartTrade parity modal anchor fix was not applied.");
 }
 if (!source.includes("const smartLedgerPnl = smartPnl + '  const paperRealizedPnl = dcaRealized + smartRealized;")) {
   throw new Error("SmartTrade parity unified-account PnL fix was not applied.");
 }
+if (!source.includes("SMARTTRADE_STRUCTURE")) {
+  throw new Error("SmartTrade structural diagnostics were not installed.");
+}
 
 fs.writeFileSync(scriptPath, source);
-console.log("Fixed SmartTrade parity modal anchor and unified account PnL preservation.");
+console.log("Fixed SmartTrade parity modal anchor/account PnL and enabled structural diagnostics.");
