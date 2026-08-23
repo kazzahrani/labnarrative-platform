@@ -26,7 +26,7 @@ export default function WealthSaudiMarketAutoRefresh() {
 
         const { data: holdings, error } = await browserSupabase
           .from("wealth_holdings")
-          .select("id,asset_type,symbol,quantity,unit_price,market_value")
+          .select("id,asset_type,symbol,quantity,unit_price,market_value,portfolio_kind")
           .eq("user_id", user.id);
         if (error) throw error;
 
