@@ -5,7 +5,7 @@ import Link from "next/link";
 import { browserSupabase } from "@/lib/supabase-browser";
 import styles from "./login.module.css";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "recovery";
 
 function safeNext(value: string | null) {
   if (!value || !value.startsWith("/wealth")) return "/wealth";
@@ -21,7 +21,11 @@ export default function WealthLoginClient() {
   const [message, setMessage] = useState("");
   const [nextPath, setNextPath] = useState("/wealth");
 
-  const title = useMemo(() => mode === "signin" ? "مرحبًا بعودتك." : "أنشئ حساب ثروة.", [mode]);
+  const title = useMemo(() => {
+    if (mode === "signin") return "مرحبًا بعودتك.";
+    if (mode === "signup") return "أنشئ حساب ثروة.";
+    return "استعد حسابك.";
+  }, [mode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -33,9 +37,20 @@ export default function WealthLoginClient() {
     });
   }, []);
 
+  function switchMode(nextMode: Mode) {
+    setMode(nextMode);
+    setError("");
+    setMessage("");
+    if (nextMode !== "signin") setPassword("");
+  }
+
   async function submit() {
-    if (!email.trim() || !password) {
-      setError("أدخل البريد الإلكتروني وكلمة المرور.");
+    if (!email.trim()) {
+      setError("أدخل البريد الإلكتروني.");
+      return;
+    }
+    if (mode !== "recovery" && !password) {
+      setError("أدخل كلمة المرور.");
       return;
     }
     if (mode === "signup" && password.length < 8) {
@@ -58,6 +73,16 @@ export default function WealthLoginClient() {
         return;
       }
 
+      if (mode === "recovery") {
+        const recoveryUrl = `${window.location.origin}/wealth/reset-password?next=${encodeURIComponent(nextPath)}`;
+        const { error: recoveryError } = await browserSupabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: recoveryUrl,
+        });
+        if (recoveryError) throw recoveryError;
+        setMessage("إذا كان هذا البريد مرتبطًا بحساب، أرسلنا له رابط إعادة تعيين كلمة المرور. افحص الوارد وSpam ثم افتح الرابط.");
+        return;
+      }
+
       const { data, error: authError } = await browserSupabase.auth.signUp({
         email: email.trim(),
         password,
@@ -70,7 +95,7 @@ export default function WealthLoginClient() {
         window.location.replace(nextPath);
         return;
       }
-      setMessage("تم إنشاء الحساب. افتح رسالة التأكيد التي أرسلها Supabase إلى بريدك ثم عد إلى ثروة.");
+      setMessage("إذا كان البريد جديدًا، ستصلك رسالة تأكيد. إذا سبق استخدام هذا البريد، انتقل إلى تسجيل الدخول أو اختر «نسيت كلمة المرور؟» — لن يرسل Supabase رسالة إنشاء جديدة للحساب الموجود مسبقًا.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "تعذر إكمال العملية.");
     } finally {
@@ -102,14 +127,20 @@ export default function WealthLoginClient() {
 
           <section className={styles.card}>
             <div className={styles.modeSwitch}>
-              <button type="button" className={mode === "signin" ? styles.active : ""} onClick={() => { setMode("signin"); setError(""); setMessage(""); }}>تسجيل الدخول</button>
-              <button type="button" className={mode === "signup" ? styles.active : ""} onClick={() => { setMode("signup"); setError(""); setMessage(""); }}>حساب جديد</button>
+              <button type="button" className={mode === "signin" ? styles.active : ""} onClick={() => switchMode("signin")}>تسجيل الدخول</button>
+              <button type="button" className={mode === "signup" ? styles.active : ""} onClick={() => switchMode("signup")}>حساب جديد</button>
             </div>
 
             <div className={styles.copy}>
-              <span>{mode === "signin" ? "حسابك" : "ابدأ الآن"}</span>
+              <span>{mode === "signin" ? "حسابك" : mode === "signup" ? "ابدأ الآن" : "استعادة الوصول"}</span>
               <h2>{title}</h2>
-              <p>{mode === "signin" ? "ادخل لحفظ محفظة عوائد ومتابعة ثروتك من أي جهاز." : "أنشئ حسابًا واحدًا لكل أصولك ومحافظك."}</p>
+              <p>
+                {mode === "signin"
+                  ? "ادخل لحفظ محفظة عوائد ومتابعة ثروتك من أي جهاز."
+                  : mode === "signup"
+                    ? "أنشئ حسابًا واحدًا لكل أصولك ومحافظك."
+                    : "أدخل بريدك وسنرسل رابطًا آمنًا لاختيار كلمة مرور جديدة."}
+              </p>
             </div>
 
             <div className={styles.form}>
@@ -117,19 +148,39 @@ export default function WealthLoginClient() {
                 <span>البريد الإلكتروني</span>
                 <input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" />
               </label>
-              <label>
-                <span>كلمة المرور</span>
-                <input
-                  type="password"
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  onKeyDown={(event) => { if (event.key === "Enter") void submit(); }}
-                  placeholder={mode === "signup" ? "8 أحرف على الأقل" : "••••••••"}
-                />
-              </label>
+
+              {mode !== "recovery" ? (
+                <label>
+                  <span>كلمة المرور</span>
+                  <input
+                    type="password"
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    onKeyDown={(event) => { if (event.key === "Enter") void submit(); }}
+                    placeholder={mode === "signup" ? "8 أحرف على الأقل" : "••••••••"}
+                  />
+                </label>
+              ) : null}
+
+              {mode === "signin" ? (
+                <button type="button" className={styles.textAction} onClick={() => switchMode("recovery")}>
+                  نسيت كلمة المرور؟
+                </button>
+              ) : mode === "recovery" ? (
+                <button type="button" className={styles.textAction} onClick={() => switchMode("signin")}>
+                  العودة إلى تسجيل الدخول
+                </button>
+              ) : null}
+
               <button type="button" className={styles.primary} disabled={loading} onClick={() => void submit()}>
-                {loading ? "جاري التحقق…" : mode === "signin" ? "دخول إلى ثروة" : "إنشاء الحساب"}
+                {loading
+                  ? "جاري التحقق…"
+                  : mode === "signin"
+                    ? "دخول إلى ثروة"
+                    : mode === "signup"
+                      ? "إنشاء الحساب"
+                      : "إرسال رابط الاستعادة"}
               </button>
             </div>
 
