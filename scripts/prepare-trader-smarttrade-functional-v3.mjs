@@ -272,7 +272,7 @@ const required = [
   'stopTriggeredAt: new Date(nowMs).toISOString()',
   'closeReason: "Trailing Take Profit"',
   'closeReason: working.breakevenActivated ? "Breakeven Stop"',
-  'trailingStopPeak = working.side === "Buy"',
+  'trailingStopPeak = trade.side === "Buy"',
   'if (working.breakeven) breakevenActivated = true;',
   'tpOrderType, stopOrderType, stopTimeout, stopTimeoutSec, trailingStop, breakeven',
 ];
