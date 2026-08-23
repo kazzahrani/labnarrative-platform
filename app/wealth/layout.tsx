@@ -1,4 +1,5 @@
 import "./wealth-font.css";
+import "./wealth-no-effects.css";
 import WealthSaudiMarketAutoRefresh from "./WealthSaudiMarketAutoRefresh";
 
 export default function WealthLayout({
