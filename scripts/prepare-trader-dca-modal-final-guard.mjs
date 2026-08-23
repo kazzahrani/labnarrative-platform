@@ -20,7 +20,8 @@ if (!source.includes('const selectedDcaChartTrade =')) throw new Error('Final DC
 if (!source.includes('selectedDcaChartTrade && <DcaTradeChart')) throw new Error('Final DCA chart modal missing.');
 if (!source.includes('const editingDcaTrade =')) throw new Error('Final DCA edit trade state missing.');
 if (!source.includes('className={styles.dcaTradeEditOverlay}')) throw new Error('Final DCA edit modal missing.');
-if (!source.includes('className={styles.dealPriceBar}')) throw new Error('Final DCA embedded price bar missing.');
+if (!source.includes('styles.dealPriceBar')) throw new Error('Final DCA embedded price bar missing.');
+if (source.includes('styles.dealPriceBar3c') && !source.includes('styles.dealCurrentEndpoint')) throw new Error('3Commas DCA endpoint marker missing.');
 
 fs.writeFileSync(traderPath, source);
-console.log('Verified outer-scope DCA chart/edit modal state and embedded TP/SL/DCA price bar.');
+console.log('Verified outer-scope DCA chart/edit state and the final DCA price bar.');
