@@ -200,7 +200,11 @@ async function parseWorkbook(bytes: Uint8Array) {
   workbook.eachSheet((sheet) => {
     const rows: unknown[][] = [];
     sheet.eachRow({ includeEmpty: false }, (row) => {
-      rows.push(row.values.slice(1).map((cell) => {
+      const rawValues = row.values as unknown;
+      const values: unknown[] = Array.isArray(rawValues)
+        ? rawValues.slice(1)
+        : Object.values((rawValues ?? {}) as Record<string, unknown>);
+      rows.push(values.map((cell) => {
         if (cell && typeof cell === "object" && "result" in cell) return (cell as { result?: unknown }).result ?? "";
         if (cell && typeof cell === "object" && "text" in cell) return (cell as { text?: unknown }).text ?? "";
         return cell ?? "";
