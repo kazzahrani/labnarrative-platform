@@ -4,9 +4,9 @@ import path from "node:path";
 const traderPath = path.join(process.cwd(), "app/trader/TradingAgent.tsx");
 let source = fs.readFileSync(traderPath, "utf8");
 
-// ACTIVE DCA TRADE AVERAGING LIMITS V1
+// ACTIVE DCA TRADE AVERAGING LIMITS V2
 // An open deal can override both its lifetime averaging-order count and its simultaneous
-// pending-order limit. These values must drive the paper engine, reservations and fills.
+// pending-order limit. These values drive the paper engine, reservations, fills and ledger UI.
 
 // When opening the Active Trade editor, inherit the deal override first, then the bot's
 // configured simultaneous exchange-order limit.
@@ -36,6 +36,13 @@ source = source.replace(
   '<small>Changes apply immediately to this active paper trade, including pending-order reservation and which DCA levels are eligible to fill.</small>'
 );
 
+// Freeze the simultaneous order-window setting into newly opened deals. Older deals still
+// fall back to the bot value until the user edits them once.
+source = source.replaceAll(
+  'averagingFilled: 0, maxAveraging: bot.maxSafetyOrders,',
+  'averagingFilled: 0, maxAveraging: bot.maxSafetyOrders, activeOrdersLimit: Math.max(1, Math.min(bot.maxSafetyOrders, bot.limitSafetyOrders ?? bot.maxSafetyOrders)),'
+);
+
 // The per-trade simultaneous limit is authoritative. The bot setting is only the fallback
 // for trades that pre-date this override.
 source = source.replace(
@@ -50,16 +57,24 @@ source = source.replace(
   '              const totalAllowed = Math.max(0, item.maxAveraging);'
 );
 
-// Make the active row expose the actual live configuration where the existing OS summary exists.
+// Keep the compact bot summary aligned with the active-deal execution window where present.
 source = source.replace(
   'OS: {trade.averagingFilled}, Max: {trade.maxAveraging}',
   'OS: {trade.averagingFilled}, Max: {trade.maxAveraging}, Active: {dcaAveragingOrderLimit(tradeBot!, trade)}'
 );
 
+// IMPORTANT: the Averaging O column previously displayed Active as (Max - Completed), which
+// made every fresh 5-order deal show Active: 5 / Max: 5 even when the user edited the active
+// exchange-order limit to 1, 2, 3, etc. Render the actual live pending window instead.
+const oldAveragingCell = '<td><span>Completed: {trade.averagingFilled}</span><small>{mode === "Active" ? "Active: " + Math.max(0, trade.maxAveraging - trade.averagingFilled) : "Filled: " + trade.averagingFilled}</small><small>Max: {trade.maxAveraging}</small></td>';
+const newAveragingCell = '<td><span>Completed: {trade.averagingFilled}</span><small>{mode === "Active" ? "Active: " + (() => { const activeBot = dcaBots.find((candidate) => candidate.id === trade.botId); const remaining = Math.max(0, trade.maxAveraging - trade.averagingFilled); if (!activeBot) return Math.min(remaining, Math.max(0, trade.activeOrdersLimit ?? trade.maxAveraging)); return dcaAveragingOrderLimit(activeBot, trade); })() : "Filled: " + trade.averagingFilled}</small><small>Max: {trade.maxAveraging}</small></td>';
+source = source.replace(oldAveragingCell, newAveragingCell);
+
 if (!source.includes('Limit averaging orders placed on exchange <i className={styles.dcaInfoIcon}>')) throw new Error('Active-trade simultaneous-order field was not upgraded.');
 if (!source.includes('trade.activeOrdersLimit ?? fallbackLimit')) throw new Error('Per-trade active averaging-order limit is not authoritative in the paper engine.');
 if (!source.includes('const totalAllowed = Math.max(0, item.maxAveraging);')) throw new Error('Per-trade total averaging-order override is not authoritative in the paper engine.');
 if (!source.includes('Changes apply immediately to this active paper trade')) throw new Error('Active-trade execution explanation was not installed.');
+if (!source.includes('const activeBot = dcaBots.find((candidate) => candidate.id === trade.botId); const remaining = Math.max(0, trade.maxAveraging - trade.averagingFilled);')) throw new Error('Active Trades Averaging O column still does not render the real simultaneous order window.');
 
 fs.writeFileSync(traderPath, source);
-console.log('Applied real per-trade averaging-order total and simultaneous limits to DCA Active trades.');
+console.log('Applied real per-trade averaging-order limits and corrected Active/Max ledger counts.');
