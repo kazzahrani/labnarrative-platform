@@ -52,7 +52,7 @@ export default function WealthPage() {
           </div>
           <div className={styles.topActions}>
             <button className={styles.ghostButton}>الإشعارات</button>
-            <button className={styles.primaryButton}>إضافة أصل أو حساب</button>
+            <a href="/wealth/connect" className={styles.primaryButton}>إضافة أصل أو حساب</a>
           </div>
         </header>
 
