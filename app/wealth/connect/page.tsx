@@ -23,8 +23,10 @@ const directSources: SourceCard[] = [
     name: "Interactive Brokers",
     category: "وسيط عالمي",
     status: "ربط مباشر",
-    description: "للأسهم العالمية وETFs والنقد متعدد العملات ضمن نفس صورة الثروة.",
-    methods: ["API", "قراءة فقط"],
+    description: "ربط فعلي عبر Flex Web Service للمراكز والتكلفة والنقد والحركات، بدون كلمة مرور أو صلاحية تداول.",
+    methods: ["Flex Web Service", "تقارير فقط", "Vault مشفر"],
+    href: "/wealth/connect/ibkr",
+    featured: true,
   },
   {
     name: "Binance",
@@ -153,7 +155,7 @@ function SourceSection({ eyebrow, title, description, cards }: { eyebrow: string
             <p>{card.description}</p>
             <div className={styles.methods}>{card.methods.map((method) => <span key={method}>{method}</span>)}</div>
             {card.href ? (
-              <Link href={card.href} className={`${styles.chooseButton} ${card.featured ? styles.featuredButton : ""}`}>{card.name === "Binance" ? "ربط Binance" : "فتح"}</Link>
+              <Link href={card.href} className={`${styles.chooseButton} ${card.featured ? styles.featuredButton : ""}`}>ربط {card.name}</Link>
             ) : (
               <button type="button" className={styles.chooseButton}>اختيار</button>
             )}
@@ -189,14 +191,14 @@ export default function WealthConnectPage() {
         <section className={styles.flow}>
           <div className={styles.flowIntro}><span className={styles.eyebrow}>الأساس</span><h2>ربط، مزامنة، ثم تحقق.</h2><p>كل اتصال يدخل عبر محرك واحد مع سجل مزامنة وفصل كامل بين الحسابات.</p></div>
           <div className={styles.steps}>
-            <article><span>٠١</span><h3>اربط المصدر</h3><p>بصلاحيات القراءة فقط عندما يكون الربط المباشر متاحًا.</p></article>
+            <article><span>٠١</span><h3>اربط المصدر</h3><p>بصلاحيات القراءة أو التقارير فقط عندما يكون الربط المباشر متاحًا.</p></article>
             <article><span>٠٢</span><h3>زامن البيانات</h3><p>الحساب والأرصدة والأسعار تدخل إلى نفس نموذج البيانات.</p></article>
             <article><span>٠٣</span><h3>راجع النتيجة</h3><p>أي خطأ أو أصل غير مسعّر يظهر في سجل المزامنة بدل إخفائه.</p></article>
           </div>
         </section>
 
         <div id="sources" className={styles.sections}>
-          <SourceSection eyebrow="ربط مباشر" title="الروابط الفعلية" description="Binance يعمل الآن؛ بقية الروابط سنفعلها على نفس المحرك بعد ثباته." cards={directSources} />
+          <SourceSection eyebrow="ربط مباشر" title="الروابط الفعلية" description="Binance وInteractive Brokers يعملان على نفس محرك المزامنة الآمن." cards={directSources} />
           <SourceSection eyebrow="رفع كشف" title="مصادر بدون ربط مباشر حتى الآن" description="نستخدم الكشف أو الإدخال اليدوي فقط كحل مرحلي." cards={importSources} />
           <SourceSection eyebrow="إدخال يدوي" title="الأصول التي لا تحتاج API" description="للعقار والذهب والسيولة والأصول الخاصة." cards={manualSources} />
         </div>
