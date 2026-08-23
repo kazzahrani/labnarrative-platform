@@ -270,7 +270,7 @@ export default function WealthDashboardClient() {
       const market = numeric(holding.market_value);
       const cost = holding.cost_basis === null ? null : numeric(holding.cost_basis);
       const holdingPnl = cost === null ? null : market - cost;
-      const holdingPnlPercent = holdingPnl !== null && cost > 0 ? (holdingPnl / cost) * 100 : null;
+      const holdingPnlPercent = holdingPnl !== null && cost !== null && cost > 0 ? (holdingPnl / cost) * 100 : null;
       return { holding, market, cost, pnl: holdingPnl, pnlPercent: holdingPnlPercent };
     });
 
