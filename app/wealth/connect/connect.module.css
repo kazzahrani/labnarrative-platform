@@ -1,0 +1,329 @@
+:global(html) {
+  background: #1f1f1f;
+}
+
+.page {
+  min-height: 100vh;
+  background: #1f1f1f;
+  color: #f5f3f0;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 42px 0 96px;
+}
+
+.header {
+  display: grid;
+  gap: 20px;
+}
+
+.headerLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.back,
+.pill,
+.eyebrow,
+.primary,
+.secondary,
+.status,
+.methods span,
+.chooseButton {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.02);
+  border-radius: 999px;
+}
+
+.back,
+.pill {
+  padding: 10px 16px;
+  color: rgba(255,255,255,.8);
+  text-decoration: none;
+  font-size: .94rem;
+}
+
+.hero,
+.flow,
+.sourceCard,
+.preview,
+.steps article,
+.previewList {
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.018);
+  border-radius: 28px;
+}
+
+.hero {
+  padding: 58px clamp(24px, 5vw, 58px);
+  display: grid;
+  gap: 22px;
+}
+
+.eyebrow {
+  width: fit-content;
+  padding: 9px 15px;
+  color: rgba(255,255,255,.66);
+  font-size: .9rem;
+}
+
+.hero h1,
+.flowIntro h2,
+.sectionIntro h2,
+.preview h2 {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -.035em;
+  line-height: 1.06;
+}
+
+.hero h1 {
+  max-width: 800px;
+  font-size: clamp(2.7rem, 6vw, 5rem);
+}
+
+.hero p,
+.flowIntro p,
+.sectionIntro p,
+.sourceCard p,
+.steps p,
+.preview p {
+  margin: 0;
+  color: rgba(255,255,255,.66);
+  line-height: 1.9;
+}
+
+.hero p {
+  max-width: 780px;
+  font-size: 1.05rem;
+}
+
+.heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.primary,
+.secondary,
+.chooseButton {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  color: #f5f3f0;
+  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.primary {
+  background: #f5f3f0;
+  color: #1f1f1f;
+  border-color: #f5f3f0;
+}
+
+.back:hover,
+.secondary:hover,
+.chooseButton:hover {
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.2);
+  transform: translateY(-1px);
+}
+
+.primary:hover {
+  transform: translateY(-1px);
+  background: #fff;
+}
+
+.flow,
+.preview {
+  margin-top: 22px;
+  padding: 34px;
+}
+
+.flowIntro {
+  display: grid;
+  gap: 12px;
+}
+
+.flowIntro h2,
+.sectionIntro h2,
+.preview h2 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+}
+
+.steps {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 14px;
+}
+
+.steps article {
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.steps article > span {
+  color: rgba(255,255,255,.46);
+  font-size: .9rem;
+}
+
+.steps h3,
+.sourceCard h3 {
+  margin: 0;
+  font-size: 1.22rem;
+}
+
+.sections {
+  margin-top: 38px;
+  display: grid;
+  gap: 42px;
+}
+
+.sourceSection {
+  display: grid;
+  gap: 18px;
+}
+
+.sectionIntro {
+  display: grid;
+  gap: 11px;
+}
+
+.sectionIntro > span {
+  color: rgba(255,255,255,.5);
+  font-size: .9rem;
+}
+
+.sourceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 14px;
+}
+
+.sourceCard {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.sourceTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sourceTop small {
+  display: block;
+  margin-bottom: 7px;
+  color: rgba(255,255,255,.46);
+}
+
+.status {
+  padding: 8px 12px;
+  color: rgba(255,255,255,.72);
+  font-size: .78rem;
+  white-space: nowrap;
+}
+
+.methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.methods span {
+  padding: 7px 10px;
+  color: rgba(255,255,255,.7);
+  font-size: .8rem;
+}
+
+.chooseButton {
+  width: 100%;
+  margin-top: auto;
+}
+
+.preview {
+  display: grid;
+  grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.preview > div:first-child {
+  display: grid;
+  gap: 13px;
+}
+
+.previewList {
+  padding: 12px;
+  display: grid;
+  gap: 9px;
+}
+
+.previewList > div {
+  min-height: 58px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,.055);
+  background: rgba(255,255,255,.015);
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.previewList span {
+  color: rgba(255,255,255,.55);
+}
+
+.previewList b {
+  font-size: .82rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.75);
+}
+
+@media (max-width: 960px) {
+  .sourceGrid,
+  .steps {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .preview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .shell {
+    width: min(100% - 28px, 1180px);
+    padding-top: 24px;
+  }
+
+  .hero,
+  .flow,
+  .preview {
+    padding: 24px 18px;
+  }
+
+  .sourceGrid,
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .previewList > div {
+    grid-template-columns: 1fr;
+  }
+}
