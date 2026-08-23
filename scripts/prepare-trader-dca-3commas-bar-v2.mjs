@@ -16,8 +16,12 @@ const volumeCell = '<td><span>{compactMoney(trade.invested)}</span><small>{trade
 const volumeCellReplacement = '<td><span>{compactMoney(trade.invested)}</span><small>{trade.quantity.toFixed(8)} {symbol}</small>{mode === "Active" && <small className={pnl >= 0 ? styles.dealVolumePnlWin : styles.dealVolumePnlLoss}>{compactMoney(pnl)}</small>}</td>';
 source = source.replace(volumeCell, volumeCellReplacement);
 
-// Rebuild the active price bar so CURRENT MARKET PRICE defines an endpoint.
-// Losing = current is left endpoint. Winning = current is right endpoint.
+// Rebuild the active price bar to match 3Commas:
+// - the full scale is neutral/white
+// - ONLY the interval between Average Buy and Current Market Price is colored
+// - loss => that interval is red
+// - profit => that interval is green
+// - current market price remains the outer endpoint of the scale in the direction of PnL.
 const barStartToken = 'const mappedLevels = [current, trade.averagePrice, tpLevel, slLevel, nextDcaLevel]';
 const barStart = source.indexOf(barStartToken);
 const barEndToken = '})()}</td>';
@@ -35,11 +39,18 @@ if (barStart >= 0 && barEnd > barStart) {
     '    barMin = current - pad;',
     '    barMax = current + pad;',
     '  }',
-    '  const markerLeft = (value: number) => String(Math.min(100, Math.max(0, ((value - barMin) / Math.max(barMax - barMin, 0.00000001)) * 100))) + "%";',
-    '  const currentLeft = tradeIsWinning ? "100%" : "0%";',
+    '  const markerPct = (value: number) => Math.min(100, Math.max(0, ((value - barMin) / Math.max(barMax - barMin, 0.00000001)) * 100));',
+    '  const markerLeft = (value: number) => String(markerPct(value)) + "%";',
+    '  const currentPct = tradeIsWinning ? 100 : 0;',
+    '  const buyPct = markerPct(trade.averagePrice);',
+    '  const pnlSegmentLeft = Math.min(currentPct, buyPct);',
+    '  const pnlSegmentWidth = Math.abs(currentPct - buyPct);',
+    '  const currentLeft = String(currentPct) + "%";',
     '  return <div className={styles.dealTradeSnapshot}>',
     '    <div className={styles.dealPriceBar + " " + styles.dealPriceBar3c}>',
-    '      <div className={tradeIsWinning ? styles.dealPriceTrack + " " + styles.dealPriceTrackWin : styles.dealPriceTrack + " " + styles.dealPriceTrackLoss}/>',
+    '      <div className={styles.dealPriceTrack + " " + styles.dealPriceTrackNeutral}>',
+    '        <i className={tradeIsWinning ? styles.dealPnlSegment + " " + styles.dealPnlSegmentWin : styles.dealPnlSegment + " " + styles.dealPnlSegmentLoss} style={{ left: String(pnlSegmentLeft) + "%", width: String(pnlSegmentWidth) + "%" }}/>',
+    '      </div>',
     '      <span className={styles.dealCurrentEndpoint + " " + (tradeIsWinning ? styles.dealCurrentWin : styles.dealCurrentLoss)} style={{ left: currentLeft }}><b>{pct(pnlPct)}</b><em>{money(current)}</em></span>',
     '      <span className={styles.dealBarMarker + " " + styles.dealBuyMarker} style={{ left: markerLeft(trade.averagePrice) }}><b>Buy</b>{money(trade.averagePrice)}</span>',
     '      {nextDcaLevel ? <span className={styles.dealBarMarker + " " + styles.dealDcaMarker} style={{ left: markerLeft(nextDcaLevel) }}><b>DCA</b>{money(nextDcaLevel)}</span> : null}',
@@ -52,16 +63,20 @@ if (barStart >= 0 && barEnd > barStart) {
 }
 
 if (!source.includes('className={styles.dealCurrentEndpoint')) throw new Error('3Commas current-price endpoint marker was not inserted.');
+if (!source.includes('styles.dealPnlSegmentLoss')) throw new Error('3Commas Buy-to-current PnL segment was not inserted.');
 if (!source.includes('styles.dealVolumePnlLoss')) throw new Error('Active DCA PnL was not moved under Volume.');
 
-if (!css.includes('/* DCA 3Commas endpoint bar v2 */')) {
+if (!css.includes('/* DCA 3Commas endpoint bar v3 */')) {
   css += `
-/* DCA 3Commas endpoint bar v2 */
+/* DCA 3Commas endpoint bar v3 */
 .dealTradeSnapshot{min-width:420px;margin-top:0!important;padding-top:24px!important;padding-bottom:31px!important}
 .dealPriceBar3c{height:34px!important;position:relative}
-.dealPriceBar3c .dealPriceTrack{left:0!important;right:0!important;top:12px!important;height:8px!important;border-radius:0;overflow:visible!important}
-.dealPriceBar3c .dealPriceTrackWin{background:#19b69f!important}
-.dealPriceBar3c .dealPriceTrackLoss{background:#f06780!important}
+.dealPriceBar3c .dealPriceTrack{left:0!important;right:0!important;top:12px!important;height:8px!important;border-radius:0;overflow:hidden!important;background:#dce4e8!important}
+.dealPriceBar3c .dealPriceTrackNeutral{background:#dce4e8!important}
+.dealPriceBar3c .dealPnlSegment{position:absolute!important;top:0!important;bottom:0!important;display:block!important;z-index:2!important}
+.dealPriceBar3c .dealPnlSegmentLoss{background:#f06780!important}
+.dealPriceBar3c .dealPnlSegmentWin{background:#19b69f!important}
+.dealPriceBar3c .dealPriceTrackWin,.dealPriceBar3c .dealPriceTrackLoss{background:#dce4e8!important}
 .dealCurrentEndpoint{position:absolute;z-index:6;top:-13px;display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:10px;line-height:1;color:#dbe4e9}
 .dealCurrentEndpoint b{font-size:11px;font-weight:900}.dealCurrentEndpoint em{font-style:normal;color:#aebac3;font-size:10px;font-weight:650}
 .dealCurrentEndpoint:after{content:"";position:absolute;top:14px;width:1px;height:15px;background:currentColor;opacity:.95}
@@ -80,4 +95,4 @@ if (!css.includes('/* DCA 3Commas endpoint bar v2 */')) {
 
 fs.writeFileSync(traderPath, source);
 fs.writeFileSync(cssPath, css);
-console.log('Matched 3Commas DCA bar endpoints and moved active PnL under Volume.');
+console.log('Matched 3Commas DCA bar: neutral track with only Buy-to-current interval colored.');
