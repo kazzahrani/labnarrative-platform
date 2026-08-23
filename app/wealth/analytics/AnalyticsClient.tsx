@@ -233,7 +233,7 @@ export default function AnalyticsClient() {
         <section className={styles.performancePanel}>
           <div className={styles.panelHead}><div><small>الأداء المقارن</small><h2>المحفظة مقابل السوق</h2></div><div className={styles.ranges}>{Object.keys(RANGE_LABELS).map((key) => <button type="button" key={key} onClick={() => setRange(key)} className={range === key ? styles.rangeActive : ""}>{RANGE_LABELS[key]}</button>)}</div></div>
           {analyticsLoading ? <div className={styles.chartLoading}>جاري جلب الأسعار التاريخية…</div> : analytics ? <PerformanceChart portfolio={analytics.portfolio} benchmarks={analytics.benchmarks} /> : <div className={styles.empty}>لا توجد بيانات.</div>}
-          <div className={styles.methodNote}>المقارنة تبدأ من 100. المصدر الحالي: Yahoo Finance historical fallback. TASI يستخدم الرمز ^TASI.SR. citeturn758955search1turn758955search0</div>
+          <div className={styles.methodNote}>المقارنة تبدأ من 100. المصدر الحالي: Yahoo Finance historical fallback. مؤشر السوق السعودي يستخدم TASI.</div>
         </section>
 
         <section className={styles.visualGrid}>
