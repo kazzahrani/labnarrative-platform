@@ -1,10 +1,11 @@
 import Link from "next/link";
+import AwaedScreenshotClient from "./AwaedScreenshotClient";
 import AwaedImportClient from "./AwaedImportClient";
 import styles from "./awaed.module.css";
 
 export const metadata = {
   title: "إضافة محفظة عوائد — ثروة",
-  description: "أضف استثمارات عوائد إلى لوحة ثروتك عبر إدخال سريع أو رفع كشف للمراجعة.",
+  description: "أضف استثمارات عوائد إلى لوحة ثروتك عبر صور المحفظة أو كشف الحساب أو الإدخال السريع.",
 };
 
 export default function AwaedConnectPage() {
@@ -21,25 +22,27 @@ export default function AwaedConnectPage() {
             <span className={styles.eyebrow}>محفظتك الحالية</span>
             <h1>ابدأ بمحفظة عوائد.</h1>
             <p>
-              اجمع استثماراتك في عوائد داخل صورة ثروتك الكاملة. نبدأ اليوم بإدخال آمن وبسيط،
-              ثم نستبدله لاحقًا بربط مباشر رسمي عندما يتوفر التكامل المناسب.
+              أسهل طريقة الآن هي تصوير صفحة استثماراتك في عوائد ورفع اللقطات. تقرأها ثروة محليًا،
+              تعرض الأصول للمراجعة، ثم تحفظ فقط البيانات التي تعتمدها أنت.
             </p>
           </div>
           <div className={styles.heroFacts}>
-            <div><span>الأسهم</span><strong>مدعومة</strong></div>
-            <div><span>الصناديق</span><strong>مدعومة</strong></div>
+            <div><span>صور المحفظة</span><strong>مدعومة</strong></div>
+            <div><span>الأسهم والصناديق</span><strong>مدعومة</strong></div>
             <div><span>المرابحات</span><strong>مدعومة</strong></div>
             <div><span>الوضع الحالي</span><strong>قراءة فقط</strong></div>
           </div>
         </section>
 
+        <AwaedScreenshotClient />
         <AwaedImportClient />
 
         <section className={styles.securityNote}>
           <span>الخصوصية أولًا</span>
           <p>
-            لا نطلب اسم المستخدم أو كلمة مرور عوائد، ولا ننفذ أي تداول أو تحويل. بعد تسجيل الدخول،
-            تُحفظ بيانات محفظتك في جداول ثروة المحمية بسياسات وصول تمنع أي مستخدم من قراءة بيانات مستخدم آخر.
+            لا نطلب اسم المستخدم أو كلمة مرور عوائد، ولا ننفذ أي تداول أو تحويل. صور المحفظة تُقرأ داخل متصفحك
+            ولا نخزن الصور نفسها في قاعدة البيانات؛ بعد المراجعة نحفظ فقط بيانات الأصول التي وافقت عليها،
+            داخل جداول ثروة المحمية بسياسات وصول لكل مستخدم.
           </p>
         </section>
       </div>
