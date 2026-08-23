@@ -7,6 +7,7 @@ const ROUTES: Record<string, string> = {
   "التحليلات": "/wealth/analytics",
   "الالتزام الشرعي": "/wealth/shariah",
   "الحسابات": "/wealth/accounts",
+  "اسأل ثروتي": "/wealth/ask",
 };
 
 function addBrandMark() {
