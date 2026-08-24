@@ -6,43 +6,17 @@ import { browserSupabase } from "@/lib/supabase-browser";
 
 type PortfolioKind = "real" | "paper";
 type PriceStatus = "fresh" | "delayed" | "stale" | "unavailable";
-type Holding = {
+type Row = {
   id: string;
   asset_name: string;
   symbol: string | null;
-  asset_type: string | null;
-  unit_price: number | string | null;
-  market_value: number | string | null;
-  metadata: Record<string, unknown> | null;
+  effective_price_status: PriceStatus | null;
 };
-
-type StatusRow = Holding & { status: PriceStatus };
-
-function bool(v: unknown) {
-  return v === true || v === "true";
-}
-
-function isManaged(h: Holding) {
-  const meta = h.metadata ?? {};
-  return bool(meta.market_price_managed) || String(meta.source ?? "") === "binance_api";
-}
-
-function effectiveStatus(h: Holding, now: number): PriceStatus {
-  const meta = h.metadata ?? {};
-  if (h.unit_price === null || h.market_value === null || String(meta.price_status ?? "") === "unavailable") return "unavailable";
-  const staleAt = Date.parse(String(meta.price_stale_after ?? ""));
-  if (Number.isFinite(staleAt) && staleAt < now) return "stale";
-  if (bool(meta.price_delayed)) return "delayed";
-  const observedAt = Date.parse(String(meta.price_observed_at ?? meta.synced_at ?? ""));
-  if (Number.isFinite(observedAt)) return "fresh";
-  return "unavailable";
-}
 
 export default function WealthPricingIntegrity() {
   const searchParams = useSearchParams();
   const kind: PortfolioKind = searchParams.get("portfolio") === "paper" ? "paper" : "real";
-  const [holdings, setHoldings] = useState<Holding[]>([]);
-  const [now, setNow] = useState(() => Date.now());
+  const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -50,32 +24,30 @@ export default function WealthPricingIntegrity() {
       const { data: userData } = await browserSupabase.auth.getUser();
       if (!userData.user) return;
       const { data } = await browserSupabase
-        .from("wealth_holdings")
-        .select("id,asset_name,symbol,asset_type,unit_price,market_value,metadata")
+        .from("wealth_holdings_pricing_status")
+        .select("id,asset_name,symbol,effective_price_status")
         .eq("user_id", userData.user.id)
-        .eq("portfolio_kind", kind);
-      if (active) setHoldings((data ?? []) as Holding[]);
+        .eq("portfolio_kind", kind)
+        .not("effective_price_status", "is", null);
+      if (active) setRows((data ?? []) as Row[]);
     }
     void load();
-    const tick = window.setInterval(() => setNow(Date.now()), 60_000);
-    const refresh = window.setInterval(() => void load(), 300_000);
+    const refresh = window.setInterval(() => void load(), 60_000);
     return () => {
       active = false;
-      window.clearInterval(tick);
       window.clearInterval(refresh);
     };
   }, [kind]);
 
-  const rows = useMemo<StatusRow[]>(() => holdings.filter(isManaged).map(h => ({ ...h, status: effectiveStatus(h, now) })), [holdings, now]);
   const counts = useMemo(() => ({
-    fresh: rows.filter(r => r.status === "fresh").length,
-    delayed: rows.filter(r => r.status === "delayed").length,
-    stale: rows.filter(r => r.status === "stale").length,
-    unavailable: rows.filter(r => r.status === "unavailable").length,
+    fresh: rows.filter(r => r.effective_price_status === "fresh").length,
+    delayed: rows.filter(r => r.effective_price_status === "delayed").length,
+    stale: rows.filter(r => r.effective_price_status === "stale").length,
+    unavailable: rows.filter(r => r.effective_price_status === "unavailable").length,
   }), [rows]);
 
   if (!rows.length) return null;
-  const affected = rows.filter(r => r.status === "stale" || r.status === "unavailable");
+  const affected = rows.filter(r => r.effective_price_status === "stale" || r.effective_price_status === "unavailable");
   const affectedNames = affected.slice(0, 3).map(r => r.symbol || r.asset_name).join("، ");
   const hasProblem = counts.stale > 0 || counts.unavailable > 0;
 
