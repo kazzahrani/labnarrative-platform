@@ -20,6 +20,13 @@ function normalizeOtp(value: string) {
     .slice(0, 6);
 }
 
+function wealthAuthOrigin() {
+  if (window.location.hostname === "thrwa.tech" || window.location.hostname === "www.thrwa.tech") {
+    return "https://thrwa.tech";
+  }
+  return window.location.origin;
+}
+
 export default function WealthLoginClient() {
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -103,7 +110,7 @@ export default function WealthLoginClient() {
         type: "signup",
         email: cleanEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}${nextPath}`,
+          emailRedirectTo: `${wealthAuthOrigin()}${nextPath}`,
         },
       });
       if (resendError) throw resendError;
@@ -150,7 +157,7 @@ export default function WealthLoginClient() {
       }
 
       if (mode === "recovery") {
-        const recoveryUrl = `${window.location.origin}/wealth/reset-password?next=${encodeURIComponent(nextPath)}`;
+        const recoveryUrl = `${wealthAuthOrigin()}/wealth/reset-password?next=${encodeURIComponent(nextPath)}`;
         const { error: recoveryError } = await browserSupabase.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: recoveryUrl,
         });
@@ -163,7 +170,7 @@ export default function WealthLoginClient() {
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}${nextPath}`,
+          emailRedirectTo: `${wealthAuthOrigin()}${nextPath}`,
         },
       });
       if (authError) throw authError;
