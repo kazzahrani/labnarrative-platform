@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
     "/api/platform/tenders/boq-extract": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
     "/api/tenders/boq-analyze": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/",
+        destination: "/wealth",
+        has: [{ type: "host", value: "thrwa.tech" }],
+      },
+    ];
+  },
   async redirects() {
     return [
       { source: "/intelligence", destination: "/", permanent: true },
