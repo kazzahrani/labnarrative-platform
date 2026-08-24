@@ -34,7 +34,7 @@ const ledgerBlock = [
   "      const quantity = price > 0 ? floorToStep(plannedAmount / price, market?.stepSize || 0) : 0;",
   "      const amount = quantity > 0 ? quantity * price : plannedAmount;",
   "      return {",
-  "        id: `${trade.id}:dca:${zeroBasedIndex + 1}`,
+  "        id: trade.id + \" :dca:\".replace(\" \" , \"\") + String(zeroBasedIndex + 1),",
   "        tradeId: trade.id, botId: bot.id, pair: trade.pair, index: zeroBasedIndex + 1, price, amount, quantity, status: \"Pending\" as const,",
   "      };",
   "    });",
