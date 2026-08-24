@@ -16,7 +16,7 @@
     "react-dom": "19.2.8",
     "@supabase/supabase-js": "2.110.8",
     "@napi-rs/canvas": "0.1.89",
-    "exceljs": "4.4.5",
+    "exceljs": "4.4.0",
     "pdf-parse": "2.4.5",
     "sharp": "0.34.3",
     "lightweight-charts": "5.2.1"
