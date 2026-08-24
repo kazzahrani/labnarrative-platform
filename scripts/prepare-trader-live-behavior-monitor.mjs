@@ -7,8 +7,8 @@ let source = fs.readFileSync(traderPath, "utf8");
 let css = fs.readFileSync(cssPath, "utf8");
 
 // TRADING V2 LIVE BEHAVIOR MONITOR
-// Keep raw Binance ticks available to the DCA engine immediately, but batch visible
-// React-state updates. Professional automation UIs should not repaint on every book tick.
+// Raw Binance ticks remain immediate for the execution cache. React/UI prices are
+// deliberately batched so the interface does not repaint on every order-book tick.
 if (!source.includes("PROFESSIONAL_MARKET_UI_BUFFER_V1")) {
   const stateAnchor = '  const [lastMarketUpdate, setLastMarketUpdate] = useState<string | null>(null);';
   if (!source.includes(stateAnchor)) throw new Error("Trader behavior monitor: market update state anchor missing.");
@@ -25,46 +25,53 @@ if (!source.includes("PROFESSIONAL_MARKET_UI_BUFFER_V1")) {
     '    if (typeof patch.ask === "number" && Number.isFinite(patch.ask) && patch.ask > 0) clean.ask = patch.ask;',
     '    if (typeof patch.change24h === "number" && Number.isFinite(patch.change24h)) clean.change24h = patch.change24h;',
     '    if (!Object.keys(clean).length) return;',
-    '    // Raw execution cache: update on every Binance tick, independently of UI cadence.',
     '    dcaMarketsRef.current = dcaMarketsRef.current.map((item) => item.exchangeSymbol.toUpperCase() === exchangeSymbol ? { ...item, ...clean } : item);',
     '    marketUiQueueRef.current.set(exchangeSymbol, { ...(marketUiQueueRef.current.get(exchangeSymbol) ?? {}), ...clean });',
     '    marketUiLastTickRef.current = new Date().toISOString();',
     '  };',
   ].join("\n"));
 
-  const selectedSocketPattern = /          setMarkets\(\(items\) => items\.map\(\(item\) => item\.exchangeSymbol\.toLowerCase\(\) === exchangeSymbol \? \{\n            \.\.\.item,\n            price: Number\.isFinite\(price\) && price > 0 \? price : item\.price,\n            bid: Number\.isFinite\(bid\) && bid > 0 \? bid : item\.bid,\n            ask: Number\.isFinite\(ask\) && ask > 0 \? ask : item\.ask,\n            change24h: Number\.isFinite\(price\) && price > 0 && Number\.isFinite\(open\) && open > 0 \? \(\(price - open\) \/ open\) \* 100 : item\.change24h,\n          \} : item\)\)\);\n          setLastMarketUpdate\(new Date\(\)\.toISOString\(\)\);/g;
-  let selectedReplacements = 0;
-  source = source.replace(selectedSocketPattern, () => {
-    selectedReplacements += 1;
-    return [
-      '          queueProfessionalMarketTick(exchangeSymbol, {',
-      '            price: Number.isFinite(price) && price > 0 ? price : undefined,',
-      '            bid: Number.isFinite(bid) && bid > 0 ? bid : undefined,',
-      '            ask: Number.isFinite(ask) && ask > 0 ? ask : undefined,',
-      '            change24h: Number.isFinite(price) && price > 0 && Number.isFinite(open) && open > 0 ? ((price - open) / open) * 100 : undefined,',
-      '          });',
-    ].join("\n");
-  });
-  if (selectedReplacements < 1) throw new Error("Trader behavior monitor: selected-pair WebSocket renderer anchor missing.");
+  // Selected-pair stream inserted by prepare-trader-live-binance-data.mjs.
+  const selectedMarker = source.indexOf('// Keep the selected Binance pair genuinely live between REST refreshes.');
+  if (selectedMarker < 0) throw new Error("Trader behavior monitor: selected-pair stream marker missing.");
+  const selectedStart = source.indexOf('          setMarkets((items) =>', selectedMarker);
+  const selectedLastUpdate = source.indexOf('          setLastMarketUpdate(new Date().toISOString());', selectedStart);
+  if (selectedStart < 0 || selectedLastUpdate <= selectedStart) throw new Error("Trader behavior monitor: selected-pair update block missing.");
+  const selectedEnd = selectedLastUpdate + '          setLastMarketUpdate(new Date().toISOString());'.length;
+  source = source.slice(0, selectedStart) + [
+    '          queueProfessionalMarketTick(exchangeSymbol, {',
+    '            price: Number.isFinite(price) && price > 0 ? price : undefined,',
+    '            bid: Number.isFinite(bid) && bid > 0 ? bid : undefined,',
+    '            ask: Number.isFinite(ask) && ask > 0 ? ask : undefined,',
+    '            change24h: Number.isFinite(price) && price > 0 && Number.isFinite(open) && open > 0 ? ((price - open) / open) * 100 : undefined,',
+    '          });',
+  ].join("\n") + source.slice(selectedEnd);
 
-  const activeSocketPattern = /          setMarkets\(\(items\) => items\.map\(\(item\) => item\.exchangeSymbol === exchangeSymbol \? \{\n            \.\.\.item,\n            price: Number\.isFinite\(price\) && price > 0 \? price : item\.price,\n            bid: Number\.isFinite\(bid\) && bid > 0 \? bid : item\.bid,\n            ask: Number\.isFinite\(ask\) && ask > 0 \? ask : item\.ask,\n          \} : item\)\)\);/g;
-  let activeReplacements = 0;
-  source = source.replace(activeSocketPattern, () => {
-    activeReplacements += 1;
-    return [
-      '          queueProfessionalMarketTick(exchangeSymbol, {',
-      '            price: Number.isFinite(price) && price > 0 ? price : undefined,',
-      '            bid: Number.isFinite(bid) && bid > 0 ? bid : undefined,',
-      '            ask: Number.isFinite(ask) && ask > 0 ? ask : undefined,',
-      '          });',
-    ].join("\n");
-  });
-  if (activeReplacements < 1) throw new Error("Trader behavior monitor: active-DCA WebSocket renderer anchor missing.");
+  // Active/pending DCA streams inserted by the final DCA accuracy passes.
+  const activeMarker = source.indexOf('// DCA_ACTIVE_PAIR_STREAMS_V2');
+  if (activeMarker < 0) throw new Error("Trader behavior monitor: active DCA stream marker missing.");
+  const activeStart = source.indexOf('          setMarkets((items) =>', activeMarker);
+  const activeCloseNeedle = '          } : item));';
+  const activeClose = source.indexOf(activeCloseNeedle, activeStart);
+  if (activeStart < 0 || activeClose <= activeStart) throw new Error("Trader behavior monitor: active DCA market update block missing.");
+  const activeEnd = activeClose + activeCloseNeedle.length;
+  source = source.slice(0, activeStart) + [
+    '          queueProfessionalMarketTick(exchangeSymbol, {',
+    '            price: Number.isFinite(price) && price > 0 ? price : undefined,',
+    '            bid: Number.isFinite(bid) && bid > 0 ? bid : undefined,',
+    '            ask: Number.isFinite(ask) && ask > 0 ? ask : undefined,',
+    '          });',
+  ].join("\n") + source.slice(activeEnd);
 
   const outerReturn = source.lastIndexOf('  return <main className={styles.appShell}>');
   if (outerReturn < 0) throw new Error("Trader behavior monitor: outer return anchor missing.");
   const effects = String.raw`
-  // Flush visible prices at a calm cadence while raw ticks continue updating dcaMarketsRef.
+  const dcaAuditBotsRef = useRef(dcaBots);
+  const dcaAuditTradesRef = useRef(dcaTrades);
+  useEffect(() => { dcaAuditBotsRef.current = dcaBots; }, [dcaBots]);
+  useEffect(() => { dcaAuditTradesRef.current = dcaTrades; }, [dcaTrades]);
+
+  // Visible values update every two seconds. Execution still sees every raw tick above.
   useEffect(() => {
     const flushVisibleMarkets = () => {
       if (!marketUiQueueRef.current.size) return;
@@ -80,23 +87,23 @@ if (!source.includes("PROFESSIONAL_MARKET_UI_BUFFER_V1")) {
     return () => window.clearInterval(timer);
   }, []);
 
-  // First-bot validation telemetry. This is diagnostic only: it never opens, edits or closes a trade.
+  // Production diagnostics for the newest/first validation bot. Read-only only.
   useEffect(() => {
     let cancelled = false;
     let busy = false;
     const postAudit = async () => {
       if (cancelled || busy) return;
-      const bots = [...dcaBotsRef.current];
+      const bots = [...dcaAuditBotsRef.current];
       if (!bots.length) return;
       busy = true;
       try {
-        const bot = bots.sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")))[0];
-        const botTrades = dcaTradesRef.current.filter((trade) => trade.botId === bot.id);
+        const bot = bots[0];
+        const botTrades = dcaAuditTradesRef.current.filter((trade) => trade.botId === bot.id);
         const activeTrade = botTrades.find((trade) => trade.status === "Active") ?? null;
         const pair = activeTrade?.pair ?? bot.pairs?.[0] ?? bot.pair;
         const symbol = pair.split("/")[0];
         const market = dcaMarketsRef.current.find((item) => item.symbol === symbol) ?? null;
-        const conditionResults = [];
+        const conditionResults: Array<Record<string, unknown>> = [];
         for (const condition of bot.conditions ?? []) {
           try {
             const result = await evaluateDcaCondition(bot, pair, condition);
@@ -140,7 +147,7 @@ if (!source.includes("PROFESSIONAL_MARKET_UI_BUFFER_V1")) {
         };
         await fetch("/api/trader/audit", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), keepalive: true });
       } catch {
-        // Telemetry must never interfere with trading behavior.
+        // Diagnostics must never interfere with trade execution.
       } finally {
         busy = false;
       }
