@@ -34,7 +34,7 @@ const ledgerBlock = [
   "      const quantity = price > 0 ? floorToStep(plannedAmount / price, market?.stepSize || 0) : 0;",
   "      const amount = quantity > 0 ? quantity * price : plannedAmount;",
   "      return {",
-  "        id: trade.id + \" :dca:\".replace(\" \" , \"\") + String(zeroBasedIndex + 1),",
+  "        id: trade.id + \":dca:\" + String(zeroBasedIndex + 1),",
   "        tradeId: trade.id, botId: bot.id, pair: trade.pair, index: zeroBasedIndex + 1, price, amount, quantity, status: \"Pending\" as const,",
   "      };",
   "    });",
@@ -62,7 +62,9 @@ source = source.replaceAll(
 
 // The live chart must display those same open order records, not independently recompute them.
 const chartStart = source.indexOf("  // DCA_PENDING_CHART_ORDERS_V1");
-const chartEnd = source.indexOf("  const selectedDcaTpPrice", chartStart);
+const tpPctAnchor = source.indexOf("  const selectedDcaTpPct", chartStart);
+const tpPriceAnchor = source.indexOf("  const selectedDcaTpPrice", chartStart);
+const chartEnd = tpPctAnchor >= 0 ? tpPctAnchor : tpPriceAnchor;
 if (chartStart < 0 || chartEnd < 0) throw new Error("Paper pending-order ledger: selected trade pending-order chart block missing.");
 const chartBlock = [
   "  // DCA_PENDING_CHART_ORDERS_V1 — chart renders the actual pending paper-order ledger.",
@@ -92,6 +94,7 @@ if (!source.includes("dcaPendingAveragingReserved = dcaPaperPendingAveragingOrde
 if (!source.includes("activePendingAtCycleStart = dcaPaperPendingAveragingOrdersForTrade(item).length")) throw new Error("Execution is not bounded by pending-order ledger.");
 if (!source.includes("dcaPaperPendingAveragingOrders.filter((order) => order.tradeId === selectedDcaChartTrade.id)")) throw new Error("Chart is not rendering pending-order ledger.");
 if (!source.includes("reserved in open orders")) throw new Error("Dashboard Reserved is not broker-style open-order cash.");
+if (source.includes("selectedDcaTpPrice = selectedDcaChartTrade && selectedDcaTpPct > 0") && !source.includes("const selectedDcaTpPct")) throw new Error("TP override declaration was lost by pending-order transform.");
 
 fs.writeFileSync(traderPath, source);
 console.log("Prepared authoritative paper pending DCA order ledger: reservation, fills and chart use the same open orders.");
