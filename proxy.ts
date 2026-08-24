@@ -34,6 +34,25 @@ export function proxy(request: NextRequest) {
   const isTendersHost = host === `tenders.${rootDomain}`;
   const isSaasHost = host === `app.${rootDomain}`;
   const isCareerHost = host === `career.${rootDomain}`;
+  const isThrwaApexHost = host === "thrwa.tech";
+  const isThrwaWwwHost = host === "www.thrwa.tech";
+
+  // Thrwa is deployed from the same codebase but has its own canonical domain.
+  // Route its public root directly to the wealth application without exposing
+  // the LabNarrative homepage from the shared repository.
+  if (isThrwaWwwHost) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.protocol = "https:";
+    canonicalUrl.hostname = "thrwa.tech";
+    canonicalUrl.port = "";
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
+  if (isThrwaApexHost && request.nextUrl.pathname === "/") {
+    const wealthUrl = request.nextUrl.clone();
+    wealthUrl.pathname = "/wealth";
+    return NextResponse.rewrite(wealthUrl);
+  }
 
   if (request.nextUrl.pathname.startsWith("/engine-v4/render/")) {
     const response = NextResponse.next();
