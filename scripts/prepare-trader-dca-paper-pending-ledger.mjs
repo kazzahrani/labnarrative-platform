@@ -71,6 +71,7 @@ const chartBlock = [
   "  const selectedDcaPendingAveragingOrders = selectedDcaChartTrade",
   "    ? dcaPaperPendingAveragingOrders.filter((order) => order.tradeId === selectedDcaChartTrade.id).map((order) => ({ index: order.index, price: order.price, amount: order.amount }))",
   "    : [];",
+  "  const selectedDcaNextAveragingPrice = selectedDcaPendingAveragingOrders[0]?.price ?? null;",
   "",
 ].join("\n");
 source = source.slice(0, chartStart) + chartBlock + source.slice(chartEnd);
@@ -93,6 +94,7 @@ if (!source.includes("const dcaPaperPendingAveragingOrders = activeDcaTrades.fla
 if (!source.includes("dcaPendingAveragingReserved = dcaPaperPendingAveragingOrders.reduce")) throw new Error("Reserved cash is not derived from pending orders.");
 if (!source.includes("activePendingAtCycleStart = dcaPaperPendingAveragingOrdersForTrade(item).length")) throw new Error("Execution is not bounded by pending-order ledger.");
 if (!source.includes("dcaPaperPendingAveragingOrders.filter((order) => order.tradeId === selectedDcaChartTrade.id)")) throw new Error("Chart is not rendering pending-order ledger.");
+if (!source.includes("selectedDcaNextAveragingPrice = selectedDcaPendingAveragingOrders[0]?.price ?? null")) throw new Error("Next DCA compatibility value is not derived from pending-order ledger.");
 if (!source.includes("reserved in open orders")) throw new Error("Dashboard Reserved is not broker-style open-order cash.");
 if (source.includes("selectedDcaTpPrice = selectedDcaChartTrade && selectedDcaTpPct > 0") && !source.includes("const selectedDcaTpPct")) throw new Error("TP override declaration was lost by pending-order transform.");
 
