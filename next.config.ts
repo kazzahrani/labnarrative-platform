@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
         destination: "/wealth",
         has: [{ type: "host", value: "thrwa.tech" }],
       },
+      {
+        source: "/",
+        destination: "/wealth",
+        has: [{ type: "host", value: "www.thrwa.tech" }],
+      },
     ];
   },
   async redirects() {
