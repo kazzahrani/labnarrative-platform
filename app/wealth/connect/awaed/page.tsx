@@ -1,10 +1,10 @@
 import Link from "next/link";
-import ManualAwaedClientV2 from "./ManualAwaedClientV2";
+import ManualAwaedClientV3 from "./ManualAwaedClientV3";
 import styles from "./awaed.module.css";
 
 export const metadata = {
-  title: "إضافة محفظة عوائد — ثروة",
-  description: "أضف استثمارات عوائد يدويًا إلى لوحة ثروتك بشكل بسيط وآمن.",
+  title: "تحديث محفظة عوائد — ثروة",
+  description: "طابق محفظة عوائد الحالية بأمان مع ثروة دون استبدال البيانات عشوائيًا.",
 };
 
 export default function AwaedConnectPage() {
@@ -18,28 +18,28 @@ export default function AwaedConnectPage() {
 
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
-            <span className={styles.eyebrow}>محفظتك الحالية</span>
-            <h1>أدخل محفظة عوائد يدويًا.</h1>
+            <span className={styles.eyebrow}>المحفظة الحقيقية</span>
+            <h1>حدّث محفظة عوائد، ولا تعِد إدخالها.</h1>
             <p>
-              بما أن تطبيق عوائد يمنع التقاط صور الشاشة، جعلنا الإدخال اليدوي هو المسار الأساسي.
-              انقل اسم الاستثمار ونوعه وقيمته الحالية فقط، وأضف الكمية ومتوسط التكلفة إذا أردت تحليلات أدق لاحقًا.
+              ثروة تحمّل الأصول المسجلة حاليًا ثم تطابقها مع أي تغيير تقوم به. عدّل الكمية أو متوسط التكلفة عند الشراء أو البيع،
+              بينما أسعار الأسهم والـREIT السعودية تستمر في التحديث تلقائيًا.
             </p>
           </div>
           <div className={styles.heroFacts}>
-            <div><span>الحد الأدنى المطلوب</span><strong>الاسم + القيمة</strong></div>
-            <div><span>الأسهم والصناديق</span><strong>مدعومة</strong></div>
-            <div><span>المرابحات والصكوك</span><strong>مدعومة</strong></div>
-            <div><span>الوضع الحالي</span><strong>قراءة فقط</strong></div>
+            <div><span>الأصول الحالية</span><strong>تُحمّل تلقائيًا</strong></div>
+            <div><span>الأسهم والـREIT</span><strong>سعر سوق تلقائي</strong></div>
+            <div><span>تغير الكمية</span><strong>يُسجل في التاريخ</strong></div>
+            <div><span>طريقة الحفظ</span><strong>مطابقة ذرّية</strong></div>
           </div>
         </section>
 
-        <ManualAwaedClientV2 />
+        <ManualAwaedClientV3 />
 
         <section className={styles.securityNote}>
-          <span>الخصوصية أولًا</span>
+          <span>بدون بيانات دخول عوائد</span>
           <p>
-            لا نطلب اسم المستخدم أو كلمة مرور عوائد، ولا ننفذ أي تداول أو تحويل. أنت تنقل فقط بيانات الاستثمارات التي تريد إضافتها،
-            وتُحفظ بعد تسجيل الدخول داخل جداول ثروة المحمية بسياسات وصول لكل مستخدم.
+            لا نطلب اسم المستخدم أو كلمة المرور، ولا ننفذ تداولًا. تحديث الكمية هنا يعني فقط أن ثروة تطابق سجلها مع لقطة محفظتك الحالية،
+            وتتعامل مع الفرق كتعديل مركز ما لم يتوفر لنا لاحقًا سجل تنفيذ رسمي من عوائد.
           </p>
         </section>
       </div>
