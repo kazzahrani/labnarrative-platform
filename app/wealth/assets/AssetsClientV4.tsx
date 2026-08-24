@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "@/lib/supabase-browser";
+import { formatWealthMoney, type WealthCurrency } from "../wealth-money";
 import styles from "./assets.module.css";
 
 type PortfolioKind = "real" | "paper";
@@ -14,141 +15,45 @@ const COLORS:Record<string,string>={saudi_stock:"#38bdf8",global_stock:"#6366f1"
 const BINANCE_DUST_SAR=3.75;
 const n=(v:number|string|null|undefined)=>{const x=Number(v??0);return Number.isFinite(x)?x:0};
 const fmt=(v:number,d=2)=>new Intl.NumberFormat("ar-SA-u-nu-arab",{maximumFractionDigits:d}).format(v);
-const sar=(v:number)=>`${fmt(v)} ر.س`;
 const pct=(v:number)=>`${v>0?"+":""}${fmt(v,1)}٪`;
 
 export default function AssetsClientV4(){
-  const [kind,setKind]=useState<PortfolioKind>("real");
-  const [manage,setManage]=useState(false);
-  const [accounts,setAccounts]=useState<Account[]>([]);
-  const [holdings,setHoldings]=useState<Holding[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState("");
-  const [search,setSearch]=useState("");
-  const [typeFilter,setTypeFilter]=useState("all");
-  const [accountFilter,setAccountFilter]=useState("all");
-  const [performanceFilter,setPerformanceFilter]=useState("all");
-  const [editing,setEditing]=useState<Holding|null>(null);
-  const [saving,setSaving]=useState(false);
-  const [editError,setEditError]=useState("");
-  const [name,setName]=useState("");
-  const [symbol,setSymbol]=useState("");
-  const [quantity,setQuantity]=useState("");
-  const [unitPrice,setUnitPrice]=useState("");
-  const [marketValue,setMarketValue]=useState("");
-  const [costBasis,setCostBasis]=useState("");
+  const[kind,setKind]=useState<PortfolioKind>("real");const[manage,setManage]=useState(false);const[accounts,setAccounts]=useState<Account[]>([]);const[holdings,setHoldings]=useState<Holding[]>([]);const[baseCurrency,setBaseCurrency]=useState<WealthCurrency>("SAR");const[loading,setLoading]=useState(true);const[error,setError]=useState("");const[search,setSearch]=useState("");const[typeFilter,setTypeFilter]=useState("all");const[accountFilter,setAccountFilter]=useState("all");const[performanceFilter,setPerformanceFilter]=useState("all");const[editing,setEditing]=useState<Holding|null>(null);const[saving,setSaving]=useState(false);const[editError,setEditError]=useState("");const[name,setName]=useState("");const[symbol,setSymbol]=useState("");const[quantity,setQuantity]=useState("");const[unitPrice,setUnitPrice]=useState("");const[marketValue,setMarketValue]=useState("");const[costBasis,setCostBasis]=useState("");
 
-  async function load(mode:PortfolioKind){
-    const {data:userData,error:userError}=await browserSupabase.auth.getUser();
-    if(userError||!userData.user){window.location.replace(`/wealth/login?next=${encodeURIComponent(window.location.pathname+window.location.search)}`);return}
-    if(mode==="paper"){const {error:seedError}=await browserSupabase.rpc("ensure_wealth_paper_portfolio");if(seedError)throw seedError}
-    const uid=userData.user.id;
-    const [a,h]=await Promise.all([
-      browserSupabase.from("wealth_accounts").select("id,provider,account_name").eq("user_id",uid).eq("portfolio_kind",mode).order("created_at",{ascending:true}),
-      browserSupabase.from("wealth_holdings").select("id,account_id,asset_name,symbol,asset_type,quantity,unit_price,market_value,cost_basis,currency").eq("user_id",uid).eq("portfolio_kind",mode).order("market_value",{ascending:false})
-    ]);
-    if(a.error)throw a.error;
-    if(h.error)throw h.error;
-    setAccounts((a.data??[]) as Account[]);
-    setHoldings((h.data??[]) as Holding[]);
-  }
+  async function load(mode:PortfolioKind){const{data:userData,error:userError}=await browserSupabase.auth.getUser();if(userError||!userData.user){window.location.replace(`/wealth/login?next=${encodeURIComponent(window.location.pathname+window.location.search)}`);return}if(mode==="paper"){const{error:seedError}=await browserSupabase.rpc("ensure_wealth_paper_portfolio");if(seedError)throw seedError}const uid=userData.user.id;const[a,h,p]=await Promise.all([
+    browserSupabase.from("wealth_accounts").select("id,provider,account_name").eq("user_id",uid).eq("portfolio_kind",mode).order("created_at",{ascending:true}),
+    browserSupabase.from("wealth_holdings").select("id,account_id,asset_name,symbol,asset_type,quantity,unit_price,market_value,cost_basis,currency").eq("user_id",uid).eq("portfolio_kind",mode).order("market_value",{ascending:false}),
+    browserSupabase.from("wealth_profiles").select("base_currency").eq("user_id",uid).maybeSingle()]);if(a.error)throw a.error;if(h.error)throw h.error;if(p.error)throw p.error;setAccounts((a.data??[]) as Account[]);setHoldings((h.data??[]) as Holding[]);setBaseCurrency(p.data?.base_currency==="USD"?"USD":"SAR")}
 
-  useEffect(()=>{
-    let alive=true;
-    const params=new URLSearchParams(window.location.search);
-    const mode:PortfolioKind=params.get("portfolio")==="paper"?"paper":"real";
-    setKind(mode);setManage(params.get("manage")==="1");
-    void load(mode).catch(e=>{if(alive)setError(e instanceof Error?e.message:"تعذر تحميل الأصول.")}).finally(()=>{if(alive)setLoading(false)});
-    return()=>{alive=false};
-  },[]);
-
+  useEffect(()=>{let alive=true;const params=new URLSearchParams(window.location.search);const mode:PortfolioKind=params.get("portfolio")==="paper"?"paper":"real";setKind(mode);setManage(params.get("manage")==="1");void load(mode).catch(e=>{if(alive)setError(e instanceof Error?e.message:"تعذر تحميل الأصول.")}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[]);
+  async function changeCurrency(currency:WealthCurrency){setBaseCurrency(currency);const{data}=await browserSupabase.auth.getUser();if(data.user)await browserSupabase.from("wealth_profiles").upsert({user_id:data.user.id,base_currency:currency,updated_at:new Date().toISOString()},{onConflict:"user_id"})}
+  const money=(v:number)=>formatWealthMoney(v,baseCurrency);
   const accountMap=useMemo(()=>new Map(accounts.map(a=>[a.id,a])),[accounts]);
-  const visibleHoldings=useMemo(()=>holdings.filter(h=>{
-    const provider=(accountMap.get(h.account_id)?.provider||"").toLowerCase();
-    if(!provider.includes("binance"))return true;
-    if(h.market_value===null)return false;
-    return n(h.market_value)>=BINANCE_DUST_SAR;
-  }),[holdings,accountMap]);
-
-  const metrics=useMemo(()=>{
-    const total=visibleHoldings.reduce((s,h)=>s+n(h.market_value),0);
-    const known=visibleHoldings.filter(h=>h.cost_basis!==null);
-    const cost=known.reduce((s,h)=>s+n(h.cost_basis),0);
-    const current=known.reduce((s,h)=>s+n(h.market_value),0);
-    const pnl=current-cost;
-    return{total,pnl,pnlPct:cost>0?pnl/cost*100:0,winners:known.filter(h=>n(h.market_value)>n(h.cost_basis)).length,losers:known.filter(h=>n(h.market_value)<n(h.cost_basis)).length};
-  },[visibleHoldings]);
-
+  const visibleHoldings=useMemo(()=>holdings.filter(h=>{const provider=(accountMap.get(h.account_id)?.provider||"").toLowerCase();if(!provider.includes("binance"))return true;if(h.market_value===null)return false;return n(h.market_value)>=BINANCE_DUST_SAR}),[holdings,accountMap]);
+  const metrics=useMemo(()=>{const total=visibleHoldings.reduce((s,h)=>s+n(h.market_value),0);const known=visibleHoldings.filter(h=>h.cost_basis!==null);const cost=known.reduce((s,h)=>s+n(h.cost_basis),0);const current=known.reduce((s,h)=>s+n(h.market_value),0);const pnl=current-cost;return{total,pnl,pnlPct:cost>0?pnl/cost*100:0,winners:known.filter(h=>n(h.market_value)>n(h.cost_basis)).length,losers:known.filter(h=>n(h.market_value)<n(h.cost_basis)).length}},[visibleHoldings]);
   const types=useMemo(()=>Array.from(new Set(visibleHoldings.map(h=>h.asset_type||"other"))),[visibleHoldings]);
-  const filtered=useMemo(()=>{
-    const q=search.trim().toLowerCase();
-    return visibleHoldings.filter(h=>{
-      const p=h.cost_basis===null?null:n(h.market_value)-n(h.cost_basis);
-      return(!q||h.asset_name.toLowerCase().includes(q)||(h.symbol||"").toLowerCase().includes(q))&&
-        (typeFilter==="all"||(h.asset_type||"other")===typeFilter)&&
-        (accountFilter==="all"||h.account_id===accountFilter)&&
-        (performanceFilter==="all"||(performanceFilter==="profit"&&p!==null&&p>0)||(performanceFilter==="loss"&&p!==null&&p<0)||(performanceFilter==="no_cost"&&p===null));
-    });
-  },[visibleHoldings,search,typeFilter,accountFilter,performanceFilter]);
+  const filtered=useMemo(()=>{const q=search.trim().toLowerCase();return visibleHoldings.filter(h=>{const p=h.cost_basis===null?null:n(h.market_value)-n(h.cost_basis);return(!q||h.asset_name.toLowerCase().includes(q)||(h.symbol||"").toLowerCase().includes(q))&&(typeFilter==="all"||(h.asset_type||"other")===typeFilter)&&(accountFilter==="all"||h.account_id===accountFilter)&&(performanceFilter==="all"||(performanceFilter==="profit"&&p!==null&&p>0)||(performanceFilter==="loss"&&p!==null&&p<0)||(performanceFilter==="no_cost"&&p===null))})},[visibleHoldings,search,typeFilter,accountFilter,performanceFilter]);
 
   function edit(h:Holding){setEditing(h);setName(h.asset_name);setSymbol(h.symbol||"");setQuantity(h.quantity===null?"":String(h.quantity));setUnitPrice(h.unit_price===null?"":String(h.unit_price));setMarketValue(h.market_value===null?"":String(h.market_value));setCostBasis(h.cost_basis===null?"":String(h.cost_basis));setEditError("");window.scrollTo({top:0,behavior:"smooth"})}
-  async function save(){
-    if(!editing||!name.trim())return;
-    setSaving(true);setEditError("");
-    try{
-      const q=quantity.trim()===""?null:Number(quantity),p=unitPrice.trim()===""?null:Number(unitPrice);
-      let mv=marketValue.trim()===""?null:Number(marketValue);
-      if(q!==null&&p!==null&&Number.isFinite(q)&&Number.isFinite(p))mv=q*p;
-      const cb=costBasis.trim()===""?null:Number(costBasis);
-      const {error:e}=await browserSupabase.from("wealth_holdings").update({asset_name:name.trim(),symbol:symbol.trim()||null,quantity:q,unit_price:p,market_value:mv,cost_basis:cb,as_of_date:new Date().toISOString().slice(0,10)}).eq("id",editing.id);
-      if(e)throw e;
-      await load(kind);setEditing(null);
-    }catch(e){setEditError(e instanceof Error?e.message:"تعذر حفظ التعديل.")}finally{setSaving(false)}
-  }
+  async function save(){if(!editing||!name.trim())return;setSaving(true);setEditError("");try{const q=quantity.trim()===""?null:Number(quantity),p=unitPrice.trim()===""?null:Number(unitPrice);let mv=marketValue.trim()===""?null:Number(marketValue);if(q!==null&&p!==null&&Number.isFinite(q)&&Number.isFinite(p))mv=q*p;const cb=costBasis.trim()===""?null:Number(costBasis);const{error:e}=await browserSupabase.from("wealth_holdings").update({asset_name:name.trim(),symbol:symbol.trim()||null,quantity:q,unit_price:p,market_value:mv,cost_basis:cb,as_of_date:new Date().toISOString().slice(0,10)}).eq("id",editing.id);if(e)throw e;await load(kind);setEditing(null)}catch(e){setEditError(e instanceof Error?e.message:"تعذر حفظ التعديل.")}finally{setSaving(false)}}
 
-  const paper=kind==="paper";
-  const suffix=paper?"?portfolio=paper":"";
-  if(loading)return <main className={styles.page}><div className={styles.state}>جاري تحميل الأصول…</div></main>;
-  if(error)return <main className={styles.page}><div className={styles.state}><strong>تعذر تحميل الأصول.</strong><span>{error}</span></div></main>;
+  const paper=kind==="paper";const suffix=paper?"?portfolio=paper":"";
+  if(loading)return<main className={styles.page}><div className={styles.state}>جاري تحميل الأصول…</div></main>;
+  if(error)return<main className={styles.page}><div className={styles.state}><strong>تعذر تحميل الأصول.</strong><span>{error}</span></div></main>;
 
-  const cells=(h:Holding)=>{
-    const mv=h.market_value===null?null:n(h.market_value);
-    const cb=h.cost_basis===null?null:n(h.cost_basis);
-    const pl=mv===null||cb===null?null:mv-cb;
-    const plPct=pl!==null&&cb!==null&&cb>0?pl/cb*100:null;
-    return <>
-      <span className={styles.assetCell}><i style={{background:COLORS[h.asset_type||"other"]??COLORS.other}}/><b>{h.asset_name}</b><small>{h.symbol||LABELS[h.asset_type||"other"]||"أصل"}</small></span>
-      <span><b>{accountMap.get(h.account_id)?.provider||"حساب"}</b><small>{accountMap.get(h.account_id)?.account_name||""}</small></span>
-      <span>{h.quantity===null?"—":fmt(n(h.quantity),4)}</span>
-      <span>{h.unit_price===null?"—":sar(n(h.unit_price))}</span>
-      <span>{cb===null?"—":sar(cb)}</span>
-      <span><b>{mv===null?"غير مُسعّر":sar(mv)}</b></span>
-      <span className={pl===null?styles.neutral:pl>=0?styles.profit:styles.loss}><b>{pl===null?"—":`${pl>0?"+":""}${sar(pl)}`}</b><small>{plPct===null?"":pct(plPct)}</small></span>
-    </>;
-  };
+  const cells=(h:Holding)=>{const mv=h.market_value===null?null:n(h.market_value);const cb=h.cost_basis===null?null:n(h.cost_basis);const pl=mv===null||cb===null?null:mv-cb;const plPct=pl!==null&&cb!==null&&cb>0?pl/cb*100:null;return<><span className={styles.assetCell}><i style={{background:COLORS[h.asset_type||"other"]??COLORS.other}}/><b>{h.asset_name}</b><small>{h.symbol||LABELS[h.asset_type||"other"]||"أصل"}</small></span><span><b>{accountMap.get(h.account_id)?.provider||"حساب"}</b><small>{accountMap.get(h.account_id)?.account_name||""}</small></span><span>{h.quantity===null?"—":fmt(n(h.quantity),4)}</span><span>{h.unit_price===null?"—":money(n(h.unit_price))}</span><span>{cb===null?"—":money(cb)}</span><span><b>{mv===null?"غير مُسعّر":money(mv)}</b></span><span className={pl===null?styles.neutral:pl>=0?styles.profit:styles.loss}><b>{pl===null?"—":`${pl>0?"+":""}${money(pl)}`}</b><small>{plPct===null?"":pct(plPct)}</small></span></>};
 
-  return <main className={styles.page} dir="rtl">
-    <aside className={styles.sidebar}><div><div className={styles.brand}>ثروة</div><div className={styles.brandSub}>{paper?"محفظة تجريبية":"إدارة الثروة"}</div></div><nav className={styles.nav}><Link className={styles.navItem} href={`/wealth${suffix}`}>نظرة عامة</Link><Link className={`${styles.navItem} ${styles.active}`} href={`/wealth/assets${suffix}`}>الأصول</Link><Link className={styles.navItem} href={`/wealth/income${suffix}`}>الدخل</Link><Link className={styles.navItem} href={`/wealth/analytics${suffix}`}>التحليلات</Link><Link className={styles.navItem} href={`/wealth/shariah${suffix}`}>الالتزام الشرعي</Link><Link className={styles.navItem} href={`/wealth/accounts${suffix}`}>الحسابات</Link><Link className={styles.navItem} href={`/wealth/ask${suffix}`}>اسأل ثروتي</Link></nav></aside>
-    <section className={styles.workspace}>
-      <header className={styles.topbar}><div><p>{paper?"بيئة الاختبار":"المحفظة الحقيقية"}</p><h1>{manage?"إدارة الأصول":"الأصول"}</h1></div><div className={styles.actions}><Link href={paper?"/wealth/assets":"/wealth/assets?portfolio=paper"} className={styles.ghost}>{paper?"محفظتي الحقيقية":"محفظة تجريبية"}</Link><Link href={manage?`/wealth/assets${suffix}`:paper?"/wealth/assets?portfolio=paper&manage=1":"/wealth/assets?manage=1"} className={styles.primary}>{manage?"تم":"إدارة الأصول"}</Link></div></header>
-      <div className={styles.content}>
-        {manage&&<section className={styles.panel} style={{marginBottom:18}}><div className={styles.panelHead}><div><h2>{editing?`تعديل: ${editing.asset_name}`:"إدارة المحفظة"}</h2><p>{paper?"عدّل بيانات الاختبار دون أي تأثير على المحفظة الحقيقية.":"تعديل الأصول الحالية أو إضافة أصل جديد."}</p></div>{!paper&&<Link className={styles.primary} href="/wealth/connect">إضافة أصل</Link>}</div>{editing&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:10}}><input style={input} value={name} onChange={e=>setName(e.target.value)} placeholder="اسم الأصل"/><input style={input} value={symbol} onChange={e=>setSymbol(e.target.value)} placeholder="الرمز"/><input style={input} value={quantity} onChange={e=>setQuantity(e.target.value)} placeholder="الكمية"/><input style={input} value={unitPrice} onChange={e=>setUnitPrice(e.target.value)} placeholder="سعر الوحدة"/><input style={input} value={marketValue} onChange={e=>setMarketValue(e.target.value)} placeholder="القيمة الحالية"/><input style={input} value={costBasis} onChange={e=>setCostBasis(e.target.value)} placeholder="إجمالي التكلفة"/><div style={{display:"flex",gap:8}}><button style={primaryButton} disabled={saving} onClick={()=>void save()}>{saving?"جارٍ الحفظ…":"حفظ"}</button><button style={ghostButton} onClick={()=>setEditing(null)}>إلغاء</button></div>{editError&&<span className={styles.loss}>{editError}</span>}</div>}</section>}
-        <section className={styles.metricGrid}><article><small>القيمة الإجمالية</small><strong>{sar(metrics.total)}</strong><span>{visibleHoldings.length} أصل</span></article><article><small>الربح / الخسارة</small><strong className={metrics.pnl>=0?styles.profit:styles.loss}>{sar(metrics.pnl)}</strong><span className={metrics.pnl>=0?styles.profit:styles.loss}>{pct(metrics.pnlPct)}</span></article><article><small>مراكز رابحة</small><strong className={styles.profit}>{metrics.winners}</strong><span>حسب التكلفة</span></article><article><small>مراكز خاسرة</small><strong className={styles.loss}>{metrics.losers}</strong><span>حسب التكلفة</span></article></section>
-        <section className={styles.tablePanel}>
-          <div className={styles.tableHeader}><div><h2>كل الأصول</h2><p>{paper?"السعودية + Binance + Interactive Brokers + نقد + عقار":"الأصول المسجلة حاليًا"}</p></div><div className={styles.filters}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث"/><select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">كل الأنواع</option>{types.map(t=><option key={t} value={t}>{LABELS[t]??t}</option>)}</select><select value={accountFilter} onChange={e=>setAccountFilter(e.target.value)}><option value="all">كل الحسابات</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.provider||a.account_name}</option>)}</select><select value={performanceFilter} onChange={e=>setPerformanceFilter(e.target.value)}><option value="all">كل الأداء</option><option value="profit">رابح</option><option value="loss">خاسر</option><option value="no_cost">بدون تكلفة</option></select></div></div>
-          <div className={styles.tableWrap}>
-            <div className={`${styles.row} ${manage?styles.manageRow:""} ${styles.headRow}`}><span>الأصل</span><span>الحساب</span><span>الكمية</span><span>سعر الوحدة</span><span>التكلفة</span><span>القيمة</span><span>الربح/الخسارة</span>{manage&&<span>إدارة</span>}</div>
-            {filtered.map(h=>manage?
-              <div className={`${styles.row} ${styles.manageRow}`} key={h.id}>{cells(h)}<span><button style={ghostButton} onClick={()=>edit(h)}>تعديل</button></span></div>:
-              <Link className={`${styles.row} ${styles.clickableRow}`} key={h.id} href={`/wealth/assets/${h.id}${paper?"?portfolio=paper":""}`}>{cells(h)}</Link>
-            )}
-          </div>
-        </section>
-      </div>
-    </section>
-  </main>;
+  return<main className={styles.page} dir="rtl"><aside className={styles.sidebar}><div><div className={styles.brand}>ثروة</div><div className={styles.brandSub}>{paper?"محفظة تجريبية":"إدارة الثروة"}</div></div><nav className={styles.nav}><Link className={styles.navItem} href={`/wealth${suffix}`}>نظرة عامة</Link><Link className={`${styles.navItem} ${styles.active}`} href={`/wealth/assets${suffix}`}>الأصول</Link><Link className={styles.navItem} href={`/wealth/income${suffix}`}>الدخل</Link><Link className={styles.navItem} href={`/wealth/analytics${suffix}`}>التحليلات</Link><Link className={styles.navItem} href={`/wealth/shariah${suffix}`}>الالتزام الشرعي</Link><Link className={styles.navItem} href={`/wealth/accounts${suffix}`}>الحسابات</Link><Link className={styles.navItem} href={`/wealth/ask${suffix}`}>اسأل ثروتي</Link></nav></aside>
+    <section className={styles.workspace}><header className={styles.topbar}><div><p>{paper?"بيئة الاختبار":"المحفظة الحقيقية"}</p><h1>{manage?"إدارة الأصول":"الأصول"}</h1></div><div className={styles.actions}><div style={currencyToggle}><button type="button" style={baseCurrency==="SAR"?currencyActive:currencyButton} onClick={()=>void changeCurrency("SAR")}>ر.س</button><button type="button" style={baseCurrency==="USD"?currencyActive:currencyButton} onClick={()=>void changeCurrency("USD")}>$</button></div><Link href={paper?"/wealth/assets":"/wealth/assets?portfolio=paper"} className={styles.ghost}>{paper?"محفظتي الحقيقية":"محفظة تجريبية"}</Link><Link href={manage?`/wealth/assets${suffix}`:paper?"/wealth/assets?portfolio=paper&manage=1":"/wealth/assets?manage=1"} className={styles.primary}>{manage?"تم":"إدارة الأصول"}</Link></div></header>
+      <div className={styles.content}>{manage&&<section className={styles.panel} style={{marginBottom:18}}><div className={styles.panelHead}><div><h2>{editing?`تعديل: ${editing.asset_name}`:"إدارة المحفظة"}</h2><p>{paper?"عدّل بيانات الاختبار دون أي تأثير على المحفظة الحقيقية.":"تعديل الأصول الحالية أو إضافة أصل جديد."}</p></div>{!paper&&<Link className={styles.primary} href="/wealth/connect">إضافة أصل</Link>}</div>{editing&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:10}}><input style={input} value={name} onChange={e=>setName(e.target.value)} placeholder="اسم الأصل"/><input style={input} value={symbol} onChange={e=>setSymbol(e.target.value)} placeholder="الرمز"/><input style={input} value={quantity} onChange={e=>setQuantity(e.target.value)} placeholder="الكمية"/><input style={input} value={unitPrice} onChange={e=>setUnitPrice(e.target.value)} placeholder="سعر الوحدة (ر.س داخلي)"/><input style={input} value={marketValue} onChange={e=>setMarketValue(e.target.value)} placeholder="القيمة الحالية (ر.س داخلي)"/><input style={input} value={costBasis} onChange={e=>setCostBasis(e.target.value)} placeholder="إجمالي التكلفة (ر.س داخلي)"/><div style={{display:"flex",gap:8}}><button style={primaryButton} disabled={saving} onClick={()=>void save()}>{saving?"جارٍ الحفظ…":"حفظ"}</button><button style={ghostButton} onClick={()=>setEditing(null)}>إلغاء</button></div>{editError&&<span className={styles.loss}>{editError}</span>}</div>}</section>}
+        <section className={styles.metricGrid}><article><small>القيمة الإجمالية</small><strong>{money(metrics.total)}</strong><span>{visibleHoldings.length} أصل</span></article><article><small>الربح / الخسارة</small><strong className={metrics.pnl>=0?styles.profit:styles.loss}>{money(metrics.pnl)}</strong><span className={metrics.pnl>=0?styles.profit:styles.loss}>{pct(metrics.pnlPct)}</span></article><article><small>مراكز رابحة</small><strong className={styles.profit}>{metrics.winners}</strong><span>حسب التكلفة</span></article><article><small>مراكز خاسرة</small><strong className={styles.loss}>{metrics.losers}</strong><span>حسب التكلفة</span></article></section>
+        <section className={styles.tablePanel}><div className={styles.tableHeader}><div><h2>كل الأصول</h2><p>{paper?"السعودية + Binance + Interactive Brokers + نقد + عقار":"الأصول المسجلة حاليًا"}</p></div><div className={styles.filters}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث"/><select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">كل الأنواع</option>{types.map(t=><option key={t} value={t}>{LABELS[t]??t}</option>)}</select><select value={accountFilter} onChange={e=>setAccountFilter(e.target.value)}><option value="all">كل الحسابات</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.provider||a.account_name}</option>)}</select><select value={performanceFilter} onChange={e=>setPerformanceFilter(e.target.value)}><option value="all">كل الأداء</option><option value="profit">رابح</option><option value="loss">خاسر</option><option value="no_cost">بدون تكلفة</option></select></div></div><div className={styles.tableWrap}><div className={`${styles.row} ${manage?styles.manageRow:""} ${styles.headRow}`}><span>الأصل</span><span>الحساب</span><span>الكمية</span><span>سعر الوحدة</span><span>التكلفة</span><span>القيمة</span><span>الربح/الخسارة</span>{manage&&<span>إدارة</span>}</div>{filtered.map(h=>manage?<div className={`${styles.row} ${styles.manageRow}`} key={h.id}>{cells(h)}<span><button style={ghostButton} onClick={()=>edit(h)}>تعديل</button></span></div>:<Link className={`${styles.row} ${styles.clickableRow}`} key={h.id} href={`/wealth/assets/${h.id}${paper?"?portfolio=paper":""}`}>{cells(h)}</Link>)}</div></section>
+      </div></section></main>
 }
 
 const input:React.CSSProperties={background:"#242424",border:"1px solid #3a3a3a",color:"#fafafa",borderRadius:12,padding:"11px 12px",fontFamily:"Tahoma",outline:"none"};
 const primaryButton:React.CSSProperties={background:"#fafafa",color:"#1f1f1f",border:0,borderRadius:999,padding:"9px 14px",fontFamily:"Tahoma",fontWeight:700,cursor:"pointer"};
 const ghostButton:React.CSSProperties={background:"transparent",color:"#bbb",border:"1px solid #444",borderRadius:999,padding:"8px 12px",fontFamily:"Tahoma",cursor:"pointer"};
+const currencyToggle:React.CSSProperties={display:"flex",gap:3,padding:3,border:"1px solid #444",borderRadius:999};
+const currencyButton:React.CSSProperties={height:32,minWidth:44,padding:"0 10px",border:0,borderRadius:999,background:"transparent",color:"#aaa",fontFamily:"Tahoma",cursor:"pointer"};
+const currencyActive:React.CSSProperties={...currencyButton,background:"#fafafa",color:"#1f1f1f"};
