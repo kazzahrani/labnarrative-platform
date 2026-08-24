@@ -15,8 +15,8 @@ if (!trader.includes("const dcaAveragingOrderLimit =") || !trader.includes("cons
 }
 
 if (!trader.includes("const selectedDcaPendingAveragingOrders =")) {
-  const anchor = "  const selectedDcaTpPrice = selectedDcaChartTrade && selectedDcaChartBot?.takeProfit ? selectedDcaChartTrade.averagePrice * (1 + selectedDcaChartBot.takeProfit / 100) : null;";
-  if (!trader.includes(anchor)) throw new Error("Pending DCA chart orders: selected chart TP anchor missing.");
+  const anchor = "  const selectedDcaChartBot = selectedDcaChartTrade ? dcaBots.find((bot) => bot.id === selectedDcaChartTrade.botId) ?? null : null;";
+  if (!trader.includes(anchor)) throw new Error("Pending DCA chart orders: selected chart bot anchor missing.");
   const block = [
     "  // DCA_PENDING_CHART_ORDERS_V1 — exact exchange-style pending DCA window for the selected live trade.",
     "  const selectedDcaPendingAveragingOrders = (() => {",
@@ -32,7 +32,7 @@ if (!trader.includes("const selectedDcaPendingAveragingOrders =")) {
     "    }).filter((order) => Number.isFinite(order.price) && order.price > 0 && Number.isFinite(order.amount) && order.amount > 0);",
     "  })();",
   ].join("\n");
-  trader = trader.replace(anchor, block + "\n" + anchor);
+  trader = trader.replace(anchor, anchor + "\n" + block);
 }
 
 if (!trader.includes("pendingAveragingOrders={selectedDcaPendingAveragingOrders}")) {
