@@ -45,8 +45,8 @@ function filterValue(filters: BinanceFilter[] | undefined, filterType: string, k
 export async function GET() {
   try {
     const [exchangeResponse, tickerResponse] = await Promise.all([
-      fetch(`${BINANCE_DATA}/api/v3/exchangeInfo`, { next: { revalidate: 300 }, signal: AbortSignal.timeout(8000) }),
-      fetch(`${BINANCE_DATA}/api/v3/ticker/24hr`, { next: { revalidate: 15 }, signal: AbortSignal.timeout(8000) }),
+      fetch(`${BINANCE_DATA}/api/v3/exchangeInfo`, { cache: "no-store", signal: AbortSignal.timeout(8000) }),
+      fetch(`${BINANCE_DATA}/api/v3/ticker/24hr`, { cache: "no-store", signal: AbortSignal.timeout(8000) }),
     ]);
 
     if (!exchangeResponse.ok || !tickerResponse.ok) {
