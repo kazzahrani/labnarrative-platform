@@ -3,7 +3,7 @@ import TradingAgent from "./TradingAgent";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Trading Automations",
-  description: "Trading Automations v1.1: the full DCA automation workspace with live Binance Spot market data and the new minimal LabNarrative design.",
+  description: "Trading Automations v2: full DCA automation with live Binance Spot market data, advanced portfolio analytics, and the Thrwa design system.",
 };
 
 export default function TraderPage() {
