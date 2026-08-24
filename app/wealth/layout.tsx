@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import "./wealth-font.css";
 import "./wealth-no-effects.css";
 import WealthSaudiMarketAutoRefresh from "./WealthSaudiMarketAutoRefresh";
 import WealthNavEnhancer from "./WealthNavEnhancer";
+import WealthPricingIntegrity from "./WealthPricingIntegrity";
 
 export default function WealthLayout({
   children,
@@ -12,6 +14,9 @@ export default function WealthLayout({
     <div className="wealth-tahoma">
       <WealthSaudiMarketAutoRefresh />
       <WealthNavEnhancer />
+      <Suspense fallback={null}>
+        <WealthPricingIntegrity />
+      </Suspense>
       {children}
     </div>
   );
