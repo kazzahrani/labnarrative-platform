@@ -16,8 +16,8 @@ const directSources: SourceCard[] = [
     name: "دراية",
     category: "وسيط سعودي",
     status: "ربط مباشر",
-    description: "نبدأ بها كأقوى مرشح للربط المباشر للحسابات والأسهم والصناديق والنقد.",
-    methods: ["OAuth / API", "قراءة فقط"],
+    description: "OpenAPI رسمي يدعم OAuth والمحفظة والنقد والنشاط. ننتظر بيانات Sandbox/Production من دراية قبل تفعيل الربط الحقيقي.",
+    methods: ["OAuth 2.0", "API رسمي", "يتطلب اعتماد شريك"],
   },
   {
     name: "Interactive Brokers",
@@ -43,45 +43,58 @@ const importSources: SourceCard[] = [
   {
     name: "عوائد",
     category: "منصة استثمار سعودية",
-    status: "رفع كشف",
-    description: "ابدأ من محفظتك الحالية في عوائد: أسهم وصناديق ومرابحات ضمن مصدر واحد، مع مسار مخصص للاستيراد والمراجعة.",
-    methods: ["كشف / ملف", "إدخال يدوي", "ربط رسمي لاحقًا"],
+    status: "إدخال يدوي",
+    description: "المسار الحالي الموثوق لعوائد هو الإدخال اليدوي المفصل إلى أن يتوفر ربط رسمي.",
+    methods: ["إدخال يدوي", "ربط رسمي لاحقًا"],
     href: "/wealth/connect/awaed",
+  },
+  {
+    name: "دراية · كشف",
+    category: "وسيط سعودي",
+    status: "رفع كشف",
+    description: "استخدم CSV أو Excel الآن كحل فعلي مؤقت إلى أن نستلم بيانات OpenAPI الرسمية.",
+    methods: ["Excel", "CSV", "مراجعة قبل الحفظ"],
+    href: "/wealth/connect/statement?provider=derayah",
   },
   {
     name: "الراجحي المالية",
     category: "وسيط سعودي",
     status: "رفع كشف",
-    description: "ارفع كشف PDF أو Excel لإضافة المحفظة الآن، ثم نحدّث قيم الأصول عبر بيانات السوق.",
-    methods: ["PDF", "Excel", "CSV"],
+    description: "استورد CSV أو Excel واربط الأعمدة بنفسك قبل إدخال أي مركز إلى ثروة.",
+    methods: ["Excel", "CSV", "مراجعة قبل الحفظ"],
+    href: "/wealth/connect/statement?provider=alrajhi",
   },
   {
     name: "SNB Capital",
     category: "وسيط سعودي",
     status: "رفع كشف",
-    description: "إضافة عملية للمحفظة السعودية دون انتظار تكامل API رسمي.",
-    methods: ["PDF", "Excel", "CSV"],
+    description: "استيراد فعلي للكشف دون انتظار API، مع معاينة كاملة للمراكز والتكلفة.",
+    methods: ["Excel", "CSV", "مراجعة قبل الحفظ"],
+    href: "/wealth/connect/statement?provider=snb",
   },
   {
     name: "الرياض المالية",
     category: "وسيط سعودي",
     status: "رفع كشف",
-    description: "نبدأ بالكشف، ثم نستبدله لاحقًا بربط مباشر عند توفر التكامل المناسب.",
-    methods: ["PDF", "Excel", "CSV"],
+    description: "استورد الكشف الآن، ثم يمكن استبداله لاحقًا بربط مباشر عندما يتوفر رسميًا.",
+    methods: ["Excel", "CSV", "مراجعة قبل الحفظ"],
+    href: "/wealth/connect/statement?provider=riyad",
   },
   {
     name: "الإنماء للاستثمار",
     category: "وسيط سعودي",
     status: "رفع كشف",
-    description: "أدخل الأسهم والصناديق المحلية من كشف الحساب بطريقة سريعة وواضحة.",
-    methods: ["PDF", "Excel", "CSV"],
+    description: "إدخال الأسهم والصناديق من ملف منظم مع ربط مرن للأعمدة.",
+    methods: ["Excel", "CSV", "مراجعة قبل الحفظ"],
+    href: "/wealth/connect/statement?provider=alinma",
   },
   {
     name: "Sahm",
     category: "وسيط استثماري",
     status: "رفع كشف",
-    description: "أضف محفظتك الحالية إلى صورة الثروة الموحدة حتى قبل توفر الربط المباشر.",
-    methods: ["PDF", "CSV"],
+    description: "استورد محفظة Sahm من CSV أو Excel إلى صورة الثروة الموحدة.",
+    methods: ["Excel", "CSV", "مراجعة قبل الحفظ"],
+    href: "/wealth/connect/statement?provider=sahm",
   },
 ];
 
@@ -155,9 +168,11 @@ function SourceSection({ eyebrow, title, description, cards }: { eyebrow: string
             <p>{card.description}</p>
             <div className={styles.methods}>{card.methods.map((method) => <span key={method}>{method}</span>)}</div>
             {card.href ? (
-              <Link href={card.href} className={`${styles.chooseButton} ${card.featured ? styles.featuredButton : ""}`}>ربط {card.name}</Link>
+              <Link href={card.href} className={`${styles.chooseButton} ${card.featured ? styles.featuredButton : ""}`}>
+                {card.status === "رفع كشف" ? "استيراد الكشف" : card.status === "إدخال يدوي" ? "فتح" : `ربط ${card.name}`}
+              </Link>
             ) : (
-              <button type="button" className={styles.chooseButton}>اختيار</button>
+              <button type="button" className={styles.chooseButton} disabled>يتطلب اعتماد المزود</button>
             )}
           </article>
         ))}
@@ -183,23 +198,23 @@ export default function WealthConnectPage() {
           <section className={styles.hero}>
             <span className={styles.eyebrow}>ثروة</span>
             <h1>اربط حساباتك وأكمل صورة ثروتك.</h1>
-            <p>نبدأ الآن بالروابط الفعلية الآمنة، ونستخدم الكشوف أو الإدخال اليدوي فقط عندما لا يتوفر API مناسب.</p>
+            <p>نستخدم الربط الرسمي عندما يكون متاحًا، والكشف المنظم عندما يحتاج المزود إلى شراكة أو لا يوفر API للمستخدم مباشرة.</p>
             <div className={styles.heroActions}><a href="#sources" className={styles.primary}>الحسابات والمصادر</a><Link href="/wealth/accounts" className={styles.secondary}>الحسابات</Link></div>
           </section>
         </header>
 
         <section className={styles.flow}>
-          <div className={styles.flowIntro}><span className={styles.eyebrow}>الأساس</span><h2>ربط، مزامنة، ثم تحقق.</h2><p>كل اتصال يدخل عبر محرك واحد مع سجل مزامنة وفصل كامل بين الحسابات.</p></div>
+          <div className={styles.flowIntro}><span className={styles.eyebrow}>الأساس</span><h2>ربط، مزامنة، ثم تحقق.</h2><p>كل مصدر يدخل إلى نفس نموذج الحسابات والأصول والتكلفة والنقد بدون خلط البيانات.</p></div>
           <div className={styles.steps}>
-            <article><span>٠١</span><h3>اربط المصدر</h3><p>بصلاحيات القراءة أو التقارير فقط عندما يكون الربط المباشر متاحًا.</p></article>
-            <article><span>٠٢</span><h3>زامن البيانات</h3><p>الحساب والأرصدة والأسعار تدخل إلى نفس نموذج البيانات.</p></article>
-            <article><span>٠٣</span><h3>راجع النتيجة</h3><p>أي خطأ أو أصل غير مسعّر يظهر في سجل المزامنة بدل إخفائه.</p></article>
+            <article><span>٠١</span><h3>اربط أو استورد</h3><p>API قراءة فقط عندما يتوفر، أو ملف منظم عندما لا يتوفر.</p></article>
+            <article><span>٠٢</span><h3>راجع البيانات</h3><p>لا نحفظ كشفًا قبل معاينة الأعمدة والمراكز والتكلفة.</p></article>
+            <article><span>٠٣</span><h3>وحّد المحفظة</h3><p>تدخل النتيجة إلى نفس صافي الثروة والتحليلات والمحاسبة.</p></article>
           </div>
         </section>
 
         <div id="sources" className={styles.sections}>
-          <SourceSection eyebrow="ربط مباشر" title="الروابط الفعلية" description="Binance وInteractive Brokers يعملان على نفس محرك المزامنة الآمن." cards={directSources} />
-          <SourceSection eyebrow="رفع كشف" title="مصادر بدون ربط مباشر حتى الآن" description="نستخدم الكشف أو الإدخال اليدوي فقط كحل مرحلي." cards={importSources} />
+          <SourceSection eyebrow="ربط مباشر" title="الروابط الفعلية" description="Binance يعمل فعليًا. IBKR جاهز عند توفر حساب صالح. دراية تحتاج اعتماد OpenAPI من المزود." cards={directSources} />
+          <SourceSection eyebrow="رفع كشف" title="الوسطاء السعوديون الآن" description="CSV وExcel يعملان الآن مع ربط مرن للأعمدة ومعاينة قبل الحفظ." cards={importSources} />
           <SourceSection eyebrow="إدخال يدوي" title="الأصول التي لا تحتاج API" description="للعقار والذهب والسيولة والأصول الخاصة." cards={manualSources} />
         </div>
       </div>
