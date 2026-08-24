@@ -3,7 +3,7 @@ import TradingAgent from "./TradingAgent";
 
 export const metadata: Metadata = {
   title: "LabNarrative Trading",
-  description: "Crypto SmartTrades, DCA bots and portfolio automation with live TradingView charts.",
+  description: "DCA bot trading and portfolio automation with live Binance Spot market data and TradingView charts.",
 };
 
 export default function TraderPage() {
