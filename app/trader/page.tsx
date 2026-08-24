@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import TradingAgent from "./TradingAgent";
+import TradingAutomationsV1 from "./v1/TradingAutomationsV1";
 
 export const metadata: Metadata = {
-  title: "LabNarrative Trading",
-  description: "DCA bot trading and portfolio automation with live Binance Spot market data and TradingView charts.",
+  title: "Trading Automations",
+  description: "A focused portfolio and DCA automation workspace powered by live Binance Spot market data.",
 };
 
 export default function TraderPage() {
-  return <TradingAgent />;
+  return <TradingAutomationsV1 />;
 }
