@@ -1,10 +1,10 @@
 import Link from "next/link";
-import ManualAwaedClientV3 from "./ManualAwaedClientV3";
+import ManualAwaedClientV4 from "./ManualAwaedClientV4";
 import styles from "./awaed.module.css";
 
 export const metadata = {
   title: "تحديث محفظة عوائد — ثروة",
-  description: "طابق محفظة عوائد الحالية بأمان مع ثروة دون استبدال البيانات عشوائيًا.",
+  description: "طابق محفظة عوائد السعودية والأمريكية بعملتها الأصلية داخل ثروة.",
 };
 
 export default function AwaedConnectPage() {
@@ -18,28 +18,28 @@ export default function AwaedConnectPage() {
 
         <section className={styles.hero}>
           <div className={styles.heroCopy}>
-            <span className={styles.eyebrow}>المحفظة الحقيقية</span>
-            <h1>حدّث محفظة عوائد، ولا تعِد إدخالها.</h1>
+            <span className={styles.eyebrow}>السوق السعودي + الأمريكي</span>
+            <h1>أدخل الاستثمار بعملته الأصلية.</h1>
             <p>
-              ثروة تحمّل الأصول المسجلة حاليًا ثم تطابقها مع أي تغيير تقوم به. عدّل الكمية أو متوسط التكلفة عند الشراء أو البيع،
-              بينما أسعار الأسهم والـREIT السعودية تستمر في التحديث تلقائيًا.
+              اختر الريال للأصول السعودية والدولار للأصول الأمريكية كما تظهر في عوائد. تحتفظ ثروة بالقيمة الأصلية،
+              ثم توحّد الحسابات وتعرض المنصة كلها بالعملة الرئيسية التي تختارها.
             </p>
           </div>
           <div className={styles.heroFacts}>
-            <div><span>الأصول الحالية</span><strong>تُحمّل تلقائيًا</strong></div>
-            <div><span>الأسهم والـREIT</span><strong>سعر سوق تلقائي</strong></div>
-            <div><span>تغير الكمية</span><strong>يُسجل في التاريخ</strong></div>
-            <div><span>طريقة الحفظ</span><strong>مطابقة ذرّية</strong></div>
+            <div><span>العملات المدعومة</span><strong>ر.س + $</strong></div>
+            <div><span>سعر التحويل</span><strong>1$ = 3.75 ر.س</strong></div>
+            <div><span>الأسهم السعودية</span><strong>سعر سوق تلقائي</strong></div>
+            <div><span>الحفظ</span><strong>مطابقة ذرّية</strong></div>
           </div>
         </section>
 
-        <ManualAwaedClientV3 />
+        <ManualAwaedClientV4 />
 
         <section className={styles.securityNote}>
-          <span>بدون بيانات دخول عوائد</span>
+          <span>عملة الأصل لا تضيع</span>
           <p>
-            لا نطلب اسم المستخدم أو كلمة المرور، ولا ننفذ تداولًا. تحديث الكمية هنا يعني فقط أن ثروة تطابق سجلها مع لقطة محفظتك الحالية،
-            وتتعامل مع الفرق كتعديل مركز ما لم يتوفر لنا لاحقًا سجل تنفيذ رسمي من عوائد.
+            ثروة تستخدم الريال كعملة محاسبية داخلية موحدة، لكنها تحفظ عملة الإدخال والقيمة الأصلية لكل أصل. تغيير العملة الرئيسية
+            من ريال إلى دولار يغير العرض فقط ولا يعيد كتابة استثماراتك أو تكلفتها.
           </p>
         </section>
       </div>
