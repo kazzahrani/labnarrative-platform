@@ -11,9 +11,14 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         {
-          source: "/:path*",
+          source: "/health",
           has: [{ type: "host", value: "trader-gateway.labnarrative.com" }],
-          destination: "http://84.13.157.157:8080/:path*",
+          destination: "http://84.13.157.157:8080/health",
+        },
+        {
+          source: "/relay",
+          has: [{ type: "host", value: "trader-gateway.labnarrative.com" }],
+          destination: "http://84.13.157.157:8080/relay",
         },
       ],
       afterFiles: [],
