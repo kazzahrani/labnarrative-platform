@@ -61,7 +61,7 @@ async function normalizeMarketBuy(symbol: string, quoteAmount: number) {
   const quantity = floorStep(quoteAmount / ask, rules.stepSize), actualQuote = quantity * ask;
   if (!(quantity > 0)) throw new Error("Order quantity rounds to zero under Binance rules.");
   if (rules.minQty > 0 && quantity + 1e-15 < rules.minQty) throw new Error("Order is below Binance minimum quantity.");
-  if (rules.maxQty > 0 && quantity - 1e-15 > rules.maxQty) throw new Error("Order exceeds Binance maximum quantity.");
+  if (rules.maxQty > 0 && quantity - 1e-15 > rules.maxQty + 1e-15) throw new Error("Order exceeds Binance maximum quantity.");
   if (rules.minNotional > 0 && actualQuote + 1e-9 < rules.minNotional) throw new Error("Order is below Binance minimum notional.");
   return { price: ask, quantity, quote: actualQuote };
 }
@@ -152,6 +152,8 @@ export async function POST(request: NextRequest) {
     console.error("trader-server-command", error);
     return attachTraderCookie(response({ error: error instanceof Error ? error.message : "Trader server command failed." }, 500), tokenToSet);
   } finally {
-    if (db && accountId && lockId) await db.rpc("trader_release_account", { p_account_id: accountId, p_worker_id: lockId } as never).catch(() => undefined);
+    if (db && accountId && lockId) {
+      try { await db.rpc("trader_release_account", { p_account_id: accountId, p_worker_id: lockId } as never); } catch { /* lease expires automatically */ }
+    }
   }
 }
