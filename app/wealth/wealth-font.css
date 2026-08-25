@@ -10,6 +10,10 @@
   direction: rtl;
 }
 
+html[data-wealth-lang="en"] .wealth-brand-with-mark {
+  direction: ltr;
+}
+
 .wealth-brand-mark {
   display: block;
   width: 32px;
@@ -17,11 +21,11 @@
   flex: 0 0 32px;
   object-fit: contain;
   border-radius: 8px;
+  filter: none !important;
 }
 
-/* Future light theme: use the inverse dark-tile asset when it is introduced. */
 [data-wealth-theme="light"] .wealth-brand-mark,
 .wealth-theme-light .wealth-brand-mark,
 [data-theme="light"] .wealth-tahoma .wealth-brand-mark {
-  filter: invert(1);
+  filter: none !important;
 }
