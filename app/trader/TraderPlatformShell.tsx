@@ -3,6 +3,7 @@
 import { FormEvent, MouseEvent as ReactMouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
 import BinanceConnectionLayer from "./BinanceConnectionLayer";
+import RealTradingWorkspace from "./RealTradingWorkspace";
 import TradingAgent from "./TradingAgent";
 import styles from "./trader-platform-shell.module.css";
 
@@ -299,36 +300,12 @@ export default function TraderPlatformShell() {
     </div>;
   }
 
-  const connected = realAccount?.exchangeStatus === "connected";
+  if (!realAccount) {
+    return <div className={styles.loading}>Real Account is not available.</div>;
+  }
+
   return <div className={styles.shell}>
-    <div className={styles.realPage}>
-      <header className={styles.realHeader}>
-        <div className={styles.brand}><span className={styles.brandMark}>LN</span><strong>LabNarrative</strong></div>
-        <div className={styles.modeBadge}><span>REAL ACCOUNT</span><strong>{connected ? "Binance connected" : "Not connected"}</strong></div>
-        <div className={styles.realHeaderSpacer}/>
-        <button type="button" className={styles.accountPill} style={{ position: "static" }} onClick={() => setAccountModal(true)}><span>Real Account</span><small>{connected ? "CONNECTED" : "SETUP"}</small><i>⌄</i></button>
-      </header>
-      <main className={styles.realMain}>
-        <div className={styles.realTitle}><span className={styles.kicker}>REAL-MONEY WORKSPACE</span><h1>Real Account</h1><p>This account is isolated from your Paper Account. Connect Binance here to verify balances and prepare shadow/live execution. Connecting the exchange alone never enables real orders.</p></div>
-        <div className={styles.realGrid}>
-          <section className={styles.realCard}>
-            <div className={styles.realCardHead}><span className={styles.exchangeLogo}>◆</span><div><h2>Binance Spot</h2><p>Static-IP secured exchange connection</p></div><span className={`${styles.connectionBadge} ${connected ? styles.connectedBadge : ""}`}>{connected ? "Connected" : "Not connected"}</span></div>
-            <div className={styles.realCardBody}>
-              <p>{connected ? `API verification is complete${realAccount?.apiKeyLast4 ? ` for key ending in ${realAccount.apiKeyLast4}` : ""}. Live execution is still disabled.` : "Connect the Binance API key that is restricted to the LabNarrative gateway IP. Credentials are verified server-side and stored in Supabase Vault."}</p>
-              {!connected && <button type="button" className={`${styles.primary} ${styles.connectButton}`}>Connect Binance</button>}
-            </div>
-          </section>
-          <aside className={styles.safetyCard}>
-            <h3>Execution safety</h3>
-            <div className={styles.safetyLine}><span>Account mode</span><strong>Real / Shadow</strong></div>
-            <div className={styles.safetyLine}><span>Live execution</span><strong className={styles.safe}>OFF</strong></div>
-            <div className={styles.safetyLine}><span>Kill switch</span><strong className={styles.safe}>ON</strong></div>
-            <div className={styles.safetyLine}><span>Withdrawals</span><strong className={styles.safe}>BLOCKED</strong></div>
-          </aside>
-        </div>
-        <div className={styles.realNotice}>Your Paper Account remains unchanged, including its bots, trades and historical balance. We are switching workspaces — not converting or deleting the paper account.</div>
-      </main>
-    </div>
+    <RealTradingWorkspace account={realAccount} onOpenAccounts={() => setAccountModal(true)} />
     <BinanceConnectionLayer />
     {accountChooser}
   </div>;
