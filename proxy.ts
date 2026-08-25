@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api", "tenders", "app", "career"]);
+const RESERVED_SUBDOMAINS = new Set(["www", "platform", "admin", "api", "tenders", "app", "career", "trader-gateway"]);
 const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform.vercel.app",
   "labnarrative-platform-lab-narrative.vercel.app",
