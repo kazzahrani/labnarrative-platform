@@ -24,6 +24,8 @@ type ControlResponse = {
 
 function friendlyError(raw: string) {
   if (raw.includes("trader_account_not_bound")) return "This signed-in account is not bound to the Trader account.";
+  if (raw.includes("claim_not_allowed")) return "This signed-in LabNarrative account is not authorized for this Trader workspace.";
+  if (raw.includes("target_owner_changed") || raw.includes("claim_conflict")) return "Trader account ownership changed unexpectedly. Connection was stopped safely.";
   if (raw.includes("gateway_not_ready")) return "The Binance gateway is not ready yet.";
   if (raw.includes("gateway_401")) return "The secure gateway rejected its signed server request. Please try again.";
   if (raw.includes("binance_key_reading_disabled")) return "Enable Reading on this Binance API key, then save the Binance settings and retry.";
@@ -53,6 +55,34 @@ async function invokeControl(body: Record<string, unknown>): Promise<ControlResp
   return result;
 }
 
+async function claimTraderAccount() {
+  const { data, error } = await browserSupabase.functions.invoke("trader-owner-claim", { body: {} });
+  if (error) {
+    let message = error.message || "trader_owner_claim_failed";
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const payload = await context.clone().json() as { error?: string };
+        if (payload?.error) message = payload.error;
+      } catch {}
+    }
+    throw new Error(message);
+  }
+  const result = (data ?? {}) as { ok?: boolean; error?: string };
+  if (result.error || result.ok !== true) throw new Error(result.error || "trader_owner_claim_failed");
+}
+
+async function invokeBoundControl(body: Record<string, unknown>): Promise<ControlResponse> {
+  try {
+    return await invokeControl(body);
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    if (!message.includes("trader_account_not_bound")) throw caught;
+    await claimTraderAccount();
+    return await invokeControl(body);
+  }
+}
+
 export default function BinanceConnectionLayer() {
   const [open, setOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -73,11 +103,14 @@ export default function BinanceConnectionLayer() {
 
   const loadStatus = async () => {
     try {
-      const data = await invokeControl({ action: "status" });
+      const data = await invokeBoundControl({ action: "status" });
       setConnected(data.connection?.status === "connected");
       setLast4(data.connection?.apiKeyLast4 ?? null);
       if (data.gateway?.egressIp) setGatewayIp(data.gateway.egressIp);
-    } catch {}
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      setAuthError(friendlyError(message));
+    }
   };
 
   useEffect(() => {
@@ -192,9 +225,9 @@ export default function BinanceConnectionLayer() {
     setBusy(true);
     setError("");
     try {
-      const health = await invokeControl({ action: "gateway_health" });
+      const health = await invokeBoundControl({ action: "gateway_health" });
       if (health.gateway?.egressIp) setGatewayIp(health.gateway.egressIp);
-      const result = await invokeControl({ action: "connect", apiKey: apiKey.trim(), apiSecret: apiSecret.trim() });
+      const result = await invokeBoundControl({ action: "connect", apiKey: apiKey.trim(), apiSecret: apiSecret.trim() });
       setConnected(result.connection?.status === "connected");
       setLast4(result.connection?.apiKeyLast4 ?? apiKey.trim().slice(-4));
       setApiKey("");
