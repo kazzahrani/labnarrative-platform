@@ -5,7 +5,7 @@ import "./wealth-preferences.css";
 import WealthSaudiMarketAutoRefresh from "./WealthSaudiMarketAutoRefresh";
 import WealthNavEnhancer from "./WealthNavEnhancer";
 import WealthPricingIntegrity from "./WealthPricingIntegrity";
-import WealthPreferencesV2 from "./WealthPreferencesV2";
+import WealthPreferencesV3 from "./WealthPreferencesV3";
 import WealthThemeRuntime from "./WealthThemeRuntime";
 
 const preferenceBoot = `
@@ -31,7 +31,7 @@ export default function WealthLayout({
       <script dangerouslySetInnerHTML={{ __html: preferenceBoot }} />
       <WealthSaudiMarketAutoRefresh />
       <WealthNavEnhancer />
-      <WealthPreferencesV2 />
+      <WealthPreferencesV3 />
       <WealthThemeRuntime />
       <Suspense fallback={null}>
         <WealthPricingIntegrity />
