@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import BinanceConnectionLayer from "./BinanceConnectionLayer";
+import BinanceLauncher from "./BinanceLauncher";
 import TradingAgent from "./TradingAgent";
 
 export const metadata: Metadata = {
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function TraderPage() {
   return <>
     <TradingAgent />
+    <BinanceLauncher />
     <BinanceConnectionLayer />
   </>;
 }
