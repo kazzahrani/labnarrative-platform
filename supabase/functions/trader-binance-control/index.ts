@@ -33,16 +33,15 @@ function base64Bytes(buffer:ArrayBuffer){ const bytes=new Uint8Array(buffer); le
 
 async function ownerRealAccount(admin:Db,userId:string){
   const {data,error}=await admin.from("trader_accounts")
-    .select("id,owner_user_id,status,mode")
+    .select("id,owner_user_id,account_kind,status,mode")
     .eq("owner_user_id",userId)
+    .eq("account_kind","real")
     .eq("status","active")
-    .neq("mode","paper")
-    .order("created_at",{ascending:false})
     .limit(1)
     .maybeSingle();
   if(error)throw error;
   if(!data)throw new Error("real_account_required");
-  return data as {id:string;owner_user_id:string;status:string;mode:"shadow"|"live"};
+  return data as {id:string;owner_user_id:string;account_kind:"real";status:string;mode:"paper"|"shadow"|"live"};
 }
 async function gatewayConfig(admin:Db){ const {data,error}=await admin.from("trader_gateway_config").select("name,base_url,status,egress_ip,last_health_at,last_error").eq("name","binance").single(); if(error)throw error; return data as GatewayConfig; }
 function validatedGatewayOrigin(config:GatewayConfig,requireReady=true){

@@ -7,14 +7,12 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const LEGACY_EMAIL = "oxyginmusic@gmail.com";
-const LEGACY_PAPER_ACCOUNT_ID = "afd5d578-4ff2-4ea7-b613-670ac01c7345";
-const LEGACY_OWNER_ID = "d1c884ad-c093-438f-bcf2-ea82af52651b";
-
 type Db = ReturnType<typeof createClient>;
+type AccountKind = "paper" | "real";
 type AccountRow = {
   id: string;
   owner_user_id: string | null;
+  account_kind: AccountKind;
   name: string;
   mode: "paper" | "shadow" | "live";
   status: string;
@@ -42,7 +40,7 @@ async function newAccessHash() {
 async function accountsForUser(admin: Db, userId: string) {
   const { data, error } = await admin
     .from("trader_accounts")
-    .select("id,owner_user_id,name,mode,status,quote_asset,starting_balance,created_at")
+    .select("id,owner_user_id,account_kind,name,mode,status,quote_asset,starting_balance,created_at")
     .eq("owner_user_id", userId)
     .eq("status", "active")
     .order("created_at", { ascending: true });
@@ -71,7 +69,7 @@ async function accountsForUser(admin: Db, userId: string) {
     return {
       id: account.id,
       name: account.name,
-      kind: account.mode === "paper" ? "paper" : "real",
+      kind: account.account_kind,
       mode: account.mode,
       status: account.status,
       quoteAsset: account.quote_asset,
@@ -82,46 +80,28 @@ async function accountsForUser(admin: Db, userId: string) {
   });
 }
 
-async function ensurePaperAccount(admin: Db, user: { id: string; email?: string | null }) {
-  const { data: existing, error: existingError } = await admin
+async function ownedAccount(admin: Db, userId: string, kind: AccountKind) {
+  const { data, error } = await admin
     .from("trader_accounts")
     .select("id")
-    .eq("owner_user_id", user.id)
-    .eq("mode", "paper")
+    .eq("owner_user_id", userId)
+    .eq("account_kind", kind)
     .eq("status", "active")
     .limit(1)
     .maybeSingle();
-  if (existingError) throw existingError;
-  if (existing) return String(existing.id);
+  if (error) throw error;
+  return data ? String(data.id) : null;
+}
 
-  const email = (user.email || "").trim().toLowerCase();
-  if (email === LEGACY_EMAIL) {
-    const { data: legacy, error: legacyError } = await admin
-      .from("trader_accounts")
-      .select("id,owner_user_id,status,mode")
-      .eq("id", LEGACY_PAPER_ACCOUNT_ID)
-      .maybeSingle();
-    if (legacyError) throw legacyError;
-    if (legacy && legacy.status === "active" && legacy.mode === "paper") {
-      if (legacy.owner_user_id === user.id) return LEGACY_PAPER_ACCOUNT_ID;
-      if (legacy.owner_user_id === LEGACY_OWNER_ID) {
-        const { data: claimed, error: claimError } = await admin
-          .from("trader_accounts")
-          .update({ owner_user_id: user.id, updated_at: new Date().toISOString() })
-          .eq("id", LEGACY_PAPER_ACCOUNT_ID)
-          .eq("owner_user_id", LEGACY_OWNER_ID)
-          .select("id")
-          .maybeSingle();
-        if (claimError || !claimed) throw new Error("legacy_paper_claim_failed");
-        return LEGACY_PAPER_ACCOUNT_ID;
-      }
-    }
-  }
+async function ensurePaperAccount(admin: Db, userId: string) {
+  const existing = await ownedAccount(admin, userId, "paper");
+  if (existing) return existing;
 
   const { data: created, error: createError } = await admin
     .from("trader_accounts")
     .insert({
-      owner_user_id: user.id,
+      owner_user_id: userId,
+      account_kind: "paper",
       access_token_hash: await newAccessHash(),
       name: "Paper Account",
       mode: "paper",
@@ -132,27 +112,26 @@ async function ensurePaperAccount(admin: Db, user: { id: string; email?: string 
     })
     .select("id")
     .single();
-  if (createError) throw createError;
+
+  if (createError) {
+    if (createError.code === "23505") {
+      const raced = await ownedAccount(admin, userId, "paper");
+      if (raced) return raced;
+    }
+    throw createError;
+  }
   return String(created.id);
 }
 
 async function ensureRealAccount(admin: Db, userId: string) {
-  const { data: existing, error: existingError } = await admin
-    .from("trader_accounts")
-    .select("id")
-    .eq("owner_user_id", userId)
-    .neq("mode", "paper")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (existingError) throw existingError;
-  if (existing) return String(existing.id);
+  const existing = await ownedAccount(admin, userId, "real");
+  if (existing) return existing;
 
   const { data: created, error: createError } = await admin
     .from("trader_accounts")
     .insert({
       owner_user_id: userId,
+      account_kind: "real",
       access_token_hash: await newAccessHash(),
       name: "Real Account",
       mode: "shadow",
@@ -163,9 +142,20 @@ async function ensureRealAccount(admin: Db, userId: string) {
     })
     .select("id")
     .single();
-  if (createError) throw createError;
 
-  const accountId = String(created.id);
+  let accountId: string;
+  if (createError) {
+    if (createError.code === "23505") {
+      const raced = await ownedAccount(admin, userId, "real");
+      if (!raced) throw createError;
+      accountId = raced;
+    } else {
+      throw createError;
+    }
+  } else {
+    accountId = String(created.id);
+  }
+
   const { error: controlError } = await admin
     .from("trader_execution_controls")
     .upsert({
@@ -209,12 +199,12 @@ Deno.serve(async (req: Request) => {
     const action = String(body.action || "bootstrap");
 
     if (action === "bootstrap" || action === "list") {
-      await ensurePaperAccount(admin, user);
+      await ensurePaperAccount(admin, user.id);
       return json({ ok: true, accounts: await accountsForUser(admin, user.id) });
     }
 
     if (action === "create_real") {
-      await ensurePaperAccount(admin, user);
+      await ensurePaperAccount(admin, user.id);
       const realAccountId = await ensureRealAccount(admin, user.id);
       return json({ ok: true, realAccountId, accounts: await accountsForUser(admin, user.id) });
     }
