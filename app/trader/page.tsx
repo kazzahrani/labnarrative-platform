@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-import BinanceConnectionLayer from "./BinanceConnectionLayer";
-import BinanceLauncher from "./BinanceLauncher";
-import TradingAgent from "./TradingAgent";
+import TraderPlatformShell from "./TraderPlatformShell";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Trading Automations",
-  description: "Trading Automations v2: full DCA automation with live Binance Spot market data, advanced portfolio analytics, and the Thrwa design system.",
+  description: "Authenticated crypto trading automation with isolated Paper and Real accounts and secured Binance Spot connectivity.",
 };
 
 export default function TraderPage() {
-  return <>
-    <TradingAgent />
-    <BinanceLauncher />
-    <BinanceConnectionLayer />
-  </>;
+  return <TraderPlatformShell />;
 }
