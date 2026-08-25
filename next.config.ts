@@ -7,6 +7,19 @@ const nextConfig: NextConfig = {
     "/api/platform/tenders/boq-extract": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
     "/api/tenders/boq-analyze": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/:path*",
+          has: [{ type: "host", value: "trader-gateway.labnarrative.com" }],
+          destination: "http://84.13.157.157:8080/:path*",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async redirects() {
     return [
       { source: "/intelligence", destination: "/", permanent: true },
