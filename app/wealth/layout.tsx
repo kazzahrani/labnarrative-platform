@@ -6,8 +6,8 @@ import WealthSaudiMarketAutoRefresh from "./WealthSaudiMarketAutoRefresh";
 import WealthNavEnhancer from "./WealthNavEnhancer";
 import WealthPricingIntegrity from "./WealthPricingIntegrity";
 import WealthPreferences from "./WealthPreferences";
+import WealthEnglishFinalizer from "./WealthEnglishFinalizer";
 import WealthThemeRuntime from "./WealthThemeRuntime";
-import WealthEnglishGuard from "./WealthEnglishGuard";
 
 const preferenceBoot = `
 try {
@@ -32,8 +32,8 @@ export default function WealthLayout({
       <script dangerouslySetInnerHTML={{ __html: preferenceBoot }} />
       <WealthSaudiMarketAutoRefresh />
       <WealthNavEnhancer />
-      <WealthEnglishGuard />
       <WealthPreferences />
+      <WealthEnglishFinalizer />
       <WealthThemeRuntime />
       <Suspense fallback={null}>
         <WealthPricingIntegrity />
