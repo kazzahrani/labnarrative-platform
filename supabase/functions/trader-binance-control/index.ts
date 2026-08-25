@@ -7,6 +7,10 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const EXPECTED_GATEWAY_ORIGIN = "https://trader-gateway.labnarrative.com";
+const PUBLIC_PRICE_ENDPOINTS = [
+  "https://data-api.binance.vision/api/v3/ticker/price",
+  "https://api.binance.com/api/v3/ticker/price",
+];
 
 type Db = ReturnType<typeof createClient>;
 type GatewayConfig = { name:string; base_url:string|null; status:string; egress_ip:string|null; last_health_at:string|null; last_error:string|null };
@@ -117,16 +121,63 @@ async function storedCredentials(admin:Db,accountId:string){
   if(!credentials.apiKey||!credentials.apiSecret)throw new Error("credential_not_found");
   return {apiKey:credentials.apiKey,apiSecret:credentials.apiSecret};
 }
+
+async function publicTickerPrices(){
+  let lastError="binance_public_prices_failed";
+  for(const endpoint of PUBLIC_PRICE_ENDPOINTS){
+    try{
+      const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(8_000)});
+      if(!response.ok){ lastError=`binance_public_prices_${response.status}`; continue; }
+      const payload=await response.json().catch(()=>null);
+      if(!Array.isArray(payload)){ lastError="binance_public_prices_invalid"; continue; }
+      const prices=new Map<string,number>();
+      for(const row of payload){
+        const item=obj(row),symbol=String(item.symbol||""),price=n(item.price);
+        if(symbol&&price>0)prices.set(symbol,price);
+      }
+      if(prices.size)return prices;
+      lastError="binance_public_prices_empty";
+    }catch(error){ lastError=cleanError(error); }
+  }
+  throw new Error(lastError.startsWith("binance_")?lastError:"binance_public_prices_failed");
+}
+function assetUsdPrice(asset:string,prices:Map<string,number>){
+  if(asset==="USDT")return 1;
+  const direct=prices.get(`${asset}USDT`);
+  if(direct&&direct>0)return direct;
+  const stableAssets=new Set(["USDC","FDUSD","TUSD","DAI","BUSD"]);
+  if(stableAssets.has(asset)){
+    const inverse=prices.get(`USDT${asset}`);
+    if(inverse&&inverse>0)return 1/inverse;
+    return 1;
+  }
+  const btcUsd=prices.get("BTCUSDT");
+  const viaBtc=prices.get(`${asset}BTC`);
+  if(viaBtc&&btcUsd&&viaBtc>0&&btcUsd>0)return viaBtc*btcUsd;
+  const bnbUsd=prices.get("BNBUSDT");
+  const viaBnb=prices.get(`${asset}BNB`);
+  if(viaBnb&&bnbUsd&&viaBnb>0&&bnbUsd>0)return viaBnb*bnbUsd;
+  return null;
+}
 async function sanitizedBalances(admin:Db,account:RealAccount){
   const connection=await readConnection(admin,account.id);
   if(!connection||connection.status!=="connected")throw new Error("binance_not_connected");
   const credentials=await storedCredentials(admin,account.id);
-  const info=await signedBinance(admin,"GET","/api/v3/account",credentials.apiKey,credentials.apiSecret,{omitZeroBalances:true}) as Record<string,unknown>;
-  const balances=arr(info.balances).map(obj).map((row)=>({
+  const [info,prices]=await Promise.all([
+    signedBinance(admin,"GET","/api/v3/account",credentials.apiKey,credentials.apiSecret,{omitZeroBalances:true}) as Promise<Record<string,unknown>>,
+    publicTickerPrices(),
+  ]);
+  const rawBalances=arr(info.balances).map(obj).map((row)=>({
     asset:String(row.asset||""),
     free:Math.max(0,n(row.free)),
     locked:Math.max(0,n(row.locked)),
   })).filter((row)=>row.asset&&row.free+row.locked>0);
+  const balances=rawBalances.map((row)=>{
+    const usdPrice=assetUsdPrice(row.asset,prices);
+    const total=row.free+row.locked;
+    return {...row,usdPrice,usdValue:usdPrice==null?null:total*usdPrice};
+  }).sort((a,b)=>(b.usdValue??-1)-(a.usdValue??-1));
+  const totalUsd=balances.reduce((sum,row)=>sum+(row.usdValue??0),0);
   const quote=balances.find((row)=>row.asset==="USDT");
   const quoteBalance=(quote?.free||0)+(quote?.locked||0);
 
@@ -138,11 +189,11 @@ async function sanitizedBalances(admin:Db,account:RealAccount){
   if(tradeError||orderError||fillError)throw tradeError||orderError||fillError;
   const hasFinancialHistory=(tradeCount||0)>0||(orderCount||0)>0||(fillCount||0)>0;
   const currentStarting=n(account.starting_balance);
-  if(!hasFinancialHistory&&quoteBalance>=0&&Math.abs(currentStarting-quoteBalance)>0.00000001){
-    const {error:updateError}=await admin.from("trader_accounts").update({starting_balance:quoteBalance}).eq("id",account.id).eq("owner_user_id",account.owner_user_id);
+  if(!hasFinancialHistory&&totalUsd>=0&&Math.abs(currentStarting-totalUsd)>0.00000001){
+    const {error:updateError}=await admin.from("trader_accounts").update({starting_balance:totalUsd}).eq("id",account.id).eq("owner_user_id",account.owner_user_id);
     if(updateError)throw updateError;
   }
-  return {balances,quoteAsset:"USDT",quoteBalance,canSeedShadowBalance:!hasFinancialHistory,serverTime:info.updateTime||null};
+  return {balances,quoteAsset:"USDT",quoteBalance,totalUsd,pricedAssetCount:balances.filter((row)=>row.usdValue!=null).length,canSeedShadowBalance:!hasFinancialHistory,serverTime:info.updateTime||null};
 }
 
 Deno.serve(async(req:Request)=>{
