@@ -15,11 +15,15 @@ type Connection = {
   permission_read:boolean; permission_trade:boolean; permission_withdraw:boolean; permission_internal_transfer:boolean;
   ip_restricted:boolean|null; binance_uid_last4:string|null; last_verified_at:string|null; last_error:string|null;
 };
+type RealAccount = {id:string;owner_user_id:string;account_kind:"real";status:string;mode:"paper"|"shadow"|"live";starting_balance?:number|string};
 
 let cachedGatewaySigningKey: CryptoKey | null = null;
 
 function json(body:unknown,status=200){ return new Response(JSON.stringify(body),{status,headers:{...cors,"content-type":"application/json","cache-control":"no-store"}}); }
 function cleanError(error:unknown){ if(error instanceof Error)return error.message; return String(error||"unknown_error"); }
+function n(value:unknown,fallback=0){ const number=Number(value); return Number.isFinite(number)?number:fallback; }
+function arr(value:unknown):unknown[]{ return Array.isArray(value)?value:[]; }
+function obj(value:unknown):Record<string,unknown>{ return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{}; }
 async function hmacHex(secret:string,message:string){ const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]); const sig=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(message)); return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,"0")).join(""); }
 async function sha256(value:string){ const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value)); return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join(""); }
 function nonce(){ const bytes=new Uint8Array(24); crypto.getRandomValues(bytes); return Array.from(bytes).map(b=>b.toString(16).padStart(2,"0")).join(""); }
@@ -33,7 +37,7 @@ function base64Bytes(buffer:ArrayBuffer){ const bytes=new Uint8Array(buffer); le
 
 async function ownerRealAccount(admin:Db,userId:string){
   const {data,error}=await admin.from("trader_accounts")
-    .select("id,owner_user_id,account_kind,status,mode")
+    .select("id,owner_user_id,account_kind,status,mode,starting_balance")
     .eq("owner_user_id",userId)
     .eq("account_kind","real")
     .eq("status","active")
@@ -41,7 +45,7 @@ async function ownerRealAccount(admin:Db,userId:string){
     .maybeSingle();
   if(error)throw error;
   if(!data)throw new Error("real_account_required");
-  return data as {id:string;owner_user_id:string;account_kind:"real";status:string;mode:"paper"|"shadow"|"live"};
+  return data as RealAccount;
 }
 async function gatewayConfig(admin:Db){ const {data,error}=await admin.from("trader_gateway_config").select("name,base_url,status,egress_ip,last_health_at,last_error").eq("name","binance").single(); if(error)throw error; return data as GatewayConfig; }
 function validatedGatewayOrigin(config:GatewayConfig,requireReady=true){
@@ -65,13 +69,13 @@ async function gatewaySignature(admin:Db,message:string){
 }
 async function relay(admin:Db,payload:Record<string,unknown>){
   const config=await gatewayConfig(admin),origin=validatedGatewayOrigin(config,true);
-  const raw=JSON.stringify(payload),timestamp=Date.now(),n=nonce(),signature=await gatewaySignature(admin,`${timestamp}\n${n}\n${raw}`);
-  const response=await fetch(`${origin}/relay`,{method:"POST",headers:{"content-type":"application/json","x-ln-timestamp":String(timestamp),"x-ln-nonce":n,"x-ln-signature":signature},body:raw,signal:AbortSignal.timeout(12_000)});
+  const raw=JSON.stringify(payload),timestamp=Date.now(),nce=nonce(),signature=await gatewaySignature(admin,`${timestamp}\n${nce}\n${raw}`);
+  const response=await fetch(`${origin}/relay`,{method:"POST",headers:{"content-type":"application/json","x-ln-timestamp":String(timestamp),"x-ln-nonce":nce,"x-ln-signature":signature},body:raw,signal:AbortSignal.timeout(12_000)});
   const envelope=await response.json().catch(()=>({})) as Record<string,unknown>;
   if(!response.ok)throw new Error(`gateway_${response.status}:${String(envelope.error||"relay_failed")}`);
   const upstreamStatus=Number(envelope.upstreamStatus||0),upstreamBody=String(envelope.upstreamBody||"");
   let body:Record<string,unknown>|unknown[]={}; try{body=upstreamBody?JSON.parse(upstreamBody):{};}catch{throw new Error("binance_invalid_json");}
-  if(upstreamStatus<200||upstreamStatus>=300){ const obj=body as Record<string,unknown>; throw new Error(`binance_${String(obj.code??upstreamStatus)}:${String(obj.msg??"request_failed")}`); }
+  if(upstreamStatus<200||upstreamStatus>=300){ const value=body as Record<string,unknown>; throw new Error(`binance_${String(value.code??upstreamStatus)}:${String(value.msg??"request_failed")}`); }
   return body;
 }
 async function serverTime(admin:Db){ const payload=await relay(admin,{requestId:crypto.randomUUID(),method:"GET",path:"/api/v3/time",query:""}) as Record<string,unknown>; const t=Number(payload.serverTime); if(!Number.isFinite(t)||t<=0)throw new Error("binance_time_invalid"); return t; }
@@ -106,6 +110,40 @@ async function verifyAndPersist(admin:Db,userId:string,accountId:string,apiKey:s
   const {error:secretError}=await admin.rpc("trader_binance_store_secret",{p_account_id:accountId,p_owner_user_id:userId,p_secret:JSON.stringify({apiKey,apiSecret})}); if(secretError)throw secretError;
   return await publicStatus(admin,accountId);
 }
+async function storedCredentials(admin:Db,accountId:string){
+  const {data:secret,error}=await admin.rpc("trader_binance_read_secret",{p_account_id:accountId});
+  if(error||!secret)throw new Error("credential_not_found");
+  const credentials=JSON.parse(String(secret)) as {apiKey?:string;apiSecret?:string};
+  if(!credentials.apiKey||!credentials.apiSecret)throw new Error("credential_not_found");
+  return {apiKey:credentials.apiKey,apiSecret:credentials.apiSecret};
+}
+async function sanitizedBalances(admin:Db,account:RealAccount){
+  const connection=await readConnection(admin,account.id);
+  if(!connection||connection.status!=="connected")throw new Error("binance_not_connected");
+  const credentials=await storedCredentials(admin,account.id);
+  const info=await signedBinance(admin,"GET","/api/v3/account",credentials.apiKey,credentials.apiSecret,{omitZeroBalances:true}) as Record<string,unknown>;
+  const balances=arr(info.balances).map(obj).map((row)=>({
+    asset:String(row.asset||""),
+    free:Math.max(0,n(row.free)),
+    locked:Math.max(0,n(row.locked)),
+  })).filter((row)=>row.asset&&row.free+row.locked>0);
+  const quote=balances.find((row)=>row.asset==="USDT");
+  const quoteBalance=(quote?.free||0)+(quote?.locked||0);
+
+  const [{count:tradeCount,error:tradeError},{count:orderCount,error:orderError},{count:fillCount,error:fillError}]=await Promise.all([
+    admin.from("trader_trades").select("id",{count:"exact",head:true}).eq("account_id",account.id),
+    admin.from("trader_orders").select("id",{count:"exact",head:true}).eq("account_id",account.id),
+    admin.from("trader_fills").select("id",{count:"exact",head:true}).eq("account_id",account.id),
+  ]);
+  if(tradeError||orderError||fillError)throw tradeError||orderError||fillError;
+  const hasFinancialHistory=(tradeCount||0)>0||(orderCount||0)>0||(fillCount||0)>0;
+  const currentStarting=n(account.starting_balance);
+  if(!hasFinancialHistory&&quoteBalance>=0&&Math.abs(currentStarting-quoteBalance)>0.00000001){
+    const {error:updateError}=await admin.from("trader_accounts").update({starting_balance:quoteBalance}).eq("id",account.id).eq("owner_user_id",account.owner_user_id);
+    if(updateError)throw updateError;
+  }
+  return {balances,quoteAsset:"USDT",quoteBalance,canSeedShadowBalance:!hasFinancialHistory,serverTime:info.updateTime||null};
+}
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
@@ -117,6 +155,7 @@ Deno.serve(async(req:Request)=>{
   try{
     const account=await ownerRealAccount(admin,user.id),body=await req.json().catch(()=>({})) as Record<string,unknown>,action=String(body.action||"status");
     if(action==="status")return json({ok:true,...await publicStatus(admin,account.id)});
+    if(action==="balances")return json({ok:true,...await sanitizedBalances(admin,account),...await publicStatus(admin,account.id)});
     if(action==="gateway_health"){
       const config=await gatewayConfig(admin),origin=validatedGatewayOrigin(config,false);
       const response=await fetch(`${origin}/health`,{signal:AbortSignal.timeout(8000)}),health=await response.json().catch(()=>({})) as Record<string,unknown>;
@@ -130,8 +169,7 @@ Deno.serve(async(req:Request)=>{
       return json({ok:true,...await verifyAndPersist(admin,user.id,account.id,apiKey,apiSecret)});
     }
     if(action==="reverify"){
-      const {data:secret,error}=await admin.rpc("trader_binance_read_secret",{p_account_id:account.id}); if(error||!secret)throw new Error("credential_not_found");
-      const credentials=JSON.parse(String(secret)) as {apiKey:string;apiSecret:string}; return json({ok:true,...await verifyAndPersist(admin,user.id,account.id,credentials.apiKey,credentials.apiSecret)});
+      const credentials=await storedCredentials(admin,account.id); return json({ok:true,...await verifyAndPersist(admin,user.id,account.id,credentials.apiKey,credentials.apiSecret)});
     }
     if(action==="disconnect"){
       await admin.from("trader_binance_connections").update({status:"disconnected",permission_read:false,permission_trade:false,last_error:null,updated_at:new Date().toISOString()}).eq("account_id",account.id);
