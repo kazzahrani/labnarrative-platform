@@ -53,8 +53,8 @@ const helper = String.raw`  // TRADER_SUPABASE_EDGE_API_V3 — recovery-safe sto
       ? ["labnarrative-dca-bots-v1", "labnarrative-dca-bots-v2-backup"]
       : ["labnarrative-dca-trades-v1", "labnarrative-dca-trades-v2-backup"];
     for (const key of primaryKeys) {
-      candidates.push({ source: `local:${key}`, items: traderStoredArray(window.localStorage, key) as T[] });
-      candidates.push({ source: `session:${key}`, items: traderStoredArray(window.sessionStorage, key) as T[] });
+      candidates.push({ source: "local:" + key, items: traderStoredArray(window.localStorage, key) as T[] });
+      candidates.push({ source: "session:" + key, items: traderStoredArray(window.sessionStorage, key) as T[] });
     }
     const scan = (storage: Storage, prefix: string) => {
       for (let index = 0; index < storage.length; index += 1) {
@@ -64,7 +64,7 @@ const helper = String.raw`  // TRADER_SUPABASE_EDGE_API_V3 — recovery-safe sto
           ? /(?:dca|trader).*(?:bot)|(?:bot).*(?:dca|trader)/i.test(key)
           : /(?:dca|trader).*(?:trade|deal)|(?:trade|deal).*(?:dca|trader)/i.test(key);
         if (!matches) continue;
-        candidates.push({ source: `${prefix}:${key}`, items: traderStoredArray(storage, key) as T[] });
+        candidates.push({ source: prefix + ":" + key, items: traderStoredArray(storage, key) as T[] });
       }
     };
     scan(window.localStorage, "local-scan");
