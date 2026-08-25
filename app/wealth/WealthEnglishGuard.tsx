@@ -7,7 +7,6 @@ const ARABIC = /[\u0600-\u06ff]/;
 
 const EXACT: Record<string, string> = {
   "العربية": "Arabic",
-  "ثروة": "Thrwa",
   "أرامكو": "Aramco",
   "سدكو كابيتال ريت": "SEDCO Capital REIT",
   "جدوى ريت": "Jadwa REIT",
@@ -21,6 +20,8 @@ const EXACT: Record<string, string> = {
   "الفترة المحددة": "Selected period",
   "أفضل وأسوأ الأصول": "Best & worst assets",
   "أفضل وأسوأ assets": "Best & worst assets",
+  "Best وWorst asset": "Best & worst assets",
+  "Best وWorst assets": "Best & worst assets",
   "الأفضل": "Best",
   "الأسوأ": "Worst",
   "التركيز": "Concentration",
@@ -39,12 +40,9 @@ const EXACT: Record<string, string> = {
   "جاري جلب الأسعار التاريخية…": "Loading historical prices…",
   "جاري تحميل الأسعار الفعلية…": "Loading market prices…",
   "جاري تحليل التوزيعات الفعلية…": "Analyzing actual distributions…",
-  "جاري بناء التحليلات…": "Building analytics…",
-  "جاري بناء الفحص الشرعي المبدئي…": "Building preliminary Shariah screening…",
-  "جاري تحميل ثروتك…": "Loading your wealth…",
-  "جاري تحميل الأصل…": "Loading asset…",
   "كل السلاسل تبدأ من 0٪، ثم تعرض نسبة التغير منذ بداية الفترة.": "All series start at 0%, then show the percentage change from the beginning of the selected period.",
   "كل السلاسل تبدأ من 0%، ثم تعرض نسبة التغير منذ بداية الفترة.": "All series start at 0%, then show the percentage change from the beginning of the selected period.",
+  "كل السلاسل تبدأ من 0%, ثم تعرض نسبة التغير منذ بداية period.": "All series start at 0%, then show the percentage change from the beginning of the selected period.",
   "التاريخ السعري الحقيقي": "Historical market price",
   "نطاق الفترة": "Period range",
   "آخر سعر": "Latest price",
@@ -75,9 +73,13 @@ const EXACT: Record<string, string> = {
   "تفاصيل assets": "Asset details",
   "الفحص لكل الأصول": "Screening by asset",
   "الفحص لكل assets": "Screening by asset",
+  "screening لكل asset": "Screening by asset",
+  "screening لكل assets": "Screening by asset",
   "الحالة": "Status",
   "سبب التصنيف": "Classification reason",
   "الكل": "All",
+  "فحص مبدئي، وليس فتوى.": "Preliminary screening, not a fatwa.",
+  "screening مبدئي، وليس فتوى.": "Preliminary screening, not a fatwa.",
   "استبعاد أو تنبيه المنتجات والأنشطة الواضحة غير المفلترة شرعيًا.": "Exclude or flag clearly non-screened products and activities.",
   "الأسهم تحتاج بيانات مالية محدثة وفحصًا وفق معيار شرعي مختار.": "Stocks require current financial data and screening against the selected Shariah standard.",
   "لا نحسب مبلغ تنقية قبل توفر نسبة موثوقة لكل أصل.": "Purification is not calculated until a reliable rate is available for each asset.",
@@ -85,25 +87,45 @@ const EXACT: Record<string, string> = {
   "صندوق مؤشري عام غير مفلتر شرعيًا؛ قد يضم قطاعات وشركات غير متوافقة.": "A broad index fund without Shariah screening may include non-compliant sectors and companies.",
   "مصنف متوافق مبدئيًا وفق طبيعة الأصل والبيانات المتاحة؛ يبقى الاعتماد النهائي لمرجع شرعي مؤهل.": "Preliminarily classified as compliant based on the asset and available data; final reliance remains with a qualified Shariah authority.",
   "الذهب يتطلب تحققًا من الملكية والقبض وطريقة التسوية.": "Gold requires verification of ownership, possession and settlement method.",
-  "لا توجد بيانات كافية لإصدار فحص مبدئي موثوق لهذا الأصل.": "There is not enough data for a reliable preliminary screening of this asset.",
-  "لا تصدر ثروة حكمًا نهائيًا عليها آليًا بسبب نقص المعالجة الشرعية الموثقة.": "Thrwa does not issue a final automated ruling because documented Shariah screening data is insufficient.",
+  "لا تصدر ثروة حكمًا نهائيًا عليها حاليًا لأنها أصول رقمية محل اختلاف في المعالجة الشرعية.": "Thrwa does not currently issue a definitive Shariah ruling on digital assets because their treatment differs across Shariah methodologies.",
+  "لا تصدر Thrwa حكمًا نهائيًا عليها حاليًا لأنها assets رقمية محل اختلاف في المعالجة Shariah.": "Thrwa does not currently issue a definitive Shariah ruling on digital assets because their treatment differs across Shariah methodologies.",
   "اسأل عن ثروتك": "Ask about your wealth",
+  "ذكاء ثروة AI": "Thrwa AI",
+  "ذكاء Thrwa AI": "Thrwa AI",
+  "AI ذكاءThrwa": "Thrwa AI",
   "استعمل التحليلات على بياناتك الحقيقية فقط": "Use analytics on your real portfolio data only",
+  "استعمل Analytics على بياناتك الحقيقية فقط": "Use analytics on your real portfolio data only",
   "ما أكبر تركّز في المحفظة؟": "What is the largest concentration in my portfolio?",
   "رابح وخاسر: ما أكثر الأصول؟": "Which assets are the biggest winners and losers?",
+  "رابح وخاسر: ما أكثر asset؟": "Which assets are the biggest winners and losers?",
   "رابح وخاسر: ما أكثر assets؟": "Which assets are the biggest winners and losers?",
   "بين السعودية والعالم والكريبتو، كيف توزعت الثروة؟": "How is my wealth split between Saudi, global and crypto assets?",
+  "بين Saudi Arabia وglobal markets وcrypto، كيف توزعت الportfolio؟": "How is my wealth split between Saudi, global and crypto assets?",
   "يدوي": "Manual",
   "متصل": "Connected",
   "غير محققة": "Unrealized",
   "لا يوجد سجل بعد": "No history yet",
   "حسابات تجريبية متنوعة": "Diversified paper accounts",
+  "جاري تحميل ثروتك…": "Loading your wealth…",
   "لا توجد بيانات بعد.": "No data yet.",
-  "لا توجد بيانات.": "No data.",
   "الإجمالي": "Total",
+  "القيمة الإجمالية": "Total value",
+  "value الإجمالية": "Total value",
+  "كل الأصول": "All assets",
+  "كل assets": "All assets",
+  "الأصول المسجلة حاليًا": "Currently recorded assets",
+  "assets المسجلة حاليًا": "Currently recorded assets",
+  "كل الحسابات": "All accounts",
+  "كل accounts": "All accounts",
+  "حسب التكلفة": "By cost basis",
+  "حسب cost": "By cost basis",
+  "التوزيعات الشهرية — آخر 12 شهرًا": "Monthly distributions — last 12 months",
+  "allocationات الشهرية — آخر 12 شهرًا": "Monthly distributions — last 12 months",
+  "الدخل حسب الحساب": "Income by account",
+  "الدخل حسب account": "Income by account",
   "حدث خلال 5 سنوات": "events over 5 years",
   "سعودي / محلي": "Saudi / Local",
-  "السعودية / محلي": "Saudi / Local",
+  "SAR سعودي / محلي": "Saudi / Local · SAR",
   "ريال سعودي": "Saudi Riyal",
   "دولار أمريكي": "US Dollar",
   "الدولار": "USD",
@@ -131,84 +153,27 @@ const EXACT: Record<string, string> = {
   "فتح الحسابات": "Open accounts",
   "فتح التحليلات": "Open analytics",
   "فتح الالتزام الشرعي": "Open Shariah",
-  "فتح الدخل والتوزيعات": "Open income & distributions",
-  "نظرة عامة": "Overview",
-  "الأصول": "Assets",
-  "الدخل": "Income",
-  "الدخل والتوزيعات": "Income & distributions",
-  "التحليلات": "Analytics",
-  "الالتزام الشرعي": "Shariah",
-  "الحسابات": "Accounts",
-  "إدارة الثروة": "Wealth management",
-  "المحفظة الحقيقية": "Real portfolio",
-  "المحفظة التجريبية": "Paper portfolio",
-  "محفظة تجريبية": "Paper portfolio",
-  "إدارة الأصول": "Manage assets",
-  "إدارة": "Manage",
-  "صافي الثروة": "Net worth",
-  "آخر Snapshot": "Latest snapshot",
-  "عدد الأصول": "Number of assets",
-  "السيولة": "Liquidity",
-  "السيولة المسجّلة": "Recorded liquidity",
-  "توزيع الأصول": "Asset allocation",
-  "أين توجد الثروة؟": "Where is your wealth?",
-  "الحسابات والمحافظ": "Accounts & portfolios",
-  "مصادر أصولك الحالية": "Your current asset sources",
-  "التوزيع حسب المصدر": "Allocation by source",
-  "حالة المراكز": "Position status",
-  "رابح مقابل خاسر": "Winners vs losers",
-  "مراكز رابحة": "Winning positions",
-  "مراكز خاسرة": "Losing positions",
-  "الربح / الخسارة": "Profit / Loss",
-  "الربح/الخسارة": "Profit / Loss",
-  "التكلفة غير مكتملة": "Cost basis incomplete",
-  "المحفظة": "Portfolio",
-  "عالمي": "Global",
-  "كريبتو": "Crypto",
-  "الأصول الرقمية": "Digital assets",
-  "أخرى": "Other",
-  "الطاقة": "Energy",
-  "العقار والريت": "Real estate & REITs",
-  "نقد وأدوات قصيرة": "Cash & short-term instruments",
-  "فحص مبدئي، وليس فتوى.": "Preliminary screening, not a fatwa.",
-  "التصنيف الآلي يساعد على اكتشاف ما يحتاج مراجعة.": "Automated screening helps identify what needs review.",
-  "متوافق مبدئيًا": "Preliminarily compliant",
-  "متوافق": "Compliant",
-  "يحتاج مراجعة": "Needs review",
-  "مراجعة": "Review",
-  "غير متوافق مبدئيًا": "Preliminarily non-compliant",
-  "غير متوافق": "Non-compliant",
-  "غير مصنف": "Unclassified",
-  "غير مصنف بعد.": "Not classified yet.",
-  "المنهجية الحالية": "Current methodology",
-  "كيف يتم الفحص؟": "How is screening performed?",
-  "طبيعة الأصل والنشاط": "Asset and business activity",
-  "النسب المالية": "Financial ratios",
-  "الدخل غير المباح والتنقية": "Non-permissible income & purification",
-  "مراجعة بشرية": "Human review",
-  "السجل": "History",
-  "آخر التوزيعات": "Latest distributions",
-  "التاريخ": "Date",
-  "الأصل": "Asset",
-  "الحساب": "Account",
-  "للوحدة": "Per unit"
+  "فتح الدخل والتوزيعات": "Open income & distributions"
 };
 
-const FRAGMENTS: Array<[string, string]> = [
+const PHRASES: Array<[string, string]> = [
+  ["التوزيعات الشهرية — آخر 12 شهرًا", "Monthly distributions — last 12 months"],
+  ["الأصول المسجلة حاليًا", "Currently recorded assets"],
+  ["لا تصدر ثروة حكمًا نهائيًا عليها حاليًا لأنها أصول رقمية محل اختلاف في المعالجة الشرعية.", "Thrwa does not currently issue a definitive Shariah ruling on digital assets because their treatment differs across Shariah methodologies."],
   ["سدكو كابيتال ريت", "SEDCO Capital REIT"],
   ["جدوى ريت", "Jadwa REIT"],
   ["محفظة عوائد", "Awaed portfolio"],
   ["أرامكو", "Aramco"],
-  ["ثروة", "Thrwa"],
-  ["الدخل والتوزيعات", "Income & distributions"],
-  ["الالتزام الشرعي", "Shariah"],
-  ["نظرة عامة", "Overview"],
-  ["التحليلات", "Analytics"],
+  ["فحص مبدئي، وليس فتوى.", "Preliminary screening, not a fatwa."],
   ["متوسط التكلفة", "Average cost"],
   ["من إجمالي", "of total"],
   ["الثروة المسجلة", "recorded wealth"],
   ["المحفظة التجريبية", "paper portfolio"],
   ["المحفظة الحالية", "current portfolio"],
+  ["كل الأصول", "All assets"],
+  ["كل الحسابات", "All accounts"],
+  ["حسب التكلفة", "By cost basis"],
+  ["الدخل حسب الحساب", "Income by account"],
   ["المحفظة", "portfolio"],
   ["الأصول", "assets"],
   ["أصل", "asset"],
@@ -228,6 +193,7 @@ const FRAGMENTS: Array<[string, string]> = [
   ["القيمة", "value"],
   ["المراكز", "positions"],
   ["الفترة", "period"],
+  ["التوزيعات", "distributions"],
   ["التوزيع", "allocation"],
   ["القطاعي", "sector"],
   ["القطاعات", "sectors"],
@@ -250,6 +216,58 @@ const FRAGMENTS: Array<[string, string]> = [
   ["الكل", "All"]
 ];
 
+const TOKENS: Array<[RegExp, string]> = [
+  [/\bلكل\b/g, "by"],
+  [/\bالإجمالية\b/g, "total"],
+  [/\bالمسجلة\b/g, "recorded"],
+  [/\bحاليًا\b/g, "currently"],
+  [/\bحسب\b/g, "by"],
+  [/\bالشهرية\b/g, "monthly"],
+  [/\bآخر\b/g, "last"],
+  [/\bشهرًا\b/g, "months"],
+  [/\bمنذ\b/g, "since"],
+  [/\bبداية\b/g, "start of"],
+  [/\bتبدأ\b/g, "start"],
+  [/\bتعرض\b/g, "show"],
+  [/\bنسبة\b/g, "percentage"],
+  [/\bالتغير\b/g, "change"],
+  [/\bالسلاسل\b/g, "series"],
+  [/\bكل\b/g, "all"],
+  [/\bوWorst\b/g, "& Worst"],
+  [/\bوBest\b/g, "& Best"],
+  [/\bوglobal\b/g, "and global"],
+  [/\bوcrypto\b/g, "and crypto"],
+  [/\bذكاء\b/g, "AI"],
+  [/\bاستعمل\b/g, "Use"],
+  [/\bعلى\b/g, "on"],
+  [/\bبياناتك\b/g, "your data"],
+  [/\bالحقيقية\b/g, "real"],
+  [/\bفقط\b/g, "only"],
+  [/\bرابح\b/g, "winner"],
+  [/\bوخاسر\b/g, "and loser"],
+  [/\bما\b/g, "what"],
+  [/\bأكثر\b/g, "largest"],
+  [/\bبين\b/g, "between"],
+  [/\bكيف\b/g, "how"],
+  [/\bتوزعت\b/g, "is allocated"],
+  [/\bالثروة\b/g, "wealth"],
+  [/\bفحص\b/g, "screening"],
+  [/\bمبدئي\b/g, "preliminary"],
+  [/\bوليس\b/g, "not"],
+  [/\bفتوى\b/g, "fatwa"],
+  [/\bلا\b/g, "not"],
+  [/\bتصدر\b/g, "issue"],
+  [/\bحكمًا\b/g, "a ruling"],
+  [/\bنهائيًا\b/g, "definitive"],
+  [/\bعليها\b/g, "on it"],
+  [/\bلأنها\b/g, "because it is"],
+  [/\bرقمية\b/g, "digital"],
+  [/\bمحل\b/g, "subject to"],
+  [/\bاختلاف\b/g, "different views"],
+  [/\bفي\b/g, "in"],
+  [/\bالمعالجة\b/g, "treatment"]
+];
+
 function westernize(value: string) {
   return value
     .replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
@@ -257,6 +275,25 @@ function westernize(value: string) {
     .replace(/٪/g, "%")
     .replace(/ر\.س/g, "SAR")
     .replace(/،/g, ",");
+}
+
+function cleanMixed(value: string) {
+  return value
+    .replace(/screening\s+لكل\s+assets?/gi, "Screening by asset")
+    .replace(/Best\s+و\s*Worst\s+assets?/gi, "Best & worst assets")
+    .replace(/value\s+الإجمالية/gi, "Total value")
+    .replace(/كل\s+assets/gi, "All assets")
+    .replace(/assets\s+المسجلة\s+حاليًا/gi, "Currently recorded assets")
+    .replace(/كل\s+accounts/gi, "All accounts")
+    .replace(/حسب\s+cost/gi, "By cost basis")
+    .replace(/allocationات\s+الشهرية\s+—\s+آخر\s+12\s+شهرًا/gi, "Monthly distributions — last 12 months")
+    .replace(/account\s*الدخل\s+حسب\s+ال?/gi, "Income by account")
+    .replace(/الدخل\s+حسب\s+account/gi, "Income by account")
+    .replace(/AI\s+ذكاء\s*Thrwa/gi, "Thrwa AI")
+    .replace(/ذكاء\s*Thrwa\s*AI/gi, "Thrwa AI")
+    .replace(/SAR\s+سعودي\s*\/\s*محلي/gi, "Saudi / Local · SAR")
+    .replace(/كل\s+السلاسل\s+تبدأ\s+من\s+0%،?\s*ثم\s+تعرض\s+نسبة\s+التغير\s+منذ\s+بداية\s+period\.?/gi, "All series start at 0%, then show the percentage change from the beginning of the selected period.")
+    .replace(/لا\s+تصدر\s+(?:Thrwa\s+)?حكمًا\s+نهائيًا\s+عليها\s+حاليًا\s+لأنها\s+(?:assets\s+)?رقمية\s+محل\s+اختلاف\s+في\s+المعالجة\s+Shariah\.?/gi, "Thrwa does not currently issue a definitive Shariah ruling on digital assets because their treatment differs across Shariah methodologies.");
 }
 
 function translateRemaining(value: string) {
@@ -268,16 +305,33 @@ function translateRemaining(value: string) {
     return `${lead}${EXACT[trimmed]}${trail}`;
   }
 
-  next = next
+  next = cleanMixed(next)
     .replace(/^(\d+)\s+حدث خلال 5 سنوات$/, "$1 events over 5 years")
     .replace(/^حدث خلال 5 سنوات\s+(\d+)$/, "$1 events over 5 years")
     .replace(/^عبر\s+(\d+)\s+حسابات$/, "Across $1 accounts")
     .replace(/^آخر تحديث\s+(.+)$/, "Last updated $1")
     .replace(/^متوسط التكلفة\s+(.+)$/, "Average cost $1")
-    .replace(/^(.+)\s+من إجمالي\s+(.+)$/, "$1 of total $2");
+    .replace(/^(.+)\s+من إجمالي\s+(.+)$/, "$1 of total $2")
+    .replace(/^(\d+)\s+أصل$/, "$1 assets")
+    .replace(/^(\d+)\s+حساب$/, "$1 account")
+    .replace(/^(\d+)\s+حسابات$/, "$1 accounts");
 
-  for (const [ar, en] of FRAGMENTS) next = next.replaceAll(ar, en);
-  return next;
+  for (const [ar, en] of PHRASES) next = next.replaceAll(ar, en);
+  next = cleanMixed(next);
+
+  if (ARABIC.test(next)) {
+    for (const [pattern, en] of TOKENS) next = next.replace(pattern, en);
+    next = cleanMixed(next);
+  }
+
+  return next
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.!?])/g, "$1")
+    .replace(/\bby\s+asset\b/gi, "by asset")
+    .replace(/\bAll\s+asset\b/gi, "All assets")
+    .replace(/\bUse\s+Analytics\b/g, "Use analytics")
+    .replace(/\bwinner\s+and loser:\s*what\s+largest\s+asset\??/gi, "Which assets are the biggest winners and losers?")
+    .replace(/\bbetween\s+Saudi Arabia\s+and global markets\s+and crypto,?\s*how\s+is allocated\s+the?\s*portfolio\??/gi, "How is my wealth split between Saudi, global and crypto assets?");
 }
 
 function capturable(node: Text) {
