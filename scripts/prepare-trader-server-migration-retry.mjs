@@ -4,8 +4,8 @@ import path from "node:path";
 const traderPath = path.join(process.cwd(), "app/trader/TradingAgent.tsx");
 let source = fs.readFileSync(traderPath, "utf8");
 
-if (source.includes("TRADER_SERVER_MIGRATION_RETRY_V1")) {
-  console.log("Trader server migration retry already prepared.");
+if (source.includes("TRADER_SERVER_MIGRATION_RETRY_V2")) {
+  console.log("Trader server migration retry V2 already prepared.");
   process.exit(0);
 }
 if (!source.includes("TRADER_SUPABASE_EDGE_API_V3")) throw new Error("Migration retry requires Supabase Edge API V3.");
@@ -20,16 +20,23 @@ if (!source.includes(snapshotAnchor)) throw new Error("Migration retry snapshot 
 source = source.replace(snapshotAnchor, [
   '    const bots = Array.isArray(snapshot.bots) ? snapshot.bots : [];',
   '    const trades = Array.isArray(snapshot.trades) ? snapshot.trades : [];',
-  '    // TRADER_SERVER_MIGRATION_RETRY_V1 — never let an empty durable snapshot erase a verified browser backup.',
+  '    // TRADER_SERVER_MIGRATION_RETRY_V2 — an empty durable account can never erase browser recovery state.',
   '    const migrationRecovery = traderBrowserBootstrapSnapshot();',
   '    if (!bots.length && !trades.length && (migrationRecovery.bots.length > 0 || migrationRecovery.trades.length > 0 || migrationRecovery.hasPersistenceHistory)) {',
   '      setServerOpenOrders(Array.isArray(snapshot.orders) ? snapshot.orders : []);',
   '      setServerAccountState(snapshot.account ?? null);',
+  '      // Recovery must be allowed to run even when the first bootstrap intentionally pauses.',
   '      setServerEngineReady(true);',
   '      return;',
   '    }',
   '    serverApplyingRef.current = true;',
 ].join("\n"));
+
+// The original bootstrap can intentionally pause when persistence history exists but no verified
+// array has been found yet. That pause must still enter recovery mode instead of deadlocking.
+const pauseNeedle = '          setNotice("Durable migration paused: saved DCA history exists but no verified recovery payload was found. Local state was not overwritten.");\n          return;';
+if (!source.includes(pauseNeedle)) throw new Error("Migration retry V2: bootstrap pause anchor missing.");
+source = source.replace(pauseNeedle, '          setNotice("Durable migration paused: saved DCA history exists but no verified recovery payload was found. Local state was not overwritten.");\n          setServerEngineReady(true);\n          return;');
 
 const returnAnchor = '  return <main className={styles.appShell}>';
 const returnIndex = source.lastIndexOf(returnAnchor);
@@ -37,15 +44,26 @@ if (returnIndex < 0) throw new Error("Migration retry component return anchor mi
 const retryEffect = String.raw`
   const traderMigrationRecoveryBusyRef = useRef(false);
   useEffect(() => {
-    if (!serverEngineReady) return;
+    // TRADER_SERVER_MIGRATION_RETRY_V2_LOOP — recovery runs independently of initial server hydration.
     let cancelled = false;
     let attempts = 0;
+    let complete = false;
     const recoverDurableMigration = async () => {
-      if (cancelled || traderMigrationRecoveryBusyRef.current) return;
+      if (cancelled || complete || traderMigrationRecoveryBusyRef.current) return;
       const migration = traderBrowserBootstrapSnapshot();
-      if (!migration.bots.length && !migration.trades.length) return;
-      traderMigrationRecoveryBusyRef.current = true;
       attempts += 1;
+      if (!migration.bots.length && !migration.trades.length) {
+        if (attempts === 1 || attempts % 10 === 0) {
+          void fetch("/api/trader/audit", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            keepalive: true,
+            body: JSON.stringify({ event: "durable_migration_no_candidate", at: new Date().toISOString(), attempt: attempts, botSource: migration.botSource, tradeSource: migration.tradeSource, hasPersistenceHistory: migration.hasPersistenceHistory }),
+          }).catch(() => undefined);
+        }
+        return;
+      }
+      traderMigrationRecoveryBusyRef.current = true;
       try {
         const stateResponse = await traderEdgeRequest({ action: "state" });
         const stateSnapshot = await stateResponse.json().catch(() => ({}));
@@ -56,6 +74,7 @@ const retryEffect = String.raw`
         const missingBot = migration.bots.some((bot) => !durableBotIds.has(bot.id));
         const missingTrade = migration.trades.some((trade) => !durableTradeIds.has(trade.id));
         if (!missingBot && !missingTrade) {
+          complete = true;
           if (!cancelled && stateResponse.ok) applyTraderServerSnapshot(stateSnapshot);
           return;
         }
@@ -80,6 +99,7 @@ const retryEffect = String.raw`
           setNotice("Durable DCA recovery is incomplete; local backup remains protected and retry will continue.");
           return;
         }
+        complete = true;
         if (!cancelled) {
           applyTraderServerSnapshot(snapshot);
           setNotice("Durable DCA migration verified. Supabase is now the trading source of truth.");
@@ -92,23 +112,25 @@ const retryEffect = String.raw`
       }
     };
     void recoverDurableMigration();
-    const timer = window.setInterval(() => { if (attempts < 20) void recoverDurableMigration(); }, 3000);
+    const timer = window.setInterval(() => { if (attempts < 120 && !complete) void recoverDurableMigration(); }, 3000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [serverEngineReady]);
+  }, []);
 
 `;
 source = source.slice(0, returnIndex) + retryEffect + source.slice(returnIndex);
 
 for (const token of [
-  "TRADER_SERVER_MIGRATION_RETRY_V1",
-  "migrationRecovery.hasPersistenceHistory",
+  "TRADER_SERVER_MIGRATION_RETRY_V2",
+  "TRADER_SERVER_MIGRATION_RETRY_V2_LOOP",
+  "durable_migration_no_candidate",
   "durable_migration_retry",
   "durable_migration_verified",
   "Durable DCA migration verified",
   "traderMigrationRecoveryBusyRef",
+  "setServerEngineReady(true);",
 ]) {
-  if (!source.includes(token)) throw new Error(`Migration retry guard missing: ${token}`);
+  if (!source.includes(token)) throw new Error(`Migration retry V2 guard missing: ${token}`);
 }
 
 fs.writeFileSync(traderPath, source);
-console.log("Prepared automatic durable DCA recovery retry with empty-snapshot protection.");
+console.log("Prepared deadlock-free automatic durable DCA recovery retry V2.");
