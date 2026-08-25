@@ -6,7 +6,7 @@ import BinanceConnectionLayer from "./BinanceConnectionLayer";
 import styles from "./trader-v2.module.css";
 
 type AccountKind = "paper" | "real";
-type Section = "Dashboard" | "Portfolio" | "Bots";
+type Section = "Dashboard" | "Portfolio" | "Bots" | "Active Trades" | "Closed Trades";
 type BotTab = "Active" | "Closed";
 type TraderAccount = {
   id: string;
@@ -78,8 +78,8 @@ type WorkspaceResponse = {
   trades?: Trade[];
   error?: string;
 };
-type Balance = { asset: string; free: number; locked: number };
-type BalanceResponse = { ok?: boolean; balances?: Balance[]; quoteBalance?: number; error?: string };
+type Balance = { asset: string; free: number; locked: number; usdPrice: number | null; usdValue: number | null };
+type BalanceResponse = { ok?: boolean; balances?: Balance[]; quoteBalance?: number; totalUsd?: number; error?: string };
 type AccountsResponse = { ok?: boolean; accounts?: TraderAccount[]; defaultAccount?: AccountKind; error?: string };
 
 type AuthMode = "login" | "signup";
@@ -187,6 +187,7 @@ export default function TraderV2Shell() {
   const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [quoteBalance, setQuoteBalance] = useState<number | null>(null);
+  const [totalUsd, setTotalUsd] = useState<number | null>(null);
   const [accountMenu, setAccountMenu] = useState(false);
   const [exchangeModal, setExchangeModal] = useState(false);
   const [botModal, setBotModal] = useState(false);
@@ -195,6 +196,7 @@ export default function TraderV2Shell() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const hiddenBinanceButton = useRef<HTMLButtonElement>(null);
+  const sessionBootstrapped = useRef(false);
 
   const [botName, setBotName] = useState("My DCA Bot");
   const [pair, setPair] = useState("BTC/USDT");
@@ -218,6 +220,9 @@ export default function TraderV2Shell() {
   const closedTrades = trades.filter((trade) => trade.status === "Closed");
   const connected = currentAccount?.kind === "real" && currentAccount.exchangeStatus === "connected";
   const displayBots = botTab === "Active" ? activeBots : closedBots;
+  const displayBalances = useMemo(() => [...balances].sort((a, b) => (b.usdValue ?? -1) - (a.usdValue ?? -1)), [balances]);
+  const displayedEquity = currentAccount?.kind === "real" && connected && totalUsd != null ? totalUsd : (stateAccount?.equity ?? currentAccount?.startingBalance ?? 0);
+  const displayedAvailable = currentAccount?.kind === "real" && connected && quoteBalance != null ? quoteBalance : (stateAccount?.available ?? currentAccount?.startingBalance ?? 0);
 
   const loadAccounts = async (bootstrap = false) => {
     try {
@@ -246,11 +251,12 @@ export default function TraderV2Shell() {
     } finally { if (!quiet) setLoading(false); }
   };
   const loadBalances = async (quiet = false) => {
-    if (!connected) { setBalances([]); setQuoteBalance(null); return; }
+    if (!connected) { setBalances([]); setQuoteBalance(null); setTotalUsd(null); return; }
     try {
       const result = await invokeBalances();
       setBalances(result.balances ?? []);
       setQuoteBalance(Number(result.quoteBalance ?? 0));
+      setTotalUsd(Number(result.totalUsd ?? 0));
       await loadWorkspace(true);
     } catch (caught) {
       if (!quiet) setNotice(caught instanceof Error ? caught.message : "Could not refresh Binance balances.");
@@ -263,20 +269,31 @@ export default function TraderV2Shell() {
       if (!active) return;
       const hasSession = Boolean(data.session);
       setSignedIn(hasSession); setAuthReady(true);
-      if (hasSession) void loadAccounts(true);
+      if (hasSession) {
+        sessionBootstrapped.current = true;
+        void loadAccounts(true);
+      }
     });
     const { data: listener } = browserSupabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       const hasSession = Boolean(session);
       setSignedIn(hasSession); setAuthReady(true);
-      if (hasSession) { setAccountsReady(false); void loadAccounts(true); }
-      else { setAccounts([]); setWorkspace(null); setAccountsReady(false); setSelectedKind("real"); }
+      if (hasSession) {
+        if (!sessionBootstrapped.current) {
+          sessionBootstrapped.current = true;
+          void loadAccounts(true);
+        }
+      } else {
+        sessionBootstrapped.current = false;
+        setAccounts([]); setWorkspace(null); setAccountsReady(false); setSelectedKind("real");
+        setBalances([]); setQuoteBalance(null); setTotalUsd(null);
+      }
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => { if (currentAccount) void loadWorkspace(); }, [currentAccount?.id]);
-  useEffect(() => { if (connected) void loadBalances(true); else { setBalances([]); setQuoteBalance(null); } }, [connected, currentAccount?.id]);
+  useEffect(() => { if (connected) void loadBalances(true); else { setBalances([]); setQuoteBalance(null); setTotalUsd(null); } }, [connected, currentAccount?.id]);
   useEffect(() => {
     if (!signedIn || !currentAccount) return;
     const timer = window.setInterval(() => { void loadAccounts(false); void loadWorkspace(true); }, 5000);
@@ -333,6 +350,7 @@ export default function TraderV2Shell() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to close bot."); }
     finally { setBusy(false); }
   };
+  const tradePnl = (trade: Trade) => trade.status === "Closed" ? (trade.realizedPnl ?? 0) : ((trade.lastPrice ?? trade.averagePrice) - trade.averagePrice) * trade.quantity;
 
   if (!authReady) return <div className={styles.loadingPage}>Checking secure session…</div>;
   if (!signedIn) return <TraderAuth />;
@@ -341,7 +359,7 @@ export default function TraderV2Shell() {
   const dashboard = <>
     <div className={styles.pageHeading}><div><small>{currentAccount.kind === "real" ? "REAL ACCOUNT" : "PAPER ACCOUNT"}</small><h1>Dashboard</h1></div>{currentAccount.kind === "real" && <button className={styles.primaryButton} onClick={() => setExchangeModal(true)}>{connected ? "Exchange connected" : "Connect Exchange"}</button>}</div>
     <div className={styles.heroGrid}>
-      <section className={styles.heroCard}><div className={styles.cardTop}><span>Total balance</span><small>{currentAccount.kind === "real" ? (connected ? "Binance + bot activity" : "Connect exchange to sync") : "Simulation"}</small></div><strong>{money(stateAccount?.equity ?? currentAccount.startingBalance)}</strong><div className={styles.heroMeta}><span>Available {money(stateAccount?.available)}</span><span>In bots {money(stateAccount?.invested)}</span></div><div className={styles.chartLine}><i/><i/><i/><i/><i/><i/><i/></div></section>
+      <section className={styles.heroCard}><div className={styles.cardTop}><span>Total balance</span><small>{currentAccount.kind === "real" ? (connected ? "Binance Spot market value" : "Connect exchange to sync") : "Simulation"}</small></div><strong>{money(displayedEquity)}</strong><div className={styles.heroMeta}><span>{currentAccount.kind === "real" && connected ? "USDT available" : "Available"} {money(displayedAvailable)}</span><span>In bots {money(stateAccount?.invested)}</span></div><div className={styles.chartLine}><i/><i/><i/><i/><i/><i/><i/></div></section>
       <div className={styles.metricStack}><section className={styles.metricCard}><span>Active bots</span><strong>{activeBots.length}</strong><small>{activeBots.filter((bot) => bot.status === "Running").length} running</small></section><section className={styles.metricCard}><span>Active trades</span><strong>{activeTrades.length}</strong><small>{closedTrades.length} closed trades</small></section><section className={styles.metricCard}><span>PnL</span><strong className={(stateAccount?.realizedPnl ?? 0) + (stateAccount?.unrealizedPnl ?? 0) >= 0 ? styles.positive : styles.negative}>{money((stateAccount?.realizedPnl ?? 0) + (stateAccount?.unrealizedPnl ?? 0))}</strong><small>Realized + unrealized</small></section></div>
     </div>
     <div className={styles.dashboardGrid}>
@@ -352,7 +370,7 @@ export default function TraderV2Shell() {
 
   const portfolio = <>
     <div className={styles.pageHeading}><div><small>PORTFOLIO</small><h1>{currentAccount.kind === "real" ? "My Portfolio" : "Paper Portfolio"}</h1></div>{currentAccount.kind === "real" && <button className={styles.ghostButton} onClick={() => connected ? void loadBalances(false) : setExchangeModal(true)}>{connected ? "Refresh" : "Connect Exchange"}</button>}</div>
-    <div className={styles.portfolioGrid}><section className={styles.heroCard}><div className={styles.cardTop}><span>Account equity</span><small>{currentAccount.kind === "real" ? "Real account" : "Simulation"}</small></div><strong>{money(stateAccount?.equity ?? currentAccount.startingBalance)}</strong><div className={styles.statGrid}><div><span>Available</span><b>{money(stateAccount?.available)}</b></div><div><span>Invested</span><b>{money(stateAccount?.invested)}</b></div><div><span>Reserved</span><b>{money(stateAccount?.reserved)}</b></div><div><span>Realized PnL</span><b className={(stateAccount?.realizedPnl ?? 0) >= 0 ? styles.positive : styles.negative}>{money(stateAccount?.realizedPnl)}</b></div></div></section><section className={styles.panel}><div className={styles.panelTitle}><div><h2>Assets</h2><p>{currentAccount.kind === "real" ? "Binance Spot balances" : "Paper account cash"}</p></div></div>{currentAccount.kind === "real" ? connected ? <div className={styles.assetRows}>{balances.length ? balances.map((item) => <div className={styles.assetRow} key={item.asset}><span className={styles.assetLogo}>{item.asset.slice(0, 2)}</span><div><strong>{item.asset}</strong><small>Free {amount(item.free)}</small></div><b>{amount(item.free + item.locked)}</b></div>) : <div className={styles.emptyCompact}><strong>No non-zero Binance assets</strong><p>Your account may currently be empty.</p></div>}</div> : <div className={styles.connectEmpty}><span>◆</span><strong>Connect your exchange</strong><p>Link Binance to display your actual Spot balances here.</p><button className={styles.primaryButton} onClick={() => setExchangeModal(true)}>Connect Exchange</button></div> : <div className={styles.assetRow}><span className={styles.assetLogo}>US</span><div><strong>USDT</strong><small>Paper balance</small></div><b>{money(stateAccount?.available ?? currentAccount.startingBalance)}</b></div>}</section></div>
+    <div className={styles.portfolioGrid}><section className={styles.heroCard}><div className={styles.cardTop}><span>Account equity</span><small>{currentAccount.kind === "real" && connected ? "All Binance Spot assets in USD" : currentAccount.kind === "real" ? "Real account" : "Simulation"}</small></div><strong>{money(displayedEquity)}</strong><div className={styles.statGrid}><div><span>{currentAccount.kind === "real" && connected ? "Available USDT" : "Available"}</span><b>{money(displayedAvailable)}</b></div><div><span>Bot capital</span><b>{money(stateAccount?.invested)}</b></div><div><span>Reserved</span><b>{money(stateAccount?.reserved)}</b></div><div><span>Realized PnL</span><b className={(stateAccount?.realizedPnl ?? 0) >= 0 ? styles.positive : styles.negative}>{money(stateAccount?.realizedPnl)}</b></div></div></section><section className={styles.panel}><div className={styles.panelTitle}><div><h2>Assets</h2><p>{currentAccount.kind === "real" ? "Binance Spot balances · current USD value" : "Paper account cash"}</p></div></div>{currentAccount.kind === "real" ? connected ? <div className={styles.assetRows}>{displayBalances.length ? displayBalances.map((item) => <div className={styles.assetRow} key={item.asset}><span className={styles.assetLogo}>{item.asset.slice(0, 2)}</span><div><strong>{item.asset}</strong><small>Free {amount(item.free)}{item.locked > 0 ? ` · Locked ${amount(item.locked)}` : ""}</small></div><b style={{display:"grid",gap:3,textAlign:"right"}}><span>{item.usdValue == null ? "—" : money(item.usdValue)}</span><small style={{fontSize:8,color:"#6c6c6c",fontWeight:400}}>{amount(item.free + item.locked)} {item.asset}{item.usdPrice != null ? ` · ${money(item.usdPrice)}` : " · price unavailable"}</small></b></div>) : <div className={styles.emptyCompact}><strong>No non-zero Binance assets</strong><p>Your account may currently be empty.</p></div>}</div> : <div className={styles.connectEmpty}><span>◆</span><strong>Connect your exchange</strong><p>Link Binance to display your actual Spot balances here.</p><button className={styles.primaryButton} onClick={() => setExchangeModal(true)}>Connect Exchange</button></div> : <div className={styles.assetRow}><span className={styles.assetLogo}>US</span><div><strong>USDT</strong><small>Paper balance</small></div><b>{money(stateAccount?.available ?? currentAccount.startingBalance)}</b></div>}</section></div>
   </>;
 
   const botsPage = <>
@@ -361,10 +379,18 @@ export default function TraderV2Shell() {
     <section className={styles.panel}><div className={styles.botTableHead}><span>Bot</span><span>Pair</span><span>Capital</span><span>Take profit</span><span>Status</span><span/></div>{displayBots.length ? displayBots.map((bot) => <div className={styles.botRow} key={bot.id}><div><strong>{bot.name}</strong><small>{bot.startCondition} · {bot.executionMode}</small></div><b>{bot.pair}</b><span>{money(bot.baseOrder + bot.safetyOrder * bot.maxSafetyOrders)}</span><span>{bot.takeProfit}%</span><span className={bot.status === "Running" && bot.lifecycle !== "closed" ? styles.connected : styles.muted}>{bot.lifecycle === "closed" ? "CLOSED" : bot.status.toUpperCase()}</span><div className={styles.rowActions}>{bot.lifecycle !== "closed" && <><button onClick={() => void toggleBot(bot)}>{bot.status === "Running" ? "Pause" : "Resume"}</button><button onClick={() => void closeBot(bot)}>Close</button></>}</div></div>) : <div className={styles.emptyState}><strong>No {botTab.toLowerCase()} bots</strong><p>{botTab === "Active" ? "Create a bot to start automating this account." : "Bots you close will remain here with their history."}</p></div>}</section>
   </>;
 
+  const tradesPage = (tradeState: "Active" | "Closed") => {
+    const rows = tradeState === "Active" ? activeTrades : closedTrades;
+    return <>
+      <div className={styles.pageHeading}><div><small>BOTS · TRADES</small><h1>{tradeState} Trades</h1></div></div>
+      <section className={styles.panel}><div className={styles.botTableHead}><span>Trade</span><span>Invested</span><span>Avg. entry</span><span>Last price</span><span>PnL</span><span>{tradeState === "Active" ? "Opened" : "Closed"}</span></div>{rows.length ? rows.map((trade) => { const pnl = tradePnl(trade); return <div className={styles.botRow} key={trade.id}><div><strong>{trade.pair}</strong><small>{tradeState === "Closed" ? (trade.closeReason || "Closed") : "Active position"}</small></div><b>{money(trade.invested)}</b><span>{money(trade.averagePrice)}</span><span>{trade.lastPrice == null ? "—" : money(trade.lastPrice)}</span><span className={pnl >= 0 ? styles.positive : styles.negative}>{money(pnl)}</span><span>{dateLabel(tradeState === "Active" ? trade.openedAt : trade.closedAt)}</span></div>; }) : <div className={styles.emptyState}><strong>No {tradeState.toLowerCase()} trades</strong><p>{tradeState === "Active" ? "Open bot positions will appear here." : "Completed bot trades remain here as account history."}</p></div>}</section>
+    </>;
+  };
+
   return <div className={styles.page}>
-    <aside className={styles.sidebar}><div><div className={styles.brand}><span className={styles.brandMark}>LN</span><div><strong>LabNarrative</strong><small>Trading</small></div></div><nav className={styles.nav}><button className={section === "Dashboard" ? styles.navActive : ""} onClick={() => setSection("Dashboard")}><span>⌘</span>Dashboard</button><button className={section === "Portfolio" ? styles.navActive : ""} onClick={() => setSection("Portfolio")}><span>◔</span>Portfolio</button><button className={section === "Bots" ? styles.navActive : ""} onClick={() => setSection("Bots")}><span>▣</span>Bots</button></nav></div><div className={styles.sidebarBottom}><div><span className={currentAccount.kind === "real" ? styles.liveDot : styles.paperDot}/><div><strong>{currentAccount.kind === "real" ? "Real workspace" : "Paper workspace"}</strong><small>{currentAccount.kind === "real" ? (currentAccount.mode === "live" ? "Live" : "Shadow") : "Simulation"}</small></div></div></div></aside>
+    <aside className={styles.sidebar}><div><div className={styles.brand}><span className={styles.brandMark}>LN</span><div><strong>LabNarrative</strong><small>Trading</small></div></div><nav className={styles.nav}><button className={section === "Dashboard" ? styles.navActive : ""} onClick={() => setSection("Dashboard")}><span>⌘</span>Dashboard</button><button className={section === "Portfolio" ? styles.navActive : ""} onClick={() => setSection("Portfolio")}><span>◔</span>Portfolio</button><button className={section === "Bots" ? styles.navActive : ""} onClick={() => setSection("Bots")}><span>▣</span>Bots</button><div style={{display:"grid",gap:2,margin:"-1px 0 4px 30px"}}><button className={section === "Active Trades" ? styles.navActive : ""} style={{height:30,padding:"0 9px",fontSize:10,borderRadius:9}} onClick={() => setSection("Active Trades")}><span style={{width:8,fontSize:8}}>•</span>Active Trades <em style={{marginLeft:"auto",fontStyle:"normal",fontSize:9,color:"#666"}}>{activeTrades.length}</em></button><button className={section === "Closed Trades" ? styles.navActive : ""} style={{height:30,padding:"0 9px",fontSize:10,borderRadius:9}} onClick={() => setSection("Closed Trades")}><span style={{width:8,fontSize:8}}>•</span>Closed Trades <em style={{marginLeft:"auto",fontStyle:"normal",fontSize:9,color:"#666"}}>{closedTrades.length}</em></button></div></nav></div><div className={styles.sidebarBottom}><div><span className={currentAccount.kind === "real" ? styles.liveDot : styles.paperDot}/><div><strong>{currentAccount.kind === "real" ? "Real workspace" : "Paper workspace"}</strong><small>{currentAccount.kind === "real" ? (currentAccount.mode === "live" ? "Live" : "Shadow") : "Simulation"}</small></div></div></div></aside>
     <div className={styles.workspace}><header className={styles.topbar}><div><small>{section.toUpperCase()}</small><strong>{currentAccount.kind === "real" ? "Real Account" : "Paper Account"}</strong></div><div className={styles.topActions}><button className={styles.accountButton} onClick={() => setAccountMenu((value) => !value)}><span>{currentAccount.kind === "real" ? "R" : "P"}</span><div><strong>{currentAccount.kind === "real" ? "Real Account" : "Paper Account"}</strong><small>{currentAccount.kind === "real" ? (connected ? "Binance connected" : "Real workspace") : "Simulation"}</small></div><i>⌄</i></button>{accountMenu && <div className={styles.accountMenu}><button className={selectedKind === "real" ? styles.accountMenuActive : ""} onClick={() => chooseAccount("real")}><span>R</span><div><strong>Real Account</strong><small>{accounts.find((item) => item.kind === "real")?.exchangeStatus === "connected" ? "Binance connected" : "Connect an exchange"}</small></div></button><button className={selectedKind === "paper" ? styles.accountMenuActive : ""} onClick={() => chooseAccount("paper")}><span>P</span><div><strong>Paper Account</strong><small>Simulation workspace</small></div></button><div className={styles.menuDivider}/><button onClick={() => void signOut()}><span>↪</span><div><strong>Sign out</strong><small>End this session</small></div></button></div>}</div></header>
-      <main className={styles.content}>{notice && <button className={styles.notice} onClick={() => setNotice("")}>{notice}<span>×</span></button>}{error && <button className={styles.errorNotice} onClick={() => setError("")}>{error}<span>×</span></button>}{loading ? <div className={styles.loadingCard}>Loading workspace…</div> : section === "Dashboard" ? dashboard : section === "Portfolio" ? portfolio : botsPage}</main>
+      <main className={styles.content}>{notice && <button className={styles.notice} onClick={() => setNotice("")}>{notice}<span>×</span></button>}{error && <button className={styles.errorNotice} onClick={() => setError("")}>{error}<span>×</span></button>}{loading ? <div className={styles.loadingCard}>Loading workspace…</div> : section === "Dashboard" ? dashboard : section === "Portfolio" ? portfolio : section === "Bots" ? botsPage : section === "Active Trades" ? tradesPage("Active") : tradesPage("Closed")}</main>
     </div>
 
     {exchangeModal && <div className={styles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setExchangeModal(false); }}><section className={styles.modal}><div className={styles.modalHead}><div><small>EXCHANGES</small><h2>Connect Exchange</h2><p>Choose the exchange you want to connect to this Real Account.</p></div><button onClick={() => setExchangeModal(false)}>×</button></div><button className={styles.exchangeChoice} onClick={openBinance}><span className={styles.exchangeChoiceLogo}>◆</span><div><strong>Binance</strong><small>Spot trading · API connection</small></div><span>{connected ? "CONNECTED" : "CONNECT"}</span></button><div className={styles.comingSoon}>More exchanges and brokers will appear here as they are added.</div></section></div>}
