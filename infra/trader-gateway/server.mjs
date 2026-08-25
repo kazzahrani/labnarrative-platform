@@ -1,18 +1,19 @@
 import http from "node:http";
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, verify as verifySignature } from "node:crypto";
 
 const PORT = Number(process.env.PORT || 8080);
-const SHARED_SECRET = String(process.env.LN_GATEWAY_SHARED_SECRET || "").trim();
 const BINANCE_ORIGIN = "https://api.binance.com";
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_CLOCK_SKEW_MS = 30_000;
 const NONCE_TTL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 10_000;
 
-if (SHARED_SECRET.length < 32) {
-  console.error("LN_GATEWAY_SHARED_SECRET must be at least 32 characters.");
-  process.exit(1);
-}
+// Public half only. The matching private key is generated and kept inside Supabase Vault.
+const RELAY_SIGNING_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/x13leNz65fns4Cnoh6vEyAbR8MB
+xctNegKl/b1/1PYc1ENJ3ET0UuRXSkPwBWHpaDoioCV8hlJ7Dpu6JOr61w==
+-----END PUBLIC KEY-----
+`;
 
 const allowed = new Set([
   "GET /api/v3/time",
@@ -43,12 +44,6 @@ const json = (res, status, body) => {
     "x-content-type-options": "nosniff",
   });
   res.end(data);
-};
-
-const safeEqual = (a, b) => {
-  const aa = Buffer.from(String(a || ""));
-  const bb = Buffer.from(String(b || ""));
-  return aa.length === bb.length && timingSafeEqual(aa, bb);
 };
 
 const cleanupNonces = () => {
@@ -83,10 +78,26 @@ const verifyRelayAuth = (req, rawBody) => {
   const supplied = String(req.headers["x-ln-signature"] || "");
   if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > MAX_CLOCK_SKEW_MS) return false;
   if (!/^[a-zA-Z0-9_-]{16,128}$/.test(nonce)) return false;
+  if (!/^[A-Za-z0-9+/=]{80,100}$/.test(supplied)) return false;
   cleanupNonces();
   if (seenNonces.has(nonce)) return false;
-  const expected = createHmac("sha256", SHARED_SECRET).update(`${timestamp}\n${nonce}\n${rawBody}`).digest("hex");
-  if (!safeEqual(expected, supplied)) return false;
+
+  let signature;
+  try {
+    signature = Buffer.from(supplied, "base64");
+  } catch {
+    return false;
+  }
+  if (signature.length !== 64) return false;
+
+  const message = `${timestamp}\n${nonce}\n${rawBody}`;
+  const verified = verifySignature(
+    "sha256",
+    Buffer.from(message, "utf8"),
+    { key: RELAY_SIGNING_PUBLIC_KEY, dsaEncoding: "ieee-p1363" },
+    signature,
+  );
+  if (!verified) return false;
   seenNonces.set(nonce, Date.now());
   return true;
 };
@@ -117,7 +128,7 @@ const relay = async (payload) => {
   const apiKey = typeof payload?.apiKey === "string" ? payload.apiKey.trim() : "";
   if (apiKey && apiKey.length > 256) throw Object.assign(new Error("invalid_api_key"), { status: 400 });
 
-  const headers = { "accept": "application/json" };
+  const headers = { accept: "application/json" };
   if (apiKey) headers["x-mbx-apikey"] = apiKey;
   if (payload?.body != null) headers["content-type"] = "application/json";
 
@@ -147,7 +158,13 @@ const server = http.createServer(async (req, res) => {
     if (!rateAllowed()) return json(res, 429, { error: "gateway_rate_limited" });
     if (req.method === "GET" && req.url === "/health") {
       const ip = await refreshEgressIp();
-      return json(res, 200, { ok: true, service: "labnarrative-binance-gateway", egressIp: ip, binanceOrigin: BINANCE_ORIGIN });
+      return json(res, 200, {
+        ok: true,
+        service: "labnarrative-binance-gateway",
+        auth: "ecdsa-p256",
+        egressIp: ip,
+        binanceOrigin: BINANCE_ORIGIN,
+      });
     }
     if (req.method !== "POST" || req.url !== "/relay") return json(res, 404, { error: "not_found" });
     const rawBody = await readBody(req);
@@ -166,6 +183,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(JSON.stringify({ event: "gateway_started", port: PORT }));
+  console.log(JSON.stringify({ event: "gateway_started", port: PORT, auth: "ecdsa-p256" }));
   void refreshEgressIp();
 });
