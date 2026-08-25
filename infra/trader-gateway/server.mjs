@@ -104,6 +104,25 @@ const verifyRelayAuth = (req, rawBody) => {
 
 const refreshEgressIp = async () => {
   if (egressIp && Date.now() - egressCheckedAt < 10 * 60_000) return egressIp;
+
+  // Prefer OCI's local Instance Metadata Service so health does not depend on
+  // a third-party public-IP service being reachable from the VM.
+  try {
+    const response = await fetch("http://169.254.169.254/opc/v2/vnics/", {
+      headers: { Authorization: "Bearer Oracle" },
+      signal: AbortSignal.timeout(2000),
+    });
+    const vnics = await response.json();
+    const value = Array.isArray(vnics)
+      ? String(vnics.find((v) => typeof v?.publicIp === "string" && v.publicIp.trim())?.publicIp || "").trim()
+      : "";
+    if (response.ok && /^[0-9a-fA-F:.]+$/.test(value)) {
+      egressIp = value;
+      egressCheckedAt = Date.now();
+      return egressIp;
+    }
+  } catch {}
+
   try {
     const response = await fetch("https://checkip.amazonaws.com", { signal: AbortSignal.timeout(4000) });
     const value = (await response.text()).trim();
