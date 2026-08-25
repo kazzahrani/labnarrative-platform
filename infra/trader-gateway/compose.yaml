@@ -4,7 +4,6 @@ services:
     restart: unless-stopped
     environment:
       PORT: 8080
-      LN_GATEWAY_SHARED_SECRET: ${LN_GATEWAY_SHARED_SECRET}
     expose:
       - "8080"
 
