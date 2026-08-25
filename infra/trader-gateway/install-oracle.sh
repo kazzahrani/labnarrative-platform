@@ -1,39 +1,61 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="https://github.com/kazzahrani/labnarrative-platform.git"
 INSTALL_ROOT="/opt/labnarrative-trader-gateway"
-REPO_DIR="$INSTALL_ROOT/repo"
+SERVER_URL="https://raw.githubusercontent.com/kazzahrani/labnarrative-platform/main/infra/trader-gateway/server.mjs"
+SERVICE_FILE="/etc/systemd/system/labnarrative-trader-gateway.service"
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl git iptables-persistent
-
-if ! command -v docker >/dev/null 2>&1; then
-  curl -fsSL https://get.docker.com | sudo sh
-fi
-sudo systemctl enable --now docker
+sudo apt-get install -y ca-certificates curl nodejs iptables-persistent
 
 sudo mkdir -p "$INSTALL_ROOT"
-sudo chown -R "$USER":"$USER" "$INSTALL_ROOT"
+sudo curl -4 -fL --retry 5 --retry-delay 2 --connect-timeout 10 "$SERVER_URL" -o "$INSTALL_ROOT/server.mjs"
+sudo chown -R ubuntu:ubuntu "$INSTALL_ROOT"
+sudo chmod 0755 "$INSTALL_ROOT"
+sudo chmod 0644 "$INSTALL_ROOT/server.mjs"
 
-if [ -d "$REPO_DIR/.git" ]; then
-  git -C "$REPO_DIR" fetch --depth 1 origin main
-  git -C "$REPO_DIR" reset --hard origin/main
-else
-  git clone --depth 1 --branch main "$REPO_URL" "$REPO_DIR"
-fi
-
-# OCI Ubuntu images can also have a host firewall in addition to the VCN security list.
+# OCI Ubuntu images can have a host firewall in addition to the VCN security list.
 if ! sudo iptables -C INPUT -p tcp --dport 8080 -j ACCEPT 2>/dev/null; then
   sudo iptables -I INPUT 1 -p tcp --dport 8080 -j ACCEPT
 fi
 sudo netfilter-persistent save >/dev/null 2>&1 || true
 
-cd "$REPO_DIR/infra/trader-gateway"
-sudo docker compose down --remove-orphans || true
-sudo docker compose up -d --build
+sudo tee "$SERVICE_FILE" >/dev/null <<'EOF'
+[Unit]
+Description=LabNarrative Binance Trader Gateway
+After=network-online.target
+Wants=network-online.target
 
-sleep 3
-curl -fsS http://127.0.0.1:8080/health
-printf '\nGateway installed.\n'
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/labnarrative-trader-gateway
+Environment=NODE_ENV=production
+Environment=PORT=8080
+ExecStart=/usr/bin/node /opt/labnarrative-trader-gateway/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now labnarrative-trader-gateway.service
+
+for _ in $(seq 1 20); do
+  if curl -fsS --max-time 3 http://127.0.0.1:8080/health; then
+    printf '\nGateway installed.\n'
+    exit 0
+  fi
+  sleep 1
+done
+
+sudo systemctl --no-pager --full status labnarrative-trader-gateway.service || true
+sudo journalctl -u labnarrative-trader-gateway.service -n 50 --no-pager || true
+exit 1
