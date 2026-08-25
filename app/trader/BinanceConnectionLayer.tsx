@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { browserSupabase } from "../../lib/supabase-browser";
 import styles from "./binance-connect.module.css";
 
 type ControlResponse = {
@@ -23,32 +22,29 @@ type ControlResponse = {
 };
 
 function friendlyError(raw: string) {
-  if (raw.includes("trader_account_not_bound")) return "Your signed-in account is not bound to a trading account yet.";
+  if (raw.includes("trader_session_missing") || raw === "unauthorized") return "Your Trader session expired. Refresh this page and try again.";
+  if (raw.includes("trader_account_not_bound")) return "This Trader session is not bound to your trading account.";
   if (raw.includes("gateway_not_ready")) return "The Binance gateway is not ready yet.";
-  if (raw.includes("gateway_401") || raw.includes("unauthorized")) return "The secure gateway rejected the request. Please try again.";
+  if (raw.includes("gateway_401")) return "The secure gateway rejected its signed server request. Please try again.";
   if (raw.includes("binance_key_reading_disabled")) return "Enable Reading on this Binance API key, then save the Binance settings and retry.";
   if (raw.includes("binance_key_ip_restriction_required")) return "Binance does not report this API key as IP-restricted. Restrict it to 84.13.156.194 and retry.";
   if (raw.includes("binance_key_unsafe_permissions")) return "This Binance API key has an unsafe permission enabled. Keep withdrawals, transfers, futures and options disabled.";
   if (raw.includes("-2015") || raw.toLowerCase().includes("invalid api-key")) return "Binance rejected the key. Check the API key, secret, trusted IP 84.13.156.194, and Spot trading permission.";
   if (raw.includes("invalid_credentials_format")) return "Enter the complete Binance API key and secret.";
+  if (raw.includes("binance_control_unavailable")) return "The secure Binance control service is temporarily unavailable. Please try again.";
   return "Binance verification failed. Recheck the API key settings and try again.";
 }
 
 async function invokeControl(body: Record<string, unknown>): Promise<ControlResponse> {
-  const { data, error } = await browserSupabase.functions.invoke("trader-binance-control", { body });
-  if (error) {
-    let message = error.message || "binance_control_failed";
-    const context = (error as { context?: Response }).context;
-    if (context) {
-      try {
-        const payload = await context.clone().json() as { error?: string };
-        if (payload?.error) message = payload.error;
-      } catch {}
-    }
-    throw new Error(message);
-  }
-  const result = (data ?? {}) as ControlResponse;
-  if (result.error) throw new Error(result.error);
+  const response = await fetch("/api/trader/binance-control", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  const result = await response.json().catch(() => ({})) as ControlResponse;
+  if (!response.ok || result.error) throw new Error(result.error || `binance_control_${response.status}`);
   return result;
 }
 
@@ -141,7 +137,7 @@ export default function BinanceConnectionLayer() {
         </div>
         <button type="button" className={styles.primary} onClick={close}>Done</button>
       </div> : <form onSubmit={connect} className={styles.form}>
-        <p className={styles.intro}>Paste the credentials directly here. They are sent to the authenticated Supabase control function for Binance verification and Vault storage.</p>
+        <p className={styles.intro}>Paste the credentials directly here. They travel through your authenticated Trader session to Supabase for Binance verification and Vault storage.</p>
         <div className={styles.guardrail}><span>✓</span><div><strong>Trusted egress IP</strong><p>{gatewayIp}</p></div></div>
         <label><span>API Key</span><input value={apiKey} onChange={(event) => setApiKey(event.target.value)} autoComplete="off" spellCheck={false} placeholder="Paste Binance API Key" disabled={busy}/></label>
         <label><span>Secret Key</span><input type="password" value={apiSecret} onChange={(event) => setApiSecret(event.target.value)} autoComplete="new-password" spellCheck={false} placeholder="Paste Binance Secret Key" disabled={busy}/></label>
