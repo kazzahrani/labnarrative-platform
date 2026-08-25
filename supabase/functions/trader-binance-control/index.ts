@@ -31,11 +31,18 @@ function pemBytes(pem:string){
 }
 function base64Bytes(buffer:ArrayBuffer){ const bytes=new Uint8Array(buffer); let binary=""; for(const byte of bytes)binary+=String.fromCharCode(byte); return btoa(binary); }
 
-async function ownerAccount(admin:Db,userId:string){
-  const {data,error}=await admin.from("trader_accounts").select("id,owner_user_id,status").eq("owner_user_id",userId).eq("status","active").order("created_at",{ascending:false}).limit(1).maybeSingle();
+async function ownerRealAccount(admin:Db,userId:string){
+  const {data,error}=await admin.from("trader_accounts")
+    .select("id,owner_user_id,status,mode")
+    .eq("owner_user_id",userId)
+    .eq("status","active")
+    .neq("mode","paper")
+    .order("created_at",{ascending:false})
+    .limit(1)
+    .maybeSingle();
   if(error)throw error;
-  if(!data)throw new Error("trader_account_not_bound");
-  return data as {id:string;owner_user_id:string;status:string};
+  if(!data)throw new Error("real_account_required");
+  return data as {id:string;owner_user_id:string;status:string;mode:"shadow"|"live"};
 }
 async function gatewayConfig(admin:Db){ const {data,error}=await admin.from("trader_gateway_config").select("name,base_url,status,egress_ip,last_health_at,last_error").eq("name","binance").single(); if(error)throw error; return data as GatewayConfig; }
 function validatedGatewayOrigin(config:GatewayConfig,requireReady=true){
@@ -76,6 +83,7 @@ async function signedBinance(admin:Db,method:"GET"|"POST"|"DELETE",path:string,a
 function checkedPermissions(raw:Record<string,unknown>){
   const read=raw.enableReading===true,trade=raw.enableSpotAndMarginTrading===true,withdraw=raw.enableWithdrawals===true,internal=raw.enableInternalTransfer===true||raw.permitsUniversalTransfer===true,ipRestricted=raw.ipRestrict===true;
   if(!read)throw new Error("binance_key_reading_disabled");
+  if(!trade)throw new Error("binance_key_trading_disabled");
   const forbidden=["enableWithdrawals","enableInternalTransfer","permitsUniversalTransfer","enableFutures","enableVanillaOptions","enablePortfolioMarginTrading","enableFixApiTrade"].filter(k=>raw[k]===true);
   if(forbidden.length)throw new Error(`binance_key_unsafe_permissions:${forbidden.join(",")}`);
   if(!ipRestricted)throw new Error("binance_key_ip_restriction_required");
@@ -108,7 +116,7 @@ Deno.serve(async(req:Request)=>{
   const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"").trim(); if(!token)return json({error:"unauthorized"},401);
   const {data:userData,error:userError}=await admin.auth.getUser(token),user=userData.user; if(userError||!user)return json({error:"unauthorized"},401);
   try{
-    const account=await ownerAccount(admin,user.id),body=await req.json().catch(()=>({})) as Record<string,unknown>,action=String(body.action||"status");
+    const account=await ownerRealAccount(admin,user.id),body=await req.json().catch(()=>({})) as Record<string,unknown>,action=String(body.action||"status");
     if(action==="status")return json({ok:true,...await publicStatus(admin,account.id)});
     if(action==="gateway_health"){
       const config=await gatewayConfig(admin),origin=validatedGatewayOrigin(config,false);
@@ -134,7 +142,7 @@ Deno.serve(async(req:Request)=>{
     return json({error:"unknown_action"},400);
   }catch(error){
     const message=cleanError(error); console.error("trader-binance-control",message);
-    const safe = message.startsWith("binance_")||message.startsWith("gateway_")||message.includes("credential_not_found")||message.includes("trader_account_not_bound") ? message : "binance_control_failed";
-    return json({error:safe},safe.includes("not_ready")||safe.includes("not_configured")?409:400);
+    const safe = message.startsWith("binance_")||message.startsWith("gateway_")||message.includes("credential_not_found")||message.includes("real_account_required") ? message : "binance_control_failed";
+    return json({error:safe},safe.includes("not_ready")||safe.includes("not_configured")||safe.includes("real_account_required")?409:400);
   }
 });
