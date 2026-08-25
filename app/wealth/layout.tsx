@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import "./wealth-font.css";
 import "./wealth-no-effects.css";
 import "./wealth-preferences.css";
+import "./wealth-sidebar-position.css";
 import WealthSaudiMarketAutoRefresh from "./WealthSaudiMarketAutoRefresh";
 import WealthNavEnhancer from "./WealthNavEnhancer";
 import WealthPricingIntegrity from "./WealthPricingIntegrity";
