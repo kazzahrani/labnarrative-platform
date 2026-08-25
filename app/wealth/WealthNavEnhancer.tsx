@@ -30,13 +30,24 @@ function currentLogo() {
 
 function addBrandMark() {
   document.querySelectorAll<HTMLElement>('[class*="brand"]').forEach((node) => {
-    const label = node.textContent?.trim();
-    if (node.dataset.wealthBrandEnhanced === "1") {
+    /* The layout-level Thrwa sidebar already owns its single logo. */
+    if (node.closest('[data-global-wealth-sidebar="true"]')) {
       const mark = node.querySelector<HTMLImageElement>(".wealth-brand-mark");
       if (mark) mark.src = currentLogo();
       return;
     }
-    if (label !== "ثروة" && label !== "Tharwa") return;
+
+    /* Never inject a second logo into a brand that already has one. */
+    const existingMark = node.querySelector<HTMLImageElement>(".wealth-brand-mark");
+    if (existingMark) {
+      node.dataset.wealthBrandEnhanced = "1";
+      existingMark.src = currentLogo();
+      return;
+    }
+
+    const label = node.textContent?.trim();
+    if (node.dataset.wealthBrandEnhanced === "1") return;
+    if (label !== "ثروة" && label !== "Tharwa" && label !== "Thrwa") return;
 
     node.dataset.wealthBrandEnhanced = "1";
     node.classList.add("wealth-brand-with-mark");
