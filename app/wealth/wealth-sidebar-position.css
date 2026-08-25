@@ -1,4 +1,11 @@
 @media (min-width: 1101px) {
+  /* One sidebar geometry for every Thrwa section. */
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) {
+    display: grid !important;
+    grid-template-columns: 240px minmax(0, 1fr) !important;
+    min-height: 100vh !important;
+  }
+
   html[data-wealth-lang="en"] .wealth-tahoma main:has(> aside[class*="sidebar"]) {
     direction: ltr !important;
   }
@@ -8,40 +15,87 @@
   }
 
   .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
+    box-sizing: border-box !important;
+    width: 240px !important;
+    min-width: 240px !important;
+    max-width: 240px !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
     position: sticky !important;
     top: 0 !important;
     bottom: auto !important;
     left: auto !important;
     right: auto !important;
-    height: 100vh !important;
-    min-height: 100vh !important;
-    max-height: 100vh !important;
     align-self: start !important;
-    flex: 0 0 auto !important;
-    z-index: 30 !important;
+    padding: 30px 24px 22px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
     overflow: hidden auto !important;
+    z-index: 30 !important;
+  }
+
+  /* Brand has the same size and coordinates on every section. */
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] [class*="brand"] {
+    font-size: 28px !important;
+    line-height: 1.1 !important;
+  }
+
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] [class*="brandSub"] {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    margin-top: 4px !important;
+  }
+
+  /* Navigation always starts directly below the logo/brand; never drifts vertically. */
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] {
+    width: 100% !important;
+    margin: 34px 0 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] [class*="navItem"],
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] a,
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] span {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-height: 40px !important;
+    padding: 11px 12px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    line-height: 18px !important;
+  }
+
+  /* Optional profile/account block stays at the bottom without moving the navigation. */
+  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > [class*="profile"] {
+    margin-top: auto !important;
   }
 
   .wealth-tahoma main:has(> aside[class*="sidebar"]) > section[class*="workspace"] {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    width: auto !important;
+    grid-column: 2 !important;
+    margin: 0 !important;
+    width: 100% !important;
     min-width: 0 !important;
-    flex: 1 1 auto !important;
   }
 
   html[data-wealth-lang="en"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
+    grid-column: 1 !important;
     border-left: 0 !important;
     border-right: 1px solid #343434 !important;
   }
 
   html[data-wealth-lang="ar"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
+    grid-column: 1 !important;
     border-right: 0 !important;
     border-left: 1px solid #343434 !important;
   }
 
-  html[data-wealth-theme="light"][data-wealth-lang="en"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"],
-  html[data-wealth-theme="light"][data-wealth-lang="ar"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
+  html[data-wealth-theme="light"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
     border-color: #d9d7d1 !important;
   }
 }
