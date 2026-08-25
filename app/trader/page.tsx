@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import TraderPlatformShell from "./TraderPlatformShell";
+import TraderV2Shell from "./TraderV2Shell";
 
 export const metadata: Metadata = {
-  title: "LabNarrative — Trading Automations",
-  description: "Authenticated crypto trading automation with isolated Paper and Real accounts and secured Binance Spot connectivity.",
+  title: "LabNarrative Trading",
+  description: "Crypto trading automation with Real Account first, optional Paper trading, and secure exchange connectivity.",
 };
 
 export default function TraderPage() {
-  return <TraderPlatformShell />;
+  return <TraderV2Shell />;
 }
