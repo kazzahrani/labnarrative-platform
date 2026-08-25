@@ -16,11 +16,20 @@ type Connection = {
   ip_restricted:boolean|null; binance_uid_last4:string|null; last_verified_at:string|null; last_error:string|null;
 };
 
+let cachedGatewaySigningKey: CryptoKey | null = null;
+
 function json(body:unknown,status=200){ return new Response(JSON.stringify(body),{status,headers:{...cors,"content-type":"application/json","cache-control":"no-store"}}); }
 function cleanError(error:unknown){ if(error instanceof Error)return error.message; return String(error||"unknown_error"); }
 async function hmacHex(secret:string,message:string){ const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]); const sig=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(message)); return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,"0")).join(""); }
 async function sha256(value:string){ const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value)); return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join(""); }
 function nonce(){ const bytes=new Uint8Array(24); crypto.getRandomValues(bytes); return Array.from(bytes).map(b=>b.toString(16).padStart(2,"0")).join(""); }
+function pemBytes(pem:string){
+  const base64=pem.replace(/-----BEGIN [^-]+-----/g,"").replace(/-----END [^-]+-----/g,"").replace(/\s+/g,"");
+  const binary=atob(base64),bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i+=1)bytes[i]=binary.charCodeAt(i);
+  return bytes;
+}
+function base64Bytes(buffer:ArrayBuffer){ const bytes=new Uint8Array(buffer); let binary=""; for(const byte of bytes)binary+=String.fromCharCode(byte); return btoa(binary); }
 
 async function ownerAccount(admin:Db,userId:string){
   const {data,error}=await admin.from("trader_accounts").select("id,owner_user_id,status").eq("owner_user_id",userId).eq("status","active").order("created_at",{ascending:false}).limit(1).maybeSingle();
@@ -29,16 +38,28 @@ async function ownerAccount(admin:Db,userId:string){
   return data as {id:string;owner_user_id:string;status:string};
 }
 async function gatewayConfig(admin:Db){ const {data,error}=await admin.from("trader_gateway_config").select("name,base_url,status,egress_ip,last_health_at,last_error").eq("name","binance").single(); if(error)throw error; return data as GatewayConfig; }
-function validatedGatewayOrigin(config:GatewayConfig){
-  if(config.status!=="ready" || !config.base_url)throw new Error("gateway_not_ready");
+function validatedGatewayOrigin(config:GatewayConfig,requireReady=true){
+  if(!config.base_url)throw new Error("gateway_not_configured");
+  if(requireReady&&config.status!=="ready")throw new Error("gateway_not_ready");
   const url=new URL(config.base_url);
-  if(url.origin!==EXPECTED_GATEWAY_ORIGIN || url.pathname!=="/")throw new Error("gateway_origin_not_allowed");
+  if(url.origin!==EXPECTED_GATEWAY_ORIGIN||url.pathname!=="/")throw new Error("gateway_origin_not_allowed");
   return url.origin;
 }
-async function gatewaySecret(admin:Db){ const {data,error}=await admin.rpc("trader_gateway_read_secret"); if(error||!data)throw new Error("gateway_secret_not_configured"); return String(data); }
+async function gatewaySigningKey(admin:Db){
+  if(cachedGatewaySigningKey)return cachedGatewaySigningKey;
+  const {data,error}=await admin.rpc("trader_gateway_read_signing_private_key");
+  if(error||!data)throw new Error("gateway_signing_key_not_configured");
+  cachedGatewaySigningKey=await crypto.subtle.importKey("pkcs8",pemBytes(String(data)),{name:"ECDSA",namedCurve:"P-256"},false,["sign"]);
+  return cachedGatewaySigningKey;
+}
+async function gatewaySignature(admin:Db,message:string){
+  const key=await gatewaySigningKey(admin);
+  const signature=await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"},key,new TextEncoder().encode(message));
+  return base64Bytes(signature);
+}
 async function relay(admin:Db,payload:Record<string,unknown>){
-  const config=await gatewayConfig(admin),origin=validatedGatewayOrigin(config),secret=await gatewaySecret(admin);
-  const raw=JSON.stringify(payload),timestamp=Date.now(),n=nonce(),signature=await hmacHex(secret,`${timestamp}\n${n}\n${raw}`);
+  const config=await gatewayConfig(admin),origin=validatedGatewayOrigin(config,true);
+  const raw=JSON.stringify(payload),timestamp=Date.now(),n=nonce(),signature=await gatewaySignature(admin,`${timestamp}\n${n}\n${raw}`);
   const response=await fetch(`${origin}/relay`,{method:"POST",headers:{"content-type":"application/json","x-ln-timestamp":String(timestamp),"x-ln-nonce":n,"x-ln-signature":signature},body:raw,signal:AbortSignal.timeout(12_000)});
   const envelope=await response.json().catch(()=>({})) as Record<string,unknown>;
   if(!response.ok)throw new Error(`gateway_${response.status}:${String(envelope.error||"relay_failed")}`);
@@ -90,15 +111,15 @@ Deno.serve(async(req:Request)=>{
     const account=await ownerAccount(admin,user.id),body=await req.json().catch(()=>({})) as Record<string,unknown>,action=String(body.action||"status");
     if(action==="status")return json({ok:true,...await publicStatus(admin,account.id)});
     if(action==="gateway_health"){
-      const config=await gatewayConfig(admin); if(!config.base_url)return json({ok:false,error:"gateway_not_configured",...await publicStatus(admin,account.id)},409);
-      const origin=validatedGatewayOrigin(config),response=await fetch(`${origin}/health`,{signal:AbortSignal.timeout(8000)}),health=await response.json().catch(()=>({})) as Record<string,unknown>;
-      if(!response.ok||health.ok!==true)throw new Error("gateway_health_failed");
+      const config=await gatewayConfig(admin),origin=validatedGatewayOrigin(config,false);
+      const response=await fetch(`${origin}/health`,{signal:AbortSignal.timeout(8000)}),health=await response.json().catch(()=>({})) as Record<string,unknown>;
+      if(!response.ok||health.ok!==true||health.auth!=="ecdsa-p256")throw new Error("gateway_health_failed");
       await admin.from("trader_gateway_config").update({status:"ready",egress_ip:String(health.egressIp||"")||null,last_health_at:new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("name","binance");
       return json({ok:true,health,...await publicStatus(admin,account.id)});
     }
     if(action==="connect"){
       const apiKey=String(body.apiKey||"").trim(),apiSecret=String(body.apiSecret||"").trim(); if(apiKey.length<10||apiSecret.length<10)return json({error:"invalid_credentials_format"},400);
-      validatedGatewayOrigin(await gatewayConfig(admin));
+      validatedGatewayOrigin(await gatewayConfig(admin),true);
       return json({ok:true,...await verifyAndPersist(admin,user.id,account.id,apiKey,apiSecret)});
     }
     if(action==="reverify"){
