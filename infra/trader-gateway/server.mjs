@@ -153,10 +153,20 @@ const relay = async (payload) => {
   };
 };
 
+const normalizedPath = (req) => {
+  try {
+    const pathname = new URL(String(req.url || "/"), "http://gateway.local").pathname;
+    return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  } catch {
+    return "/";
+  }
+};
+
 const server = http.createServer(async (req, res) => {
   try {
     if (!rateAllowed()) return json(res, 429, { error: "gateway_rate_limited" });
-    if (req.method === "GET" && req.url === "/health") {
+    const pathname = normalizedPath(req);
+    if (req.method === "GET" && pathname === "/health") {
       const ip = await refreshEgressIp();
       return json(res, 200, {
         ok: true,
@@ -166,7 +176,7 @@ const server = http.createServer(async (req, res) => {
         binanceOrigin: BINANCE_ORIGIN,
       });
     }
-    if (req.method !== "POST" || req.url !== "/relay") return json(res, 404, { error: "not_found" });
+    if (req.method !== "POST" || pathname !== "/relay") return json(res, 404, { error: "not_found" });
     const rawBody = await readBody(req);
     if (!verifyRelayAuth(req, rawBody)) return json(res, 401, { error: "unauthorized" });
     let payload;
