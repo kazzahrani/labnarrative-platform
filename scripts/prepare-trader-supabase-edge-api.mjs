@@ -80,7 +80,7 @@ source = source.replace(
 
 source = source.replace(
   '        const response = await fetch("/api/trader/server/state", { method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", body: JSON.stringify({ bots: serverDcaBotsRef.current, trades: serverDcaTradesRef.current }) });',
-  '        const migration = traderBrowserBootstrapSnapshot();\n        if (!migration.bots.length && !migration.trades.length) { setNotice("Waiting for saved DCA state before durable migration…"); return; }\n        const response = await traderEdgeRequest({ action: "bootstrap", bots: migration.bots, trades: migration.trades });'
+  '        const migration = traderBrowserBootstrapSnapshot();\n        const response = await traderEdgeRequest({ action: "bootstrap", bots: migration.bots, trades: migration.trades, confirmedEmpty: migration.bots.length === 0 && migration.trades.length === 0 });'
 );
 
 source = source.replace(
@@ -95,6 +95,7 @@ for (const token of [
   "traderBrowserBootstrapSnapshot",
   "labnarrative-dca-bots-v2-backup",
   "labnarrative-dca-trades-v2-backup",
+  "confirmedEmpty",
   'action: "bootstrap"',
   'action: "state"',
   "const response = await traderEdgeRequest(payload);",
@@ -106,4 +107,4 @@ if (source.includes('/api/trader/server/state') || source.includes('/api/trader/
 }
 
 fs.writeFileSync(traderPath, source);
-console.log("Routed durable trader UI through Supabase Edge API with guarded local-state migration.");
+console.log("Routed durable trader UI through Supabase Edge API with storage-first migration.");
