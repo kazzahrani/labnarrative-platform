@@ -1,101 +1,185 @@
+/*
+ * Thrwa desktop app shell.
+ * The sidebar is a single layout-level component, like /trader: it never
+ * remounts or changes geometry when moving between wealth sections.
+ */
+.wealth-global-sidebar {
+  display: none;
+}
+
 @media (min-width: 1101px) {
-  /* One sidebar geometry for every Thrwa section. */
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) {
-    display: grid !important;
-    grid-template-columns: 240px minmax(0, 1fr) !important;
-    min-height: 100vh !important;
+  :root {
+    --thrwa-sidebar-width: 260px;
   }
 
-  html[data-wealth-lang="en"] .wealth-tahoma main:has(> aside[class*="sidebar"]) {
+  .wealth-global-sidebar {
+    box-sizing: border-box;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: var(--thrwa-sidebar-width);
+    height: 100vh;
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    padding: 34px 26px 28px;
+    background: #1f1f1f;
+    color: #fafafa;
+    border-color: #343434;
+    overflow: hidden;
+  }
+
+  html[data-wealth-lang="en"] .wealth-global-sidebar {
+    left: 0;
+    right: auto;
+    border-right: 1px solid #343434;
+    border-left: 0;
+    text-align: left;
+  }
+
+  html[data-wealth-lang="ar"] .wealth-global-sidebar {
+    right: 0;
+    left: auto;
+    border-left: 1px solid #343434;
+    border-right: 0;
+    text-align: right;
+  }
+
+  html[data-wealth-theme="light"] .wealth-global-sidebar {
+    background: #f5f3ee;
+    color: #202020;
+    border-color: #d9d7d1;
+  }
+
+  html[data-wealth-theme="light"][data-wealth-lang="en"] .wealth-global-sidebar {
+    border-right-color: #d9d7d1;
+  }
+
+  html[data-wealth-theme="light"][data-wealth-lang="ar"] .wealth-global-sidebar {
+    border-left-color: #d9d7d1;
+  }
+
+  .wealth-global-brand {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .wealth-global-brand-line {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    white-space: nowrap;
+  }
+
+  .wealth-global-brand-line .wealth-brand-mark {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    flex: 0 0 36px !important;
+    border-radius: 9px;
+  }
+
+  .wealth-global-brand-line strong {
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+  }
+
+  .wealth-global-brand > span {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 16px;
+    color: #858585;
+  }
+
+  .wealth-global-nav {
+    width: 100%;
+    margin-top: 42px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .wealth-global-nav-item {
+    box-sizing: border-box;
+    width: 100%;
+    height: 46px;
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 14px;
+    text-decoration: none;
+    color: #969696;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 400;
+    white-space: nowrap;
+    transition: background-color .15s ease, color .15s ease;
+  }
+
+  .wealth-global-nav-item:hover {
+    color: #eeeeee;
+    background: #252525;
+  }
+
+  .wealth-global-nav-item.is-active {
+    color: #fafafa;
+    background: #292929;
+  }
+
+  html[data-wealth-theme="light"] .wealth-global-nav-item {
+    color: #66645f;
+  }
+
+  html[data-wealth-theme="light"] .wealth-global-nav-item:hover {
+    color: #202020;
+    background: #ebe8e2;
+  }
+
+  html[data-wealth-theme="light"] .wealth-global-nav-item.is-active {
+    color: #202020;
+    background: #e5e2dc;
+  }
+
+  /* Remove every page-specific sidebar on desktop. There is only one shell. */
+  html.wealth-global-sidebar-active .wealth-tahoma > main > aside[class*="sidebar"],
+  html.wealth-global-sidebar-active .wealth-tahoma > main aside[class*="sidebar"] {
+    display: none !important;
+  }
+
+  /* Pages no longer own a sidebar grid column; the global shell owns it. */
+  html.wealth-global-sidebar-active .wealth-tahoma > main {
+    box-sizing: border-box !important;
+    display: block !important;
+    min-height: 100vh !important;
+    width: calc(100% - var(--thrwa-sidebar-width)) !important;
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  html.wealth-global-sidebar-active[data-wealth-lang="en"] .wealth-tahoma > main {
+    margin-left: var(--thrwa-sidebar-width) !important;
+    margin-right: 0 !important;
     direction: ltr !important;
   }
 
-  html[data-wealth-lang="ar"] .wealth-tahoma main:has(> aside[class*="sidebar"]) {
+  html.wealth-global-sidebar-active[data-wealth-lang="ar"] .wealth-tahoma > main {
+    margin-right: var(--thrwa-sidebar-width) !important;
+    margin-left: 0 !important;
     direction: rtl !important;
   }
 
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
+  html.wealth-global-sidebar-active .wealth-tahoma > main > section[class*="workspace"],
+  html.wealth-global-sidebar-active .wealth-tahoma > main > div[class*="workspace"] {
     box-sizing: border-box !important;
-    width: 240px !important;
-    min-width: 240px !important;
-    max-width: 240px !important;
-    height: 100vh !important;
-    min-height: 100vh !important;
-    max-height: 100vh !important;
-    position: sticky !important;
-    top: 0 !important;
-    bottom: auto !important;
-    left: auto !important;
-    right: auto !important;
-    align-self: start !important;
-    padding: 30px 24px 22px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-start !important;
-    overflow: hidden auto !important;
-    z-index: 30 !important;
-  }
-
-  /* Brand has the same size and coordinates on every section. */
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] [class*="brand"] {
-    font-size: 28px !important;
-    line-height: 1.1 !important;
-  }
-
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] [class*="brandSub"] {
-    font-size: 12px !important;
-    line-height: 1.35 !important;
-    margin-top: 4px !important;
-  }
-
-  /* Navigation always starts directly below the logo/brand; never drifts vertically. */
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] {
-    width: 100% !important;
-    margin: 34px 0 0 !important;
-    padding: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    overflow: visible !important;
-  }
-
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] [class*="navItem"],
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] a,
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > nav[class*="nav"] span {
-    box-sizing: border-box !important;
-    width: 100% !important;
-    min-height: 40px !important;
-    padding: 11px 12px !important;
-    border-radius: 12px !important;
-    font-size: 14px !important;
-    line-height: 18px !important;
-  }
-
-  /* Optional profile/account block stays at the bottom without moving the navigation. */
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] > [class*="profile"] {
-    margin-top: auto !important;
-  }
-
-  .wealth-tahoma main:has(> aside[class*="sidebar"]) > section[class*="workspace"] {
-    grid-column: 2 !important;
-    margin: 0 !important;
     width: 100% !important;
     min-width: 0 !important;
-  }
-
-  html[data-wealth-lang="en"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
-    grid-column: 1 !important;
-    border-left: 0 !important;
-    border-right: 1px solid #343434 !important;
-  }
-
-  html[data-wealth-lang="ar"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
-    grid-column: 1 !important;
-    border-right: 0 !important;
-    border-left: 1px solid #343434 !important;
-  }
-
-  html[data-wealth-theme="light"] .wealth-tahoma main:has(> aside[class*="sidebar"]) > aside[class*="sidebar"] {
-    border-color: #d9d7d1 !important;
+    margin: 0 !important;
+    grid-column: auto !important;
   }
 }
