@@ -24,4 +24,28 @@ if (!source.includes(marker)) {
   fs.writeFileSync(shellPath, source);
 }
 
-console.log("Permanent total invested trade display prepared");
+const actionsPath = path.join(root, "app/trader/TradeActionsV2.tsx");
+let actions = fs.readFileSync(actionsPath, "utf8");
+const closeMarker = "TRADER_RECONCILED_CLOSE_V1";
+if (!actions.includes(closeMarker)) {
+  actions = actions.replace(
+    '  lastPrice: number | null;\n};',
+    '  lastPrice: number | null;\n  closeReason?: string | null;\n};',
+  );
+
+  const guard = '  if (trade.status !== "Active") return null;';
+  if (!actions.includes(guard)) throw new Error("Reconciled close: active trade guard missing");
+  const replacement = `  const finishClose = async (event: React.MouseEvent) => {\n    event.stopPropagation();\n    if (busy || !window.confirm(\`Finish closing \\${trade.pair}? This checks the Binance fills that belong to this trade and sends a real MARKET SELL only for the remaining trade-owned quantity.\`)) return;\n    setBusy(true); setError(\"\");\n    try {\n      await invokeFunction(\"trader-live-close-control\", { action: \"finish_close\", accountId, tradeId: trade.id });\n      await onChanged();\n    } catch (caught) {\n      window.alert(errorText(caught instanceof Error ? caught.message : \"Unable to finish closing the trade.\"));\n    } finally { setBusy(false); }\n  };\n\n  if (trade.status !== \"Active\") {\n    if (accountMode !== \"live\" || !String(trade.closeReason || \"\").includes(\"residual pending\")) return null;\n    return <div className={styles.actions} onClick={(event) => event.stopPropagation()}>\n      <button className={styles.closeTrade} disabled={busy} onClick={finishClose}>Finish close</button>\n      <span style={{display:\"none\"}}>${closeMarker}</span>\n    </div>;\n  }`;
+  actions = actions.replace(guard, replacement);
+
+  const oldClose = '      await invokeTrade(accountMode, { action: "close_trade", accountId, tradeId: trade.id });';
+  if (!actions.includes(oldClose)) throw new Error("Reconciled close: close invocation missing");
+  actions = actions.replace(
+    oldClose,
+    '      if (accountMode === "live") await invokeFunction("trader-live-close-control", { action: "close_trade", accountId, tradeId: trade.id });\n      else await invokeTrade(accountMode, { action: "close_trade", accountId, tradeId: trade.id });',
+  );
+
+  fs.writeFileSync(actionsPath, actions);
+}
+
+console.log("Permanent total invested display and reconciled live close prepared");
