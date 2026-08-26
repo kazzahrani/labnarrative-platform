@@ -1,0 +1,24 @@
+import fs from "node:fs";
+import path from "node:path";
+const root=process.cwd(),barFile=path.join(root,"app/trader/TradeLevelBar.tsx"),barCssFile=path.join(root,"app/trader/trade-level-bar.module.css"),chartFile=path.join(root,"app/trader/DcaTradeChartV2Workstation.tsx");
+let b=fs.readFileSync(barFile,"utf8");
+const br=(a,c,n)=>{if(!b.includes(a))throw new Error("Filled TP visuals: missing "+n);b=b.replace(a,c)};
+br('  takeProfitTargets?: Array<{ index: number; profitPct: number; allocationPct: number; price: number }>;\n  stopLossPrice?: number | null;','  takeProfitTargets?: Array<{ index: number; profitPct: number; allocationPct: number; price: number; filled?: boolean }>;\n  takeProfitFilled?: number[];\n  stopLossPrice?: number | null;',"bar trade type");
+br('  amount?: number;\n};','  amount?: number;\n  filled?: boolean;\n};',"marker filled type");
+br('    const configuredTps = (exactTrade?.takeProfitTargets ?? [])\n      .filter((target) => finitePositive(target.price) != null)\n      .sort((a, b) => a.index - b.index);','    const filledTpNumbers = new Set((exactTrade?.takeProfitFilled ?? []).map((value) => Math.round(Number(value) || 0)));\n    const configuredTps = (exactTrade?.takeProfitTargets ?? [])\n      .filter((target) => finitePositive(target.price) != null)\n      .sort((a, b) => a.index - b.index);',"filled set");
+br('      configuredTps.forEach((target) => raw.push({ key: `tp-config-${target.index}`, kind: "tp", label: configuredTps.length > 1 ? `T${target.index}` : "TP", price: target.price }));','      configuredTps.forEach((target) => { const filled=Boolean(target.filled || filledTpNumbers.has(target.index)); raw.push({ key: `tp-config-${target.index}`, kind: "tp", label: configuredTps.length > 1 ? `T${target.index}${filled ? "✓" : ""}` : filled ? "TP✓" : "TP", price: target.price, filled }); });',"configured markers");
+br('        className={`${styles.marker} ${styles[marker.kind]} ${index % 2 ? styles.lower : styles.upper}`}', '        className={`${styles.marker} ${styles[marker.kind]} ${index % 2 ? styles.lower : styles.upper} ${marker.filled ? styles.filledTp : ""}`} ',"marker class");
+fs.writeFileSync(barFile,b);
+let bc=fs.readFileSync(barCssFile,"utf8");if(!bc.includes("filled-tp-marker-v3"))bc+='\n/* filled-tp-marker-v3 */\n.marker.filledTp:before{background:#2b6650!important}.marker.filledTp{color:#547766!important}.marker.filledTp em{color:#668978!important;opacity:.72}\n';fs.writeFileSync(barCssFile,bc);
+
+let c=fs.readFileSync(chartFile,"utf8");
+if(c.includes('  sequence?: number;\n  kind: string;'))c=c.replace('  sequence?: number;\n  kind: string;','  sequence?: number;\n  exitTargets?: number[];\n  kind: string;');
+if(c.includes('  takeProfitTargets: Array<{ index: number; profitPct: number; allocationPct: number; price: number }>;\n  stopEnabled: boolean;'))c=c.replace('  takeProfitTargets: Array<{ index: number; profitPct: number; allocationPct: number; price: number }>;\n  stopEnabled: boolean;','  takeProfitTargets: Array<{ index: number; profitPct: number; allocationPct: number; price: number; filled?: boolean }>;\n  takeProfitFilled?: number[];\n  stopEnabled: boolean;');
+const markerOld='      if (isTp) {\n        if (sequence > 0) {';
+const markerNew='      if (isTp) {\n        const exactTargets = Array.isArray(fill.exitTargets) ? fill.exitTargets.map((value) => Math.max(0, Math.round(Number(value) || 0))).filter((value) => value > 0) : [];\n        if (exactTargets.length) {\n          text = exactTargets.map((target) => `TP${target}`).join("+");\n          previousTpSequence = Math.max(previousTpSequence, ...exactTargets);\n        } else if (sequence > 0) {';
+if(c.includes(markerOld))c=c.replace(markerOld,markerNew);
+const lineOld='    tpPrices.forEach((order, index) => order.price && candleSeries.createPriceLine({ price: order.price, color: "#57c99c", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: tpPrices.length > 1 ? `TP${order.sequence || index + 1}` : "TP" }));';
+const lineNew='    tpPrices.forEach((order, index) => { const target = trade.takeProfitTargets?.[index]; const filled = Boolean(target?.filled || (trade.takeProfitFilled ?? []).includes(index + 1)); if (order.price) candleSeries.createPriceLine({ price: order.price, color: filled ? "#2c6b53" : "#57c99c", lineWidth: 1, lineStyle: filled ? LineStyle.Dotted : LineStyle.Dashed, axisLabelVisible: true, title: tpPrices.length > 1 ? `TP${order.sequence || index + 1}${filled ? "✓" : ""}` : filled ? "TP✓" : "TP" }); });';
+if(c.includes(lineOld))c=c.replace(lineOld,lineNew);
+fs.writeFileSync(chartFile,c);
+console.log("Completed TP levels marked in trade bar and chart; exact combined TP labels prepared");
