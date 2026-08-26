@@ -5,6 +5,7 @@ const root = process.cwd();
 const shellPath = path.join(root, "app/trader/TraderV2FullShell.tsx");
 const dcaCssPath = path.join(root, "app/trader/trader-dca-v2.module.css");
 const baseCssPath = path.join(root, "app/trader/trader-v2.module.css");
+const workstationPath = path.join(root, "app/trader/DcaTradeChartV2Workstation.tsx");
 
 let shell = fs.readFileSync(shellPath, "utf8");
 if (!shell.includes('import DcaBotConfigurator from "./DcaBotConfigurator";')) {
@@ -46,6 +47,14 @@ if (oldChartPattern.test(shell)) shell = shell.replace(oldChartPattern, restored
 else if (oldChartPatternCompact.test(shell)) shell = shell.replace(oldChartPatternCompact, restoredChart);
 else if (!shell.includes('tradeId={selectedTrade.id}')) throw new Error("Could not route selected DCA trade to V2 chart workstation");
 fs.writeFileSync(shellPath, shell);
+
+// Keep the workstation strict-TypeScript clean after all legacy source transforms.
+let workstation = fs.readFileSync(workstationPath, "utf8");
+workstation = workstation.replace(
+  'return win.reduce((s, v) => s + (v ?? 0), 0) / length;',
+  'return win.reduce<number>((s, v) => s + (v ?? 0), 0) / length;',
+);
+fs.writeFileSync(workstationPath, workstation);
 
 let dcaCss = fs.readFileSync(dcaCssPath, "utf8");
 dcaCss = dcaCss
