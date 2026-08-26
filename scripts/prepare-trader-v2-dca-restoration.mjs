@@ -13,6 +13,12 @@ if (!shell.includes('import DcaBotConfigurator from "./DcaBotConfigurator";')) {
     'import DcaTradeChart from "./DcaTradeChart";\nimport DcaBotConfigurator from "./DcaBotConfigurator";',
   );
 }
+// The V2 workstation is deliberately routed after all legacy trader build transforms,
+// so the older full-screen DcaTradeChart generator cannot overwrite this chart.
+shell = shell.replace(
+  'import DcaTradeChart from "./DcaTradeChart";',
+  'import DcaTradeChart from "./DcaTradeChartV2Workstation";',
+);
 const legacyModalBody = '{botModalMode === "view" && selectedBot ? renderBotReadOnly(selectedBot) : renderBotEditor()}';
 const restoredModalBody = `{<DcaBotConfigurator
   mode={botModalMode}
@@ -32,6 +38,13 @@ const restoredModalBody = `{<DcaBotConfigurator
   onError={(message) => setError(message)}
 />}`;
 if (shell.includes(legacyModalBody)) shell = shell.replace(legacyModalBody, restoredModalBody);
+
+const oldChartPattern = /\{selectedTrade && <DcaTradeChart pair=\{selectedTrade\.pair\}[\s\S]*?onClose=\{\(\) => setSelectedTradeId\(null\)\}\/ >\}/;
+const oldChartPatternCompact = /\{selectedTrade && <DcaTradeChart pair=\{selectedTrade\.pair\}[\s\S]*?onClose=\{\(\) => setSelectedTradeId\(null\)\}\/\>\}/;
+const restoredChart = `{selectedTrade && <DcaTradeChart accountId={currentAccount.id} tradeId={selectedTrade.id} pair={selectedTrade.pair} status={selectedTrade.status} entryPrice={selectedTrade.entryPrice} averagePrice={selectedTrade.averagePrice} createdAt={selectedTrade.openedAt} closedAt={selectedTrade.closedAt ?? undefined} exitPrice={selectedTrade.exitPrice ?? undefined} closeReason={selectedTrade.closeReason ?? undefined} lastPrice={selectedTrade.lastPrice ?? undefined} fills={selectedTrade.fills} takeProfitPrice={selectedTrade.takeProfitPrice} stopLossPrice={selectedTrade.stopLossPrice} nextAveragingPrice={selectedTrade.nextAveragingPrice} onClose={() => setSelectedTradeId(null)}/ >}`.replace('/ >','/>');
+if (oldChartPattern.test(shell)) shell = shell.replace(oldChartPattern, restoredChart);
+else if (oldChartPatternCompact.test(shell)) shell = shell.replace(oldChartPatternCompact, restoredChart);
+else if (!shell.includes('tradeId={selectedTrade.id}')) throw new Error("Could not route selected DCA trade to V2 chart workstation");
 fs.writeFileSync(shellPath, shell);
 
 let dcaCss = fs.readFileSync(dcaCssPath, "utf8");
@@ -52,4 +65,4 @@ baseCss = baseCss
   .replace(/\.connected\{color:#a9c2b0!important\}/g, ".connected{color:#2ee88f!important}");
 fs.writeFileSync(baseCssPath, baseCss);
 
-console.log("Trader V2 full DCA restoration applied");
+console.log("Trader V2 full DCA restoration and chart workstation routing applied");
