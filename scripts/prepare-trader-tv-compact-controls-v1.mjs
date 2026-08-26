@@ -4,6 +4,7 @@ import path from "node:path";
 const root = process.cwd();
 const chartPath = path.join(root, "app/trader/DcaTradeChartV2Workstation.tsx");
 const cssPath = path.join(root, "app/trader/dca-trade-workstation.module.css");
+const actionsPath = path.join(root, "app/trader/TradeActionsV2.tsx");
 const shellPaths = [
   path.join(root, "app/trader/TraderV2FullShell.tsx"),
   path.join(root, "app/trader/RealTradingWorkspace.tsx"),
@@ -73,4 +74,19 @@ for (const file of shellPaths) {
   if (text !== original) fs.writeFileSync(file, text);
 }
 
-console.log("Trader TV compact timeframe, in-price-pane volume, and two-decimal display prepared");
+if (fs.existsSync(actionsPath)) {
+  let actions = fs.readFileSync(actionsPath, "utf8");
+  if (!actions.includes("TRADER_LIVE_DCA_CONTROL_V2")) {
+    const oldInvoke = `async function invokeTrade(accountMode: Props["accountMode"], body: Record<string, unknown>) {\n  return invokeFunction(accountMode === "live" ? "trader-live-trade-control" : "trader-trade-control", body);\n}`;
+    const newInvoke = `async function invokeTrade(accountMode: Props["accountMode"], body: Record<string, unknown>) {\n  const action = String(body.action ?? ""); // TRADER_LIVE_DCA_CONTROL_V2\n  const functionName = accountMode === "live"\n    ? action === "update_trade" ? "trader-live-dca-control" : "trader-live-trade-control"\n    : "trader-trade-control";\n  return invokeFunction(functionName, body);\n}`;
+    if (!actions.includes(oldInvoke)) throw new Error("Live DCA edit routing: invokeTrade anchor missing");
+    actions = actions.replace(oldInvoke, newInvoke);
+    actions = actions.replace(
+      '  if (message.includes("binance_")) return `Binance rejected the action: ${message}`;',
+      '  if (message.includes("gateway_500") || message.includes("timeout")) return "Binance took too long to answer. The DCA editor checked for an existing order before allowing a retry.";\n  if (message.includes("live_dca_control_failed")) return "The DCA edit could not be completed safely. No duplicate order will be created; please retry.";\n  if (message.includes("binance_")) return `Binance rejected the action: ${message}`;',
+    );
+    fs.writeFileSync(actionsPath, actions);
+  }
+}
+
+console.log("Trader TV compact timeframe, in-price-pane volume, two-decimal display, and resilient DCA edit routing prepared");
