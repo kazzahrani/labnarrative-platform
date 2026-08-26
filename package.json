@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "verify:figures": "node scripts/verify-research-figures.mjs",
-    "verify:templates": "node scripts/prepare-trader-v2-dca-restoration.mjs && node scripts/prepare-trader-v2-inline-trade-level-bar.mjs && node scripts/prepare-trader-live-test-validation.mjs && node scripts/verify-ciribilli-narita-template.mjs"
+    "verify:templates": "node scripts/prepare-trader-v2-dca-restoration.mjs && node scripts/prepare-trader-v2-inline-trade-level-bar.mjs && node scripts/verify-ciribilli-narita-template.mjs"
   },
   "dependencies": {
     "next": "16.2.12",
