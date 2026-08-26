@@ -46,7 +46,7 @@ const liveEffect = String.raw`  // Keep the open Binance candle moving while the
       busy = true;
       try {
         const params = new URLSearchParams({ symbol, interval, bars: "2", endTime: String(Date.now()) });
-        const response = await fetch(`/api/trader/klines?${params.toString()}`, { cache: "no-store" });
+        const response = await fetch("/api/trader/klines?" + params.toString(), { cache: "no-store" });
         if (!response.ok) return;
         const payload = await response.json() as { candles?: Candle[] };
         const latest = Array.isArray(payload.candles) ? payload.candles.at(-1) : undefined;
