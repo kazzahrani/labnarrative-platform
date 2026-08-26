@@ -117,6 +117,7 @@ if (!source.includes("TRADER_CHART_ORDER_MARKERS_V1")) {
       const text = kind.includes("base") ? "BUY" : kind.includes("averag") ? \`DCA \${++dcaMarkerNumber}\` : kind.includes("add") ? "ADD" : "BUY";
       return [{ time, position: "belowBar", color: "#46d7a2", shape: "arrowUp", text }];
     });
+    let previousTpSequence = 0;
     const sellMarkers: SeriesMarker<UTCTimestamp>[] = groupedSellOrders.flatMap((fill) => {
       const time = nearestCandleTime(candles, new Date(fill.at).getTime());
       if (!time) return [];
@@ -124,7 +125,15 @@ if (!source.includes("TRADER_CHART_ORDER_MARKERS_V1")) {
       const sequence = Math.max(0, Math.round(fill.sequence ?? 0));
       const isTp = kind.includes("take profit") || kind.includes("take_profit");
       const isSl = kind.includes("stop loss") || kind.includes("stop_loss");
-      const text = isTp ? (sequence > 0 ? \`TP \${sequence}\` : "TP") : isSl ? "SL" : "EXIT";
+      let text = isSl ? "SL" : "EXIT";
+      if (isTp) {
+        if (sequence > 0) {
+          const start = Math.max(1, previousTpSequence + 1);
+          const targets = Array.from({ length: Math.max(1, sequence - start + 1) }, (_, index) => \`TP\${start + index}\`);
+          text = targets.join("+");
+          previousTpSequence = Math.max(previousTpSequence, sequence);
+        } else text = "TP";
+      }
       return [{ time, position: "aboveBar", color: isTp ? "#57c99c" : "#e27883", shape: "arrowDown", text }];
     });
     const markers: SeriesMarker<UTCTimestamp>[] = [...buyMarkers, ...sellMarkers];
