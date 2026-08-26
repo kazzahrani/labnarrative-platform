@@ -54,6 +54,16 @@ workstation = workstation.replace(
   'return win.reduce((s, v) => s + (v ?? 0), 0) / length;',
   'return win.reduce<number>((s, v) => s + (v ?? 0), 0) / length;',
 );
+if (!workstation.includes('const conditionSignature = JSON.stringify')) {
+  workstation = workstation.replace(
+    '  const structureSignature = useMemo(() => JSON.stringify({',
+    '  const conditionSignature = JSON.stringify(conditions.map(c => [c.kind,c.timeframe,c.length,c.comparator,c.signal,c.aux1,c.aux2,c.aux3]));\n\n  const structureSignature = useMemo(() => JSON.stringify({',
+  );
+}
+workstation = workstation.replace(
+  'autoY, conditions, structureSignature, canvasHeight',
+  'autoY, conditionSignature, structureSignature, canvasHeight',
+);
 fs.writeFileSync(workstationPath, workstation);
 
 let dcaCss = fs.readFileSync(dcaCssPath, "utf8");
