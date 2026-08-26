@@ -26,6 +26,16 @@ function cleanConditions(value: unknown) {
     };
   });
 }
+function cleanTakeProfitTargets(value: unknown, averagePrice: number) {
+  if (!Array.isArray(value) || averagePrice <= 0) return [];
+  return value.slice(0, 8).flatMap((raw, index) => {
+    const target = obj(raw);
+    const profitPct = n(target.profitPct);
+    const allocationPct = n(target.allocationPct);
+    if (!(profitPct > 0) || !(allocationPct > 0)) return [];
+    return [{ index: index + 1, profitPct, allocationPct, price: averagePrice * (1 + profitPct / 100) }];
+  });
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -74,9 +84,13 @@ Deno.serve(async (req: Request) => {
     if (ordersResult.error) throw ordersResult.error;
 
     const averagePrice = n(trade.average_price);
-    const takeProfitPct = n(trade.take_profit_pct);
-    const stopPct = n(trade.stop_pct);
-    const stopEnabled = trade.stop_enabled === true;
+    const state = obj(trade.client_state);
+    const strategyV2 = state.exitStrategyV2 === true;
+    const takeProfitTargets = cleanTakeProfitTargets(state.takeProfitTargets, averagePrice);
+    const legacyTakeProfitPct = n(trade.take_profit_pct);
+    const takeProfitPct = takeProfitTargets[0]?.profitPct ?? legacyTakeProfitPct;
+    const stopPct = strategyV2 ? n(state.stopPct, n(trade.stop_pct)) : n(trade.stop_pct);
+    const stopEnabled = strategyV2 ? state.stopEnabled === true : trade.stop_enabled === true;
     const activeOrders = (ordersResult.data ?? []).filter((order) => ["OPEN", "PENDING", "NEW", "PARTIALLY_FILLED"].includes(String(order.status || "").toUpperCase()));
 
     return json({
@@ -85,8 +99,10 @@ Deno.serve(async (req: Request) => {
         id: String(trade.client_id), pair: String(trade.pair), status: String(trade.status),
         entryPrice: n(trade.entry_price), averagePrice, quantity: n(trade.quantity), invested: n(trade.invested),
         takeProfitPct,
-        takeProfitPrice: averagePrice > 0 && takeProfitPct > 0 ? averagePrice * (1 + takeProfitPct / 100) : null,
+        takeProfitPrice: takeProfitTargets[0]?.price ?? (averagePrice > 0 && legacyTakeProfitPct > 0 ? averagePrice * (1 + legacyTakeProfitPct / 100) : null),
+        takeProfitTargets,
         stopEnabled, stopPct,
+        stopLossTimeoutSeconds: strategyV2 ? Math.max(0, n(state.stopLossTimeoutSeconds)) : 0,
         stopLossPrice: stopEnabled && averagePrice > 0 && stopPct > 0 ? averagePrice * (1 - stopPct / 100) : null,
         lastPrice: trade.last_price == null ? null : n(trade.last_price),
         exitPrice: trade.exit_price == null ? null : n(trade.exit_price),
