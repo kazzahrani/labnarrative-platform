@@ -12,9 +12,36 @@ const required = (before, after, label) => {
 };
 
 required(
+  '  CandlestickSeries,\n  ColorType,',
+  '  BaselineSeries,\n  CandlestickSeries,\n  ColorType,',
+  "baseline series import",
+);
+
+required(
   '  const separateEnabled = paneOrder.filter(name => enabled.includes(name) && !OVERLAYS.has(name));\n  const canvasHeight = Math.max(420, priceHeight + separateEnabled.reduce((sum, name) => sum + (paneHeights[name] ?? 130), 0));',
-  '  const separateEnabled = paneOrder.filter(name => enabled.includes(name) && !OVERLAYS.has(name));\n  const paneWeightTotal = Math.max(1, priceHeight + separateEnabled.reduce((sum, name) => sum + (paneHeights[name] ?? 130), 0));',
+  `  const separateEnabled = paneOrder.filter(name => enabled.includes(name) && !OVERLAYS.has(name));
+  const indicatorCount = separateEnabled.length;
+  const layoutPriceShare = indicatorCount === 0 ? 1 : indicatorCount === 1 ? .68 : indicatorCount === 2 ? .58 : indicatorCount === 3 ? .52 : indicatorCount === 4 ? .48 : .44;
+  const equalIndicatorShare = indicatorCount ? (1 - layoutPriceShare) / indicatorCount : 0;`,
   "dynamic canvas height",
+);
+
+required(
+  '        const c = visualCondition("RSI"); const series = chart.addSeries(LineSeries, { color: "#b78de3", lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: `RSI ${normalizeLength(c.length, 14)}` }, pane); series.setData(rsi(candles, normalizeLength(c.length, 14))); addThreshold(series, 70, "70"); addThreshold(series, 30, "30"); if (c.signal !== 30 && c.signal !== 70) addThreshold(series, c.signal, "Bot trigger");',
+  `        const c = visualCondition("RSI");
+        const band = chart.addSeries(BaselineSeries, { baseValue: { type: "price", price: 30 }, topFillColor1: "rgba(145,106,190,.13)", topFillColor2: "rgba(145,106,190,.13)", topLineColor: "rgba(145,106,190,0)", bottomFillColor1: "rgba(0,0,0,0)", bottomFillColor2: "rgba(0,0,0,0)", bottomLineColor: "rgba(0,0,0,0)", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }, pane);
+        if (candles.length) band.setData([{ time: t(candles[0]), value: 70 }, { time: t(candles[candles.length - 1]), value: 70 }]);
+        const series = chart.addSeries(LineSeries, { color: "#b78de3", lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: \`RSI \${normalizeLength(c.length, 14)}\` }, pane); series.setData(rsi(candles, normalizeLength(c.length, 14))); addThreshold(series, 70, "70"); addThreshold(series, 30, "30"); if (c.signal !== 30 && c.signal !== 70) addThreshold(series, c.signal, "Bot trigger");`,
+  "RSI range band",
+);
+
+required(
+  '        const c = visualCondition("Stochastic"); const st = stochastic(candles, normalizeLength(c.aux1, 14), normalizeLength(c.aux2, 1), normalizeLength(c.aux3, 3));\n        const k = chart.addSeries(LineSeries, { color: "#6ca6d9", lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: "%K" }, pane); const d = chart.addSeries(LineSeries, { color: "#d6924e", lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: "%D" }, pane); k.setData(st.k); d.setData(st.d); addThreshold(k, 80, "80"); addThreshold(k, 20, "20"); if (c.signal !== 20 && c.signal !== 80) addThreshold(k, c.signal, "Bot trigger");',
+  `        const c = visualCondition("Stochastic"); const st = stochastic(candles, normalizeLength(c.aux1, 14), normalizeLength(c.aux2, 1), normalizeLength(c.aux3, 3));
+        const band = chart.addSeries(BaselineSeries, { baseValue: { type: "price", price: 20 }, topFillColor1: "rgba(86,132,170,.12)", topFillColor2: "rgba(86,132,170,.12)", topLineColor: "rgba(86,132,170,0)", bottomFillColor1: "rgba(0,0,0,0)", bottomFillColor2: "rgba(0,0,0,0)", bottomLineColor: "rgba(0,0,0,0)", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }, pane);
+        if (candles.length) band.setData([{ time: t(candles[0]), value: 80 }, { time: t(candles[candles.length - 1]), value: 80 }]);
+        const k = chart.addSeries(LineSeries, { color: "#6ca6d9", lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: "%K" }, pane); const d = chart.addSeries(LineSeries, { color: "#d6924e", lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: "%D" }, pane); k.setData(st.k); d.setData(st.d); addThreshold(k, 80, "80"); addThreshold(k, 20, "20"); if (c.signal !== 20 && c.signal !== 80) addThreshold(k, c.signal, "Bot trigger");`,
+  "stochastic range band",
 );
 
 required(
@@ -22,21 +49,24 @@ required(
   `    const fitPanes = () => {
       const panes = chart.panes();
       if (!panes[0]) return;
-      const available = Math.max(260, host.clientHeight);
-      if (!separateEnabled.length) { panes[0].setHeight(available); return; }
-      const indicatorWeight = Math.max(1, separateEnabled.reduce((sum, name) => sum + (paneHeights[name] ?? 130), 0));
-      const rawPriceShare = priceHeight / Math.max(1, priceHeight + indicatorWeight);
-      const minimumPriceShare = separateEnabled.length >= 6 ? .40 : separateEnabled.length >= 3 ? .46 : .54;
-      const maximumPriceShare = separateEnabled.length >= 6 ? .54 : .68;
-      const priceShare = Math.max(minimumPriceShare, Math.min(maximumPriceShare, rawPriceShare));
-      const pricePixels = Math.max(120, Math.round(available * priceShare));
-      panes[0].setHeight(pricePixels);
-      const remaining = Math.max(1, available - pricePixels);
-      paneMap.forEach((index, name) => {
-        if (!panes[index]) return;
-        const weight = paneHeights[name] ?? 130;
-        panes[index].setHeight(Math.max(18, Math.round(remaining * weight / indicatorWeight)));
+      if (!indicatorCount) return;
+      const indicatorPanes = separateEnabled.flatMap(name => {
+        const index = paneMap.get(name);
+        return index != null && panes[index] ? [panes[index]] : [];
       });
+      if (!indicatorPanes.length) return;
+      const equalizeIndicators = () => {
+        for (let pass = 0; pass < 7; pass += 1) {
+          const average = indicatorPanes.reduce((sum, pane) => sum + pane.getHeight(), 0) / indicatorPanes.length;
+          indicatorPanes.forEach(pane => pane.setHeight(average));
+        }
+      };
+      equalizeIndicators();
+      let totalPaneHeight = panes.reduce((sum, pane) => sum + pane.getHeight(), 0);
+      panes[0].setHeight(Math.max(120, Math.round(totalPaneHeight * layoutPriceShare)));
+      equalizeIndicators();
+      totalPaneHeight = panes.reduce((sum, pane) => sum + pane.getHeight(), 0);
+      panes[0].setHeight(Math.max(120, Math.round(totalPaneHeight * layoutPriceShare)));
     };
     fitPanes();
     const recentBars = interval === "1M" ? 120 : interval === "1w" ? 180 : interval === "1d" ? 320 : 420;
@@ -50,12 +80,12 @@ required(
 
 source = source.replace(
   '}, [candles, interval, enabled, paneOrder, paneHeights, priceHeight, autoY, conditionSignature, settingsSignature, structureSignature, canvasHeight]);',
-  '}, [candles, interval, enabled, paneOrder, paneHeights, priceHeight, autoY, conditionSignature, settingsSignature, structureSignature]);',
+  '}, [candles, interval, enabled, paneOrder, autoY, conditionSignature, settingsSignature, structureSignature, indicatorCount, layoutPriceShare]);',
 );
 
 required(
   '  const paneTop = (name: IndicatorName) => { let top = priceHeight; for (const pane of separateEnabled) { if (pane === name) return top; top += paneHeights[pane] ?? 130; } return top; };',
-  '  const paneTop = (name: IndicatorName) => { let top = priceHeight; for (const pane of separateEnabled) { if (pane === name) return top / paneWeightTotal * 100; top += paneHeights[pane] ?? 130; } return top / paneWeightTotal * 100; };',
+  '  const paneTop = (name: IndicatorName) => { const index = separateEnabled.indexOf(name); return index < 0 ? 100 : (layoutPriceShare + index * equalIndicatorShare) * 100; };',
   "pane label position",
 );
 
@@ -90,4 +120,4 @@ css = css.replace('.topbar{height:64px;', '.topbar{height:58px;');
 css = css.replace('.toolbar{height:43px;', '.toolbar{height:40px;');
 fs.writeFileSync(cssPath, css);
 
-console.log("Trading chart fitted to fixed modal viewport");
+console.log("Trading chart fitted with equal indicator panes and oscillator bands");
