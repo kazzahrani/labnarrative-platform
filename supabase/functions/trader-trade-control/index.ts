@@ -144,6 +144,50 @@ async function addFunds(admin: Db, account: AccountRow, trade: TradeRow, amount:
   }
 }
 
+async function reconcileAveragingOrders(
+  admin: Db,
+  trade: TradeRow,
+  completed: number,
+  maxAveraging: number,
+  activeOrdersLimit: number,
+) {
+  const desiredFirst = completed + 1;
+  const desiredLast = Math.min(maxAveraging, completed + activeOrdersLimit);
+  const { data, error } = await admin.from("trader_orders")
+    .select("id,kind,side,status,sequence_no,requested_quote")
+    .eq("trade_id", trade.id)
+    .eq("kind", "averaging")
+    .eq("side", "BUY")
+    .order("sequence_no", { ascending: true });
+  if (error) throw error;
+
+  const now = new Date().toISOString();
+  for (const order of data ?? []) {
+    const sequence = Math.round(n(order.sequence_no));
+    const status = String(order.status || "").toUpperCase();
+    const shouldBeActive = activeOrdersLimit > 0 && sequence >= desiredFirst && sequence <= desiredLast;
+
+    if (shouldBeActive && status === "CANCELLED") {
+      const { error: reopenError } = await admin.from("trader_orders").update({
+        status: "OPEN",
+        reserved_quote: Math.max(0, n(order.requested_quote)),
+        cancelled_at: null,
+        opened_at: now,
+        updated_at: now,
+      }).eq("id", order.id);
+      if (reopenError) throw reopenError;
+    } else if (!shouldBeActive && ["OPEN", "PENDING"].includes(status)) {
+      const { error: cancelError } = await admin.from("trader_orders").update({
+        status: "CANCELLED",
+        reserved_quote: 0,
+        cancelled_at: now,
+        updated_at: now,
+      }).eq("id", order.id);
+      if (cancelError) throw cancelError;
+    }
+  }
+}
+
 async function updateTrade(admin: Db, account: AccountRow, trade: TradeRow, body: Json) {
   requireSimulationMode(account);
   if (trade.status !== "Active") throw new Error("trade_not_active");
@@ -175,12 +219,10 @@ async function updateTrade(admin: Db, account: AccountRow, trade: TradeRow, body
     updated_at: new Date().toISOString(),
   }).eq("id", trade.id).eq("status", "Active");
   if (error) throw error;
-  const { error: cancelError } = await admin.from("trader_orders").update({
-    status: "CANCELLED",
-    reserved_quote: 0,
-    cancelled_at: new Date().toISOString(),
-  }).eq("trade_id", trade.id).in("status", ["OPEN", "PENDING"]);
-  if (cancelError) throw cancelError;
+
+  // Stop-loss / TP edits must not destroy a valid DCA ladder. Reconcile only
+  // averaging slots that fall inside or outside the configured active window.
+  await reconcileAveragingOrders(admin, trade, completed, maxAveraging, activeOrdersLimit);
 }
 
 async function closeTrade(admin: Db, account: AccountRow, trade: TradeRow) {
