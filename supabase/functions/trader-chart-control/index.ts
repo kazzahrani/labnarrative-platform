@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
 
     const [botResult, fillsResult, ordersResult] = await Promise.all([
       trade.bot_id ? admin.from("trader_bots").select("id,client_id,name,conditions").eq("account_id", accountId).eq("id", trade.bot_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      admin.from("trader_fills").select("id,side,kind,price,quantity,quote_amount,filled_at").eq("account_id", accountId).eq("trade_id", trade.id).order("filled_at", { ascending: true }),
+      admin.from("trader_fills").select("id,order_id,side,kind,price,quantity,quote_amount,filled_at").eq("account_id", accountId).eq("trade_id", trade.id).order("filled_at", { ascending: true }),
       admin.from("trader_orders").select("id,client_order_id,kind,side,status,sequence_no,price,requested_quote,reserved_quote,opened_at,updated_at").eq("account_id", accountId).eq("trade_id", trade.id).order("sequence_no", { ascending: true }),
     ]);
     if (botResult.error) throw botResult.error;
@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
         id: String(botResult.data.client_id), name: String(botResult.data.name), conditions: cleanConditions(botResult.data.conditions),
       } : null,
       fills: (fillsResult.data ?? []).map((fill) => ({
-        id: String(fill.id), side: String(fill.side), kind: String(fill.kind), price: n(fill.price), quantity: n(fill.quantity), amount: n(fill.quote_amount), at: String(fill.filled_at),
+        id: String(fill.id), orderId: fill.order_id ? String(fill.order_id) : null, side: String(fill.side), kind: String(fill.kind), price: n(fill.price), quantity: n(fill.quantity), amount: n(fill.quote_amount), at: String(fill.filled_at),
       })),
       activeOrders: activeOrders.map((order) => ({
         id: String(order.client_order_id || order.id), kind: String(order.kind), side: String(order.side), status: String(order.status),
