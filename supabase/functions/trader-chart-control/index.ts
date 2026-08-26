@@ -92,6 +92,7 @@ Deno.serve(async (req: Request) => {
     const stopPct = strategyV2 ? n(state.stopPct, n(trade.stop_pct)) : n(trade.stop_pct);
     const stopEnabled = strategyV2 ? state.stopEnabled === true : trade.stop_enabled === true;
     const activeOrders = (ordersResult.data ?? []).filter((order) => ["OPEN", "PENDING", "NEW", "PARTIALLY_FILLED"].includes(String(order.status || "").toUpperCase()));
+    const orderById = new Map((ordersResult.data ?? []).map((order) => [String(order.id), order]));
 
     return json({
       ok: true,
@@ -112,9 +113,13 @@ Deno.serve(async (req: Request) => {
       bot: botResult.data ? {
         id: String(botResult.data.client_id), name: String(botResult.data.name), conditions: cleanConditions(botResult.data.conditions),
       } : null,
-      fills: (fillsResult.data ?? []).map((fill) => ({
-        id: String(fill.id), orderId: fill.order_id ? String(fill.order_id) : null, side: String(fill.side), kind: String(fill.kind), price: n(fill.price), quantity: n(fill.quantity), amount: n(fill.quote_amount), at: String(fill.filled_at),
-      })),
+      fills: (fillsResult.data ?? []).map((fill) => {
+        const linkedOrder = fill.order_id ? orderById.get(String(fill.order_id)) : null;
+        return {
+          id: String(fill.id), orderId: fill.order_id ? String(fill.order_id) : null, sequence: linkedOrder ? n(linkedOrder.sequence_no) : 0,
+          side: String(fill.side), kind: String(fill.kind), price: n(fill.price), quantity: n(fill.quantity), amount: n(fill.quote_amount), at: String(fill.filled_at),
+        };
+      }),
       activeOrders: activeOrders.map((order) => ({
         id: String(order.client_order_id || order.id), kind: String(order.kind), side: String(order.side), status: String(order.status),
         sequence: n(order.sequence_no), price: order.price == null ? null : n(order.price), amount: n(order.requested_quote), reserved: n(order.reserved_quote),
