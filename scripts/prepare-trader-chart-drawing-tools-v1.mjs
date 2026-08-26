@@ -21,11 +21,12 @@ if (!source.includes(marker)) {
 
   if (!source.includes("candleSeriesRef")) throw new Error("Chart drawing tools: candle series ref missing");
 
-  required(
-    '<div ref={containerRef} className={styles.canvas} style={{ height: `${canvasHeight}px` }}/>',
-    '<div ref={containerRef} className={styles.canvas} style={{ height: `${canvasHeight}px` }}/><ChartDrawingTools chartRef={chartRef} seriesRef={candleSeriesRef} candles={candles} memoryKey={`${accountId}|${tradeId}|${interval}`}/>',
-    "chart canvas",
-  );
+  const styledCanvas = '<div ref={containerRef} className={styles.canvas} style={{ height: `${canvasHeight}px` }}/>';
+  const fittedCanvas = '<div ref={containerRef} className={styles.canvas}/>';
+  const drawingLayer = '<ChartDrawingTools chartRef={chartRef} seriesRef={candleSeriesRef} candles={candles} memoryKey={`${accountId}|${tradeId}|${interval}`}/>';
+  if (source.includes(styledCanvas)) source = source.replace(styledCanvas, styledCanvas + drawingLayer);
+  else if (source.includes(fittedCanvas)) source = source.replace(fittedCanvas, fittedCanvas + drawingLayer);
+  else throw new Error("Chart drawing tools: missing chart canvas");
 
   source = source.replace(
     'if (!Number.isFinite(price)) return; series.createPriceLine({ price, color: "#555", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title });',
