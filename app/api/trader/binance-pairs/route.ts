@@ -24,7 +24,13 @@ export async function GET() {
     if (!response.ok) throw new Error(`binance_exchange_info_${response.status}`);
     const data = await response.json() as { symbols?: ExchangeSymbol[] };
     const pairs = (data.symbols ?? [])
-      .filter((item) => item.status === "TRADING" && item.quoteAsset === "USDT" && item.isSpotTradingAllowed !== false && item.baseAsset)
+      .filter((item) => {
+        const base = String(item.baseAsset ?? "").toUpperCase();
+        return item.status === "TRADING"
+          && item.quoteAsset === "USDT"
+          && item.isSpotTradingAllowed !== false
+          && /^[A-Z0-9]{1,20}$/.test(base);
+      })
       .map((item) => ({
         pair: `${String(item.baseAsset).toUpperCase()}/USDT`,
         symbol: String(item.symbol ?? ""),
