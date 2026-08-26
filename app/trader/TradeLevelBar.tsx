@@ -13,8 +13,15 @@ type ActiveOrder = {
   price: number | null;
   amount: number;
 };
+type SnapshotTrade = {
+  takeProfitPrice?: number | null;
+  takeProfitTargets?: Array<{ index: number; profitPct: number; allocationPct: number; price: number }>;
+  stopLossPrice?: number | null;
+  stopLossTimeoutSeconds?: number;
+};
 type Snapshot = {
   ok?: boolean;
+  trade?: SnapshotTrade;
   activeOrders?: ActiveOrder[];
   error?: string;
 };
@@ -44,23 +51,23 @@ function priceLabel(value: number) {
   const digits = value >= 1000 ? 2 : value >= 100 ? 3 : value >= 1 ? 4 : value >= .1 ? 5 : value >= .01 ? 6 : 8;
   return value.toLocaleString("en-US", { maximumFractionDigits: digits });
 }
-async function exactOrders(accountId: string, tradeId: string) {
+async function exactSnapshot(accountId: string, tradeId: string) {
   const { data, error } = await browserSupabase.functions.invoke("trader-chart-control", { body: { accountId, tradeId } });
   if (error) throw error;
   const result = (data ?? {}) as Snapshot;
   if (result.ok !== true || result.error) throw new Error(result.error || "trade_levels_failed");
-  return result.activeOrders ?? [];
+  return result;
 }
 
 export default function TradeLevelBar({ accountId, tradeId, averagePrice, livePrice, stopLossPrice, takeProfitPrice, active }: Props) {
-  const [orders, setOrders] = useState<ActiveOrder[]>([]);
+  const [snapshot, setSnapshot] = useState<Snapshot>({});
 
   useEffect(() => {
     let alive = true;
     const refresh = async () => {
       try {
-        const next = await exactOrders(accountId, tradeId);
-        if (alive) setOrders(next);
+        const next = await exactSnapshot(accountId, tradeId);
+        if (alive) setSnapshot(next);
       } catch {
         // Keep the last exact ledger snapshot. The workspace's live price keeps moving independently.
       }
@@ -72,24 +79,32 @@ export default function TradeLevelBar({ accountId, tradeId, averagePrice, livePr
   }, [accountId, tradeId, active]);
 
   const { markers, avgPosition, livePosition } = useMemo(() => {
+    const orders = snapshot.activeOrders ?? [];
+    const exactTrade = snapshot.trade;
     const activeDcas = orders
       .filter((order) => order.side.toUpperCase() === "BUY" && order.kind.toLowerCase().includes("averag") && finitePositive(order.price) != null)
       .sort((a, b) => a.sequence - b.sequence);
     const activeTps = orders
       .filter((order) => order.side.toUpperCase() === "SELL" && finitePositive(order.price) != null && (order.kind.toLowerCase().includes("take") || order.kind.toLowerCase().includes("profit")))
       .sort((a, b) => a.sequence - b.sequence);
+    const configuredTps = (exactTrade?.takeProfitTargets ?? [])
+      .filter((target) => finitePositive(target.price) != null)
+      .sort((a, b) => a.index - b.index);
 
     const raw: Marker[] = [];
-    const sl = finitePositive(stopLossPrice);
+    const sl = finitePositive(exactTrade?.stopLossPrice) ?? finitePositive(stopLossPrice);
     const avg = finitePositive(averagePrice);
     const live = finitePositive(livePrice);
     if (sl) raw.push({ key: "sl", kind: "sl", label: "SL", price: sl });
     activeDcas.forEach((order, index) => raw.push({ key: `dca-${order.id}`, kind: "dca", label: `D${order.sequence || index + 1}`, price: Number(order.price), amount: order.amount }));
     if (avg) raw.push({ key: "avg", kind: "avg", label: "AVG", price: avg });
     if (live) raw.push({ key: "live", kind: "live", label: active ? "NOW" : "EXIT", price: live });
-    if (activeTps.length) activeTps.forEach((order, index) => raw.push({ key: `tp-${order.id}`, kind: "tp", label: activeTps.length > 1 ? `T${index + 1}` : "TP", price: Number(order.price), amount: order.amount }));
-    else {
-      const tp = finitePositive(takeProfitPrice);
+    if (activeTps.length) {
+      activeTps.forEach((order, index) => raw.push({ key: `tp-${order.id}`, kind: "tp", label: activeTps.length > 1 ? `T${index + 1}` : "TP", price: Number(order.price), amount: order.amount }));
+    } else if (configuredTps.length) {
+      configuredTps.forEach((target) => raw.push({ key: `tp-config-${target.index}`, kind: "tp", label: configuredTps.length > 1 ? `T${target.index}` : "TP", price: target.price }));
+    } else {
+      const tp = finitePositive(exactTrade?.takeProfitPrice) ?? finitePositive(takeProfitPrice);
       if (tp) raw.push({ key: "tp-derived", kind: "tp", label: "TP", price: tp });
     }
 
@@ -108,7 +123,7 @@ export default function TradeLevelBar({ accountId, tradeId, averagePrice, livePr
       avgPosition: avg ? position(avg) : 50,
       livePosition: live ? position(live) : avg ? position(avg) : 50,
     };
-  }, [orders, averagePrice, livePrice, stopLossPrice, takeProfitPrice, active]);
+  }, [snapshot, averagePrice, livePrice, stopLossPrice, takeProfitPrice, active]);
 
   const positive = livePosition >= avgPosition;
   const fillLeft = Math.min(avgPosition, livePosition);
