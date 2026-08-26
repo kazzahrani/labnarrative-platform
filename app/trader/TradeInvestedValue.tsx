@@ -24,14 +24,18 @@ export default function TradeInvestedValue({ tradeId, fallback }: Props) {
   useEffect(() => {
     let alive = true;
     setValue(Number(fallback || 0));
-    void browserSupabase.rpc("trader_trade_total_invested", { p_trade_client_id: tradeId })
-      .then(({ data, error }) => {
-        if (!alive || error) return;
-        const next = Number(data);
-        if (Number.isFinite(next)) setValue(next);
-      });
-    return () => { alive = false; };
-  }, [tradeId, fallback]);
+
+    const refresh = async () => {
+      const { data, error } = await browserSupabase.rpc("trader_trade_total_invested", { p_trade_client_id: tradeId });
+      if (!alive || error) return;
+      const next = Number(data);
+      if (Number.isFinite(next)) setValue((current) => Math.max(current, next));
+    };
+
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 5000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [tradeId]);
 
   return <>{money(value)}</>;
 }
