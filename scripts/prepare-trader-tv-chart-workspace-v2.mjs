@@ -10,6 +10,12 @@ const cssTargetPath = path.join(root, "app/trader/dca-trade-workstation.module.c
 if (!fs.existsSync(sourcePath)) throw new Error("TV Chart V2 template is missing");
 if (!fs.existsSync(cssSourcePath)) throw new Error("TV Chart V2 stylesheet is missing");
 
-fs.writeFileSync(targetPath, fs.readFileSync(sourcePath, "utf8"));
+let source = fs.readFileSync(sourcePath, "utf8");
+source = source.replace(
+  "win.reduce((s,v)=>s+(v??0),0)/length",
+  "win.reduce<number>((s,v)=>s+(v??0),0)/length",
+);
+fs.writeFileSync(sourcePath, source);
+fs.writeFileSync(targetPath, source);
 fs.writeFileSync(cssTargetPath, fs.readFileSync(cssSourcePath, "utf8"));
 console.log("TradingView-style timeframe dropdown, repeatable indicators and per-instance settings prepared");
