@@ -3,6 +3,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const chartPath = path.join(root, "app/trader/DcaTradeChartV2Workstation.tsx");
+const drawingPath = path.join(root, "app/trader/ChartDrawingTools.tsx");
 let source = fs.readFileSync(chartPath, "utf8");
 const marker = "TRADER_CHART_DRAWING_TOOLS_V1";
 
@@ -52,6 +53,15 @@ if (!source.includes(marker)) {
   );
 
   fs.writeFileSync(chartPath, source);
+}
+
+if (fs.existsSync(drawingPath)) {
+  let drawing = fs.readFileSync(drawingPath, "utf8");
+  drawing = drawing.replace(
+    'const coords = drawing.points.map(xy).filter((p): p is { x: number; y: number } => Boolean(p));',
+    'const coords = drawing.points.map(xy).filter(Boolean) as Array<{ x: number; y: number }>;',
+  );
+  fs.writeFileSync(drawingPath, drawing);
 }
 
 console.log("Trader chart drawing toolbar, compact trade labels and hidden indicator axis labels prepared");
