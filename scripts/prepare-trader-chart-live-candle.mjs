@@ -89,7 +89,7 @@ if (!source.includes("TRADER_CHART_LIVE_CANDLE_V1")) {
 if (!source.includes("TRADER_CHART_ORDER_MARKERS_V1")) {
   const fillAnchor = 'type Fill = {\n  kind: string;';
   if (!source.includes(fillAnchor)) throw new Error("Order markers: Fill type anchor missing");
-  source = source.replace(fillAnchor, 'type Fill = {\n  orderId?: string | null; // TRADER_CHART_ORDER_MARKERS_V1\n  kind: string;');
+  source = source.replace(fillAnchor, 'type Fill = {\n  orderId?: string | null; // TRADER_CHART_ORDER_MARKERS_V1\n  sequence?: number;\n  kind: string;');
 
   const markerStart = source.indexOf('    const markers: SeriesMarker<UTCTimestamp>[] = fills.flatMap');
   const markerEnd = source.indexOf('    if (trade.status === "Closed"', markerStart);
@@ -102,16 +102,38 @@ if (!source.includes("TRADER_CHART_ORDER_MARKERS_V1")) {
         if (!groups.has(key)) groups.set(key, fill);
         return groups;
       }, new Map<string, Fill>()).values());
+    const groupedSellOrders = Array.from(fills
+      .filter((fill) => (fill.side ?? "BUY").toUpperCase() === "SELL")
+      .reduce((groups, fill) => {
+        const key = fill.orderId || \`legacy-sell|\${fill.kind}|\${fill.at}\`;
+        if (!groups.has(key)) groups.set(key, fill);
+        return groups;
+      }, new Map<string, Fill>()).values());
     let dcaMarkerNumber = 0;
-    const markers: SeriesMarker<UTCTimestamp>[] = groupedBuyOrders.flatMap((fill) => {
+    const buyMarkers: SeriesMarker<UTCTimestamp>[] = groupedBuyOrders.flatMap((fill) => {
       const time = nearestCandleTime(candles, new Date(fill.at).getTime());
       if (!time) return [];
       const kind = fill.kind.toLowerCase();
       const text = kind.includes("base") ? "BUY" : kind.includes("averag") ? \`DCA \${++dcaMarkerNumber}\` : kind.includes("add") ? "ADD" : "BUY";
       return [{ time, position: "belowBar", color: "#46d7a2", shape: "arrowUp", text }];
     });
+    const sellMarkers: SeriesMarker<UTCTimestamp>[] = groupedSellOrders.flatMap((fill) => {
+      const time = nearestCandleTime(candles, new Date(fill.at).getTime());
+      if (!time) return [];
+      const kind = fill.kind.toLowerCase();
+      const sequence = Math.max(0, Math.round(fill.sequence ?? 0));
+      const isTp = kind.includes("take profit") || kind.includes("take_profit");
+      const isSl = kind.includes("stop loss") || kind.includes("stop_loss");
+      const text = isTp ? (sequence > 0 ? \`TP \${sequence}\` : "TP") : isSl ? "SL" : "EXIT";
+      return [{ time, position: "aboveBar", color: isTp ? "#57c99c" : "#e27883", shape: "arrowDown", text }];
+    });
+    const markers: SeriesMarker<UTCTimestamp>[] = [...buyMarkers, ...sellMarkers];
 `;
   source = source.slice(0, markerStart) + replacement + source.slice(markerEnd);
+  source = source.replace(
+    '    if (trade.status === "Closed" && trade.closedAt) {',
+    '    if (trade.status === "Closed" && trade.closedAt && groupedSellOrders.length === 0) {',
+  );
 }
 
 fs.writeFileSync(chartPath, source);
