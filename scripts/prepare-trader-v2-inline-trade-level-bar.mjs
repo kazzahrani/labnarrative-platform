@@ -13,6 +13,7 @@ const extraImports = [
   'import TradeLevelBar from "./TradeLevelBar";',
   'import TradeActionsV2 from "./TradeActionsV2";',
   'import TradeRowMetaV2 from "./TradeRowMetaV2";',
+  'import TradePnlValue from "./TradePnlValue";',
 ];
 for (const item of extraImports) {
   if (!shell.includes(item)) shell = shell.replace(chartImport, `${chartImport}\n${item}`);
@@ -26,7 +27,7 @@ const topStart = shell.indexOf('<div className={dca.tradeTop}>', tradesAnchor);
 const chartButtonEnd = shell.indexOf('>TV Chart</button>', topStart);
 if (topStart < 0 || chartButtonEnd < 0) throw new Error("Could not find legacy V2 trade top row");
 const topEnd = shell.indexOf('</div>', chartButtonEnd) + '</div>'.length;
-const replacementTop = `<div className={dca.tradeTop}><div className={dca.tradeIdentity}><strong>{trade.pair}</strong><small>{trade.botName} · {trade.executionMode}</small></div><TradeLevelBar accountId={currentAccount.id} tradeId={trade.id} averagePrice={trade.averagePrice} livePrice={tradeState === "Active" ? trade.lastPrice : trade.exitPrice} stopLossPrice={trade.stopLossPrice} takeProfitPrice={trade.takeProfitPrice} active={tradeState === "Active"}/><div className={dca.tradeValue}><span>Invested</span><b>{money(trade.invested)}</b></div><div className={dca.tradeValue}><span>PnL</span><b className={trade.pnl >= 0 ? dca.green : dca.red}>{money(trade.pnl)} · {pct(trade.pnlPct)}</b></div><TradeActionsV2 accountId={currentAccount.id} accountMode={currentAccount.mode} trade={trade} onChanged={() => loadWorkspace(true)}/></div>`;
+const replacementTop = `<div className={dca.tradeTop}><div className={dca.tradeIdentity}><strong>{trade.pair}</strong><small>{trade.botName} · {trade.executionMode}</small></div><TradeLevelBar accountId={currentAccount.id} tradeId={trade.id} averagePrice={trade.averagePrice} livePrice={tradeState === "Active" ? trade.lastPrice : trade.exitPrice} stopLossPrice={trade.stopLossPrice} takeProfitPrice={trade.takeProfitPrice} active={tradeState === "Active"}/><div className={dca.tradeValue}><span>Invested</span><b>{money(trade.invested)}</b></div><div className={dca.tradeValue}><span>PnL</span><b className={trade.pnl >= 0 ? dca.green : dca.red}><TradePnlValue tradeId={trade.id} pnl={trade.pnl} active={tradeState === "Active"}/></b></div><TradeActionsV2 accountId={currentAccount.id} accountMode={currentAccount.mode} trade={trade} onChanged={() => loadWorkspace(true)}/></div>`;
 shell = shell.slice(0, topStart) + replacementTop + shell.slice(topEnd);
 
 const liveStart = shell.indexOf('{tradeState === "Active" && <div className={dca.liveStrip}>', topStart);
