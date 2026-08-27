@@ -34,53 +34,69 @@ Deno.serve(async(req:Request)=>{
 
   try{
     const trades=payload.trades as Json[],accountId=String(body.accountId||"");
-    if(accountId&&trades.length){
+    if(accountId){
       const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
-      const clientIds=trades.map(t=>String(t.id||"")).filter(Boolean);
-      const{data:dbTrades,error:tradeError}=await db.from("trader_trades")
-        .select("id,client_id,total_invested,status")
-        .eq("account_id",accountId)
-        .in("client_id",clientIds);
-      if(tradeError)throw tradeError;
-
-      const lifetime=new Map<string,number>();
-      for(const row of dbTrades??[])lifetime.set(String(row.client_id),n(row.total_invested));
-
-      let activeRealized=0,activeLifetime=0;
-      const botPnl=new Map<string,number>(),botLifetime=new Map<string,number>();
-      for(const trade of trades){
-        const id=String(trade.id||""),status=String(trade.status||""),realized=n(trade.realizedPnl),oldPnl=n(trade.pnl),corrected=status==="Active"?oldPnl+realized:oldPnl,capital=lifetime.get(id)||0;
-        const remainingCostBasis=n(trade.invested);
-        trade.remainingCostBasis=remainingCostBasis;
-        trade.lifetimeInvested=capital;
-        trade.invested=capital;
-        trade.pnl=corrected;
-        trade.pnlPct=capital>0?corrected/capital*100:0;
-        if(status==="Active"){activeRealized+=realized;activeLifetime+=capital;}
-        const botId=String(trade.botId||"");
-        if(botId){botPnl.set(botId,(botPnl.get(botId)||0)+corrected);botLifetime.set(botId,(botLifetime.get(botId)||0)+capital);}
+      const botTypes=new Map<string,string>();
+      const{data:dbBots,error:botError}=await db.from("trader_bots").select("client_id,client_state").eq("account_id",accountId);
+      if(botError)throw botError;
+      for(const row of dbBots??[]){
+        const state=obj(row.client_state),type=String(state.automationType||"")==="tradingview_strategy"?"tradingview_strategy":"dca";
+        botTypes.set(String(row.client_id),type);
       }
-
-      const account=obj(payload.account);
-      if(Object.keys(account).length){
-        account.realizedPnl=n(account.realizedPnl)+activeRealized;
-        account.available=n(account.available)+activeRealized;
-        account.equity=n(account.equity)+activeRealized;
-        account.remainingCostBasis=n(account.invested);
-        account.invested=activeLifetime;
-        account.lifetimeInvested=activeLifetime;
-        payload.account=account;
-      }
-
       if(Array.isArray(payload.bots))for(const bot of payload.bots as Json[]){
-        const id=String(bot.id||"");if(!id)continue;
-        const pnl=botPnl.get(id),capital=botLifetime.get(id)||0;
-        if(pnl!==undefined)bot.pnl=pnl;
-        bot.lifetimeInvested=capital;
-        if("invested" in bot)bot.invested=capital;
-        if(capital>0)bot.pnlPct=n(pnl)/capital*100;
+        const id=String(bot.id||"");
+        const type=botTypes.get(id)||"dca";
+        bot.automationType=type;
+        if(type==="tradingview_strategy")bot.startCondition="TradingView Strategy";
+      }
+
+      if(trades.length){
+        const clientIds=trades.map(t=>String(t.id||"")).filter(Boolean);
+        const{data:dbTrades,error:tradeError}=await db.from("trader_trades")
+          .select("id,client_id,total_invested,status")
+          .eq("account_id",accountId)
+          .in("client_id",clientIds);
+        if(tradeError)throw tradeError;
+
+        const lifetime=new Map<string,number>();
+        for(const row of dbTrades??[])lifetime.set(String(row.client_id),n(row.total_invested));
+
+        let activeRealized=0,activeLifetime=0;
+        const botPnl=new Map<string,number>(),botLifetime=new Map<string,number>();
+        for(const trade of trades){
+          const id=String(trade.id||""),status=String(trade.status||""),realized=n(trade.realizedPnl),oldPnl=n(trade.pnl),corrected=status==="Active"?oldPnl+realized:oldPnl,capital=lifetime.get(id)||0;
+          const remainingCostBasis=n(trade.invested);
+          trade.remainingCostBasis=remainingCostBasis;
+          trade.lifetimeInvested=capital;
+          trade.invested=capital;
+          trade.pnl=corrected;
+          trade.pnlPct=capital>0?corrected/capital*100:0;
+          if(status==="Active"){activeRealized+=realized;activeLifetime+=capital;}
+          const botId=String(trade.botId||"");
+          if(botId){botPnl.set(botId,(botPnl.get(botId)||0)+corrected);botLifetime.set(botId,(botLifetime.get(botId)||0)+capital);}
+        }
+
+        const account=obj(payload.account);
+        if(Object.keys(account).length){
+          account.realizedPnl=n(account.realizedPnl)+activeRealized;
+          account.available=n(account.available)+activeRealized;
+          account.equity=n(account.equity)+activeRealized;
+          account.remainingCostBasis=n(account.invested);
+          account.invested=activeLifetime;
+          account.lifetimeInvested=activeLifetime;
+          payload.account=account;
+        }
+
+        if(Array.isArray(payload.bots))for(const bot of payload.bots as Json[]){
+          const id=String(bot.id||"");if(!id)continue;
+          const pnl=botPnl.get(id),capital=botLifetime.get(id)||0;
+          if(pnl!==undefined)bot.pnl=pnl;
+          bot.lifetimeInvested=capital;
+          if("invested" in bot)bot.invested=capital;
+          if(capital>0)bot.pnlPct=n(pnl)/capital*100;
+        }
       }
     }
-  }catch(error){console.error("trader-account-control-lifetime-pnl",error)}
+  }catch(error){console.error("trader-account-control-wrapper",error)}
   return json(payload,response.status);
 });
