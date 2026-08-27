@@ -1,0 +1,27 @@
+/* Public crypto marketing contrast guard.
+   Several legacy global public-theme rules set dark heading colors with high specificity.
+   These explicit markers keep text readable on intentionally dark panels without changing
+   the light sections or the trading application. */
+.crypto-public-page .crypto-dark-panel,
+.crypto-public-page .crypto-dark-panel h1,
+.crypto-public-page .crypto-dark-panel h2,
+.crypto-public-page .crypto-dark-panel h3,
+.crypto-public-page .crypto-dark-panel h4,
+.crypto-public-page .crypto-dark-panel strong,
+.crypto-public-page .crypto-dark-panel b {
+  color: #f5f7fb !important;
+}
+
+.crypto-public-page .crypto-dark-children article h1,
+.crypto-public-page .crypto-dark-children article h2,
+.crypto-public-page .crypto-dark-children article h3,
+.crypto-public-page .crypto-dark-children article h4,
+.crypto-public-page .crypto-dark-children article strong,
+.crypto-public-page .crypto-dark-children article b {
+  color: #f5f7fb !important;
+}
+
+.crypto-public-page .crypto-dark-panel a:not([class]),
+.crypto-public-page .crypto-dark-panel .wordmark {
+  color: #dce4ef !important;
+}
