@@ -2,9 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 const shellPath = path.join(process.cwd(), "app", "trader", "TraderV2FullShell.tsx");
-if (!fs.existsSync(shellPath)) throw new Error(`Automations hub target not found: ${shellPath}`);
+const cssPath = path.join(process.cwd(), "app", "trader", "trader-dca-v2.module.css");
+for (const target of [shellPath, cssPath]) {
+  if (!fs.existsSync(target)) throw new Error(`Automations hub target not found: ${target}`);
+}
 
 let source = fs.readFileSync(shellPath, "utf8");
+let css = fs.readFileSync(cssPath, "utf8");
 let changes = 0;
 
 const replaceOnce = (from, to, label) => {
@@ -19,7 +23,7 @@ if (!source.includes('automationPickerOpen')) {
   if (!source.includes(stateNeedle)) throw new Error("Automations hub could not find bot modal state");
   source = source.replace(
     stateNeedle,
-    stateNeedle + '  const [automationPickerOpen, setAutomationPickerOpen] = useState(false);\n  const [automationTypeFilter, setAutomationTypeFilter] = useState<"All" | "DCA">("All");\n',
+    stateNeedle + '  const [automationPickerOpen, setAutomationPickerOpen] = useState(false);\n  const [automationTypeFilter, setAutomationTypeFilter] = useState<"All" | "DCA">("All");\n  const [automationFilterOpen, setAutomationFilterOpen] = useState(false);\n',
   );
   changes += 1;
 }
@@ -32,8 +36,8 @@ replaceOnce(
 
 replaceOnce(
   '<div className={dca.botToolbar}><div className={dca.botTabs}><button className={botTab === "Active" ? dca.tabActive : ""} onClick={() => setBotTab("Active")}>Running / paused <span>{activeBots.length}</span></button><button className={botTab === "Closed" ? dca.tabActive : ""} onClick={() => setBotTab("Closed")}>Archived <span>{closedBots.length}</span></button></div><span className={dca.hint}>Open any automation to inspect its strategy and capital plan.</span></div>',
-  '<div className={dca.botToolbar}><div className={dca.botTabs}><button className={botTab === "Active" ? dca.tabActive : ""} onClick={() => setBotTab("Active")}>Running / paused <span>{activeBots.length}</span></button><button className={botTab === "Closed" ? dca.tabActive : ""} onClick={() => setBotTab("Closed")}>Archived <span>{closedBots.length}</span></button></div><span className={dca.hint}>Open any automation to inspect its strategy and capital plan.</span></div><div className={dca.botToolbar}><div className={dca.botTabs}><button className={automationTypeFilter === "All" ? dca.tabActive : ""} onClick={() => setAutomationTypeFilter("All")}>All</button><button className={automationTypeFilter === "DCA" ? dca.tabActive : ""} onClick={() => setAutomationTypeFilter("DCA")}>DCA</button><button disabled title="Grid Automation is coming soon">Grid <span>Soon</span></button><button disabled title="TradingView Signals are coming soon">TradingView <span>Soon</span></button></div><span className={dca.hint}>DCA is available now · Grid and TradingView Signals are coming soon.</span></div>',
-  'automation lifecycle/type toolbar',
+  '<div className={dca.botToolbar}><div className={dca.botTabs}><button className={botTab === "Active" ? dca.tabActive : ""} onClick={() => { setBotTab("Active"); setAutomationFilterOpen(false); }}>Running / paused <span>{activeBots.length}</span></button><button className={botTab === "Closed" ? dca.tabActive : ""} onClick={() => { setBotTab("Closed"); setAutomationFilterOpen(false); }}>Archived <span>{closedBots.length}</span></button><div className={dca.automationFilterWrap} onMouseLeave={() => setAutomationFilterOpen(false)}><button type="button" className={automationFilterOpen ? dca.automationFilterTriggerOpen : ""} onClick={() => setAutomationFilterOpen((open) => !open)}>Filter <span>{automationTypeFilter}</span><i>⌄</i></button>{automationFilterOpen && <div className={dca.automationFilterMenu}><button type="button" className={automationTypeFilter === "All" ? dca.automationFilterSelected : ""} onClick={() => { setAutomationTypeFilter("All"); setAutomationFilterOpen(false); }}><span>All</span><b>{automationTypeFilter === "All" ? "✓" : ""}</b></button><button type="button" className={automationTypeFilter === "DCA" ? dca.automationFilterSelected : ""} onClick={() => { setAutomationTypeFilter("DCA"); setAutomationFilterOpen(false); }}><span>DCA</span><b>{automationTypeFilter === "DCA" ? "✓" : ""}</b></button><button type="button" disabled title="Grid Automation is coming soon"><span>Grid</span><small>Soon</small></button><button type="button" disabled title="TradingView Signals are coming soon"><span>TradingView</span><small>Soon</small></button></div>}</div></div><span className={dca.hint}>Open any automation to inspect its strategy and capital plan.</span></div>',
+  'combined lifecycle/filter toolbar',
 );
 
 // Existing rows are DCA automations. Make the type explicit and remove legacy Long labelling.
@@ -55,18 +59,40 @@ if (!source.includes('Choose an automation type')) {
   changes += 1;
 }
 
+const filterCss = `
+.automationFilterWrap{position:relative}
+.automationFilterWrap>button{display:flex;align-items:center;gap:6px}
+.automationFilterWrap>button i{font-style:normal;font-size:9px;line-height:1;transition:transform .14s ease}
+.automationFilterTriggerOpen i{transform:rotate(180deg)}
+.automationFilterMenu{position:absolute;top:calc(100% + 7px);left:0;z-index:22;min-width:178px;padding:6px;border:1px solid #373737;background:#222;border-radius:13px;box-shadow:0 16px 34px rgba(0,0,0,.3)}
+.automationFilterMenu button{width:100%;border:0;background:transparent;color:#aaa;border-radius:9px;padding:9px 10px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;text-align:left;font-size:9px;cursor:pointer}
+.automationFilterMenu button:hover:not(:disabled),.automationFilterSelected{background:#2b2b2b!important;color:#eee!important}
+.automationFilterMenu button b{font-size:9px;font-weight:700;color:#ddd}
+.automationFilterMenu button small{font-size:8px;color:#666;text-transform:uppercase;letter-spacing:.08em}
+.automationFilterMenu button:disabled{opacity:.48;cursor:not-allowed}
+@media(max-width:760px){.automationFilterMenu{left:auto;right:0}}
+`;
+if (!css.includes('.automationFilterWrap{')) {
+  css += filterCss;
+  changes += 1;
+}
+
 for (const required of [
   'setAutomationPickerOpen(true)',
   'New Automation',
   'DCA Automation',
   'Grid Automation',
   'TradingView Signals',
-  'Grid <span>Soon</span>',
-  'TradingView <span>Soon</span>',
+  'automationFilterOpen',
+  'Filter <span>{automationTypeFilter}</span>',
+  '<span>Grid</span><small>Soon</small>',
+  '<span>TradingView</span><small>Soon</small>',
   '<small>DCA · {bot.startCondition} · {bot.executionMode}</small>',
 ]) {
   if (!source.includes(required)) throw new Error(`Automations hub output missing: ${required}`);
 }
+if (!css.includes('.automationFilterMenu{')) throw new Error('Automations hub filter menu CSS missing');
 
 fs.writeFileSync(shellPath, source);
-console.log(`Prepared LabNarrative Automations hub (${changes} structural changes; theme, DCA configurator and execution untouched).`);
+fs.writeFileSync(cssPath, css);
+console.log(`Prepared LabNarrative Automations hub (${changes} structural changes; compact filter dropdown, theme and DCA execution untouched).`);
