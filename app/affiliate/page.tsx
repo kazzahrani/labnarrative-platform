@@ -17,7 +17,7 @@ const steps = [
 ];
 
 const audiences = [
-  ["YouTube creators", "Crypto automation, DCA bots, Binance, TradingView, portfolio strategy, or systematic trading."],
+  ["YouTube creators", "Crypto automation, DCA bots, exchange-connected trading, TradingView, portfolio strategy, or systematic trading."],
   ["TradingView publishers", "Indicator and strategy authors whose audience already thinks in rules, signals, and repeatable systems."],
   ["Trading communities", "Discord, Telegram, forums, academies, and private groups built around active crypto traders."],
   ["Writers & educators", "Newsletters, blogs, courses, and educational channels explaining disciplined crypto trading workflows."],
@@ -25,7 +25,7 @@ const audiences = [
 
 export default function AffiliatePage() {
   return (
-    <main className={`${styles.page} ${styles.affiliatePage}`}>
+    <main className={`${styles.page} ${styles.affiliatePage} crypto-public-page`}>
       <header className={styles.header}>
         <a className={styles.wordmark} href="/">LabNarrative</a>
         <nav className={styles.nav} aria-label="Primary navigation">
@@ -48,7 +48,7 @@ export default function AffiliatePage() {
             <a className={styles.primary} href="mailto:hello@labnarrative.com?subject=LabNarrative%20Founding%20Affiliate%20Program&body=Channel%20or%20community%20URL%3A%0AAudience%20size%3A%0AMain%20platform%3A%0AAnything%20you%27d%20like%20us%20to%20know%3A">Apply as a founding partner →</a>
             <a className={styles.secondary} href={APP_URL}>Test LabNarrative first</a>
           </div>
-          <div className={styles.commissionCard}>
+          <div className={`${styles.commissionCard} crypto-dark-children`}>
             <article><small>Founding revenue share</small><strong>30%</strong></article>
             <article><small>How we want partnerships to work</small><strong>Try it first. Recommend it only if you genuinely like it.</strong></article>
           </div>
@@ -60,7 +60,7 @@ export default function AffiliatePage() {
           <p className={styles.label}>How the program works</p>
           <h2>A partnership designed around long-term users, not one-off clicks.</h2>
         </div>
-        <div className={styles.affiliateGrid}>
+        <div className={`${styles.affiliateGrid} crypto-dark-children`}>
           {steps.map(([number, title, copy]) => (
             <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>
           ))}
@@ -94,14 +94,14 @@ export default function AffiliatePage() {
             </ul>
           </section>
         </div>
-        <div className={styles.applyBox}>
+        <div className={`${styles.applyBox} crypto-dark-panel`}>
           <h3>Want to test it?</h3>
-          <p>Send your channel, community, newsletter, or TradingView profile. We are starting with a small founding group and prioritizing audiences already interested in DCA, crypto automation, Binance, and systematic trading.</p>
+          <p>Send your channel, community, newsletter, or TradingView profile. We are starting with a small founding group and prioritizing audiences already interested in DCA, crypto automation, exchange-connected trading, and systematic strategies.</p>
           <a href="mailto:hello@labnarrative.com?subject=LabNarrative%20Founding%20Affiliate%20Program&body=Channel%20or%20community%20URL%3A%0AAudience%20size%3A%0AMain%20platform%3A%0AAnything%20you%27d%20like%20us%20to%20know%3A">Apply to the Founding Affiliate Program →</a>
         </div>
       </section>
 
-      <footer className={styles.footer}>
+      <footer className={`${styles.footer} crypto-dark-panel`}>
         <a className={styles.wordmark} href="/">LabNarrative</a>
         <div><a href="/">Product</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
         <p>Affiliate participation does not permit misleading claims, investment advice, or guaranteed-profit marketing.</p>
