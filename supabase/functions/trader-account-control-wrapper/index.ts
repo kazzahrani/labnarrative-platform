@@ -49,6 +49,21 @@ Deno.serve(async(req:Request)=>{
         bot.automationType=type;
         if(type==="tradingview_strategy")bot.startCondition="TradingView Strategy";
       }
+      for(const trade of trades){
+        const type=botTypes.get(String(trade.botId||""))||"dca";
+        trade.automationType=type;
+        if(type==="tradingview_strategy"){
+          trade.takeProfitPct=0;
+          trade.takeProfitPrice=null;
+          trade.stopEnabled=false;
+          trade.stopPct=0;
+          trade.stopLossPrice=null;
+          trade.nextAveragingPrice=null;
+          trade.averagingFilled=0;
+          trade.maxAveraging=0;
+          trade.activeOrdersLimit=0;
+        }
+      }
 
       if(trades.length){
         const clientIds=trades.map(t=>String(t.id||"")).filter(Boolean);
