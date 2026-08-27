@@ -34,6 +34,7 @@ export default function HomePage() {
           <a href="#product">Product</a>
           <a href="#workflow">How it works</a>
           <a href="#why">Why LabNarrative</a>
+          <a href="/pricing">Pricing</a>
           <a href="/affiliate">Affiliates</a>
         </nav>
         <a className={styles.headerCta} href={APP_URL}>Launch app →</a>
@@ -158,7 +159,7 @@ export default function HomePage() {
 
       <footer className={`${styles.footer} crypto-dark-panel`}>
         <a className={`${styles.wordmark} lnPublicWordmark`} href="/">LabNarrative</a>
-        <div><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
+        <div><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
         <p>Software for trading automation. Not financial advice. Trading digital assets involves risk.</p>
       </footer>
     </main>
