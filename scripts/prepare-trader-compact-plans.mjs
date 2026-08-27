@@ -118,3 +118,4 @@ fs.writeFileSync(cssPath, css);
 console.log("Prepared compact side-by-side Capital / Exit plans (layout only; theme and trading contracts unchanged).");
 
 await import("./prepare-trader-strategy-map.mjs");
+await import("./prepare-trader-automations-hub.mjs");
