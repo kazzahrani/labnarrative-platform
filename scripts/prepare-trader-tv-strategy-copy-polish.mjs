@@ -23,6 +23,17 @@ if(!source.includes(oldTvModal))throw new Error("TradingView Strategy viewport g
 source=source.replace(oldTvModal,newTvModal);
 
 for(const marker of['Archive ${bot.name}? Its position history will remain available.','setTvStrategyMode(null)','`${bot.name} archived.`','maxHeight:"calc(100dvh - 24px)"','overflowY:"auto"'])if(!source.includes(marker))throw new Error(`TradingView Strategy final shell missing ${marker}`);
-for(const marker of["One Strategy Message","Exit Protection","Copy message"])if(!configurator.includes(marker))throw new Error(`TradingView Strategy final copy missing ${marker}`);
+for(const marker of[
+  "One Strategy Message",
+  "Exit Protection",
+  "Copy message",
+  "prev_position_size",
+  "market_position",
+  "Follows TradingView order stream",
+  "Multiple symbols · pyramiding · partial exits",
+  "BUY opens/adds · SELL reduces/closes",
+  "Long Spot only · shorts ignored",
+])if(!configurator.includes(marker))throw new Error(`TradingView Strategy final order-stream output missing ${marker}`);
+if(configurator.includes("Long only · one active position")||configurator.includes("One long position"))throw new Error("TradingView Strategy final output regressed to one-position model");
 fs.writeFileSync(shellPath,source);
-console.log("Polished TradingView Strategy archive copy, verified compact UI, and constrained the modal to a scrollable viewport-safe height.");
+console.log("Polished TradingView Strategy archive/modal UI and verified final multi-symbol order-stream output.");
