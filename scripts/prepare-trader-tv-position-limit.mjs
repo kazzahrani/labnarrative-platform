@@ -57,8 +57,8 @@ replaceConfig(
   'execution safety copy',
 );
 replaceConfig(
-  'One TradingView Strategy Message controls symbol, size and order actions. Exit Protection is optional and follows each symbol’s weighted average entry.',
-  'One TradingView Strategy Message controls symbol, size and order actions. Maximum open positions is strategy-specific; the Real Account safety cap can only make it stricter. Exit Protection follows each symbol’s weighted average entry.',
+  'One Strategy Message carries symbol, BUY/SELL, sizing and position-state context for the complete TradingView order stream.',
+  'One Strategy Message carries symbol, BUY/SELL, sizing and position-state context for the complete TradingView order stream. Maximum open positions is strategy-specific; the Real Account safety cap can only make it stricter.',
   'footer safety copy',
 );
 
