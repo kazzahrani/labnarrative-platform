@@ -13,6 +13,7 @@ import {
   type SeriesMarker,
   type UTCTimestamp,
 } from "lightweight-charts";
+import CoinLogo from "./CoinLogo";
 import styles from "./trader.module.css";
 
 type Fill = {
@@ -416,7 +417,7 @@ export default function DcaTradeChart({
       <div className={styles.tradeChartTopbar}>
         <div>
           <h2>TV Chart</h2>
-          <p>{pair} · BINANCE · {status} DCA trade</p>
+          <p style={{ display: "flex", alignItems: "center", gap: 7 }}><CoinLogo symbol={pair} size={17} priority/><span>{pair} · BINANCE · {status} DCA trade</span></p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close trade chart">×</button>
       </div>
