@@ -160,13 +160,13 @@ export default function DcaStrategyMap({
         </div>
 
         <div>
-          <div className={cfg.strategyMapSectionHead}><div><strong>Live checks</strong><small>Updated instantly as you change the strategy.</small></div></div>
+          <div className={`${cfg.strategyMapSectionHead} ${cfg.strategyChecksHead}`}><div><strong>Live checks</strong><small>Updates instantly.</small></div></div>
           <div className={cfg.strategyChecks}>
-            <div className={cfg.strategyCheck}><span>{capitalValid ? "✓" : "!"}</span><div>{capitalValid ? `Capital ladder is valid at ${money(plannedCapitalPerPosition)} per position.` : "Initial and DCA order amounts must be positive."}</div></div>
-            <div className={cfg.strategyCheck}><span>{tpValid ? "✓" : "!"}</span><div>{tpValid ? "Take Profit allocation is valid and totals 100%." : `Take Profit targets need ascending prices and 100% total allocation (currently ${tpTotal.toFixed(2)}%).`}</div></div>
-            <div className={cfg.strategyCheck}><span>{ladderValid ? "✓" : "!"}</span><div>{ladderValid ? `DCA ladder remains above zero and covers ${map.deepest.toFixed(2)}%.` : `DCA ladder reaches ${map.deepest.toFixed(2)}% and must stay below 100%.`}</div></div>
-            <div className={cfg.strategyCheck}><span>{activeWindowValid ? "✓" : "!"}</span><div>{activeWindowValid ? `${activeDcaOrders} of ${ladder.length} DCA orders may be active at once.` : "Active DCA orders cannot exceed the configured DCA ladder."}</div></div>
-            {available != null && <div className={cfg.strategyCheck}><span>{withinAvailable ? "✓" : "!"}</span><div>{withinAvailable ? (exposurePct == null ? `Maximum planned exposure is ${money(maximumBotCapital)} and available balance is ${money(available)}.` : `Maximum planned exposure uses ${exposurePct.toFixed(2)}% of the available ${money(available)}.`) : `Maximum planned exposure exceeds the available ${money(available)} by ${money(maximumBotCapital - available)}.`}</div></div>}
+            <div className={cfg.strategyCheck}><span>{capitalValid ? "✓" : "!"}</span><div><b>Capital ladder</b><small>{capitalValid ? `${money(plannedCapitalPerPosition)} / position` : "Order amounts must be greater than zero."}</small></div></div>
+            <div className={cfg.strategyCheck}><span>{tpValid ? "✓" : "!"}</span><div><b>TP allocation</b><small>{tpValid ? `100% across ${targets.length} target${targets.length === 1 ? "" : "s"}` : `Need ascending targets and 100% allocation · ${tpTotal.toFixed(2)}% now`}</small></div></div>
+            <div className={cfg.strategyCheck}><span>{ladderValid ? "✓" : "!"}</span><div><b>DCA coverage</b><small>{ladderValid ? `${map.deepest.toFixed(2)}% below entry` : `${map.deepest.toFixed(2)}% is invalid · must stay below 100%`}</small></div></div>
+            <div className={cfg.strategyCheck}><span>{activeWindowValid ? "✓" : "!"}</span><div><b>Active DCA window</b><small>{activeWindowValid ? `${activeDcaOrders} of ${ladder.length} active at once` : "Active orders exceed the configured ladder."}</small></div></div>
+            {available != null && <div className={cfg.strategyCheck}><span>{withinAvailable ? "✓" : "!"}</span><div><b>Capital exposure</b><small>{withinAvailable ? (exposurePct == null ? `${money(maximumBotCapital)} max · ${money(available)} available` : `${money(maximumBotCapital)} max · ${exposurePct.toFixed(1)}% of available`) : `Need ${money(maximumBotCapital)} · ${money(available)} available · ${money(maximumBotCapital - available)} short`}</small></div></div>}
           </div>
         </div>
       </div>
@@ -174,10 +174,11 @@ export default function DcaStrategyMap({
 
     <div className={cfg.strategyScenario}>
       <div className={cfg.strategyScenarioHead}>
-        <div><strong>Price scenario</strong><small>Drag the market lower to see which DCA orders fill and how the position changes.</small></div>
+        <div><strong>Price scenario</strong><small>Drag left from ENTRY to simulate a deeper market drop.</small></div>
         <b>{appliedScenarioDrop === 0 ? "ENTRY" : `-${appliedScenarioDrop.toFixed(1)}%`}</b>
       </div>
-      <input type="range" min="0" max={scenarioMax} step="0.5" value={appliedScenarioDrop} onChange={(event) => setScenarioDrop(Number(event.target.value))}/>
+      <div className={cfg.strategyScenarioScale}><span>-{scenarioMax.toFixed(0)}%</span><span>ENTRY</span></div>
+      <input className={cfg.strategyScenarioRange} aria-label="Price drop scenario" type="range" min="0" max={scenarioMax} step="0.5" value={appliedScenarioDrop} onChange={(event) => setScenarioDrop(Number(event.target.value))}/>
       <div className={`${cfg.summaryGrid} ${cfg.strategyScenarioMetrics}`}>
         <div><span>DCA filled</span><b>{scenario.filled} / {ladder.length}</b></div>
         <div><span>Invested</span><b>{money(scenario.invested)}</b></div>
