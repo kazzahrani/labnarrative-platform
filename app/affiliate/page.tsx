@@ -26,9 +26,9 @@ const audiences = [
 export default function AffiliatePage() {
   return (
     <main className={`${styles.page} ${styles.affiliatePage} crypto-public-page`}>
-      <header className={styles.header}>
-        <a className={styles.wordmark} href="/">LabNarrative</a>
-        <nav className={styles.nav} aria-label="Primary navigation">
+      <header className={`${styles.header} lnPublicHeader`}>
+        <a className={`${styles.wordmark} lnPublicWordmark`} href="/">LabNarrative</a>
+        <nav className={`${styles.nav} lnPublicNav`} aria-label="Primary navigation">
           <a href="/">Product</a>
           <a href="#program">Program</a>
           <a href="#fit">Who it is for</a>
@@ -102,7 +102,7 @@ export default function AffiliatePage() {
       </section>
 
       <footer className={`${styles.footer} crypto-dark-panel`}>
-        <a className={styles.wordmark} href="/">LabNarrative</a>
+        <a className={`${styles.wordmark} lnPublicWordmark`} href="/">LabNarrative</a>
         <div><a href="/">Product</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
         <p>Affiliate participation does not permit misleading claims, investment advice, or guaranteed-profit marketing.</p>
       </footer>
