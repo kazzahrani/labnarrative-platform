@@ -21,6 +21,18 @@ type Props = {
 
 type CheckProps = { ok: boolean; label: string; detail: string };
 
+type PositionMath = {
+  invested: number;
+  quantity: number;
+  average: number;
+  averageDrop: number;
+  currentPrice: number;
+  unrealized: number;
+  tpPrice: number;
+  tpVsInitial: number;
+  recoveryToTp: number;
+};
+
 const money = (value: number) => new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -28,6 +40,35 @@ const money = (value: number) => new Intl.NumberFormat("en-US", {
 }).format(Number.isFinite(value) ? value : 0);
 
 const signedPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+
+function positionMath(baseOrder: number, filledRows: LadderRow[], tpPct: number, currentDrop: number): PositionMath {
+  const initialPrice = 100;
+  let invested = Math.max(0, baseOrder);
+  let quantity = invested > 0 ? invested / initialPrice : 0;
+
+  for (const row of filledRows) {
+    const fillPrice = Math.max(0.0001, initialPrice * (1 - row.drop / 100));
+    const quoteAmount = Math.max(0, row.order);
+    invested += quoteAmount;
+    quantity += quoteAmount > 0 ? quoteAmount / fillPrice : 0;
+  }
+
+  const average = quantity > 0 ? invested / quantity : initialPrice;
+  const currentPrice = Math.max(0.0001, initialPrice * (1 - currentDrop / 100));
+  const tpPrice = average * (1 + Math.max(0, tpPct) / 100);
+
+  return {
+    invested,
+    quantity,
+    average,
+    averageDrop: Math.max(0, (1 - average / initialPrice) * 100),
+    currentPrice,
+    unrealized: average > 0 ? (currentPrice / average - 1) * 100 : 0,
+    tpPrice,
+    tpVsInitial: (tpPrice / initialPrice - 1) * 100,
+    recoveryToTp: currentPrice > 0 ? (tpPrice / currentPrice - 1) * 100 : 0,
+  };
+}
 
 function StrategyCheck({ ok, label, detail }: CheckProps) {
   return <div className={cfg.strategyCheck}>
@@ -50,35 +91,39 @@ export default function DcaStrategyMap({
 }: Props) {
   const [scenarioDrop, setScenarioDrop] = useState(0);
   const targets = takeProfitTargets?.length ? takeProfitTargets : [{ profitPct: takeProfit, allocationPct: 100 }];
+  const tp1Pct = Number(targets[0]?.profitPct ?? takeProfit);
 
   const map = useMemo(() => {
-    const entryPrice = 100;
+    const initialPrice = 100;
     let invested = Math.max(0, baseOrder);
-    let quantity = invested > 0 ? invested / entryPrice : 0;
+    let quantity = invested > 0 ? invested / initialPrice : 0;
 
     const levels = ladder.map((row) => {
-      const price = Math.max(0.0001, entryPrice * (1 - row.drop / 100));
-      invested += Math.max(0, row.order);
-      quantity += row.order > 0 ? row.order / price : 0;
-      const average = quantity > 0 ? invested / quantity : entryPrice;
+      const price = Math.max(0.0001, initialPrice * (1 - row.drop / 100));
+      const quoteAmount = Math.max(0, row.order);
+      invested += quoteAmount;
+      quantity += quoteAmount > 0 ? quoteAmount / price : 0;
+      const average = quantity > 0 ? invested / quantity : initialPrice;
       return {
         ...row,
         price,
         invested,
         average,
-        averageDrop: Math.max(0, (1 - average / entryPrice) * 100),
+        averageDrop: Math.max(0, (1 - average / initialPrice) * 100),
       };
     });
 
     const deepest = levels.at(-1)?.drop ?? 0;
-    const finalAverage = levels.at(-1)?.average ?? entryPrice;
-    const finalAverageDrop = Math.max(0, (1 - finalAverage / entryPrice) * 100);
-    const deepestPrice = Math.max(0.0001, entryPrice * (1 - deepest / 100));
-    const tp1 = targets[0]?.profitPct ?? takeProfit;
-    const recoveryToTp1 = (finalAverage * (1 + tp1 / 100) / deepestPrice - 1) * 100;
+    const finalState = positionMath(baseOrder, ladder, tp1Pct, deepest);
 
-    return { levels, deepest, finalAverageDrop, recoveryToTp1 };
-  }, [baseOrder, ladder, takeProfit, targets]);
+    return {
+      levels,
+      deepest,
+      finalAverageDrop: finalState.averageDrop,
+      finalTpVsInitial: finalState.tpVsInitial,
+      recoveryToTp1: finalState.recoveryToTp,
+    };
+  }, [baseOrder, ladder, tp1Pct]);
 
   const scenarioMax = Math.min(90, Math.max(
     35,
@@ -88,24 +133,17 @@ export default function DcaStrategyMap({
   const appliedScenarioDrop = Math.min(scenarioDrop, scenarioMax);
 
   const scenario = useMemo(() => {
-    const entryPrice = 100;
     const filled = ladder.filter((row) => row.drop <= appliedScenarioDrop + 1e-9);
-    let invested = Math.max(0, baseOrder);
-    let quantity = invested > 0 ? invested / entryPrice : 0;
-    for (const row of filled) {
-      const price = Math.max(0.0001, entryPrice * (1 - row.drop / 100));
-      invested += Math.max(0, row.order);
-      quantity += row.order > 0 ? row.order / price : 0;
-    }
-    const average = quantity > 0 ? invested / quantity : entryPrice;
-    const currentPrice = Math.max(0.0001, entryPrice * (1 - appliedScenarioDrop / 100));
-    const unrealized = (currentPrice / average - 1) * 100;
-    const tp1 = targets[0]?.profitPct ?? takeProfit;
-    const tp1Price = average * (1 + tp1 / 100);
-    const recovery = (tp1Price / currentPrice - 1) * 100;
-    const averageDrop = Math.max(0, (1 - average / entryPrice) * 100);
-    return { filled: filled.length, invested, averageDrop, unrealized, recovery };
-  }, [appliedScenarioDrop, baseOrder, ladder, takeProfit, targets]);
+    const state = positionMath(baseOrder, filled, tp1Pct, appliedScenarioDrop);
+    return {
+      filled: filled.length,
+      invested: state.invested,
+      averageDrop: state.averageDrop,
+      unrealized: state.unrealized,
+      tpVsInitial: state.tpVsInitial,
+      recovery: state.recoveryToTp,
+    };
+  }, [appliedScenarioDrop, baseOrder, ladder, tp1Pct]);
 
   const tpTotal = targets.reduce((sum, target) => sum + Number(target.allocationPct || 0), 0);
   const tpAscending = targets.every((target, index) => index === 0 || target.profitPct > targets[index - 1].profitPct);
@@ -151,8 +189,8 @@ export default function DcaStrategyMap({
         <div className={cfg.strategyMapExitTags}>
           <span>Exit map</span>
           <div className={cfg.chips}>
-            {targets.map((target, index) => <span key={index}>TP{index + 1} +{target.profitPct}% · {target.allocationPct}%</span>)}
-            {stopEnabled && <span>SL -{stopPct}%</span>}
+            {targets.map((target, index) => <span key={index}>TP{index + 1} +{target.profitPct}% from avg · {target.allocationPct}%</span>)}
+            {stopEnabled && <span>SL -{stopPct}% from avg</span>}
           </div>
         </div>
       </div>
@@ -162,7 +200,7 @@ export default function DcaStrategyMap({
           <div className={cfg.strategyMapSectionHead}><div><strong>Outcome</strong><small>What the complete plan means financially.</small></div></div>
           <div className={`${cfg.summaryGrid} ${cfg.strategyMapMetrics}`}>
             <div><span>Final average entry</span><b>-{map.finalAverageDrop.toFixed(2)}%</b></div>
-            <div><span>Orders / position</span><b>{ladder.length + 1}</b></div>
+            <div><span>TP1 after full DCA</span><b>{signedPct(map.finalTpVsInitial)}</b></div>
             <div><span>Position capacity</span><b>{maxActivePositions}</b></div>
             <div><span>TP targets</span><b>{targets.length}</b></div>
           </div>
@@ -195,7 +233,7 @@ export default function DcaStrategyMap({
         <div><span>Unrealized P/L</span><b>{signedPct(scenario.unrealized)}</b></div>
         <div><span>Recovery to TP1</span><b>{scenario.recovery <= 0 ? "Target reached" : signedPct(scenario.recovery)}</b></div>
       </div>
-      <small>Scenario calculations normalize the initial entry price to 100, so the percentages remain valid for any selected market.</small>
+      <small>TP1 is +{tp1Pct.toFixed(2)}% from the simulated weighted average entry, placing TP1 at {signedPct(scenario.tpVsInitial)} versus the original entry. Recovery is the rise required from the simulated current price to that TP1 level. Preview uses normalized theoretical fills; live fills can differ slightly because of fees and exchange rounding.</small>
     </div>
   </section>;
 }
