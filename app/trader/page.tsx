@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import TraderExperienceLayer from "./TraderExperienceLayer";
+import TraderV2FullShell from "./TraderV2FullShell";
 
 export const metadata: Metadata = {
   title: "LabNarrative Trading",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function TraderPage() {
-  return <TraderExperienceLayer />;
+  return <TraderV2FullShell />;
 }
