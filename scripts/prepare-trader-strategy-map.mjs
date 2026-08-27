@@ -99,21 +99,32 @@ const layoutCss = `
 .strategyMapBody{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,.75fr);gap:12px;padding:12px 15px}
 .strategyMapLadder,.strategyMapOutcomes{min-width:0}
 .strategyMapOutcomes{display:grid;gap:12px;align-content:start}
-.strategyMapSectionHead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}
-.strategyMapSectionHead>div{display:grid;gap:3px}
+.strategyMapSectionHead{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px}
+.strategyMapSectionHead>div{display:grid;gap:2px}
+.strategyMapSectionHead strong,.strategyMapExitTags>span,.strategyScenarioHead strong{font-size:12px;line-height:1.2;font-weight:600}
+.strategyMapSectionHead small,.strategyScenarioHead small,.strategyScenario>small{font-size:9px;line-height:1.35;opacity:.55}
 .strategyMapLadder .previewHead,.strategyMapLadder .previewRow{grid-template-columns:1.25fr .75fr .9fr .9fr .9fr}
-.strategyMapExitTags{display:grid;gap:7px;margin-top:10px}
+.strategyMapExitTags{display:grid;gap:6px;margin-top:10px}
+.strategyMapExitTags .chips span{font-size:9px;line-height:1.2}
 .strategyMapMetrics{grid-template-columns:1fr 1fr}
-.strategyChecks{display:grid;gap:6px}
-.strategyCheck{display:grid;grid-template-columns:18px 1fr;gap:7px;align-items:start}
-.strategyCheck>span{display:grid;place-items:center}
-.strategyScenario{display:grid;gap:9px;padding:12px 15px 14px}
+.strategyMap .previewSummary>div>span,.strategyMap .summaryGrid>div>span{font-size:9px;line-height:1.2;opacity:.58}
+.strategyMap .previewSummary>div>b,.strategyMap .summaryGrid>div>b{font-size:11px;line-height:1.2;font-weight:600}
+.strategyChecks{grid-template-columns:1fr 1fr;gap:7px}
+.strategyCheck{min-width:0}
+.strategyCheck>span{display:flex;align-items:center;gap:5px}
+.strategyCheck>span>i{font-size:9px;line-height:1;font-style:normal;opacity:.7}
+.strategyCheck>b{white-space:normal;overflow-wrap:anywhere}
+.strategyChecks .strategyCheck:last-child:nth-child(odd){grid-column:1/-1}
+.strategyScenario{display:grid;gap:8px;padding:12px 15px 14px}
 .strategyScenarioHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.strategyScenarioHead>div{display:grid;gap:3px}
-.strategyScenario input[type=range]{width:100%}
+.strategyScenarioHead>div{display:grid;gap:2px}
+.strategyScenarioHead>b{font-size:12px;line-height:1.2;font-weight:600}
+.strategyScenarioScale{display:flex;justify-content:space-between;font-size:9px;line-height:1;opacity:.55}
+.strategyScenario input[type=range]{width:100%;direction:rtl}
 .strategyScenarioMetrics{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media(max-width:980px){.strategyMapBody{grid-template-columns:1fr}.strategyScenarioMetrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:680px){.strategyMap .previewSummary,.strategyScenarioMetrics,.strategyMapMetrics{grid-template-columns:1fr 1fr}.strategyMapBody{padding:10px}.strategyScenario{padding:10px}.strategyMapLadder .previewHead,.strategyMapLadder .previewRow{grid-template-columns:1fr .8fr .9fr}.strategyMapLadder .previewHead span:nth-child(4),.strategyMapLadder .previewHead span:nth-child(5),.strategyMapLadder .previewRow span:nth-child(4),.strategyMapLadder .previewRow span:nth-child(5){display:none}.strategyScenarioHead{flex-direction:column}}
+@media(max-width:680px){.strategyMap .previewSummary,.strategyScenarioMetrics,.strategyMapMetrics,.strategyChecks{grid-template-columns:1fr 1fr}.strategyMapBody{padding:10px}.strategyScenario{padding:10px}.strategyMapLadder .previewHead,.strategyMapLadder .previewRow{grid-template-columns:1fr .8fr .9fr}.strategyMapLadder .previewHead span:nth-child(4),.strategyMapLadder .previewHead span:nth-child(5),.strategyMapLadder .previewRow span:nth-child(4),.strategyMapLadder .previewRow span:nth-child(5){display:none}.strategyScenarioHead{flex-direction:column}}
+@media(max-width:480px){.strategyChecks{grid-template-columns:1fr}.strategyChecks .strategyCheck:last-child:nth-child(odd){grid-column:auto}}
 `;
 
 for (const forbidden of ["#", "rgb(", "rgba(", "hsl(", "hsla(", "color:", "background:", "font-family", "font:"]) {
@@ -131,6 +142,8 @@ for (const required of [
   "takeProfitTargets={form.takeProfitTargets}",
   ".strategyMapBody{",
   ".strategyScenarioMetrics{",
+  ".strategyChecks{grid-template-columns:1fr 1fr",
+  ".strategyScenario input[type=range]{width:100%;direction:rtl}",
 ]) {
   if (!(shell.includes(required) || source.includes(required) || css.includes(required))) throw new Error(`Strategy Map output missing: ${required}`);
 }
@@ -140,4 +153,4 @@ if (source.includes("<h3>Strategy Preview</h3>")) throw new Error("Legacy Strate
 fs.writeFileSync(shellPath, shell);
 fs.writeFileSync(configuratorPath, source);
 fs.writeFileSync(cssPath, css);
-console.log("Prepared advanced LabNarrative Strategy Map with DCA outcomes, live checks, account exposure and scenario simulation; theme and execution contracts unchanged.");
+console.log("Prepared advanced LabNarrative Strategy Map with compact inherited typography, boxed live checks, DCA outcomes, account exposure and scenario simulation; theme and execution contracts unchanged.");
