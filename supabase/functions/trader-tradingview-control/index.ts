@@ -34,9 +34,7 @@ Deno.serve(async(req:Request)=>{
       enabled=body.enabled===true;
       if(enabled&&!current)current=token();
       const{error}=await admin.from("trader_bots").update({tradingview_token:current||null,tradingview_enabled:enabled,updated_at:new Date().toISOString()}).eq("id",bot.id);if(error)throw error;
-    }else if(action==="get_link"){
-      if(!current){current=token();enabled=true;const{error}=await admin.from("trader_bots").update({tradingview_token:current,tradingview_enabled:true,updated_at:new Date().toISOString()}).eq("id",bot.id);if(error)throw error;}
-    }else return json({error:"unknown_action"},400);
-    return json({ok:true,enabled,token:current,webhookUrl:"https://platform.labnarrative.com/api/trader/tradingview",entryRuleEnabled:isTvRule(bot.conditions)});
+    }else if(action!=="get_link")return json({error:"unknown_action"},400);
+    return json({ok:true,enabled,token:enabled?current:"",webhookUrl:"https://platform.labnarrative.com/api/trader/tradingview",entryRuleEnabled:isTvRule(bot.conditions)});
   }catch(error){console.error("trader-tradingview-control",error);return json({error:error instanceof Error?error.message:String(error)},500)}
 });
