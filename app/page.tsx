@@ -12,7 +12,7 @@ const APP_URL = "https://platform.labnarrative.com/trader";
 const workflow = [
   ["01", "Build the bot", "Set the pair, base order, averaging orders, deviation, scaling, take profit and risk controls in one focused DCA workflow."],
   ["02", "Test with paper money", "Run the strategy without putting real capital at risk. Watch fills, active trades and closed trades behave as the bot runs."],
-  ["03", "Connect when ready", "Move from simulation to your Binance Spot connection only after you understand the strategy and the workflow."],
+  ["03", "Connect when ready", "Move from simulation to a supported exchange connection only after you understand the strategy and the workflow."],
   ["04", "Review and iterate", "Keep bots, positions and trade history together so each change starts from evidence rather than memory or guesswork."],
 ];
 
@@ -20,12 +20,12 @@ const features = [
   ["DCA automation", "Build long-only crypto DCA bots with configurable averaging, scaling and take-profit logic."],
   ["Paper-first workflow", "Test the complete bot experience with simulated capital before deciding whether to connect an exchange."],
   ["Trading workspace", "See your portfolio, bots, active trades and closed trades without jumping between disconnected tools."],
-  ["Binance Spot", "Connect the exchange you already use and keep execution focused on Spot automation."],
+  ["Exchange connections", "Use the same automation workflow as additional supported crypto-exchange integrations become available."],
 ];
 
 export default function HomePage() {
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} crypto-public-page`}>
       <header className={styles.header}>
         <a className={styles.wordmark} href="/" aria-label="LabNarrative home">
           LabNarrative
@@ -45,18 +45,18 @@ export default function HomePage() {
           <p className={styles.eyebrow}>Crypto automation for disciplined traders</p>
           <h1>Build the strategy.<br /><em>Test the logic.</em><br />Automate the execution.</h1>
           <p className={styles.heroLead}>
-            LabNarrative is a focused crypto trading workspace for DCA automation. Start with paper money, understand how your bot behaves, then connect Binance Spot when you are ready.
+            LabNarrative is a focused crypto trading workspace for DCA automation. Start with paper money, understand how your bot behaves, then connect a supported exchange when you are ready.
           </p>
           <div className={styles.heroActions}>
             <a className={styles.primary} href={APP_URL}>Start with Paper Trading →</a>
             <a className={styles.secondary} href="#workflow">See how it works</a>
           </div>
           <div className={styles.heroTags}>
-            <span>Paper first</span><span>Binance Spot</span><span>Long only</span><span>DCA focused</span>
+            <span>Paper first</span><span>Exchange-ready</span><span>Long only</span><span>DCA focused</span>
           </div>
         </div>
 
-        <div className={styles.productMock} aria-label="Illustration of the LabNarrative trading workspace">
+        <div className={`${styles.productMock} crypto-dark-panel`} aria-label="Illustration of the LabNarrative trading workspace">
           <div className={styles.mockTop}><span /><span /><span /><b>LabNarrative</b><small>Paper Account</small></div>
           <div className={styles.mockBody}>
             <aside className={styles.mockSide}>
@@ -80,7 +80,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.trustBar}>
+      <section className={`${styles.trustBar} crypto-dark-panel`}>
         <span>Automate rules, not emotions.</span>
         <span>Test before real capital.</span>
         <span>Keep the workflow fast and clear.</span>
@@ -93,7 +93,7 @@ export default function HomePage() {
         </div>
         <div className={styles.featureGrid}>
           {features.map(([title, copy], index) => (
-            <article className={styles.featureCard} key={title}>
+            <article className={`${styles.featureCard} crypto-dark-panel`} key={title}>
               <span>0{index + 1}</span><h3>{title}</h3><p>{copy}</p>
             </article>
           ))}
@@ -112,7 +112,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className={styles.story} id="why">
+      <section className={`${styles.story} crypto-dark-panel`} id="why">
         <div className={styles.storyMain}>
           <p className={styles.label}>Why LabNarrative</p>
           <h2>Built after years of actually using crypto automation.</h2>
@@ -120,7 +120,7 @@ export default function HomePage() {
             LabNarrative was started from the user side of the screen: years of building DCA bots, changing strategies, testing ideas and learning what makes an automation platform worth opening every day. The goal is not to copy another platform. It is to keep what serious traders need, remove what they do not, and make strategy iteration clearer over time.
           </p>
         </div>
-        <aside className={styles.storyCard}>
+        <aside className={`${styles.storyCard} crypto-dark-panel`}>
           <small>The operating principle</small>
           <strong>Automation should make your strategy more consistent — not make you more confident than the evidence deserves.</strong>
           <span>LabNarrative does not promise profits. Crypto trading involves substantial risk.</span>
@@ -143,7 +143,7 @@ export default function HomePage() {
         <a className={styles.primary} href={APP_URL}>Open LabNarrative →</a>
       </section>
 
-      <footer className={styles.footer}>
+      <footer className={`${styles.footer} crypto-dark-panel`}>
         <a className={styles.wordmark} href="/">LabNarrative</a>
         <div><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
         <p>Software for trading automation. Not financial advice. Trading digital assets involves risk.</p>
