@@ -19,6 +19,8 @@ type Props = {
   stopPct: number;
 };
 
+type CheckProps = { ok: boolean; label: string; detail: string };
+
 const money = (value: number) => new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -26,6 +28,16 @@ const money = (value: number) => new Intl.NumberFormat("en-US", {
 }).format(Number.isFinite(value) ? value : 0);
 
 const signedPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+
+function StrategyCheck({ ok, label, detail }: CheckProps) {
+  return <div className={cfg.strategyCheck} style={{ gridTemplateColumns: "16px minmax(0,1fr)", gap: 6, alignItems: "center", padding: "3px 0" }}>
+    <span style={{ width: 16, height: 16, fontSize: 9, lineHeight: 1, opacity: .72 }}>{ok ? "✓" : "!"}</span>
+    <div style={{ display: "grid", gap: 1, minWidth: 0 }}>
+      <b style={{ fontSize: 9, lineHeight: 1.1, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</b>
+      <small style={{ fontSize: 10, lineHeight: 1.2, opacity: .72 }}>{detail}</small>
+    </div>
+  </div>;
+}
 
 export default function DcaStrategyMap({
   baseOrder,
@@ -160,13 +172,13 @@ export default function DcaStrategyMap({
         </div>
 
         <div>
-          <div className={`${cfg.strategyMapSectionHead} ${cfg.strategyChecksHead}`}><div><strong>Live checks</strong><small>Updates instantly.</small></div></div>
-          <div className={cfg.strategyChecks}>
-            <div className={cfg.strategyCheck}><span>{capitalValid ? "✓" : "!"}</span><div><b>Capital ladder</b><small>{capitalValid ? `${money(plannedCapitalPerPosition)} / position` : "Order amounts must be greater than zero."}</small></div></div>
-            <div className={cfg.strategyCheck}><span>{tpValid ? "✓" : "!"}</span><div><b>TP allocation</b><small>{tpValid ? `100% across ${targets.length} target${targets.length === 1 ? "" : "s"}` : `Need ascending targets and 100% allocation · ${tpTotal.toFixed(2)}% now`}</small></div></div>
-            <div className={cfg.strategyCheck}><span>{ladderValid ? "✓" : "!"}</span><div><b>DCA coverage</b><small>{ladderValid ? `${map.deepest.toFixed(2)}% below entry` : `${map.deepest.toFixed(2)}% is invalid · must stay below 100%`}</small></div></div>
-            <div className={cfg.strategyCheck}><span>{activeWindowValid ? "✓" : "!"}</span><div><b>Active DCA window</b><small>{activeWindowValid ? `${activeDcaOrders} of ${ladder.length} active at once` : "Active orders exceed the configured ladder."}</small></div></div>
-            {available != null && <div className={cfg.strategyCheck}><span>{withinAvailable ? "✓" : "!"}</span><div><b>Capital exposure</b><small>{withinAvailable ? (exposurePct == null ? `${money(maximumBotCapital)} max · ${money(available)} available` : `${money(maximumBotCapital)} max · ${exposurePct.toFixed(1)}% of available`) : `Need ${money(maximumBotCapital)} · ${money(available)} available · ${money(maximumBotCapital - available)} short`}</small></div></div>}
+          <div className={cfg.strategyMapSectionHead} style={{ marginBottom: 5 }}><div><strong style={{ fontSize: 12, lineHeight: 1.15 }}>Live checks</strong><small style={{ fontSize: 9, lineHeight: 1.2, opacity: .65 }}>Updates instantly.</small></div></div>
+          <div className={cfg.strategyChecks} style={{ gap: 4 }}>
+            <StrategyCheck ok={capitalValid} label="Capital ladder" detail={capitalValid ? `${money(plannedCapitalPerPosition)} / position` : "Order amounts must be greater than zero."}/>
+            <StrategyCheck ok={tpValid} label="TP allocation" detail={tpValid ? `100% across ${targets.length} target${targets.length === 1 ? "" : "s"}` : `Need ascending targets and 100% allocation · ${tpTotal.toFixed(2)}% now`}/>
+            <StrategyCheck ok={ladderValid} label="DCA coverage" detail={ladderValid ? `${map.deepest.toFixed(2)}% below entry` : `${map.deepest.toFixed(2)}% is invalid · must stay below 100%`}/>
+            <StrategyCheck ok={activeWindowValid} label="Active DCA window" detail={activeWindowValid ? `${activeDcaOrders} of ${ladder.length} active at once` : "Active orders exceed the configured ladder."}/>
+            {available != null && <StrategyCheck ok={withinAvailable} label="Capital exposure" detail={withinAvailable ? (exposurePct == null ? `${money(maximumBotCapital)} max · ${money(available)} available` : `${money(maximumBotCapital)} max · ${exposurePct.toFixed(1)}% of available`) : `Need ${money(maximumBotCapital)} · ${money(available)} available · ${money(maximumBotCapital - available)} short`}/>}          
           </div>
         </div>
       </div>
@@ -177,8 +189,8 @@ export default function DcaStrategyMap({
         <div><strong>Price scenario</strong><small>Drag left from ENTRY to simulate a deeper market drop.</small></div>
         <b>{appliedScenarioDrop === 0 ? "ENTRY" : `-${appliedScenarioDrop.toFixed(1)}%`}</b>
       </div>
-      <div className={cfg.strategyScenarioScale}><span>-{scenarioMax.toFixed(0)}%</span><span>ENTRY</span></div>
-      <input className={cfg.strategyScenarioRange} aria-label="Price drop scenario" type="range" min="0" max={scenarioMax} step="0.5" value={appliedScenarioDrop} onChange={(event) => setScenarioDrop(Number(event.target.value))}/>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, lineHeight: 1, opacity: .6 }}><span>-{scenarioMax.toFixed(0)}%</span><span>ENTRY</span></div>
+      <input aria-label="Price drop scenario" style={{ width: "100%", direction: "rtl" }} type="range" min="0" max={scenarioMax} step="0.5" value={appliedScenarioDrop} onChange={(event) => setScenarioDrop(Number(event.target.value))}/>
       <div className={`${cfg.summaryGrid} ${cfg.strategyScenarioMetrics}`}>
         <div><span>DCA filled</span><b>{scenario.filled} / {ladder.length}</b></div>
         <div><span>Invested</span><b>{money(scenario.invested)}</b></div>
