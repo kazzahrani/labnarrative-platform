@@ -12,6 +12,7 @@ type Props = {
   activeDcaOrders: number;
   maxActivePositions: number;
   plannedCapitalPerPosition: number;
+  availableBalance?: number;
   takeProfit: number;
   takeProfitTargets?: TpTarget[];
   stopEnabled: boolean;
@@ -32,6 +33,7 @@ export default function DcaStrategyMap({
   activeDcaOrders,
   maxActivePositions,
   plannedCapitalPerPosition,
+  availableBalance,
   takeProfit,
   takeProfitTargets,
   stopEnabled,
@@ -103,6 +105,9 @@ export default function DcaStrategyMap({
   const activeWindowValid = activeDcaOrders >= 0 && activeDcaOrders <= ladder.length;
   const tpValid = targets.length > 0 && targets.every((target) => target.profitPct > 0 && target.allocationPct > 0) && Math.abs(tpTotal - 100) <= 0.01 && tpAscending;
   const maximumBotCapital = plannedCapitalPerPosition * Math.max(1, maxActivePositions);
+  const available = Number.isFinite(availableBalance) ? Math.max(0, Number(availableBalance)) : null;
+  const exposurePct = available != null && available > 0 ? maximumBotCapital / available * 100 : null;
+  const withinAvailable = available == null || maximumBotCapital <= available + 0.01;
 
   return <section className={`${cfg.preview} ${cfg.strategyMap}`}>
     <div className={cfg.cardHead}>
@@ -161,6 +166,7 @@ export default function DcaStrategyMap({
             <div className={cfg.strategyCheck}><span>{tpValid ? "✓" : "!"}</span><div>{tpValid ? "Take Profit allocation is valid and totals 100%." : `Take Profit targets need ascending prices and 100% total allocation (currently ${tpTotal.toFixed(2)}%).`}</div></div>
             <div className={cfg.strategyCheck}><span>{ladderValid ? "✓" : "!"}</span><div>{ladderValid ? `DCA ladder remains above zero and covers ${map.deepest.toFixed(2)}%.` : `DCA ladder reaches ${map.deepest.toFixed(2)}% and must stay below 100%.`}</div></div>
             <div className={cfg.strategyCheck}><span>{activeWindowValid ? "✓" : "!"}</span><div>{activeWindowValid ? `${activeDcaOrders} of ${ladder.length} DCA orders may be active at once.` : "Active DCA orders cannot exceed the configured DCA ladder."}</div></div>
+            {available != null && <div className={cfg.strategyCheck}><span>{withinAvailable ? "✓" : "!"}</span><div>{withinAvailable ? (exposurePct == null ? `Maximum planned exposure is ${money(maximumBotCapital)} and available balance is ${money(available)}.` : `Maximum planned exposure uses ${exposurePct.toFixed(2)}% of the available ${money(available)}.`) : `Maximum planned exposure exceeds the available ${money(available)} by ${money(maximumBotCapital - available)}.`}</div></div>}
           </div>
         </div>
       </div>

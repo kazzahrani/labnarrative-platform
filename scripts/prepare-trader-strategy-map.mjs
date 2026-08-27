@@ -2,13 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const shellPath = path.join(root, "app", "trader", "TraderV2FullShell.tsx");
 const configuratorPath = path.join(root, "app", "trader", "DcaBotConfigurator.tsx");
 const cssPath = path.join(root, "app", "trader", "dca-bot-configurator.module.css");
 
-if (!fs.existsSync(configuratorPath) || !fs.existsSync(cssPath)) {
+if (!fs.existsSync(shellPath) || !fs.existsSync(configuratorPath) || !fs.existsSync(cssPath)) {
   throw new Error("Strategy Map targets are missing");
 }
 
+let shell = fs.readFileSync(shellPath, "utf8");
 let source = fs.readFileSync(configuratorPath, "utf8");
 let css = fs.readFileSync(cssPath, "utf8");
 
@@ -31,6 +33,35 @@ const sectionEnd = (text, start) => {
   throw new Error("Strategy Map could not resolve section boundary");
 };
 
+// Feed the already-loaded account availability into the configurator. This is presentation-only:
+// no new network request, persistence field, or execution contract is introduced.
+const shellAccountNeedle = '  accountKind={currentAccount.kind}\n  botId={selectedBotId}';
+if (!shell.includes('availableBalance={displayedAvailable}')) {
+  if (!shell.includes(shellAccountNeedle)) throw new Error("Strategy Map could not find final configurator account props");
+  shell = shell.replace(
+    shellAccountNeedle,
+    '  accountKind={currentAccount.kind}\n  availableBalance={displayedAvailable}\n  botId={selectedBotId}',
+  );
+}
+
+const propsNeedle = '  accountKind: "paper" | "real";\n  botId: string | null;';
+if (!source.includes('  availableBalance?: number;')) {
+  if (!source.includes(propsNeedle)) throw new Error("Strategy Map could not find configurator Props account fields");
+  source = source.replace(
+    propsNeedle,
+    '  accountKind: "paper" | "real";\n  availableBalance?: number;\n  botId: string | null;',
+  );
+}
+
+const signatureNeedle = 'export default function DcaBotConfigurator({mode,accountId,accountKind,botId,onCancel,onSaved,onError}:Props){';
+if (!source.includes('accountKind,availableBalance,botId')) {
+  if (!source.includes(signatureNeedle)) throw new Error("Strategy Map could not find configurator function signature");
+  source = source.replace(
+    signatureNeedle,
+    'export default function DcaBotConfigurator({mode,accountId,accountKind,availableBalance,botId,onCancel,onSaved,onError}:Props){',
+  );
+}
+
 const cfgImport = 'import cfg from "./dca-bot-configurator.module.css";';
 if (!source.includes(cfgImport)) throw new Error("Strategy Map could not find configurator CSS import");
 if (!source.includes('import DcaStrategyMap from "./DcaStrategyMap";')) {
@@ -52,6 +83,7 @@ const strategyMapCall = `<DcaStrategyMap
       activeDcaOrders={form.limitSafetyOrders}
       maxActivePositions={form.maxActiveTrades}
       plannedCapitalPerPosition={plannedPerTrade}
+      availableBalance={availableBalance}
       takeProfit={form.takeProfit}
       takeProfitTargets={form.takeProfitTargets}
       stopEnabled={form.stopEnabled}
@@ -91,17 +123,21 @@ for (const forbidden of ["#", "rgb(", "rgba(", "hsl(", "hsla(", "color:", "backg
 if (!css.includes(".strategyMap{")) css += layoutCss;
 
 for (const required of [
+  'availableBalance={displayedAvailable}',
+  'availableBalance={availableBalance}',
+  '  availableBalance?: number;',
   'import DcaStrategyMap from "./DcaStrategyMap";',
   "<DcaStrategyMap",
   "takeProfitTargets={form.takeProfitTargets}",
   ".strategyMapBody{",
   ".strategyScenarioMetrics{",
 ]) {
-  if (!(source.includes(required) || css.includes(required))) throw new Error(`Strategy Map output missing: ${required}`);
+  if (!(shell.includes(required) || source.includes(required) || css.includes(required))) throw new Error(`Strategy Map output missing: ${required}`);
 }
 
 if (source.includes("<h3>Strategy Preview</h3>")) throw new Error("Legacy Strategy Preview survived Strategy Map replacement");
 
+fs.writeFileSync(shellPath, shell);
 fs.writeFileSync(configuratorPath, source);
 fs.writeFileSync(cssPath, css);
-console.log("Prepared advanced LabNarrative Strategy Map with DCA outcomes, live checks and scenario simulation; theme and execution contracts unchanged.");
+console.log("Prepared advanced LabNarrative Strategy Map with DCA outcomes, live checks, account exposure and scenario simulation; theme and execution contracts unchanged.");
