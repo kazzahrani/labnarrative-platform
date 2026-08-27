@@ -120,3 +120,4 @@ console.log("Prepared compact side-by-side Capital / Exit plans (layout only; th
 await import("./prepare-trader-strategy-map.mjs");
 await import("./prepare-trader-automations-hub.mjs");
 await import("./prepare-trader-tradingview-link-v1.mjs");
+await import("./prepare-trader-tv-strategy-v1.mjs");
