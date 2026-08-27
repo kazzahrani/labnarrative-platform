@@ -37,3 +37,4 @@ for(const marker of[
 if(configurator.includes("Long only · one active position")||configurator.includes("One long position"))throw new Error("TradingView Strategy final output regressed to one-position model");
 fs.writeFileSync(shellPath,source);
 console.log("Polished TradingView Strategy archive/modal UI and verified final multi-symbol order-stream output.");
+await import("./prepare-trader-tv-position-limit.mjs");
