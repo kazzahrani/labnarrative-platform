@@ -18,6 +18,37 @@ Deno.serve(async(req:Request)=>{
   if(!url||!service)return json({error:"server_configuration_missing"},500);
   const raw=await req.text();
   const body=(()=>{try{return JSON.parse(raw||"{}") as Json}catch{return{}}})();
+
+  // TradingView Strategy positions must be closed by TradingView (or the position
+  // close path) before the automation can be archived. Enforce this server-side,
+  // not only through the disabled Archive button in the browser.
+  if(String(body.action||"")==="close_bot"){
+    const accountId=String(body.accountId||"").trim(),botId=String(body.botId||"").trim();
+    const bearer=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"").trim();
+    if(accountId&&botId&&bearer){
+      try{
+        const guardDb=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
+        const{data:userData}=await guardDb.auth.getUser(bearer),user=userData.user;
+        if(user){
+          const{data:account,error:accountError}=await guardDb.from("trader_accounts").select("id").eq("id",accountId).eq("owner_user_id",user.id).eq("status","active").maybeSingle();
+          if(accountError)throw accountError;
+          if(account){
+            const{data:bot,error:botError}=await guardDb.from("trader_bots").select("id,client_state").eq("account_id",accountId).eq("client_id",botId).maybeSingle();
+            if(botError)throw botError;
+            if(bot&&String(obj(bot.client_state).automationType||"")==="tradingview_strategy"){
+              const{count,error:tradeError}=await guardDb.from("trader_trades").select("id",{count:"exact",head:true}).eq("account_id",accountId).eq("bot_id",bot.id).eq("status","Active");
+              if(tradeError)throw tradeError;
+              if((count??0)>0)return json({error:"strategy_has_active_position"},409);
+            }
+          }
+        }
+      }catch(error){
+        console.error("trader-account-control-archive-guard",error);
+        return json({error:"trader_account_control_failed"},400);
+      }
+    }
+  }
+
   let response:Response;
   try{
     response=await fetch(`${url}/functions/v1/trader-account-control-core`,{
