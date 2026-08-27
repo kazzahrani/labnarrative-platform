@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
 import cfg from "./dca-bot-configurator.module.css";
 
-type LinkState = { ok?:boolean; enabled:boolean; token:string; webhookUrl:string; entryRuleEnabled:boolean; error?:string };
+type LinkState = { ok?:boolean; enabled:boolean; token:string; webhookUrl:string; entryRuleEnabled:boolean; accountKind?:"paper"|"real"; maxSingleOrder?:number|null; error?:string };
 type Props = { accountId:string; botId:string|null; entryRuleEnabled:boolean };
 
 async function invokeLink(body:Record<string,unknown>) {
@@ -37,6 +37,14 @@ export default function DcaTradingViewLink({ accountId, botId, entryRuleEnabled 
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [accountId, botId]);
+
+  const liveOrderCap = link?.accountKind === "real" && Number.isFinite(Number(link.maxSingleOrder)) && Number(link.maxSingleOrder) > 0 ? Number(link.maxSingleOrder) : null;
+  const fundsAllowed = funds > 0 && (liveOrderCap == null || funds <= liveOrderCap + 1e-9);
+
+  useEffect(() => {
+    if (liveOrderCap == null) return;
+    setFunds(current => current > 0 ? Math.min(current, liveOrderCap) : liveOrderCap);
+  }, [liveOrderCap]);
 
   const webhookUrl = link?.webhookUrl || "https://platform.labnarrative.com/api/trader/tradingview";
   const messages = useMemo(() => {
@@ -81,7 +89,7 @@ export default function DcaTradingViewLink({ accountId, botId, entryRuleEnabled 
       <div className={cfg.summaryGrid} style={{gridTemplateColumns:"repeat(3,minmax(0,1fr))",marginTop:8}}>
         <div><span>START TRADE</span><b>TradingView entry</b><small>{entryRuleEnabled?"Opens this DCA position from your alert.":"Choose TradingView Custom Signal as the entry rule first."}</small><button type="button" className={cfg.addButton} disabled={!entryRuleEnabled} onClick={()=>void copy(messages.start,"Start message")}>Copy message</button></div>
         <div><span>CLOSE POSITION</span><b>Market exit</b><small>Closes the active DCA position at market.</small><button type="button" className={cfg.addButton} onClick={()=>void copy(messages.close,"Close message")}>Copy message</button></div>
-        <div><span>ADD FUNDS</span><b>Quote currency</b><small>Adds USDT to the active position and updates average entry.</small><label><span>Amount</span><div className={cfg.unit}><input type="number" min="0" step="0.01" value={funds} onChange={event=>setFunds(Number(event.target.value))}/><b>USDT</b></div></label><button type="button" className={cfg.addButton} disabled={!(funds>0)} onClick={()=>void copy(messages.add,"Add Funds message")}>Copy message</button></div>
+        <div><span>ADD FUNDS</span><b>Quote currency</b><small>Adds USDT to the active position and updates average entry.</small><label><span>Amount</span><div className={cfg.unit}><input type="number" min="0" max={liveOrderCap ?? undefined} step="0.01" value={funds} onChange={event=>setFunds(Number(event.target.value))}/><b>USDT</b></div></label>{liveOrderCap!=null&&<small>{funds>liveOrderCap?`Exceeds your ${liveOrderCap.toLocaleString()} USDT live-order limit.`:`Maximum allowed by your Real Account safety settings: ${liveOrderCap.toLocaleString()} USDT.`}</small>}<button type="button" className={cfg.addButton} disabled={!fundsAllowed} onClick={()=>void copy(messages.add,"Add Funds message")}>Copy message</button></div>
       </div>
       <div className={cfg.liveNote} style={{marginTop:8}}>Use the same webhook URL for all three actions. The message contains a revocable key scoped only to this automation; never use a Binance API key in TradingView.</div>
     </>:<div className={cfg.immediate}>TradingView control is off. Connect it only if you want external START, CLOSE or ADD FUNDS commands for this automation.</div>}
