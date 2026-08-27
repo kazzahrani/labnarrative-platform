@@ -46,7 +46,7 @@ source=source.replace(
 );
 source=source.replace(
   '<button className={styles.exchangeChoice} style={{marginTop:8}} disabled><span className={styles.exchangeChoiceLogo}>TV</span><div><strong>TradingView Strategy</strong><small>Execute a tested TradingView strategy through a connected exchange or broker using TradingView alerts and webhooks.</small></div><span>SOON</span></button>',
-  '<button className={styles.exchangeChoice} style={{marginTop:8}} onClick={() => { setAutomationPickerOpen(false); setBotModalMode(null); setSelectedBotId(null); setTvStrategyMode("create"); }}><span className={styles.exchangeChoiceLogo}>TV</span><div><strong>TradingView Strategy</strong><small>Execute a tested TradingView strategy through this Binance Spot account using one order-fill alert.</small></div><span>CREATE</span></button>',
+  '<button className={styles.exchangeChoice} style={{marginTop:8}} onClick={() => { setAutomationPickerOpen(false); setBotModalMode(null); setSelectedBotId(null); setTvStrategyMode("create"); }}><span className={styles.exchangeChoiceLogo}>TV</span><div><strong>TradingView Strategy</strong><small>TradingView supplies symbol, size, entry and exit through one order-fill alert.</small></div><span>CREATE</span></button>',
 );
 source=source.replace(
   'Coming Soon options are visible for roadmap clarity but cannot be launched yet.',
@@ -65,8 +65,13 @@ required(
   'Automation row identity',
 );
 required(
+  '<span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</span>',
+  '{bot.automationType === "tradingview_strategy" ? <span className={dca.botCell}>From TradingView</span> : <span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</span>}',
+  'Dynamic strategy market display',
+);
+required(
   '<span className={dca.botCell}>{money(botCapital(bot))}</span>',
-  '<span className={dca.botCell}>{money(bot.automationType === "tradingview_strategy" ? bot.baseOrder : botCapital(bot))}</span>',
+  '<span className={dca.botCell}>{bot.automationType === "tradingview_strategy" ? "TradingView sizing" : money(botCapital(bot))}</span>',
   'Automation capital display',
 );
 required(
@@ -78,11 +83,10 @@ required(
 const exchangeMarker='    {exchangeModal && <div className={styles.backdrop}';
 if(!source.includes('TRADINGVIEW STRATEGY</small><h2>')){
   if(!source.includes(exchangeMarker))throw new Error("TradingView Strategy could not find modal insertion point");
-  const modal=`    {tvStrategyMode && currentAccount && <div className={styles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setTvStrategyMode(null); }}><section className={styles.modal}><div className={styles.modalHead}><div><small>TRADINGVIEW STRATEGY</small><h2>{tvStrategyMode === "create" ? "New TradingView Strategy" : selectedBot?.name ?? "TradingView Strategy"}</h2><p>TradingView decides entry and exit. LabNarrative handles account-scoped execution.</p></div><div className={dca.rowActions}>{tvStrategyMode === "view" && selectedBot?.lifecycle !== "closed" && <button type="button" onClick={() => setTvStrategyMode("edit")}>Edit</button>}<button type="button" onClick={() => setTvStrategyMode(null)}>×</button></div></div><TradingViewStrategyConfigurator mode={tvStrategyMode} accountId={currentAccount.id} accountKind={currentAccount.kind} botId={tvStrategyMode === "create" ? null : selectedBotId} onCancel={() => tvStrategyMode === "edit" && selectedBotId ? setTvStrategyMode("view") : setTvStrategyMode(null)} onSaved={(savedBotId, action) => { if (savedBotId) setSelectedBotId(savedBotId); setTvStrategyMode("view"); setBotTab("Active"); setAutomationTypeFilter("TradingView Strategy"); setNotice(action === "create" ? "TradingView Strategy created. Connect TradingView and copy the single order-fill alert message." : "TradingView Strategy settings saved."); void loadWorkspace(true); }} onError={(message) => setError(message)}/></section></div>}\n\n`;
+  const modal=`    {tvStrategyMode && currentAccount && <div className={styles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setTvStrategyMode(null); }}><section className={styles.modal}><div className={styles.modalHead}><div><small>TRADINGVIEW STRATEGY</small><h2>{tvStrategyMode === "create" ? "New TradingView Strategy" : selectedBot?.name ?? "TradingView Strategy"}</h2><p>TradingView supplies the market and trade instructions. LabNarrative handles account-scoped execution.</p></div><div className={dca.rowActions}>{tvStrategyMode === "view" && selectedBot?.lifecycle !== "closed" && <button type="button" onClick={() => setTvStrategyMode("edit")}>Edit</button>}<button type="button" onClick={() => setTvStrategyMode(null)}>×</button></div></div><TradingViewStrategyConfigurator mode={tvStrategyMode} accountId={currentAccount.id} accountKind={currentAccount.kind} botId={tvStrategyMode === "create" ? null : selectedBotId} onCancel={() => tvStrategyMode === "edit" && selectedBotId ? setTvStrategyMode("view") : setTvStrategyMode(null)} onSaved={(savedBotId, action) => { if (savedBotId) setSelectedBotId(savedBotId); setTvStrategyMode("view"); setBotTab("Active"); setAutomationTypeFilter("TradingView Strategy"); setNotice(action === "create" ? "TradingView Strategy created. Connect TradingView and copy the single order-fill alert message." : "TradingView Strategy settings saved."); void loadWorkspace(true); }} onError={(message) => setError(message)}/></section></div>}\n\n`;
   source=source.replace(exchangeMarker,modal+exchangeMarker);changes+=1;
 }
 
-// Position payloads can now belong to either automation type; remove DCA-specific metadata for strategy positions.
 source=source.replace(
   '<small>{trade.botName} · {trade.executionMode}</small>',
   '<small>{trade.automationType === "tradingview_strategy" ? `TradingView Strategy · ${trade.botName} · ${trade.executionMode}` : `${trade.botName} · ${trade.executionMode}`}</small>',
@@ -98,8 +102,8 @@ for(const marker of[
   'setTvStrategyMode("create")',
   'setAutomationTypeFilter("TradingView Strategy")',
   'Close the active position before archiving this strategy.',
-  'One order-fill alert',
-])if(!source.includes(marker)&&marker!=="One order-fill alert")throw new Error(`TradingView Strategy output missing: ${marker}`);
+  'From TradingView',
+])if(!source.includes(marker))throw new Error(`TradingView Strategy output missing: ${marker}`);
 
 fs.writeFileSync(shellPath,source);
-console.log(`Prepared real TradingView Strategy V1 (${changes} shell changes; one BUY/SELL order-fill alert, one long Spot position, DCA engine isolated).`);
+console.log(`Prepared TradingView Strategy V2 (${changes} shell changes; dynamic symbol, strategy sizing, one BUY/SELL order-fill alert, DCA engine isolated).`);
