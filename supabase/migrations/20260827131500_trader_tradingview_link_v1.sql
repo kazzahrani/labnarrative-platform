@@ -10,21 +10,23 @@ create table if not exists public.trader_tradingview_events (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references public.trader_accounts(id) on delete cascade,
   bot_id uuid not null references public.trader_bots(id) on delete cascade,
-  action text not null check (action in ('START','CLOSE','ADD_FUNDS')),
+  action text not null check (action in ('start','close','add_funds')),
   pair text not null,
-  nonce text not null,
   amount numeric(28,12),
-  status text not null default 'received' check(status in ('received','executed','ignored','failed')),
-  error text,
-  payload jsonb not null default '{}'::jsonb,
+  signal_id text,
+  dedupe_key text,
+  status text not null default 'pending' check(status in ('pending','processing','processed','failed','ignored')),
   received_at timestamptz not null default now(),
-  executed_at timestamptz
+  processed_at timestamptz,
+  error text,
+  payload jsonb not null default '{}'::jsonb
 );
 
-create unique index if not exists trader_tradingview_events_nonce_uidx
-  on public.trader_tradingview_events(bot_id, nonce);
-create index if not exists trader_tradingview_events_bot_idx
-  on public.trader_tradingview_events(bot_id, received_at desc);
+create unique index if not exists trader_tradingview_events_dedupe_uidx
+  on public.trader_tradingview_events(bot_id, dedupe_key)
+  where dedupe_key is not null;
+create index if not exists trader_tradingview_events_pending_idx
+  on public.trader_tradingview_events(status, received_at);
 
 revoke all on table public.trader_tradingview_events from anon, authenticated;
 grant all on table public.trader_tradingview_events to service_role;
