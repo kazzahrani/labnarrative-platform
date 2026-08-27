@@ -6,6 +6,7 @@ const shellPath = path.join(root, "app/trader/TraderV2FullShell.tsx");
 const dcaCssPath = path.join(root, "app/trader/trader-dca-v2.module.css");
 const baseCssPath = path.join(root, "app/trader/trader-v2.module.css");
 const workstationPath = path.join(root, "app/trader/DcaTradeChartV2Workstation.tsx");
+const configuratorPath = path.join(root, "app/trader/DcaBotConfigurator.tsx");
 
 let shell = fs.readFileSync(shellPath, "utf8");
 if (!shell.includes('import DcaBotConfigurator from "./DcaBotConfigurator";')) {
@@ -50,6 +51,15 @@ fs.writeFileSync(shellPath, shell);
 
 // Keep the workstation strict-TypeScript clean after all legacy source transforms.
 let workstation = fs.readFileSync(workstationPath, "utf8");
+if (!workstation.includes('import CoinLogo from "./CoinLogo";')) {
+  workstation = workstation.replace(
+    'import { browserSupabase } from "../../lib/supabase-browser";',
+    'import { browserSupabase } from "../../lib/supabase-browser";\nimport CoinLogo from "./CoinLogo";',
+  );
+}
+const chartIdentityOld = '<div><span className={styles.eyebrow}>{trade.status} DCA TRADE</span><h2>Trade chart</h2><p>{trade.pair} · BINANCE · {snapshot?.bot?.name ?? "DCA Bot"}</p></div>';
+const chartIdentityNew = '<div><span className={styles.eyebrow}>{trade.status} DCA TRADE</span><h2>Trade chart</h2><p style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={trade.pair} size={17}/><span>{trade.pair} · BINANCE · {snapshot?.bot?.name ?? "DCA Bot"}</span></p></div>';
+if (workstation.includes(chartIdentityOld)) workstation = workstation.replace(chartIdentityOld, chartIdentityNew);
 workstation = workstation.replace(
   'return win.reduce((s, v) => s + (v ?? 0), 0) / length;',
   'return win.reduce<number>((s, v) => s + (v ?? 0), 0) / length;',
@@ -65,6 +75,25 @@ workstation = workstation.replace(
   'autoY, conditionSignature, structureSignature, canvasHeight',
 );
 fs.writeFileSync(workstationPath, workstation);
+
+// DcaBotConfigurator replaces the legacy pair editor during the same build. Add logos
+// to its selected chips and searchable Binance pair list so the generated UI keeps them.
+let configurator = fs.readFileSync(configuratorPath, "utf8");
+if (!configurator.includes('import CoinLogo from "./CoinLogo";')) {
+  configurator = configurator.replace(
+    'import { browserSupabase } from "../../lib/supabase-browser";',
+    'import { browserSupabase } from "../../lib/supabase-browser";\nimport CoinLogo from "./CoinLogo";',
+  );
+}
+configurator = configurator.replace(
+  'form.pairs.map(pair=><span key={pair}>{pair}</span>)',
+  'form.pairs.map(pair=><span key={pair} style={{display:"inline-flex",alignItems:"center",gap:6}}><CoinLogo symbol={pair} size={16}/>{pair}</span>)',
+);
+configurator = configurator.replace(
+  '<span><b>{item.baseAsset}</b><small>{item.pair}</small></span>',
+  '<span style={{display:"flex",alignItems:"center",gap:8}}><CoinLogo symbol={item.baseAsset} size={22}/><span style={{display:"grid"}}><b>{item.baseAsset}</b><small>{item.pair}</small></span></span>',
+);
+fs.writeFileSync(configuratorPath, configurator);
 
 let dcaCss = fs.readFileSync(dcaCssPath, "utf8");
 dcaCss = dcaCss
@@ -84,4 +113,4 @@ baseCss = baseCss
   .replace(/\.connected\{color:#a9c2b0!important\}/g, ".connected{color:#2ee88f!important}");
 fs.writeFileSync(baseCssPath, baseCss);
 
-console.log("Trader V2 full DCA restoration and chart workstation routing applied");
+console.log("Trader V2 full DCA restoration, coin logos, and chart workstation routing applied");
