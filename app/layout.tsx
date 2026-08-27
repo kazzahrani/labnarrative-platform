@@ -57,6 +57,8 @@ import "./labnarrative-logo-refresh.css";
 import "./labnarrative-green-identity.css";
 // Final guard for the new crypto marketing pages so legacy public-theme rules cannot darken text on dark panels.
 import "./crypto-public-contrast-fix.css";
+// Public crypto homepage/affiliate branding and Trader-aligned product preview polish.
+import "./crypto-home-polish.css";
 
 export const metadata: Metadata = {
   title: {
