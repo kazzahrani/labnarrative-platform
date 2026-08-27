@@ -17,7 +17,12 @@ const newNotice='      setWorkspace(result); setBotModalMode(null); setTvStrateg
 if(!source.includes(oldNotice))throw new Error("TradingView Strategy archive-copy could not find shared close notice");
 source=source.replace(oldNotice,newNotice);
 
-for(const marker of['Archive ${bot.name}? Its position history will remain available.','setTvStrategyMode(null)','`${bot.name} archived.`'])if(!source.includes(marker))throw new Error(`TradingView Strategy archive-copy missing ${marker}`);
+const oldTvModal='{tvStrategyMode && currentAccount && <div className={styles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) setTvStrategyMode(null); }}><section className={styles.modal}>';
+const newTvModal='{tvStrategyMode && currentAccount && <div className={styles.backdrop} style={{padding:12,overflow:"hidden"}} onMouseDown={(event) => { if (event.target === event.currentTarget) setTvStrategyMode(null); }}><section className={styles.modal} style={{maxHeight:"calc(100dvh - 24px)",overflowY:"auto",overscrollBehavior:"contain"}}>';
+if(!source.includes(oldTvModal))throw new Error("TradingView Strategy viewport guard could not find strategy modal");
+source=source.replace(oldTvModal,newTvModal);
+
+for(const marker of['Archive ${bot.name}? Its position history will remain available.','setTvStrategyMode(null)','`${bot.name} archived.`','maxHeight:"calc(100dvh - 24px)"','overflowY:"auto"'])if(!source.includes(marker))throw new Error(`TradingView Strategy final shell missing ${marker}`);
 for(const marker of["One Strategy Message","Exit Protection","Copy message"])if(!configurator.includes(marker))throw new Error(`TradingView Strategy final copy missing ${marker}`);
 fs.writeFileSync(shellPath,source);
-console.log("Polished TradingView Strategy archive copy and verified compact Strategy Message / Exit Protection UI.");
+console.log("Polished TradingView Strategy archive copy, verified compact UI, and constrained the modal to a scrollable viewport-safe height.");
