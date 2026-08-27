@@ -9,6 +9,44 @@ const workstationPath = path.join(root, "app/trader/DcaTradeChartV2Workstation.t
 const configuratorPath = path.join(root, "app/trader/DcaBotConfigurator.tsx");
 
 let shell = fs.readFileSync(shellPath, "utf8");
+if (!shell.includes('import CoinLogo from "./CoinLogo";')) {
+  shell = shell.replace(
+    'import BinanceConnectionLayer from "./BinanceConnectionLayer";',
+    'import BinanceConnectionLayer from "./BinanceConnectionLayer";\nimport CoinLogo from "./CoinLogo";',
+  );
+}
+// Re-apply logo surfaces after all legacy prebuild transforms. These replacements are
+// intentionally idempotent, so committed modern JSX is left untouched.
+const shellLogoReplacements = [
+  [
+    '<small>{bot.pair} · {bot.executionMode}</small>',
+    '<small style={{display:"flex",alignItems:"center",gap:6}}><CoinLogo symbol={bot.pair} size={14}/><span>{bot.pair} · {bot.executionMode}</span></small>',
+  ],
+  [
+    '<span className={styles.assetLogo}>{item.asset.slice(0,2)}</span>',
+    '<CoinLogo symbol={item.asset} size={36}/>',
+  ],
+  [
+    '<span className={styles.assetLogo}>US</span>',
+    '<CoinLogo symbol="USDT" size={36}/>',
+  ],
+  [
+    '<span className={dca.botCell}>{bot.pair}</span>',
+    '<span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</span>',
+  ],
+  [
+    '<div className={dca.tradeIdentity}><strong>{trade.pair}</strong>',
+    '<div className={dca.tradeIdentity}><strong style={{display:"flex",alignItems:"center",gap:8}}><CoinLogo symbol={trade.pair} size={22}/>{trade.pair}</strong>',
+  ],
+  [
+    '<div className={dca.summaryItem}><span>Pair</span><b>{bot.pair}</b></div>',
+    '<div className={dca.summaryItem}><span>Pair</span><b style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</b></div>',
+  ],
+];
+for (const [before, after] of shellLogoReplacements) {
+  if (shell.includes(before)) shell = shell.replaceAll(before, after);
+}
+
 if (!shell.includes('import DcaBotConfigurator from "./DcaBotConfigurator";')) {
   shell = shell.replace(
     'import DcaTradeChart from "./DcaTradeChart";',
