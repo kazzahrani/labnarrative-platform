@@ -30,6 +30,7 @@ export default function AffiliatePage() {
         <a className={`${styles.wordmark} lnPublicWordmark`} href="/">LabNarrative</a>
         <nav className={`${styles.nav} lnPublicNav`} aria-label="Primary navigation">
           <a href="/">Product</a>
+          <a href="/pricing">Pricing</a>
           <a href="#program">Program</a>
           <a href="#fit">Who it is for</a>
           <a href="#terms">Terms</a>
@@ -103,7 +104,7 @@ export default function AffiliatePage() {
 
       <footer className={`${styles.footer} crypto-dark-panel`}>
         <a className={`${styles.wordmark} lnPublicWordmark`} href="/">LabNarrative</a>
-        <div><a href="/">Product</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
+        <div><a href="/pricing">Pricing</a><a href="/">Product</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
         <p>Affiliate participation does not permit misleading claims, investment advice, or guaranteed-profit marketing.</p>
       </footer>
     </main>
