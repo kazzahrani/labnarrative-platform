@@ -1,10 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+const EXPECTED_GATEWAY_ORIGIN="https://trader-gateway.labnarrative.com";
 type Json = Record<string, unknown>;
 type Db = ReturnType<typeof createClient>;
 type Bot = { id:string; account_id:string; pair:string; pairs:string[]; all_pairs:boolean; tradingview_token:string; tradingview_enabled:boolean };
 type EventRow = { id:string; status:string; error:string|null; payload:Json };
+type Creds = { apiKey:string; apiSecret:string };
+let cachedSigningKey:CryptoKey|null=null;
 
 function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json","cache-control":"no-store"}})}
 function n(value:unknown,fallback=0){const parsed=Number(value);return Number.isFinite(parsed)?parsed:fallback}
@@ -12,6 +15,17 @@ function clean(error:unknown){return error instanceof Error?error.message:String
 function cleanPair(value:unknown){let raw=String(value||"").trim().toUpperCase();if(raw.includes(":"))raw=raw.split(":").at(-1)||raw;raw=raw.replace(/[^A-Z0-9]/g,"");if(!raw.endsWith("USDT")||raw.length<=4)return"";const base=raw.slice(0,-4);return /^[A-Z0-9]{1,20}$/.test(base)?`${base}/USDT`:""}
 function pairAllowed(bot:Bot,pair:string){if(bot.all_pairs)return true;const allowed=(bot.pairs?.length?bot.pairs:[bot.pair]).map(cleanPair);return allowed.includes(pair)}
 function sleep(ms:number){return new Promise(resolve=>setTimeout(resolve,ms))}
+function nonce(){const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);return Array.from(bytes).map(x=>x.toString(16).padStart(2,"0")).join("")}
+function pemBytes(pem:string){const base64=pem.replace(/-----BEGIN [^-]+-----/g,"").replace(/-----END [^-]+-----/g,"").replace(/\s+/g,"");const binary=atob(base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes}
+function b64(buffer:ArrayBuffer){const bytes=new Uint8Array(buffer);let raw="";for(const byte of bytes)raw+=String.fromCharCode(byte);return btoa(raw)}
+async function hmac(secret:string,message:string){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);const sig=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(message));return Array.from(new Uint8Array(sig)).map(x=>x.toString(16).padStart(2,"0")).join("")}
+
+async function gatewayOrigin(db:Db){const{data,error}=await db.from("trader_gateway_config").select("base_url,status").eq("name","binance").single();if(error||!data)throw new Error("gateway_not_configured");if(data.status!=="ready"||!data.base_url)throw new Error("gateway_not_ready");const origin=new URL(String(data.base_url)).origin;if(origin!==EXPECTED_GATEWAY_ORIGIN)throw new Error("gateway_origin_not_allowed");return origin}
+async function signingKey(db:Db){if(cachedSigningKey)return cachedSigningKey;const{data,error}=await db.rpc("trader_gateway_read_signing_private_key");if(error||!data)throw new Error("gateway_signing_key_not_configured");cachedSigningKey=await crypto.subtle.importKey("pkcs8",pemBytes(String(data)),{name:"ECDSA",namedCurve:"P-256"},false,["sign"]);return cachedSigningKey}
+async function relay(db:Db,payload:Json){const origin=await gatewayOrigin(db),raw=JSON.stringify(payload),ts=Date.now(),nce=nonce(),key=await signingKey(db),sig=b64(await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"},key,new TextEncoder().encode(`${ts}\n${nce}\n${raw}`)));const response=await fetch(`${origin}/relay`,{method:"POST",headers:{"content-type":"application/json","x-ln-timestamp":String(ts),"x-ln-nonce":nce,"x-ln-signature":sig},body:raw,signal:AbortSignal.timeout(12_000)});const envelope=await response.json().catch(()=>({})) as Json;if(!response.ok)throw new Error(`gateway_${response.status}:${String(envelope.error||"relay_failed")}`);const status=n(envelope.upstreamStatus),bodyRaw=String(envelope.upstreamBody||"");let body:Json={};try{body=bodyRaw?JSON.parse(bodyRaw):{}}catch{throw new Error("binance_invalid_json")}if(status<200||status>=300)throw new Error(`binance_${String(body.code??status)}:${String(body.msg??"request_failed")}`);return body}
+async function credentials(db:Db,accountId:string){const{data,error}=await db.rpc("trader_binance_read_secret",{p_account_id:accountId});if(error||!data)throw new Error("credential_not_found");const parsed=JSON.parse(String(data)) as {apiKey?:string;apiSecret?:string};if(!parsed.apiKey||!parsed.apiSecret)throw new Error("credential_not_found");return{apiKey:parsed.apiKey,apiSecret:parsed.apiSecret}}
+async function signed(db:Db,creds:Creds,path:string,params:Record<string,string|number|boolean>={}){const time=await relay(db,{requestId:crypto.randomUUID(),method:"GET",path:"/api/v3/time",query:""});const query=new URLSearchParams();for(const[key,value]of Object.entries(params))query.set(key,String(value));query.set("timestamp",String(n(time.serverTime)));query.set("recvWindow","5000");query.set("signature",await hmac(creds.apiSecret,query.toString()));return await relay(db,{requestId:crypto.randomUUID(),method:"GET",path,query:query.toString(),apiKey:creds.apiKey})}
+async function freeUsdt(db:Db,accountId:string){const creds=await credentials(db,accountId),info=await signed(db,creds,"/api/v3/account",{omitZeroBalances:true});const balances=Array.isArray(info.balances)?info.balances as Json[]:[];return Math.max(0,n(balances.find(row=>String(row.asset||"")==="USDT")?.free))}
 
 async function waitForEvent(db:Db,eventId:string){
   const deadline=Date.now()+20_000;
@@ -102,6 +116,7 @@ Deno.serve(async(req:Request)=>{
       maxOrder=n(controls.max_single_order);if(!(maxOrder>0))return json({error:"live_order_limit_missing"},409);
       const exposure=await liveExposure(db,account.id),liveCapital=n(controls.max_live_capital);
       if(exposure+amount>liveCapital+1e-9)return json({error:"live_capital_limit_exceeded"},409);
+      const free=await freeUsdt(db,account.id);if(free+1e-8<amount)return json({error:"insufficient_usdt"},409);
     }
     const signalRaw=String(raw.signal_id||raw.signalId||"").trim(),signalId=signalRaw&&!signalRaw.includes("{{")?signalRaw.slice(0,140):"";
     const dedupeKey=signalId?`add_funds_split|${pair}|${signalId}`:null;
