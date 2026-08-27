@@ -3,7 +3,7 @@ import TraderV2FullShell from "./TraderV2FullShell";
 
 export const metadata: Metadata = {
   title: "LabNarrative Trading",
-  description: "Crypto trading automation with Real Account first, optional Paper trading, secure exchange connectivity, and full DCA bot management.",
+  description: "Design, test, automate, and compare crypto DCA strategies with Paper and Real trading workspaces.",
 };
 
 export default function TraderPage() {
