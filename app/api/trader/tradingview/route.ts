@@ -6,7 +6,7 @@ export const maxDuration = 10;
 
 const WEBHOOK = "https://umhkpflyzlifiufvejwr.supabase.co/functions/v1/trader-tradingview-webhook";
 const ADD_FUNDS_WEBHOOK = "https://umhkpflyzlifiufvejwr.supabase.co/functions/v1/trader-tradingview-add-funds";
-const STRATEGY_WEBHOOK = "https://umhkpflyzlifiufvejwr.supabase.co/functions/v1/trader-tradingview-strategy-webhook";
+const STRATEGY_WEBHOOK = "https://umhkpflyzlifiufvejwr.supabase.co/functions/v1/trader-tradingview-strategy-gateway";
 
 export async function POST(request: NextRequest) {
   try {
