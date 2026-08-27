@@ -55,14 +55,16 @@ import "./systems-public-contrast-fix.css";
 import "./labnarrative-logo-refresh.css";
 // Preserve the lighter modern system while restoring LabNarrative's established dark-green primary identity.
 import "./labnarrative-green-identity.css";
+// Final guard for the new crypto marketing pages so legacy public-theme rules cannot darken text on dark panels.
+import "./crypto-public-contrast-fix.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "LabNarrative — Scientific Revenue Intelligence",
+    default: "LabNarrative — Crypto Trading Automation",
     template: "%s | LabNarrative",
   },
   description:
-    "LabNarrative identifies scientifically credible buying opportunities for life-science suppliers and turns them into commercial action.",
+    "Build, test, and automate crypto trading strategies with a paper-first, exchange-connected workflow.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
