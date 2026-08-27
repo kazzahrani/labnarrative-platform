@@ -26,11 +26,11 @@ const features = [
 export default function HomePage() {
   return (
     <main className={`${styles.page} crypto-public-page`}>
-      <header className={styles.header}>
-        <a className={styles.wordmark} href="/" aria-label="LabNarrative home">
+      <header className={`${styles.header} lnPublicHeader`}>
+        <a className={`${styles.wordmark} lnPublicWordmark`} href="/" aria-label="LabNarrative home">
           LabNarrative
         </a>
-        <nav className={styles.nav} aria-label="Primary navigation">
+        <nav className={`${styles.nav} lnPublicNav`} aria-label="Primary navigation">
           <a href="#product">Product</a>
           <a href="#workflow">How it works</a>
           <a href="#why">Why LabNarrative</a>
@@ -56,34 +56,47 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className={`${styles.productMock} crypto-dark-panel`} aria-label="Illustration of the LabNarrative trading workspace">
-          <div className={styles.mockTop}><span /><span /><span /><b>LabNarrative</b><small>Paper Account</small></div>
-          <div className={styles.mockBody}>
-            <aside className={styles.mockSide}>
-              <b>Dashboard</b><b>Portfolio</b><b className={styles.mockActive}>DCA Bots</b><b>Active Trades</b><b>Closed Trades</b>
-            </aside>
-            <div className={styles.mockMain}>
-              <div className={styles.mockHeading}><div><small>DCA BOTS</small><strong>Strategy workspace</strong></div><button>+ New bot</button></div>
-              <div className={styles.mockStats}>
-                <article><small>Portfolio value</small><strong>$10,284.42</strong><span>Paper</span></article>
-                <article><small>Active bots</small><strong>4</strong><span>Running</span></article>
-                <article><small>Closed trades</small><strong>27</strong><span>History</span></article>
+        <div className={`${styles.productMock} crypto-dark-panel lnTraderDemo`} aria-label="Preview of the LabNarrative trading workspace">
+          <aside className="lnDemoSidebar">
+            <div className="lnDemoBrand">
+              <span>LN</span>
+              <div><strong>LabNarrative</strong><small>Trading</small></div>
+            </div>
+            <div className="lnDemoNav">
+              <b>Dashboard</b>
+              <b>Portfolio</b>
+              <b className="is-active">DCA Bots</b>
+              <b>Active Trades</b>
+              <b>Closed Trades</b>
+            </div>
+            <div className="lnDemoAccountStatus">
+              <i />
+              <div><strong>Paper Account</strong><small>Simulation</small></div>
+            </div>
+          </aside>
+
+          <div className="lnDemoWorkspace">
+            <div className="lnDemoTopbar">
+              <div><small>TRADING WORKSPACE</small><strong>DCA Bots</strong></div>
+              <div className="lnDemoAccountButton">
+                <span>P</span><div><strong>Paper Account</strong><small>Paper trading</small></div><i>⌄</i>
               </div>
-              <div className={styles.mockTable}>
-                <div className={styles.mockRowHead}><span>Bot</span><span>Pair</span><span>Orders</span><span>Status</span></div>
-                <div className={styles.mockRow}><b>BTC Accumulation</b><span>BTC / USDT</span><span>5 averaging</span><i>Running</i></div>
-                <div className={styles.mockRow}><b>ETH Core DCA</b><span>ETH / USDT</span><span>6 averaging</span><i>Running</i></div>
-                <div className={styles.mockRow}><b>SOL DCA</b><span>SOL / USDT</span><span>4 averaging</span><i>Running</i></div>
+            </div>
+            <div className="lnDemoContent">
+              <div className="lnDemoHeading">
+                <div><small>DCA AUTOMATION</small><h3>Bots</h3></div>
+                <button>+ New bot</button>
+              </div>
+              <div className="lnDemoTabs"><b className="is-active">Active <span>3</span></b><b>Closed <span>27</span></b></div>
+              <div className="lnDemoPanel">
+                <div className="lnDemoTableHead"><span>BOT</span><span>PAIR</span><span>ORDERS</span><span>PNL</span><span>STATUS</span></div>
+                <div className="lnDemoRow"><strong>BTC Accumulation</strong><span>BTC / USDT</span><span>5 / 8</span><span className="positive">+3.82%</span><i>Running</i></div>
+                <div className="lnDemoRow"><strong>ETH Core DCA</strong><span>ETH / USDT</span><span>3 / 6</span><span className="positive">+1.44%</span><i>Running</i></div>
+                <div className="lnDemoRow"><strong>SOL DCA</strong><span>SOL / USDT</span><span>2 / 5</span><span>-0.63%</span><i>Running</i></div>
               </div>
             </div>
           </div>
         </div>
-      </section>
-
-      <section className={`${styles.trustBar} crypto-dark-panel`}>
-        <span>Automate rules, not emotions.</span>
-        <span>Test before real capital.</span>
-        <span>Keep the workflow fast and clear.</span>
       </section>
 
       <section className={styles.section} id="product">
@@ -144,7 +157,7 @@ export default function HomePage() {
       </section>
 
       <footer className={`${styles.footer} crypto-dark-panel`}>
-        <a className={styles.wordmark} href="/">LabNarrative</a>
+        <a className={`${styles.wordmark} lnPublicWordmark`} href="/">LabNarrative</a>
         <div><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
         <p>Software for trading automation. Not financial advice. Trading digital assets involves risk.</p>
       </footer>
