@@ -5,6 +5,7 @@ const EXPECTED_GATEWAY_ORIGIN="https://trader-gateway.labnarrative.com";
 type Json = Record<string, unknown>;
 type Db = ReturnType<typeof createClient>;
 type Bot = { id:string; account_id:string; pair:string; pairs:string[]; all_pairs:boolean; tradingview_token:string; tradingview_enabled:boolean };
+type Account = { id:string; account_kind:"paper"|"real"; mode:string; status:string };
 type EventRow = { id:string; status:string; error:string|null; payload:Json };
 type Creds = { apiKey:string; apiSecret:string };
 let cachedSigningKey:CryptoKey|null=null;
@@ -60,10 +61,20 @@ async function forwardPart(baseUrl:string,payload:Json){
   return body;
 }
 
-async function processSplit(db:Db,baseUrl:string,aggregateId:string,bot:Bot,pair:string,amount:number,signalId:string,maxOrder:number){
+async function processSplit(db:Db,baseUrl:string,aggregateId:string,account:Account,bot:Bot,pair:string,amount:number,signalId:string){
   const parts:Json[]=[];
   try{
     await db.from("trader_tradingview_events").update({status:"processing"}).eq("id",aggregateId);
+    let maxOrder=amount;
+    if(account.account_kind==="real"){
+      const{data:controls,error:controlsError}=await db.from("trader_execution_controls").select("global_live_enabled,kill_switch,max_live_capital,max_single_order").eq("account_id",account.id).maybeSingle();
+      if(controlsError)throw controlsError;
+      if(!controls||controls.global_live_enabled!==true||controls.kill_switch===true||account.mode!=="live")throw new Error("live_trading_not_enabled");
+      maxOrder=n(controls.max_single_order);if(!(maxOrder>0))throw new Error("live_order_limit_missing");
+      const exposure=await liveExposure(db,account.id),liveCapital=n(controls.max_live_capital);
+      if(exposure+amount>liveCapital+1e-9)throw new Error("live_capital_limit_exceeded");
+      const free=await freeUsdt(db,account.id);if(free+1e-8<amount)throw new Error("insufficient_usdt");
+    }
     const count=Math.max(1,Math.ceil(amount/maxOrder));
     if(count>20)throw new Error("add_funds_too_many_execution_parts");
     const even=Number((amount/count).toFixed(8));
@@ -107,22 +118,13 @@ Deno.serve(async(req:Request)=>{
     const{data:botData,error:botError}=await db.from("trader_bots").select("id,account_id,pair,pairs,all_pairs,tradingview_token,tradingview_enabled").eq("tradingview_token",token).eq("tradingview_enabled",true).eq("is_archived",false).maybeSingle();
     if(botError)throw botError;if(!botData)return json({error:"invalid_webhook_token"},401);const bot=botData as Bot;
     const pair=cleanPair(raw.pair||bot.pair);if(!pair||!pairAllowed(bot,pair))return json({error:"pair_not_allowed"},400);
-    const{data:account,error:accountError}=await db.from("trader_accounts").select("id,account_kind,mode,status").eq("id",bot.account_id).eq("status","active").maybeSingle();
-    if(accountError)throw accountError;if(!account)return json({error:"account_unavailable"},409);
-    let maxOrder=amount;
-    if(account.account_kind==="real"){
-      const{data:controls,error:controlsError}=await db.from("trader_execution_controls").select("global_live_enabled,kill_switch,max_live_capital,max_single_order").eq("account_id",account.id).maybeSingle();
-      if(controlsError)throw controlsError;if(!controls||controls.global_live_enabled!==true||controls.kill_switch===true||account.mode!=="live")return json({error:"live_trading_not_enabled"},409);
-      maxOrder=n(controls.max_single_order);if(!(maxOrder>0))return json({error:"live_order_limit_missing"},409);
-      const exposure=await liveExposure(db,account.id),liveCapital=n(controls.max_live_capital);
-      if(exposure+amount>liveCapital+1e-9)return json({error:"live_capital_limit_exceeded"},409);
-      const free=await freeUsdt(db,account.id);if(free+1e-8<amount)return json({error:"insufficient_usdt"},409);
-    }
+    const{data:accountData,error:accountError}=await db.from("trader_accounts").select("id,account_kind,mode,status").eq("id",bot.account_id).eq("status","active").maybeSingle();
+    if(accountError)throw accountError;if(!accountData)return json({error:"account_unavailable"},409);const account=accountData as Account;
     const signalRaw=String(raw.signal_id||raw.signalId||"").trim(),signalId=signalRaw&&!signalRaw.includes("{{")?signalRaw.slice(0,140):"";
     const dedupeKey=signalId?`add_funds_split|${pair}|${signalId}`:null;
     const{data:event,error:eventError}=await db.from("trader_tradingview_events").insert({account_id:account.id,bot_id:bot.id,action:"add_funds",pair,amount,signal_id:signalId||null,dedupe_key:dedupeKey,status:"pending",payload:{split:true,requestedAmount:amount}}).select("id").single();
     if(eventError){if(String(eventError.code)==="23505")return json({ok:true,status:"duplicate"},200);throw eventError}if(!event)return json({error:"event_not_created"},500);
-    EdgeRuntime.waitUntil(processSplit(db,baseUrl,event.id,bot,pair,amount,signalId,maxOrder));
-    return json({ok:true,status:"accepted",eventId:event.id,executionParts:Math.max(1,Math.ceil(amount/maxOrder))},202);
+    EdgeRuntime.waitUntil(processSplit(db,baseUrl,event.id,account,bot,pair,amount,signalId));
+    return json({ok:true,status:"accepted",eventId:event.id},202);
   }catch(error){console.error("trader-tradingview-add-funds-ingress",error);return json({error:"add_funds_webhook_failed"},500)}
 });
