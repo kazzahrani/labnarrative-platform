@@ -13,24 +13,25 @@ const TICKERS = {
   SPX: "^GSPC",
 } as const;
 
+const ALLOWED_INTERVALS = new Set(["60m", "1d"]);
 type BenchmarkKey = keyof typeof TICKERS;
 type Point = { at: string; price: number; returnPct: number };
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
 }
-
 function safeTime(value: unknown, fallback: number) {
   if (typeof value !== "string") return fallback;
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-async function fetchBenchmark(key: BenchmarkKey, startMs: number, endMs: number): Promise<Point[]> {
+async function fetchBenchmark(key: BenchmarkKey, startMs: number, endMs: number, interval: string): Promise<Point[]> {
   const ticker = TICKERS[key];
-  const period1 = Math.max(0, Math.floor((startMs - 2 * 86_400_000) / 1000));
-  const period2 = Math.floor((endMs + 2 * 86_400_000) / 1000);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&period1=${period1}&period2=${period2}&events=div%2Csplits&includeAdjustedClose=true`;
+  const bufferMs = interval === "60m" ? 3 * 86_400_000 : 8 * 86_400_000;
+  const period1 = Math.max(0, Math.floor((startMs - bufferMs) / 1000));
+  const period2 = Math.floor((endMs + (interval === "60m" ? 2 * 3_600_000 : 2 * 86_400_000)) / 1000);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${encodeURIComponent(interval)}&period1=${period1}&period2=${period2}&events=div%2Csplits&includeAdjustedClose=true`;
   const response = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; LabNarrativeTrading/1.0)" },
     signal: AbortSignal.timeout(10_000),
@@ -39,23 +40,23 @@ async function fetchBenchmark(key: BenchmarkKey, startMs: number, endMs: number)
   const payload = await response.json();
   const result = payload?.chart?.result?.[0];
   const timestamps: number[] = Array.isArray(result?.timestamp) ? result.timestamp : [];
-  const adjusted: Array<number | null> = Array.isArray(result?.indicators?.adjclose?.[0]?.adjclose)
-    ? result.indicators.adjclose[0].adjclose
-    : [];
-  const closes: Array<number | null> = Array.isArray(result?.indicators?.quote?.[0]?.close)
-    ? result.indicators.quote[0].close
-    : [];
+  const adjusted: Array<number | null> = Array.isArray(result?.indicators?.adjclose?.[0]?.adjclose) ? result.indicators.adjclose[0].adjclose : [];
+  const closes: Array<number | null> = Array.isArray(result?.indicators?.quote?.[0]?.close) ? result.indicators.quote[0].close : [];
   const raw = timestamps.map((seconds, index) => {
     const price = Number(adjusted[index] ?? closes[index]);
     return { atMs: Number(seconds) * 1000, price };
-  }).filter((point) => Number.isFinite(point.atMs) && Number.isFinite(point.price) && point.price > 0 && point.atMs >= startMs && point.atMs <= endMs);
+  }).filter((point) => Number.isFinite(point.atMs) && Number.isFinite(point.price) && point.price > 0)
+    .sort((a, b) => a.atMs - b.atMs);
   if (!raw.length) return [];
-  const base = raw[0].price;
-  return raw.map((point) => ({
-    at: new Date(point.atMs).toISOString(),
-    price: point.price,
-    returnPct: (point.price / base - 1) * 100,
-  }));
+  const prior = [...raw].reverse().find((point) => point.atMs <= startMs) ?? raw[0];
+  const base = prior.price;
+  return raw
+    .filter((point) => point.atMs >= startMs - bufferMs && point.atMs <= endMs + bufferMs)
+    .map((point) => ({
+      at: new Date(point.atMs).toISOString(),
+      price: point.price,
+      returnPct: (point.price / base - 1) * 100,
+    }));
 }
 
 Deno.serve(async (req: Request) => {
@@ -64,13 +65,16 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
     const now = Date.now();
-    const endMs = Math.min(now + 86_400_000, safeTime(body?.endAt, now));
+    const endMs = Math.min(now + 3_600_000, safeTime(body?.endAt, now));
     const defaultStart = endMs - 90 * 86_400_000;
     const earliest = Date.UTC(2010, 0, 1);
-    const startMs = Math.max(earliest, Math.min(endMs - 86_400_000, safeTime(body?.startAt, defaultStart)));
-    const requested = Array.isArray(body?.symbols) ? body.symbols.filter((value: unknown): value is BenchmarkKey => typeof value === "string" && value in TICKERS) : (Object.keys(TICKERS) as BenchmarkKey[]);
+    const startMs = Math.max(earliest, Math.min(endMs - 3_600_000, safeTime(body?.startAt, defaultStart)));
+    const requestedInterval = typeof body?.interval === "string" && ALLOWED_INTERVALS.has(body.interval) ? body.interval : "1d";
+    const requested = Array.isArray(body?.symbols)
+      ? body.symbols.filter((value: unknown): value is BenchmarkKey => typeof value === "string" && value in TICKERS)
+      : (Object.keys(TICKERS) as BenchmarkKey[]);
     const symbols = requested.length ? Array.from(new Set(requested)) : (Object.keys(TICKERS) as BenchmarkKey[]);
-    const settled = await Promise.allSettled(symbols.map(async (key) => [key, await fetchBenchmark(key, startMs, endMs)] as const));
+    const settled = await Promise.allSettled(symbols.map(async (key) => [key, await fetchBenchmark(key, startMs, endMs, requestedInterval)] as const));
     const series: Partial<Record<BenchmarkKey, Point[]>> = {};
     const errors: Partial<Record<BenchmarkKey, string>> = {};
     settled.forEach((result, index) => {
@@ -82,7 +86,8 @@ Deno.serve(async (req: Request) => {
       ok: true,
       startAt: new Date(startMs).toISOString(),
       endAt: new Date(endMs).toISOString(),
-      source: "Yahoo Finance daily adjusted close",
+      interval: requestedInterval,
+      source: `Yahoo Finance ${requestedInterval} history`,
       series,
       errors,
     });
