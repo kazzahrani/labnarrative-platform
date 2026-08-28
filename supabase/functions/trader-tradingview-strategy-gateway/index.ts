@@ -5,8 +5,9 @@ const CORE_SLUG="trader-tradingview-strategy-webhook";
 const UNLIMITED_SENTINEL=1_000_000;
 type Json=Record<string,unknown>;
 type Db=ReturnType<typeof createClient>;
-
 type Bot={id:string;account_id:string;status:string;max_active_trades:number|string;client_state:Json};
+type Reservation={allowed?:boolean;activePositions?:number;maxOpenPositions?:number;existingPosition?:boolean;existingReservation?:boolean;reserved?:boolean};
+
 function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json","cache-control":"no-store"}})}
 function n(value:unknown,fallback=0){const parsed=Number(value);return Number.isFinite(parsed)?parsed:fallback}
 function obj(value:unknown):Json{return value&&typeof value==="object"&&!Array.isArray(value)?value as Json:{}}
@@ -23,8 +24,8 @@ function storedLimit(bot:Bot):number|null{
   return legacy>=UNLIMITED_SENTINEL?null:Math.min(100,legacy);
 }
 function signalId(raw:Json){const legacy=String(raw.signal_id||raw.signalId||"").trim();if(legacy&&!legacy.includes("{{"))return legacy.slice(0,160);const orderId=String(raw.order_id||raw.orderId||"").trim(),eventTime=String(raw.event_time||raw.eventTime||"").trim();const goodOrder=orderId&&!orderId.includes("{{")?orderId:"",goodTime=eventTime&&!eventTime.includes("{{")?eventTime:"";if(goodOrder&&goodTime)return`${goodOrder}|${goodTime}`.slice(0,160);return(goodTime||goodOrder).slice(0,160)}
-async function activeTradeForPair(db:Db,bot:Bot,pair:string){const{data,error}=await db.from("trader_trades").select("id").eq("account_id",bot.account_id).eq("bot_id",bot.id).eq("pair",pair).eq("status","Active").limit(1).maybeSingle();if(error)throw error;return Boolean(data)}
-async function activeCount(db:Db,bot:Bot){const{count,error}=await db.from("trader_trades").select("id",{count:"exact",head:true}).eq("account_id",bot.account_id).eq("bot_id",bot.id).eq("status","Active");if(error)throw error;return count??0}
+function shouldReserve(raw:Json){const market=String(raw.market_position||"").trim().toLowerCase(),prev=String(raw.prev_market_position||"").trim().toLowerCase();if(market==="short")return false;if(prev==="short"&&market==="flat")return false;return true}
+async function reserveSlot(db:Db,bot:Bot,pair:string,limit:number){const{data,error}=await db.rpc("trader_reserve_strategy_position_slot",{p_bot_id:bot.id,p_account_id:bot.account_id,p_pair:pair,p_max_positions:limit,p_lease_seconds:90});if(error)throw error;return obj(data) as Reservation}
 async function recordCapacityIgnore(db:Db,bot:Bot,pair:string,raw:Json,limit:number,active:number){const sig=signalId(raw),dedupe=sig?`start|${pair}|${sig}`:null,now=new Date().toISOString(),payload={result:{ignored:true,reason:"strategy_position_capacity_reached",maxOpenPositions:limit,activePositions:active}};const{error}=await db.from("trader_tradingview_events").insert({account_id:bot.account_id,bot_id:bot.id,action:"start",pair,amount:null,signal_id:sig||null,dedupe_key:dedupe,status:"ignored",processed_at:now,payload});if(error&&String(error.code)!=="23505")throw error}
 async function forward(base:string,rawText:string){const response=await fetch(`${base}/functions/v1/${CORE_SLUG}`,{method:"POST",headers:{"content-type":"application/json"},body:rawText,signal:AbortSignal.timeout(12_000)});const body=await response.text();return new Response(body,{status:response.status,headers:{"content-type":response.headers.get("content-type")||"application/json","cache-control":"no-store"}})}
 
@@ -38,12 +39,10 @@ Deno.serve(async(req:Request)=>{
   try{
     const{data,error}=await db.from("trader_bots").select("id,account_id,status,max_active_trades,client_state").eq("tradingview_token",token).eq("tradingview_enabled",true).eq("is_archived",false).maybeSingle();if(error)throw error;if(!data)return json({error:"invalid_webhook_token"},401);
     const bot=data as Bot;if(String(obj(bot.client_state).automationType||"")!=="tradingview_strategy")return json({error:"strategy_token_required"},400);
-    if(action==="buy"&&bot.status==="Running"){
+    if(action==="buy"&&bot.status==="Running"&&shouldReserve(raw)){
       const pair=cleanPair(raw.pair);if(!pair)return json({error:"unsupported_strategy_symbol"},400);
-      if(!await activeTradeForPair(db,bot,pair)){
-        const limit=storedLimit(bot);
-        if(limit!==null){const active=await activeCount(db,bot);if(active>=limit){await recordCapacityIgnore(db,bot,pair,raw,limit,active);return json({ok:true,status:"ignored",reason:"strategy_position_capacity_reached",maxOpenPositions:limit,activePositions:active},200)}}
-      }
+      const limit=storedLimit(bot);
+      if(limit!==null){const reservation=await reserveSlot(db,bot,pair,limit);if(reservation.allowed!==true){const occupied=Math.max(0,Math.round(n(reservation.activePositions)));await recordCapacityIgnore(db,bot,pair,raw,limit,occupied);return json({ok:true,status:"ignored",reason:"strategy_position_capacity_reached",maxOpenPositions:limit,activePositions:occupied},200)}}
     }
     return await forward(base,rawText);
   }catch(error){console.error("trader-tradingview-strategy-gateway",error);return json({error:"strategy_gateway_failed"},500)}
