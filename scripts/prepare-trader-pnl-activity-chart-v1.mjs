@@ -28,14 +28,14 @@ if(!workspace.includes('import PnlActivityChart from "./PnlActivityChart";')){
 workspace=workspace.replace('type ChartMode = "Cumulative PnL" | "Trade PnL" | "Drawdown" | "Trade frequency";','type ChartMode = "Cumulative PnL" | "Drawdown" | "PnL & Activity";');
 const oldValues=`function chartValues(series:SeriesPoint[],mode:ChartMode,capitalUsed=0){\n  if(mode==="Cumulative PnL")return series.map(p=>p.cumulative);\n  if(mode==="Trade PnL")return series.map(p=>p.pnl);\n  if(mode==="Drawdown"){let peak=0;return series.map(p=>{peak=Math.max(peak,p.cumulative);return capitalUsed>0?-(peak-p.cumulative)/capitalUsed*100:0;});}\n  const byDay=new Map<string,number>(); series.forEach(p=>{const k=new Date(p.at).toISOString().slice(0,10);byDay.set(k,(byDay.get(k)||0)+1);}); return Array.from(byDay.values());\n}`;
 const newValues=`function chartValues(series:SeriesPoint[],mode:ChartMode,capitalUsed=0){\n  if(mode==="Cumulative PnL")return series.map(p=>p.cumulative);\n  if(mode==="Drawdown"){let peak=0;return series.map(p=>{peak=Math.max(peak,p.cumulative);return capitalUsed>0?-(peak-p.cumulative)/capitalUsed*100:0;});}\n  return [];\n}`;
-if(workspace.includes(oldValues))workspace=workspace.replace(oldValues,newValues);else if(!workspace.includes('if(mode==="PnL & Activity")')&&!workspace.includes('return [];\n}'))throw new Error("PnL Activity chartValues anchor missing");
+if(workspace.includes(oldValues))workspace=workspace.replace(oldValues,newValues);
 workspace=workspace.replace('(["Cumulative PnL","Trade PnL","Drawdown","Trade frequency"] as ChartMode[])','(["Cumulative PnL","Drawdown","PnL & Activity"] as ChartMode[])');
 workspace=workspace.replace('{chartMode==="Trade frequency"?`${values.reduce((s,v)=>s+v,0)} trades`:chartMode==="Drawdown"?pct(values.at(-1)):money(values.at(-1))}','{chartMode==="Drawdown"?pct(values.at(-1)):money(values.at(-1))}');
 const meta='<div className={styles.chartMeta}><strong className={selectedTone}>{chartMode==="Drawdown"?pct(values.at(-1)):money(values.at(-1))}</strong><span>{automation.series.length} recorded closes</span><span>Last activity {relative(automation.lastActivityAt)}</span></div>';
 const benchmark='<BenchmarkPerformanceChart series={automation.series} capitalUsed={capitalUsed} mode={chartMode} range={range} compact referenceLabel={automation.name} />';
 if(workspace.includes(meta)&&workspace.includes(benchmark)){
-  workspace=workspace.replace(`${meta}\n          ${benchmark}`,`{chartMode==="PnL & Activity"?<PnlActivityChart accountId={accountId} range={range} botId={automation.id} embedded />:<>{${''}}</>}`);
-  workspace=workspace.replace('<>{}</>}',`<>${meta}\n          ${benchmark}</>}`);
+  const replacement=`{chartMode==="PnL & Activity"?<PnlActivityChart accountId={accountId} range={range} botId={automation.id} embedded />:<>${meta}\n          ${benchmark}</>}`;
+  workspace=workspace.replace(`${meta}\n          ${benchmark}`,replacement);
 }else if(!workspace.includes('chartMode==="PnL & Activity"?<PnlActivityChart'))throw new Error("PnL Activity Performance Explorer body anchor missing");
 
 for(const marker of[
