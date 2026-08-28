@@ -11,6 +11,12 @@ type BotRow = {
   volume_scale: number | string | null;
   client_state: Json | null;
 };
+type TradeRow = {
+  bot_id: string | null;
+  invested: number | string | null;
+  total_invested: number | string | null;
+  closed_at: string | null;
+};
 
 function obj(value: unknown): Json {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
@@ -35,6 +41,14 @@ function json(req: Request, body: unknown, status = 200) {
     headers: { ...cors(req), "content-type": "application/json", "cache-control": "no-store" },
   });
 }
+function rangeStart(range: string) {
+  if (range === "ytd") {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString();
+  }
+  const days = range === "7d" ? 7 : range === "30d" ? 30 : range === "90d" ? 90 : 0;
+  return days ? new Date(Date.now() - days * 86_400_000).toISOString() : null;
+}
 function maxCapital(bot: BotRow) {
   const state = obj(bot.client_state);
   if (String(state.automationType || "") === "tradingview_strategy") {
@@ -52,6 +66,25 @@ function maxCapital(bot: BotRow) {
     perTrade += safetyOrder * Math.pow(volumeScale, index);
   }
   return { maxCapital: perTrade * maxActiveTrades, maxCapitalMode: "fixed" as const };
+}
+async function fetchClosedCapital(db: ReturnType<typeof createClient>, accountId: string, since: string | null) {
+  const rows: TradeRow[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; offset < 10_000; offset += pageSize) {
+    let query = db.from("trader_trades")
+      .select("bot_id,invested,total_invested,closed_at")
+      .eq("account_id", accountId)
+      .eq("status", "Closed")
+      .order("closed_at", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (since) query = query.gte("closed_at", since);
+    const { data, error } = await query;
+    if (error) throw error;
+    const page = (data ?? []) as TradeRow[];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
 }
 
 Deno.serve(async (req: Request) => {
@@ -71,6 +104,8 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({})) as Json;
     const accountId = String(body.accountId || "").trim();
+    const requestedRange = String(body.range || "30d");
+    const range = ["7d", "30d", "90d", "ytd", "all"].includes(requestedRange) ? requestedRange : "30d";
     if (!accountId) return json(req, { error: "account_required" }, 400);
 
     const { data: account, error: accountError } = await db.from("trader_accounts")
@@ -82,13 +117,29 @@ Deno.serve(async (req: Request) => {
     if (accountError) throw accountError;
     if (!account) return json(req, { error: "account_not_found" }, 404);
 
-    const { data, error } = await db.from("trader_bots")
-      .select("id,base_order,safety_order,max_safety_orders,max_active_trades,volume_scale,client_state")
-      .eq("account_id", accountId);
+    const [{ data, error }, closedTrades] = await Promise.all([
+      db.from("trader_bots")
+        .select("id,base_order,safety_order,max_safety_orders,max_active_trades,volume_scale,client_state")
+        .eq("account_id", accountId),
+      fetchClosedCapital(db, accountId, rangeStart(range)),
+    ]);
     if (error) throw error;
 
-    const automations = ((data ?? []) as BotRow[]).map((bot) => ({ id: bot.id, ...maxCapital(bot) }));
-    return json(req, { ok: true, automations });
+    const capitalByBot = new Map<string, number>();
+    let summaryCapitalUsed = 0;
+    for (const trade of closedTrades) {
+      const capital = Math.max(0, n(trade.total_invested ?? trade.invested, 0));
+      summaryCapitalUsed += capital;
+      if (!trade.bot_id) continue;
+      capitalByBot.set(trade.bot_id, (capitalByBot.get(trade.bot_id) || 0) + capital);
+    }
+
+    const automations = ((data ?? []) as BotRow[]).map((bot) => ({
+      id: bot.id,
+      ...maxCapital(bot),
+      capitalUsed: capitalByBot.get(bot.id) || 0,
+    }));
+    return json(req, { ok: true, range, summaryCapitalUsed, automations });
   } catch (error) {
     console.error("trader-analytics-capital", error);
     return json(req, { error: error instanceof Error ? error.message : "analytics_capital_failed" }, 500);
