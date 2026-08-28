@@ -53,3 +53,4 @@ await import("./prepare-trader-chart-opening-density-v1.mjs");
 await import("./prepare-trader-automations-table-v2.mjs");
 await import("./prepare-trader-analytics.mjs");
 await import("./prepare-trader-bot-analytics-workspace.mjs");
+await import("./prepare-trader-analytics-motion-ytd.mjs");
