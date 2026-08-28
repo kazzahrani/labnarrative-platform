@@ -62,3 +62,5 @@ if (portfolio.includes('>↻ Refresh</button>')) throw new Error("Portfolio Refr
 fs.writeFileSync(portfolioPath, portfolio);
 fs.writeFileSync(advancedPath, advanced);
 console.log("Prepared Portfolio cleanup: Holdings promoted, PnL % added, redundant charts and Refresh removed.");
+
+await import("./prepare-trader-analytics-capital-deployment-v1.mjs");
