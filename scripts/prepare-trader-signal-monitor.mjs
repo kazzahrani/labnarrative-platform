@@ -60,3 +60,4 @@ await import("./prepare-trader-analytics-advanced-v1.mjs");
 await import("./verify-trader-advanced-analytics.mjs");
 await import("./prepare-trader-analytics-global-filters.mjs");
 await import("./prepare-trader-analytics-layout-cleanup.mjs");
+await import("./prepare-trader-analytics-benchmarks-axes.mjs");
