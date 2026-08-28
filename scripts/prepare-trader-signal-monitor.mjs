@@ -65,3 +65,4 @@ await import("./prepare-trader-portfolio-intelligence.mjs");
 await import("./prepare-trader-paper-demo-holdings-v2.mjs");
 await import("./prepare-trader-paper-portfolio-time-machine-v1.mjs");
 await import("./prepare-trader-portfolio-snapshot-v2.mjs");
+await import("./prepare-trader-portfolio-performance-insights-v1.mjs");
