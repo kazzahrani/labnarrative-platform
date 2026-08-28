@@ -20,7 +20,7 @@ if (!source.includes("BOT WORKSPACE TABS V1")) {
   const scrollAnchor = source.includes(motionScrollAnchor) ? motionScrollAnchor : rawScrollAnchor;
   if (!source.includes(scrollAnchor)) throw new Error("Bot workspace scroll anchor missing");
   const refPart = scrollAnchor === motionScrollAnchor ? ' ref={motionRoot}' : '';
-  source = source.replace(scrollAnchor, `<div${'${refPart}'} className={\`${'${styles.scroll}'} ${'${workspaceTab==="advanced"?styles.advancedMode:styles.overviewMode}'}\`}>\n        <nav className={styles.workspaceTabs} aria-label="Bot analytics views">\n          <button type="button" className={workspaceTab==="overview"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("overview")}>Overview</button>\n          <button type="button" className={workspaceTab==="advanced"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("advanced")}>Advanced Analytics</button>\n        </nav>`);
+  source = source.replace(scrollAnchor, `<div${refPart} className={\`${'${styles.scroll}'} ${'${workspaceTab==="advanced"?styles.advancedMode:styles.overviewMode}'}\`}>\n        <nav className={styles.workspaceTabs} aria-label="Bot analytics views">\n          <button type="button" className={workspaceTab==="overview"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("overview")}>Overview</button>\n          <button type="button" className={workspaceTab==="advanced"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("advanced")}>Advanced Analytics</button>\n        </nav>`);
 
   const advanced = '<AdvancedBotAnalytics range={range} automation={automation} automations={automations} detail={detail} />';
   if (!source.includes(advanced)) throw new Error("Advanced analytics component anchor missing");
