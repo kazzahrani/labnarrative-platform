@@ -14,3 +14,5 @@ if (source.includes('<small>ADVANCED ANALYTICS</small>') || source.includes('Ris
 
 fs.writeFileSync(target, source);
 console.log("Removed redundant Advanced Analytics suite heading.");
+
+await import("./prepare-trader-bot-popup-pies-activity-polish-v1.mjs");
