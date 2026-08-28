@@ -19,26 +19,34 @@ replaceShell(
   'Bot presentation fields',
 );
 
-replaceShell(
-  '<div className={dca.botHead}><span>Automation</span><span>Market</span><span>Positions</span><span>Capital plan</span><span>PnL</span><span>Status</span><span/></div>',
-  '<div className={dca.botHead}><span>Automation</span><span>Market</span><span>Executions</span><span>Positions</span><span>Max capital</span><span>PnL</span><span>Status</span><span/></div>',
-  'automation table headings',
-);
+const headStart=source.indexOf('<div className={dca.botHead}>');
+const headEnd=headStart>=0?source.indexOf('</div>',headStart):-1;
+if(headStart<0||headEnd<0)throw new Error('Automations table V2 missing automation table header');
+source=source.slice(0,headStart)+'<div className={dca.botHead}><span>Automation</span><span>Market</span><span>Executions</span><span>Positions</span><span>Max capital</span><span>PnL</span><span>Status</span><span/></div>'+source.slice(headEnd+'</div>'.length);
 
-replaceShell(
-  '{bot.automationType === "tradingview_strategy" ? <span className={dca.botCell}>From TradingView</span> : <span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</span>}',
-  '{bot.automationType === "tradingview_strategy" ? <span className={dca.botCell}>From TradingView</span> : bot.marketScope === "all" || bot.marketScope === "multi" ? <span className={dca.botCell}>{bot.marketLabel ?? bot.pair}</span> : <span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.marketLabel ?? bot.pair} size={18}/>{bot.marketLabel ?? bot.pair}</span>}<span className={dca.botCell}>{bot.executedCount ?? (bot.activeTradeCount + bot.closedTradeCount)}</span>',
-  'market scope and executions cells',
-);
+const marketAnchor='{bot.automationType === "tradingview_strategy" ? <span className={dca.botCell}>From TradingView</span>';
+const marketStart=source.indexOf(marketAnchor);
+const marketEndToken='</span>}';
+const marketEnd=marketStart>=0?source.indexOf(marketEndToken,marketStart):-1;
+if(marketStart<0||marketEnd<0)throw new Error('Automations table V2 missing market cell');
+const marketCell='{bot.automationType === "tradingview_strategy" ? <span className={dca.botCell}>From TradingView</span> : bot.marketScope === "all" || bot.marketScope === "multi" ? <span className={dca.botCell}>{bot.marketLabel ?? bot.pair}</span> : <span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.marketLabel ?? bot.pair} size={18}/>{bot.marketLabel ?? bot.pair}</span>}<span className={dca.botCell}>{bot.executedCount ?? (bot.activeTradeCount + bot.closedTradeCount)}</span>';
+source=source.slice(0,marketStart)+marketCell+source.slice(marketEnd+marketEndToken.length);
 
-replaceShell(
-  '<span className={dca.botCell}>{bot.automationType === "tradingview_strategy" ? "TradingView sizing" : money(botCapital(bot))}</span>',
-  '<span className={dca.botCell}>{bot.automationType === "tradingview_strategy" ? "Dynamic" : money(bot.maxCapital ?? botCapital(bot) * Math.max(1, bot.maxActiveTrades))}</span>',
-  'maximum capital cell',
-);
+const capitalNeedle='TradingView sizing';
+const capitalNeedleAt=source.indexOf(capitalNeedle);
+if(capitalNeedleAt<0)throw new Error('Automations table V2 missing capital cell');
+const capitalStart=source.lastIndexOf('<span className={dca.botCell}>',capitalNeedleAt);
+const capitalEnd=source.indexOf('</span>',capitalNeedleAt);
+if(capitalStart<0||capitalEnd<0)throw new Error('Automations table V2 could not resolve capital cell');
+const capitalCell='<span className={dca.botCell}>{bot.automationType === "tradingview_strategy" ? "Dynamic" : money(bot.maxCapital ?? botCapital(bot) * Math.max(1, bot.maxActiveTrades))}</span>';
+source=source.slice(0,capitalStart)+capitalCell+source.slice(capitalEnd+'</span>'.length);
 
 source=source.replace(
   '<span>Planned capital</span><b>{money(botCapital(bot))}</b>',
+  '<span>Max capital</span><b>{money(bot.maxCapital ?? botCapital(bot) * Math.max(1, bot.maxActiveTrades))}</b>',
+);
+source=source.replace(
+  '<span>Capital plan</span><b>{money(botCapital(bot))}</b>',
   '<span>Max capital</span><b>{money(bot.maxCapital ?? botCapital(bot) * Math.max(1, bot.maxActiveTrades))}</b>',
 );
 
