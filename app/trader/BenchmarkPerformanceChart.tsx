@@ -122,7 +122,7 @@ function synchronizedStrategy(series: SeriesPoint[], timeline: number[], start: 
   series.forEach((point) => {
     const at = Date.parse(point.at);
     if (!Number.isFinite(at) || at < start || at > timeline.at(-1)!) return;
-    const index = Math.min(pnlByBucket.length - 1, Math.max(0, Math.floor((at - start) / step)));
+    const index = Math.min(pnlByBucket.length - 1, Math.max(0, Math.ceil((at - start) / step)));
     pnlByBucket[index] += finite(point.pnl);
   });
   let cumulative = 0;
