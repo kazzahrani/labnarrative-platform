@@ -57,8 +57,8 @@ if(source.includes(gridPicker))source=source.replace(gridPicker,'');
 source=source.replace('<div className={styles.comingSoon}>Grid Automation remains on the roadmap and cannot be launched yet.</div>','');
 
 // Product wording only. Backend automationType remains "tradingview_strategy".
-source=source.replaceAll('TradingView Strategy','TradingView Automation');
-tvConfig=tvConfig.replaceAll('TradingView Strategy','TradingView Automation');
+source=source.replaceAll('TradingView Strategy','Strategy Execution');
+tvConfig=tvConfig.replaceAll('TradingView Strategy','Strategy Execution');
 
 replaceCss(
   'grid-template-columns:minmax(220px,1.45fr) .65fr .55fr .75fr .65fr .55fr .55fr;',
@@ -77,12 +77,12 @@ for(const required of[
   'bot.executedCount ?? (bot.activeTradeCount + bot.closedTradeCount)',
   'bot.marketScope === "all" || bot.marketScope === "multi"',
   'money(bot.maxCapital ?? botCapital(bot) * Math.max(1, bot.maxActiveTrades))',
-  'TradingView Automation',
+  'Strategy Execution',
 ])if(!source.includes(required))throw new Error(`Automations table V2 output missing ${required}`);
 if(source.includes('Grid Automation remains on the roadmap')||source.includes('title="Grid Automation is coming soon"')||source.includes('<strong>Grid Automation</strong>'))throw new Error('Grid Automation is still exposed in Automations UI');
-if(!tvConfig.includes('TradingView Automation'))throw new Error('TradingView Automation configurator wording missing');
+if(!tvConfig.includes('Strategy Execution'))throw new Error('Strategy Execution configurator wording missing');
 
 fs.writeFileSync(shellPath,source);
 fs.writeFileSync(cssPath,css);
 fs.writeFileSync(tvConfigPath,tvConfig);
-console.log('Prepared Automations V2: market scope labels, executions, maximum capital, no Grid option, and TradingView Automation naming.');
+console.log('Prepared Automations V2: market scope labels, executions, maximum capital, no Grid option, and Strategy Execution naming.');
