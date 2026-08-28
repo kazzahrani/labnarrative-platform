@@ -51,7 +51,7 @@ replaceOnce(
   "performance table title",
 );
 
-const botBars = '<div className={styles.botBars}>{automations.filter((item) => item.closedTrades > 0).sort((a, b) => b.realizedPnl - a.realizedPnl).slice(0, 7).map((item) => <button type="button" key={item.id} onClick={() => setSelectedId(item.id)} title={`Select ${item.name}`}><span>{item.name}</span><div><i className={pnlClass(item.realizedPnl)} style={{ width: `${Math.max(4, Math.abs(item.realizedPnl) / maxBotMagnitude * 100)}%` }}/></div><b className={pnlClass(item.realizedPnl)}>{money(item.realizedPnl)}</b></button>)}</div>\n\n        ';
+const botBars = '<div className={styles.botBars}>{automations.filter((item) => item.closedTrades > 0).sort((a, b) => b.realizedPnl - a.realizedPnl).slice(0, 7).map((item) => <button type="button" key={item.id} onClick={() => setWorkspaceId(item.id)} title={`Select ${item.name}`}><span>{item.name}</span><div><i className={pnlClass(item.realizedPnl)} style={{ width: `${Math.max(4, Math.abs(item.realizedPnl) / maxBotMagnitude * 100)}%` }}/></div><b className={pnlClass(item.realizedPnl)}>{money(item.realizedPnl)}</b></button>)}</div>\n\n        ';
 replaceOnce(botBars, "", "best-performing bot bars");
 replaceOnce(
   '  const maxBotMagnitude = Math.max(0.000001, ...automations.map((item) => Math.abs(item.realizedPnl)));\n',
