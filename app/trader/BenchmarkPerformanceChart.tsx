@@ -112,6 +112,10 @@ export default function BenchmarkPerformanceChart({ series, capitalUsed = 0, mod
         const response = (data ?? {}) as BenchmarkResponse;
         setBenchmarks(response.series ?? {});
         if (response.ok !== true) setBenchmarkError(response.error || "Benchmark data unavailable.");
+        else {
+          const failed = Object.entries(response.errors ?? {}).map(([key]) => key);
+          if (failed.length) setBenchmarkError(`${failed.join(", ")} temporarily unavailable`);
+        }
       }
       setLoading(false);
     })();
@@ -142,9 +146,17 @@ export default function BenchmarkPerformanceChart({ series, capitalUsed = 0, mod
   let minY = allPoints.length ? Math.min(0, ...allPoints.map((point) => point.value)) : 0;
   let maxY = allPoints.length ? Math.max(0, ...allPoints.map((point) => point.value)) : 1;
   if (Math.abs(maxY - minY) < 1e-9) { minY -= 1; maxY += 1; }
-  const padding = (maxY - minY) * 0.08;
-  minY -= padding;
-  maxY += padding;
+  if (!benchmarkMode && mode === "Trade frequency") {
+    minY = 0;
+    maxY = Math.max(1, maxY * 1.08);
+  } else if (!benchmarkMode && mode === "Drawdown") {
+    maxY = 0;
+    minY = Math.min(-0.01, minY * 1.08);
+  } else {
+    const padding = (maxY - minY) * 0.08;
+    minY -= padding;
+    maxY += padding;
+  }
 
   const W = 1000, H = compact ? 250 : 290;
   const left = 76, right = 22, top = 16, bottom = 52;
@@ -163,7 +175,7 @@ export default function BenchmarkPerformanceChart({ series, capitalUsed = 0, mod
     {mode === "Cumulative PnL" && <div className={styles.benchmarkBar}>
       <span>Compare with</span>
       {BENCHMARKS.map((item) => <button key={item.key} type="button" className={selected.includes(item.key) ? styles.benchmarkActive : ""} onClick={() => toggle(item.key)}>{item.label}</button>)}
-      {benchmarkMode && <small>Normalized return from period start</small>}
+      {benchmarkMode && <small>Strategy and benchmarks normalized to return from the selected period start</small>}
       {loading && <small>Loading benchmarks…</small>}
       {benchmarkError && <small className={styles.error}>{benchmarkError}</small>}
     </div>}
