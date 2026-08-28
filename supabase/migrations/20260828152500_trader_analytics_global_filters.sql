@@ -147,5 +147,5 @@ begin
 end;
 $$;
 
-revoke all on function public.trader_analytics_filtered_summary(uuid,text,text,text) from public;
+revoke all on function public.trader_analytics_filtered_summary(uuid,text,text,text) from public, anon;
 grant execute on function public.trader_analytics_filtered_summary(uuid,text,text,text) to authenticated;
