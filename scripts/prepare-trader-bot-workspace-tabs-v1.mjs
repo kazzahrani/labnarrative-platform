@@ -15,9 +15,12 @@ if (!source.includes("BOT WORKSPACE TABS V1")) {
   if (!source.includes(stateAnchor)) throw new Error("Bot workspace tab state anchor missing");
   source = source.replace(stateAnchor, `${stateAnchor}\n  const [workspaceTab,setWorkspaceTab]=useState<"overview"|"advanced">("overview");\n  // BOT WORKSPACE TABS V1 — core performance by default, deeper analytics on demand.`);
 
-  const scrollAnchor = '<div className={styles.scroll}>';
+  const motionScrollAnchor = '<div ref={motionRoot} className={styles.scroll}>';
+  const rawScrollAnchor = '<div className={styles.scroll}>';
+  const scrollAnchor = source.includes(motionScrollAnchor) ? motionScrollAnchor : rawScrollAnchor;
   if (!source.includes(scrollAnchor)) throw new Error("Bot workspace scroll anchor missing");
-  source = source.replace(scrollAnchor, `<div className={\`${'${styles.scroll}'} ${'${workspaceTab==="advanced"?styles.advancedMode:styles.overviewMode}'}\`}>\n        <nav className={styles.workspaceTabs} aria-label="Bot analytics views">\n          <button type="button" className={workspaceTab==="overview"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("overview")}>Overview</button>\n          <button type="button" className={workspaceTab==="advanced"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("advanced")}>Advanced Analytics</button>\n        </nav>`);
+  const refPart = scrollAnchor === motionScrollAnchor ? ' ref={motionRoot}' : '';
+  source = source.replace(scrollAnchor, `<div${'${refPart}'} className={\`${'${styles.scroll}'} ${'${workspaceTab==="advanced"?styles.advancedMode:styles.overviewMode}'}\`}>\n        <nav className={styles.workspaceTabs} aria-label="Bot analytics views">\n          <button type="button" className={workspaceTab==="overview"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("overview")}>Overview</button>\n          <button type="button" className={workspaceTab==="advanced"?styles.workspaceTabActive:""} onClick={()=>setWorkspaceTab("advanced")}>Advanced Analytics</button>\n        </nav>`);
 
   const advanced = '<AdvancedBotAnalytics range={range} automation={automation} automations={automations} detail={detail} />';
   if (!source.includes(advanced)) throw new Error("Advanced analytics component anchor missing");
