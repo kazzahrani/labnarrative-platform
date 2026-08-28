@@ -57,3 +57,4 @@ await import("./prepare-trader-analytics-motion-ytd.mjs");
 await import("./prepare-trader-analytics-max-capital.mjs");
 await import("./prepare-trader-analytics-dd-contrast.mjs");
 await import("./prepare-trader-analytics-advanced-v1.mjs");
+await import("./verify-trader-advanced-analytics.mjs");
