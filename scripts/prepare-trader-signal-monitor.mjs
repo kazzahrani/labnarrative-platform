@@ -50,3 +50,4 @@ fs.writeFileSync(shellPath, source);
 console.log("Prepared final Trader Signal Monitor navigation and page routing.");
 
 await import("./prepare-trader-chart-opening-density-v1.mjs");
+await import("./prepare-trader-automations-table-v2.mjs");
