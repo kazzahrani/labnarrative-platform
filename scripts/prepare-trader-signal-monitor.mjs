@@ -62,3 +62,4 @@ await import("./prepare-trader-analytics-global-filters.mjs");
 await import("./prepare-trader-analytics-layout-cleanup.mjs");
 await import("./prepare-trader-analytics-benchmarks-axes.mjs");
 await import("./prepare-trader-portfolio-intelligence.mjs");
+await import("./prepare-trader-paper-demo-holdings-v2.mjs");
