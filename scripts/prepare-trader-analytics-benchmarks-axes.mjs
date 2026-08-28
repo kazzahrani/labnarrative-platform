@@ -3,7 +3,8 @@ import path from "node:path";
 
 const analyticsPath=path.join(process.cwd(),"app","trader","Analytics.tsx");
 const workspacePath=path.join(process.cwd(),"app","trader","BotAnalyticsWorkspace.tsx");
-for(const target of [analyticsPath,workspacePath])if(!fs.existsSync(target))throw new Error(`Benchmark analytics target missing: ${target}`);
+const advancedPath=path.join(process.cwd(),"app","trader","AdvancedBotAnalytics.tsx");
+for(const target of [analyticsPath,workspacePath,advancedPath])if(!fs.existsSync(target))throw new Error(`Benchmark analytics target missing: ${target}`);
 
 let analytics=fs.readFileSync(analyticsPath,"utf8");
 if(!analytics.includes('import BenchmarkPerformanceChart from "./BenchmarkPerformanceChart";')){
@@ -25,6 +26,12 @@ const workspaceChart=/<div className=\{styles\.chart\}><svg[\s\S]*?<\/svg>\{!val
 if(!workspaceChart.test(workspace))throw new Error("Benchmark workspace Performance Explorer chart missing");
 workspace=workspace.replace(workspaceChart,'<BenchmarkPerformanceChart series={automation.series} capitalUsed={capitalUsed} mode={chartMode} range={range} compact referenceLabel={automation.name} />');
 
+let advanced=fs.readFileSync(advancedPath,"utf8");
+const underwaterWide='<article className={`${styles.card} ${styles.wide}`}><header><div><small>UNDERWATER RISK</small>';
+const underwaterAligned='<article className={styles.card}><header><div><small>UNDERWATER RISK</small>';
+if(advanced.includes(underwaterWide))advanced=advanced.replace(underwaterWide,underwaterAligned);
+else if(!advanced.includes(underwaterAligned))throw new Error("Underwater Risk card alignment anchor missing");
+
 for(const marker of [
   'import BenchmarkPerformanceChart from "./BenchmarkPerformanceChart";',
   'referenceLabel="Filtered automations"',
@@ -33,7 +40,9 @@ for(const marker of [
   'import BenchmarkPerformanceChart from "./BenchmarkPerformanceChart";',
   'referenceLabel={automation.name}',
 ])if(!workspace.includes(marker))throw new Error(`Benchmark workspace output missing ${marker}`);
+if(!advanced.includes(underwaterAligned))throw new Error("Underwater Risk card was not aligned to the two-column analytics grid");
 
 fs.writeFileSync(analyticsPath,analytics);
 fs.writeFileSync(workspacePath,workspace);
-console.log("Prepared synchronized benchmark-aware Analytics charts with filtered automation reference.");
+fs.writeFileSync(advancedPath,advanced);
+console.log("Prepared synchronized benchmark-aware Analytics charts with filtered automation reference and aligned Underwater Risk card.");
