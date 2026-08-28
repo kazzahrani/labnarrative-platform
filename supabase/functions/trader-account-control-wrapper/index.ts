@@ -7,9 +7,31 @@ const cors={
   "Access-Control-Allow-Methods":"POST, OPTIONS"
 };
 type Json=Record<string,unknown>;
+type BotMeta={type:"dca"|"tradingview_strategy";marketLabel:string;marketScope:"single"|"multi"|"all"|"dynamic";maxCapital:number|null};
 function n(v:unknown,f=0){const x=Number(v);return Number.isFinite(x)?x:f}
 function obj(v:unknown):Json{return v&&typeof v==="object"&&!Array.isArray(v)?v as Json:{}}
+function strings(v:unknown){return Array.isArray(v)?v.map(x=>String(x||"").trim()).filter(Boolean):[]}
 function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors,"content-type":"application/json","cache-control":"no-store"}})}
+function dcaPositionCapital(state:Json){
+  let total=Math.max(0,n(state.baseOrder));
+  if(state.averagingEnabled===false)return total;
+  const count=Math.max(0,Math.round(n(state.maxSafetyOrders)));
+  const safety=Math.max(0,n(state.safetyOrder));
+  const scale=Math.max(0.000001,n(state.volumeScale,1));
+  for(let index=0;index<count;index+=1)total+=safety*Math.pow(scale,index);
+  return total;
+}
+function botMetaFromState(state:Json):BotMeta{
+  const type=String(state.automationType||"")==="tradingview_strategy"?"tradingview_strategy":"dca";
+  if(type==="tradingview_strategy")return{type,marketLabel:"From TradingView",marketScope:"dynamic",maxCapital:null};
+  const allPairs=state.allPairs===true,pairs=strings(state.pairs),pair=String(state.pair||"").trim();
+  const marketScope=allPairs?"all":pairs.length>1?"multi":"single";
+  const marketLabel=allPairs?"All coins":pairs.length>1?"Multi coins":pairs[0]||pair||"—";
+  const maxActive=Math.max(1,Math.round(n(state.maxActiveTrades,1)));
+  const marketCapacity=allPairs?maxActive:Math.max(1,pairs.length||1);
+  const concurrent=Math.max(1,Math.min(maxActive,marketCapacity));
+  return{type,marketLabel,marketScope,maxCapital:dcaPositionCapital(state)*concurrent};
+}
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
@@ -67,21 +89,21 @@ Deno.serve(async(req:Request)=>{
     const trades=payload.trades as Json[],accountId=String(body.accountId||"");
     if(accountId){
       const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
-      const botTypes=new Map<string,string>();
+      const botMeta=new Map<string,BotMeta>();
       const{data:dbBots,error:botError}=await db.from("trader_bots").select("client_id,client_state").eq("account_id",accountId);
       if(botError)throw botError;
-      for(const row of dbBots??[]){
-        const state=obj(row.client_state),type=String(state.automationType||"")==="tradingview_strategy"?"tradingview_strategy":"dca";
-        botTypes.set(String(row.client_id),type);
-      }
+      for(const row of dbBots??[])botMeta.set(String(row.client_id),botMetaFromState(obj(row.client_state)));
       if(Array.isArray(payload.bots))for(const bot of payload.bots as Json[]){
-        const id=String(bot.id||"");
-        const type=botTypes.get(id)||"dca";
-        bot.automationType=type;
-        if(type==="tradingview_strategy")bot.startCondition="TradingView Strategy";
+        const id=String(bot.id||""),meta=botMeta.get(id)??{type:"dca" as const,marketLabel:String(bot.pair||"—"),marketScope:"single" as const,maxCapital:null};
+        bot.automationType=meta.type;
+        bot.marketLabel=meta.marketLabel;
+        bot.marketScope=meta.marketScope;
+        bot.maxCapital=meta.maxCapital;
+        bot.executedCount=n(bot.activeTradeCount)+n(bot.closedTradeCount);
+        if(meta.type==="tradingview_strategy")bot.startCondition="TradingView Strategy";
       }
       for(const trade of trades){
-        const type=botTypes.get(String(trade.botId||""))||"dca";
+        const type=botMeta.get(String(trade.botId||""))?.type||"dca";
         trade.automationType=type;
         if(type==="tradingview_strategy"){
           trade.takeProfitPct=0;
