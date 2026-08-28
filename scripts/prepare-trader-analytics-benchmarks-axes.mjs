@@ -13,7 +13,7 @@ if(!analytics.includes('import BenchmarkPerformanceChart from "./BenchmarkPerfor
 }
 const mainChart=/<div className=\{styles\.lineChart\}>[\s\S]*?<div className=\{styles\.chartAxis\}>[\s\S]*?<\/div>\s*<\/div>/;
 if(!mainChart.test(analytics))throw new Error("Benchmark analytics main chart block missing");
-analytics=analytics.replace(mainChart,'<BenchmarkPerformanceChart series={chartSeries} capitalUsed={summary?.capitalUsed ?? 0} mode="Cumulative PnL" range={range} />');
+analytics=analytics.replace(mainChart,'<BenchmarkPerformanceChart series={chartSeries} capitalUsed={summary?.capitalUsed ?? 0} mode="Cumulative PnL" range={range} referenceLabel="Filtered automations" />');
 
 let workspace=fs.readFileSync(workspacePath,"utf8");
 if(!workspace.includes('import BenchmarkPerformanceChart from "./BenchmarkPerformanceChart";')){
@@ -23,17 +23,17 @@ if(!workspace.includes('import BenchmarkPerformanceChart from "./BenchmarkPerfor
 }
 const workspaceChart=/<div className=\{styles\.chart\}><svg[\s\S]*?<\/svg>\{!values\.length&&<div>No closed trades in this period\.<\/div>\}<\/div>/;
 if(!workspaceChart.test(workspace))throw new Error("Benchmark workspace Performance Explorer chart missing");
-workspace=workspace.replace(workspaceChart,'<BenchmarkPerformanceChart series={automation.series} capitalUsed={capitalUsed} mode={chartMode} range={range} compact />');
+workspace=workspace.replace(workspaceChart,'<BenchmarkPerformanceChart series={automation.series} capitalUsed={capitalUsed} mode={chartMode} range={range} compact referenceLabel={automation.name} />');
 
 for(const marker of [
   'import BenchmarkPerformanceChart from "./BenchmarkPerformanceChart";',
-  '<BenchmarkPerformanceChart series={chartSeries} capitalUsed={summary?.capitalUsed ?? 0} mode="Cumulative PnL" range={range} />',
+  'referenceLabel="Filtered automations"',
 ])if(!analytics.includes(marker))throw new Error(`Benchmark analytics output missing ${marker}`);
 for(const marker of [
   'import BenchmarkPerformanceChart from "./BenchmarkPerformanceChart";',
-  '<BenchmarkPerformanceChart series={automation.series} capitalUsed={capitalUsed} mode={chartMode} range={range} compact />',
+  'referenceLabel={automation.name}',
 ])if(!workspace.includes(marker))throw new Error(`Benchmark workspace output missing ${marker}`);
 
 fs.writeFileSync(analyticsPath,analytics);
 fs.writeFileSync(workspacePath,workspace);
-console.log("Prepared benchmark-aware Analytics charts with explicit axes in the Performance Explorer and main overview.");
+console.log("Prepared synchronized benchmark-aware Analytics charts with filtered automation reference.");
