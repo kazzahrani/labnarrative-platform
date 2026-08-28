@@ -28,9 +28,7 @@ type TradeRow = {
   opened_at: string | null;
   closed_at: string | null;
 };
-
 type SeriesPoint = { at: string; pnl: number; cumulative: number };
-
 type BotStats = {
   id: string;
   name: string;
@@ -70,11 +68,6 @@ function n(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
-function maybeNumber(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
 function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
   const allowed = origin === "https://platform.labnarrative.com" || /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
@@ -92,6 +85,10 @@ function json(req: Request, body: unknown, status = 200) {
   });
 }
 function rangeStart(range: string) {
+  if (range === "ytd") {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), 0, 1)).toISOString();
+  }
   const days = range === "7d" ? 7 : range === "30d" ? 30 : range === "90d" ? 90 : 0;
   return days ? new Date(Date.now() - days * 86_400_000).toISOString() : null;
 }
@@ -248,7 +245,8 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json().catch(() => ({})) as Json;
     const accountId = String(body.accountId || "").trim();
-    const range = ["7d", "30d", "90d", "all"].includes(String(body.range)) ? String(body.range) : "30d";
+    const requestedRange = String(body.range || "30d");
+    const range = ["7d", "30d", "90d", "ytd", "all"].includes(requestedRange) ? requestedRange : "30d";
     if (!accountId) return json(req, { error: "account_required" }, 400);
 
     const { data: account, error: accountError } = await db.from("trader_accounts")
