@@ -10,11 +10,24 @@ type EventRow = {
   pair: string;
   amount: number | string | null;
   signal_id: string | null;
+  dedupe_key: string | null;
   status: string;
   received_at: string;
   processed_at: string | null;
   error: string | null;
   payload: Json | null;
+};
+type QueueRow = {
+  id: string;
+  account_id: string;
+  bot_id: string;
+  action: string;
+  pair: string;
+  signal_id: string | null;
+  dedupe_key: string | null;
+  payload: Json | null;
+  status: string;
+  received_at: string;
 };
 type TradeRow = {
   id: string;
@@ -58,6 +71,16 @@ function cleanPair(value: unknown) {
   const raw = String(value ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (raw.endsWith("USDT") && raw.length > 4) return `${raw.slice(0, -4)}/USDT`;
   return String(value ?? "").trim().toUpperCase();
+}
+function canonicalAction(value: unknown) {
+  const action = String(value ?? "").trim().toLowerCase();
+  if (action === "buy" || action === "start") return "start";
+  if (action === "sell" || action === "close") return "close";
+  return action;
+}
+function signalKey(botId: string, action: string, pair: string, signalId: string | null) {
+  if (!signalId) return null;
+  return `${botId}|${canonicalAction(action)}|${cleanPair(pair)}|${signalId}`;
 }
 function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
@@ -141,18 +164,54 @@ Deno.serve(async (req: Request) => {
     if (accountError) throw accountError;
     if (!account) return json(req, { error: "account_not_found" }, 404);
 
-    const [{ data: botRows, error: botError }, { data: eventRows, error: eventError }] = await Promise.all([
+    const [
+      { data: botRows, error: botError },
+      { data: eventRows, error: eventError },
+      { data: queueRows, error: queueError },
+    ] = await Promise.all([
       db.from("trader_bots").select("id,name,execution_mode,client_state").eq("account_id", accountId),
       db.from("trader_tradingview_events")
-        .select("id,account_id,bot_id,action,pair,amount,signal_id,status,received_at,processed_at,error,payload")
+        .select("id,account_id,bot_id,action,pair,amount,signal_id,dedupe_key,status,received_at,processed_at,error,payload")
         .eq("account_id", accountId)
+        .order("received_at", { ascending: false })
+        .limit(limit),
+      db.from("trader_strategy_signal_queue")
+        .select("id,account_id,bot_id,action,pair,signal_id,dedupe_key,payload,status,received_at")
+        .eq("account_id", accountId)
+        .in("status", ["pending", "dispatching"])
         .order("received_at", { ascending: false })
         .limit(limit),
     ]);
     if (botError) throw botError;
     if (eventError) throw eventError;
+    if (queueError) throw queueError;
 
-    const events = (eventRows ?? []) as EventRow[];
+    const realEvents = (eventRows ?? []) as EventRow[];
+    const existingKeys = new Set(realEvents.map((event) => signalKey(event.bot_id, event.action, event.pair, event.signal_id)).filter(Boolean) as string[]);
+    const queuedEvents: EventRow[] = ((queueRows ?? []) as QueueRow[])
+      .filter((row) => {
+        const key = signalKey(row.bot_id, row.action, row.pair, row.signal_id);
+        return !key || !existingKeys.has(key);
+      })
+      .map((row) => ({
+        id: `queue:${row.id}`,
+        account_id: row.account_id,
+        bot_id: row.bot_id,
+        action: row.action === "buy" ? "start" : "close",
+        pair: row.pair,
+        amount: null,
+        signal_id: row.signal_id,
+        dedupe_key: row.dedupe_key,
+        status: row.status === "dispatching" ? "processing" : "pending",
+        received_at: row.received_at,
+        processed_at: null,
+        error: null,
+        payload: row.payload,
+      }));
+    const events = [...realEvents, ...queuedEvents]
+      .sort((a, b) => Date.parse(b.received_at) - Date.parse(a.received_at))
+      .slice(0, limit);
+
     const bots = (botRows ?? []).map((row) => {
       const state = obj(row.client_state);
       return {
