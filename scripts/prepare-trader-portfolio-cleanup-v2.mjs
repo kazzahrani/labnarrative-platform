@@ -64,3 +64,4 @@ fs.writeFileSync(advancedPath, advanced);
 console.log("Prepared Portfolio cleanup: Holdings promoted, PnL % added, redundant charts and Refresh removed.");
 
 await import("./prepare-trader-analytics-capital-deployment-v1.mjs");
+await import("./prepare-trader-advanced-header-cleanup-v1.mjs");
