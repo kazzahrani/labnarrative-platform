@@ -48,3 +48,5 @@ for (const marker of [
 
 fs.writeFileSync(shellPath, source);
 console.log("Prepared final Trader Signal Monitor navigation and page routing.");
+
+await import("./prepare-trader-chart-opening-density-v1.mjs");
