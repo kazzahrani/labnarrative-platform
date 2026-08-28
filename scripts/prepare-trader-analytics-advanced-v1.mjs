@@ -12,7 +12,9 @@ if (!source.includes('import AdvancedBotAnalytics from "./AdvancedBotAnalytics";
 }
 
 if (!source.includes("<AdvancedBotAnalytics range={range}")) {
-  const anchor = '<section className={styles.card}><div className={styles.sectionHead}><div><small>TRADE LEDGER</small><h3>Latest closed trades</h3></div>';
+  const transformedAnchor = '<section className={styles.card} data-analytics-motion><div className={styles.sectionHead}><div><small>TRADE LEDGER</small><h3>Latest closed trades</h3></div>';
+  const rawAnchor = '<section className={styles.card}><div className={styles.sectionHead}><div><small>TRADE LEDGER</small><h3>Latest closed trades</h3></div>';
+  const anchor = source.includes(transformedAnchor) ? transformedAnchor : rawAnchor;
   if (!source.includes(anchor)) throw new Error("Advanced Analytics Trade Ledger anchor missing");
   source = source.replace(anchor, `<AdvancedBotAnalytics range={range} automation={automation} automations={automations} detail={detail} />\n\n        ${anchor}`);
 }
