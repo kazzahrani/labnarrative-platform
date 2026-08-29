@@ -37,3 +37,4 @@ fs.writeFileSync(target, source);
 console.log("Outcome Mix now derives bot history and realized winner/loss magnitudes from the authoritative workspace trade ledger.");
 
 await import("./prepare-trader-outcome-break-even-winrate-v1.mjs");
+await import("./prepare-trader-bot-popup-actions-v1.mjs");
