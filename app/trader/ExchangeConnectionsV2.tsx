@@ -32,6 +32,10 @@ function friendlyError(value: unknown) {
     ["invalid_credentials", "The exchange rejected these credentials."],
     ["invalid_signature", "The exchange rejected the credential signature. Check the key/secret/passphrase."],
     ["invalid_passphrase", "The exchange rejected the API passphrase."],
+    ["kraken_invalid_private_key_format", "Kraken Private Key format was not recognized. Copy the full Private Key exactly as Kraken generated it."],
+    ["kraken_api:EAPI:Invalid key", "Kraken rejected the API Key. Copy the current API Key from the same Kraken key pair."],
+    ["kraken_api:EAPI:Invalid signature", "Kraken rejected the Private Key/signature. Copy the full Private Key from the same Kraken API key pair."],
+    ["kraken_api:EGeneral:Permission denied", "Kraken denied this API key. Confirm Query Funds, Query Open/Closed Orders, Create & Modify Orders, and Cancel & Close Orders are enabled."],
     ["gateway_", "The fixed-IP gateway could not complete this exchange check yet."],
   ];
   return map.find(([key]) => raw.includes(key))?.[1] || raw.replaceAll("_", " ").slice(0, 220);
@@ -49,6 +53,21 @@ async function invoke(action: string, extra: Record<string, unknown> = {}) {
   }
   const result = (data ?? {}) as StatusResponse & DiagnosticsResponse & { connection?: Connection };
   if (result.error || result.ok !== true) throw new Error(result.error || "multiexchange_control_failed");
+  return result;
+}
+
+async function invokeKraken(action: string, extra: Record<string, unknown> = {}) {
+  const { data, error } = await browserSupabase.functions.invoke("trader-kraken-trade-control", { body: { action, ...extra } });
+  if (error) {
+    let message = error.message || "kraken_control_failed";
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try { const payload = await context.clone().json() as { error?: string }; if (payload.error) message = payload.error; } catch {}
+    }
+    throw new Error(message);
+  }
+  const result = (data ?? {}) as StatusResponse & DiagnosticsResponse & { connection?: Connection; check?: Check };
+  if (result.error || result.ok !== true) throw new Error(result.error || "kraken_control_failed");
   return result;
 }
 
@@ -95,9 +114,11 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
       const payload = item.coinbase
         ? { provider: modal, keyName: apiKey.trim(), keySecret: apiSecret.trim() }
         : { provider: modal, apiKey: apiKey.trim(), apiSecret: apiSecret.trim(), ...(item.needsPassphrase ? { passphrase: passphrase.trim() } : {}) };
-      const result = await invoke("upgrade", payload);
+      const result = modal === "kraken" ? await invokeKraken("upgrade", payload) : await invoke("upgrade", payload);
       setConnections((current) => ({ ...current, [modal]: result.connection ?? null }));
-      const diag = await invoke("diagnostics", { provider: modal }) as DiagnosticsResponse & { check?: Check };
+      const diag = modal === "kraken"
+        ? await invokeKraken("diagnostics") as DiagnosticsResponse & { check?: Check }
+        : await invoke("diagnostics", { provider: modal }) as DiagnosticsResponse & { check?: Check };
       if (diag.check) setChecks((current) => ({ ...current, [modal]: diag.check }));
       setApiKey(""); setApiSecret(""); setPassphrase("");
     } catch (caught) { setErrorMessage(friendlyError(caught)); }
