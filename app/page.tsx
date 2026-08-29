@@ -81,7 +81,7 @@ function SignalPreview() {
 export default function HomePage() {
   return <main className={styles.page}>
     <header className={styles.header}>
-      <a href="/" aria-label="LabNarrative home"><Brand /></a>
+      <a href="/" aria-label="Home"><Brand /></a>
       <nav className={styles.nav} aria-label="Primary navigation">
         <a href="#product">Product</a><a href="#platform">Platform</a><a href="#workflow">How it works</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a>
       </nav>
