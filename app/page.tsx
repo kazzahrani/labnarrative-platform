@@ -1,167 +1,160 @@
 import type { Metadata } from "next";
-import styles from "./labnarrative.module.css";
+import styles from "./trading-home.module.css";
 
 export const metadata: Metadata = {
   title: "LabNarrative — Crypto Trading Automation",
   description:
-    "Build, paper-test, and automate crypto DCA strategies with a focused trading workspace built for disciplined iteration.",
+    "Build, simulate, automate and analyse crypto strategies in one focused trading workspace.",
 };
 
 const APP_URL = "https://platform.labnarrative.com/trader";
 
-const workflow = [
-  ["01", "Build the bot", "Set the pair, base order, averaging orders, deviation, scaling, take profit and risk controls in one focused DCA workflow."],
-  ["02", "Test with paper money", "Run the strategy without putting real capital at risk. Watch fills, active trades and closed trades behave as the bot runs."],
-  ["03", "Connect when ready", "Move from simulation to a supported exchange connection only after you understand the strategy and the workflow."],
-  ["04", "Review and iterate", "Keep bots, positions and trade history together so each change starts from evidence rather than memory or guesswork."],
+const capabilities = [
+  ["01", "Automate", "Build DCA strategies and strategy-execution automations with explicit entry, averaging and exit logic."],
+  ["02", "Monitor", "Follow market conditions and strategy signals without losing sight of why a setup is or is not ready."],
+  ["03", "Manage", "Keep paper and live positions, capital deployment and trade controls in the same workspace."],
+  ["04", "Understand", "Use portfolio and bot analytics to see what is actually driving performance over time."],
 ];
 
-const features = [
-  ["DCA automation", "Build long-only crypto DCA bots with configurable averaging, scaling and take-profit logic."],
-  ["Paper-first workflow", "Test the complete bot experience with simulated capital before deciding whether to connect an exchange."],
-  ["Trading workspace", "See your portfolio, bots, active trades and closed trades without jumping between disconnected tools."],
-  ["Exchange connections", "Use the same automation workflow as additional supported crypto-exchange integrations become available."],
+const steps = [
+  ["01", "Build", "Define the automation and its risk controls."],
+  ["02", "Simulate", "Run the complete workflow with paper capital."],
+  ["03", "Connect", "Link a supported exchange when you are ready."],
+  ["04", "Automate", "Let the strategy manage entries, DCA and exits."],
+  ["05", "Analyse", "Review positions, portfolio and bot performance."],
 ];
+
+function Brand() {
+  return <span className={styles.brand}><img src="/labnarrative-mark.svg" alt="" />LabNarrative</span>;
+}
+
+function PositionsPreview({ compact = false }: { compact?: boolean }) {
+  const rows = compact ? ["BTC/USDT", "ETH/USDT", "SOL/USDT"] : ["PROM/USDT", "BNSOL/USDT", "SOL/USDT"];
+  return <div className={styles.positionRows}>
+    {rows.map((pair, index) => <div className={styles.positionRow} key={pair}>
+      <div className={styles.coin}><i /><div><strong>{pair}</strong><small>{compact ? "DCA automation · paper" : "3RSI 5m TP1 SL1 · live"}</small></div></div>
+      <div className={`${styles.levelMap} ${index === 0 ? styles.loss : ""}`}><span className={styles.avg}/><span className={styles.move}/><span className={styles.now}/><span className={styles.target}/></div>
+      <div className={styles.miniMetric}><small>Invested</small><strong>{index === 0 ? "$19.96" : "$9.92"}</strong></div>
+      <div className={`${styles.miniMetric} ${styles.pnl} ${index === 0 ? styles.loss : ""}`}><small>PnL</small><strong>{index === 0 ? "−1.16%" : "+0.15%"}</strong></div>
+    </div>)}
+  </div>;
+}
+
+function PortfolioPreview() {
+  return <div className={styles.screenInner}>
+    <div className={styles.screenTop}><strong>Portfolio</strong><small>ACCOUNT INTELLIGENCE</small></div>
+    <div className={styles.portfolioHero}>
+      <div className={styles.portfolioValue}><span>Total portfolio value</span><strong>$128,227.05</strong><small>Portfolio performance and deployed capital in one view</small></div>
+      <div className={styles.portfolioPie}><div className={styles.donut}/></div>
+    </div>
+    <div className={styles.assetList}>
+      {["BTC", "ETH", "SOL", "USDT"].map((asset, index) => <div className={styles.asset} key={asset}><strong>{asset}</strong><span>{["42.8%", "27.4%", "12.1%", "17.7%"][index]}</span><b>{index === 3 ? "Cash" : "+ active"}</b></div>)}
+    </div>
+  </div>;
+}
+
+function AnalyticsPreview() {
+  return <div className={styles.screenInner}>
+    <div className={styles.screenTop}><strong>Analytics</strong><small>PERFORMANCE INTELLIGENCE</small></div>
+    <div className={styles.analyticsGrid}>
+      <div className={styles.analyticsCard}><small>PnL & activity</small><div className={styles.chart}>{[34,58,42,74,63,49,81,67,88].map((height,index)=><i key={index} style={{height:`${height}%`}} />)}</div></div>
+      <div className={styles.analyticsCard}><small>Equity curve</small><div className={styles.curve}/></div>
+    </div>
+    <div className={styles.analyticsFoot}><div><span>Win rate</span><strong>68.4%</strong></div><div><span>Max drawdown</span><strong>−4.8%</strong></div><div><span>Executions</span><strong>324</strong></div></div>
+  </div>;
+}
+
+function SignalPreview() {
+  const signals = [
+    ["BTC / USDT", "RSI · 5m", 3],
+    ["ETH / USDT", "Stochastic RSI · 1h", 2],
+    ["SOL / USDT", "Parabolic SAR · 15m", 3],
+    ["LINK / USDT", "Heikin Ashi · 1d", 1],
+  ] as const;
+  return <div className={styles.screenInner}>
+    <div className={styles.screenTop}><strong>Signal Monitor</strong><small>MARKET CONDITIONS</small></div>
+    <div className={styles.signalFilters}><span className={styles.on}>All signals</span><span>Ready</span><span>Waiting</span></div>
+    <div className={styles.signalList}>{signals.map(([pair,rule,count])=><div className={styles.signalCard} key={pair}><div><strong>{pair}</strong><small>{rule}</small></div><div className={styles.signalDots}>{[0,1,2].map((dot)=><i className={dot < count ? styles.ok : ""} key={dot}/>)}</div><span className={styles.signalState}>{count === 3 ? "READY" : "WATCHING"}</span></div>)}</div>
+  </div>;
+}
 
 export default function HomePage() {
-  return (
-    <main className={`${styles.page} crypto-public-page`}>
-      <header className={`${styles.header} lnPublicHeader`}>
-        <a className={`${styles.wordmark} lnPublicWordmark`} href="/" aria-label="LabNarrative home">
-          LabNarrative
-        </a>
-        <nav className={`${styles.nav} lnPublicNav`} aria-label="Primary navigation">
-          <a href="#product">Product</a>
-          <a href="#workflow">How it works</a>
-          <a href="#why">Why LabNarrative</a>
-          <a href="/pricing">Pricing</a>
-          <a href="/affiliate">Affiliates</a>
-        </nav>
-        <a className={styles.headerCta} href={APP_URL}>Launch app →</a>
-      </header>
+  return <main className={styles.page}>
+    <header className={styles.header}>
+      <a href="/" aria-label="LabNarrative home"><Brand /></a>
+      <nav className={styles.nav} aria-label="Primary navigation">
+        <a href="#product">Product</a><a href="#platform">Platform</a><a href="#workflow">How it works</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a>
+      </nav>
+      <div className={styles.headerActions}><a className={styles.signIn} href={APP_URL}>Sign in</a><a className={styles.launch} href={APP_URL}>Launch app →</a></div>
+    </header>
 
-      <section className={styles.hero}>
-        <div className={styles.gridGlow} />
-        <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>Crypto automation for disciplined traders</p>
-          <h1>Build the strategy.<br /><em>Test the logic.</em><br />Automate the execution.</h1>
-          <p className={styles.heroLead}>
-            LabNarrative is a focused crypto trading workspace for DCA automation. Start with paper money, understand how your bot behaves, then connect a supported exchange when you are ready.
-          </p>
-          <div className={styles.heroActions}>
-            <a className={styles.primary} href={APP_URL}>Start with Paper Trading →</a>
-            <a className={styles.secondary} href="#workflow">See how it works</a>
-          </div>
-          <div className={styles.heroTags}>
-            <span>Paper first</span><span>Exchange-ready</span><span>Long only</span><span>DCA focused</span>
-          </div>
-        </div>
+    <section className={styles.hero}>
+      <p className={styles.eyebrow}>Crypto trading automation</p>
+      <h1>Automate your strategy.<br/><em>Understand every trade.</em></h1>
+      <p className={styles.lead}>LabNarrative brings automation, signal monitoring, positions, portfolio intelligence and performance analytics into one focused crypto trading workspace.</p>
+      <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start with Paper Trading →</a><a className={styles.secondary} href="#platform">Explore the platform</a></div>
+      <p className={styles.heroNote}>Start in simulation. Connect real capital when you are ready.</p>
 
-        <div className={`${styles.productMock} crypto-dark-panel lnTraderDemo`} aria-label="Preview of the LabNarrative trading workspace">
-          <aside className="lnDemoSidebar">
-            <div className="lnDemoBrand">
-              <span>LN</span>
-              <div><strong>LabNarrative</strong><small>Trading</small></div>
-            </div>
-            <div className="lnDemoNav">
-              <b>Dashboard</b>
-              <b>Portfolio</b>
-              <b className="is-active">DCA Bots</b>
-              <b>Active Trades</b>
-              <b>Closed Trades</b>
-            </div>
-            <div className="lnDemoAccountStatus">
-              <i />
-              <div><strong>Paper Account</strong><small>Simulation</small></div>
-            </div>
-          </aside>
-
-          <div className="lnDemoWorkspace">
-            <div className="lnDemoTopbar">
-              <div><small>TRADING WORKSPACE</small><strong>DCA Bots</strong></div>
-              <div className="lnDemoAccountButton">
-                <span>P</span><div><strong>Paper Account</strong><small>Paper trading</small></div><i>⌄</i>
+      <div className={styles.heroFrame}>
+        <div className={styles.window}>
+          <div className={styles.windowBar}><i/><i/><i/><span>platform.labnarrative.com/trader</span></div>
+          <div className={styles.productShell}>
+            <aside className={styles.previewSidebar}>
+              <div className={styles.previewBrand}><img src="/labnarrative-mark.svg" alt=""/><div><strong>LabNarrative</strong><small>Trading</small></div></div>
+              <div className={styles.previewNav}><span>Overview</span><span>Portfolio</span><span>Automations</span><span>Signal Monitor</span><span className={styles.active}>Positions</span><span>Analytics</span></div>
+            </aside>
+            <div className={styles.previewWorkspace}>
+              <div className={styles.previewHead}><div><small>POSITIONS</small><h3>Open positions</h3></div><div className={styles.previewPill}>Real workspace</div></div>
+              <div className={styles.insightGrid}>
+                <div className={styles.insight}><div className={styles.insightTop}><strong>Capital Deployment</strong><span>39% used</span></div><div className={styles.donutWrap}><div className={`${styles.donut} ${styles.gold}`}/><div className={styles.legend}><span>Available <b>$62.58</b></span><span>Deployed <b>$39.77</b></span><span>Reserved <b>$0.00</b></span></div></div></div>
+                <div className={styles.insight}><div className={styles.insightTop}><strong>Market Concentration</strong><span>3 markets</span></div><div className={styles.donutWrap}><div className={styles.donut}/><div className={styles.legend}><span>PROM <b>50.2%</b></span><span>SOL <b>24.9%</b></span><span>BNSOL <b>24.9%</b></span></div></div></div>
+                <div className={styles.insight}><div className={styles.insightTop}><strong>Live Outcome Mix</strong><span>−$0.20</span></div><div className={styles.donutWrap}><div className={`${styles.donut} ${styles.red}`}/><div className={styles.legend}><span>In profit <b>2</b></span><span>In loss <b>1</b></span><span>Flat <b>0</b></span></div></div></div>
               </div>
-            </div>
-            <div className="lnDemoContent">
-              <div className="lnDemoHeading">
-                <div><small>DCA AUTOMATION</small><h3>Bots</h3></div>
-                <button>+ New bot</button>
-              </div>
-              <div className="lnDemoTabs"><b className="is-active">Active <span>3</span></b><b>Closed <span>27</span></b></div>
-              <div className="lnDemoPanel">
-                <div className="lnDemoTableHead"><span>BOT</span><span>PAIR</span><span>ORDERS</span><span>PNL</span><span>STATUS</span></div>
-                <div className="lnDemoRow"><strong>BTC Accumulation</strong><span>BTC / USDT</span><span>5 / 8</span><span className="positive">+3.82%</span><i>Running</i></div>
-                <div className="lnDemoRow"><strong>ETH Core DCA</strong><span>ETH / USDT</span><span>3 / 6</span><span className="positive">+1.44%</span><i>Running</i></div>
-                <div className="lnDemoRow"><strong>SOL DCA</strong><span>SOL / USDT</span><span>2 / 5</span><span>-0.63%</span><i>Running</i></div>
-              </div>
+              <PositionsPreview />
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section className={styles.section} id="product">
-        <div className={styles.sectionIntro}>
-          <p className={styles.label}>The product</p>
-          <h2>Everything needed to run a disciplined DCA workflow. Nothing pretending to predict the market.</h2>
-        </div>
-        <div className={styles.featureGrid}>
-          {features.map(([title, copy], index) => (
-            <article className={`${styles.featureCard} crypto-dark-panel`} key={title}>
-              <span>0{index + 1}</span><h3>{title}</h3><p>{copy}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+    <section className={styles.section} id="product">
+      <div className={styles.sectionHead}><p className={styles.label}>One workspace</p><h2>The whole trading process, without losing sight of the strategy.</h2></div>
+      <div className={styles.capabilities}>{capabilities.map(([number,title,copy])=><article className={styles.capability} key={title}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div>
+    </section>
 
-      <section className={styles.workflowSection} id="workflow">
-        <div className={styles.workflowIntro}>
-          <p className={styles.label}>How it works</p>
-          <h2>From an idea to a running strategy, without skipping the test.</h2>
-        </div>
-        <div className={styles.workflowGrid}>
-          {workflow.map(([number, title, copy]) => (
-            <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>
-          ))}
-        </div>
-      </section>
+    <section className={styles.showcase} id="platform">
+      <div className={styles.showcaseRow}>
+        <div className={styles.showcaseCopy}><p className={styles.label}>Portfolio</p><h3>Know where your capital is.</h3><p>See balances, allocation, deployment and portfolio performance in one place instead of reconstructing the account from separate bot and exchange screens.</p></div>
+        <div className={styles.screen}><PortfolioPreview /></div>
+      </div>
+      <div className={styles.showcaseRow}>
+        <div className={styles.showcaseCopy}><p className={styles.label}>Analytics</p><h3>Go beyond a single PnL number.</h3><p>Compare strategy outcomes, activity, drawdown, execution history and time-based performance so each bot change starts from evidence.</p></div>
+        <div className={styles.screen}><AnalyticsPreview /></div>
+      </div>
+      <div className={styles.showcaseRow}>
+        <div className={styles.showcaseCopy}><p className={styles.label}>Positions</p><h3>See the trade, not just the order.</h3><p>Follow capital, average entry, DCA progression, targets, stop levels and live PnL in a compact position-first view designed for fast scanning.</p></div>
+        <div className={styles.screen}><div className={styles.screenInner}><div className={styles.screenTop}><strong>Positions</strong><small>TRADE MANAGEMENT</small></div><PositionsPreview compact /></div></div>
+      </div>
+      <div className={styles.showcaseRow}>
+        <div className={styles.showcaseCopy}><p className={styles.label}>Signal Monitor</p><h3>Understand why a setup is ready.</h3><p>Track strategy conditions across markets and timeframes before they become executions. The signal layer stays visible instead of disappearing behind the automation.</p></div>
+        <div className={styles.screen}><SignalPreview /></div>
+      </div>
+    </section>
 
-      <section className={`${styles.story} crypto-dark-panel`} id="why">
-        <div className={styles.storyMain}>
-          <p className={styles.label}>Why LabNarrative</p>
-          <h2>Built after years of actually using crypto automation.</h2>
-          <p>
-            LabNarrative was started from the user side of the screen: years of building DCA bots, changing strategies, testing ideas and learning what makes an automation platform worth opening every day. The goal is not to copy another platform. It is to keep what serious traders need, remove what they do not, and make strategy iteration clearer over time.
-          </p>
-        </div>
-        <aside className={`${styles.storyCard} crypto-dark-panel`}>
-          <small>The operating principle</small>
-          <strong>Automation should make your strategy more consistent — not make you more confident than the evidence deserves.</strong>
-          <span>LabNarrative does not promise profits. Crypto trading involves substantial risk.</span>
-        </aside>
-      </section>
+    <section className={styles.workflow} id="workflow">
+      <p className={styles.label}>Paper → live</p><h2>Build. Simulate. Connect. Automate. Analyse.</h2>
+      <div className={styles.steps}>{steps.map(([number,title,copy])=><article className={styles.step} key={title}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div>
+    </section>
 
-      <section className={styles.partnerStrip}>
-        <div>
-          <p className={styles.label}>For creators & communities</p>
-          <h2>Help traders discover a better workflow. Earn when they stay.</h2>
-          <p>We are opening the Founding Affiliate Program for crypto educators, YouTube creators, TradingView strategy publishers and trading communities.</p>
-        </div>
-        <a href="/affiliate">Explore the affiliate program →</a>
-      </section>
+    <section className={styles.story}>
+      <div><p className={styles.label}>Why LabNarrative</p><h2>Built from the trader side of the screen.</h2><p>LabNarrative grew out of years of using crypto automation tools, building DCA strategies and learning which parts of a trading platform actually matter day after day. The aim is not prediction. It is clearer execution, better visibility and better evidence for the next decision.</p></div>
+      <div className={styles.principles}><div className={styles.principle}><strong>Strategy first</strong><span>Automation follows explicit rules rather than replacing them.</span></div><div className={styles.principle}><strong>Data over guesswork</strong><span>Positions and analytics stay connected to the strategy that created them.</span></div><div className={styles.principle}><strong>Automation without blindness</strong><span>Signals, execution and outcomes remain visible throughout the trade.</span></div></div>
+    </section>
 
-      <section className={styles.finalCta}>
-        <p className={styles.label}>Start with simulation</p>
-        <h2>Build your first DCA bot with paper money.</h2>
-        <p>No performance promises. No need to risk real capital just to understand the product.</p>
-        <a className={styles.primary} href={APP_URL}>Open LabNarrative →</a>
-      </section>
+    <section className={styles.affiliate}><div><p className={styles.label}>Creators & communities</p><h2>Share a better automation workflow.</h2><p>The Founding Affiliate Program is being opened for crypto educators, TradingView strategy publishers and trading communities.</p></div><a href="/affiliate">Explore affiliates →</a></section>
 
-      <footer className={`${styles.footer} crypto-dark-panel`}>
-        <a className={`${styles.wordmark} lnPublicWordmark`} href="/">LabNarrative</a>
-        <div><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a></div>
-        <p>Software for trading automation. Not financial advice. Trading digital assets involves risk.</p>
-      </footer>
-    </main>
-  );
+    <section className={styles.final}><p className={styles.label}>Start with simulation</p><h2>Build the strategy before you risk the capital.</h2><p>Open the LabNarrative workspace, create a DCA automation and test the complete trading flow with paper money first.</p><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a></section>
+
+    <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
+  </main>;
 }
