@@ -4,52 +4,47 @@ import path from "node:path";
 const traderDir = path.join(process.cwd(), "app", "trader");
 const piesPath = path.join(traderDir, "AutomationBotInsightPies.tsx");
 const piesCssPath = path.join(traderDir, "automation-bot-insight-pies.module.css");
-const configuratorPath = path.join(traderDir, "DcaBotConfigurator.tsx");
 
-for (const target of [piesPath, piesCssPath, configuratorPath]) {
+for (const target of [piesPath, piesCssPath]) {
   if (!fs.existsSync(target)) throw new Error(`Break-even Outcome Mix target missing: ${target}`);
 }
 
 let pies = fs.readFileSync(piesPath, "utf8");
 
-const propsFrom = "type Props = { accountId: string; botId: string; outcomeOnly?: boolean };";
-const propsTo = "type Props = { accountId: string; botId: string; outcomeOnly?: boolean; takeProfitPct?: number; takeProfitTargets?: Array<{ profitPct: number; allocationPct: number }>; stopEnabled?: boolean; stopLossPct?: number };";
-if (!pies.includes(propsTo)) {
-  if (!pies.includes(propsFrom)) throw new Error("Break-even badge Props anchor missing");
-  pies = pies.replace(propsFrom, propsTo);
-}
-
-const fnFrom = "export default function AutomationBotInsightPies({ accountId, botId, outcomeOnly = false }: Props) {";
-const fnTo = "export default function AutomationBotInsightPies({ accountId, botId, outcomeOnly = false, takeProfitPct, takeProfitTargets, stopEnabled = false, stopLossPct }: Props) {";
-if (!pies.includes(fnTo)) {
-  if (!pies.includes(fnFrom)) throw new Error("Break-even badge function anchor missing");
-  pies = pies.replace(fnFrom, fnTo);
+for (const marker of ["outcomeOnly?: boolean", "outcomeOnly = false", "avgWinPnl: number | null", "avgLossPnl: number | null"]) {
+  if (!pies.includes(marker)) throw new Error(`Historical break-even Outcome Mix prerequisite missing ${marker}`);
 }
 
 const calcAnchor = "  const exitTotal = exits.reduce((sum, item) => sum + item.trades, 0);";
-const calcBlock = `${calcAnchor}\n  const fallbackTp = Number(takeProfitPct ?? 0);\n  const configuredSl = Number(stopLossPct ?? 0);\n  const validTpTargets = (takeProfitTargets ?? []).filter((target) => Number(target.profitPct) > 0 && Number(target.allocationPct) > 0);\n  const totalTpAllocation = validTpTargets.reduce((sum, target) => sum + Number(target.allocationPct), 0);\n  const weightedTakeProfit = totalTpAllocation > 0\n    ? validTpTargets.reduce((sum, target) => sum + Number(target.profitPct) * Number(target.allocationPct), 0) / totalTpAllocation\n    : fallbackTp;\n  const breakEvenWinRate = stopEnabled && weightedTakeProfit > 0 && configuredSl > 0 ? configuredSl / (weightedTakeProfit + configuredSl) * 100 : null;\n  const tpPlanLabel = validTpTargets.length\n    ? validTpTargets.map((target, index) => \`TP\${index + 1} \${Number(target.profitPct)}% × \${Number(target.allocationPct)}%\`).join(\", \")\n    : weightedTakeProfit > 0 ? \`TP \${weightedTakeProfit}% × 100%\` : \"No Take Profit plan\";\n  const breakEvenTitle = breakEvenWinRate == null\n    ? \"No fixed stop loss is configured, so a TP/SL break-even win rate is not defined.\"\n    : \`Minimum nominal win rate implied by allocation-weighted TP \${weightedTakeProfit.toFixed(2)}% and SL \${configuredSl}%. \${tpPlanLabel}. Before fees, slippage, partial execution differences, trailing exits or other close reasons.\`;`;
-if (!pies.includes("const weightedTakeProfit =")) {
-  if (!pies.includes(calcAnchor)) throw new Error("Break-even calculation anchor missing");
+const calcBlock = `${calcAnchor}\n  const averageWinPnl = Number(stats.avgWinPnl ?? 0);\n  const averageLossPnl = Math.abs(Number(stats.avgLossPnl ?? 0));\n  const nonBreakevenShare = stats.closedTrades > 0 ? (stats.wins + stats.losses) / stats.closedTrades : 0;\n  const breakEvenWinRate = averageWinPnl > 0 && averageLossPnl > 0\n    ? nonBreakevenShare * averageLossPnl / (averageWinPnl + averageLossPnl) * 100\n    : null;\n  const breakEvenTitle = breakEvenWinRate == null\n    ? \"Historical break-even needs at least one realized winning trade and one realized losing trade.\"\n    : \`Historical break-even for the same closed trades shown here. Average realized winner +$\${averageWinPnl.toFixed(2)}, average realized loser −$\${averageLossPnl.toFixed(2)}. The threshold also accounts for the observed breakeven-trade share.\`;`;
+if (!pies.includes("const averageWinPnl =")) {
+  if (!pies.includes(calcAnchor)) throw new Error("Historical break-even calculation anchor missing");
   pies = pies.replace(calcAnchor, calcBlock);
 }
 
 const headerFrom = "<header><small>OUTCOME MIX</small></header>";
-const headerTo = `<header><small>OUTCOME MIX</small>{outcomeOnly && <span className={\`${'${styles.breakEvenTag}'} \${breakEvenWinRate == null || stats.winRate == null ? \"\" : stats.winRate >= breakEvenWinRate ? styles.breakEvenAbove : styles.breakEvenBelow}\`} title={breakEvenTitle}>Break-even WR {breakEvenWinRate == null ? \"n/a\" : percent(breakEvenWinRate)}</span>}</header>`;
-if (!pies.includes("Break-even WR")) {
-  if (!pies.includes(headerFrom)) throw new Error("Break-even header anchor missing");
+const headerTo = `<header><small>OUTCOME MIX</small>{outcomeOnly && <span className={\`${'${styles.breakEvenTag}'} \${breakEvenWinRate == null || stats.winRate == null ? \"\" : stats.winRate >= breakEvenWinRate ? styles.breakEvenAbove : styles.breakEvenBelow}\`} title={breakEvenTitle}>Historical BE WR {breakEvenWinRate == null ? \"n/a\" : percent(breakEvenWinRate)}</span>}</header>`;
+if (!pies.includes("Historical BE WR")) {
+  if (!pies.includes(headerFrom)) throw new Error("Historical break-even header anchor missing");
   pies = pies.replace(headerFrom, headerTo);
 }
 
 const donutFrom = '<div className={styles.donut} style={{ background: outcomeGradient }}><i><b>{stats.closedTrades}</b><span>closed</span></i></div>';
 const donutTo = '<div className={styles.donut} style={{ background: outcomeGradient }}><i><b>{stats.closedTrades}</b><span>closed</span></i>{outcomeOnly && breakEvenWinRate != null && <div className={styles.breakEvenMarker} style={{ transform: `rotate(${breakEvenWinRate * 3.6}deg)` }} aria-hidden="true" />}</div>';
 if (!pies.includes("styles.breakEvenMarker")) {
-  if (!pies.includes(donutFrom)) throw new Error("Break-even pie marker donut anchor missing");
+  if (!pies.includes(donutFrom)) throw new Error("Historical break-even pie marker donut anchor missing");
   pies = pies.replace(donutFrom, donutTo);
 }
 
-for (const marker of ["takeProfitTargets?: Array", "const weightedTakeProfit =", "Number(target.profitPct) * Number(target.allocationPct)", "configuredSl / (weightedTakeProfit + configuredSl) * 100", "Break-even WR", "styles.breakEvenTag", "styles.breakEvenMarker", "breakEvenWinRate * 3.6"]) {
-  if (!pies.includes(marker)) throw new Error(`Break-even Outcome Mix missing ${marker}`);
-}
+for (const marker of [
+  "const averageWinPnl =",
+  "const averageLossPnl =",
+  "nonBreakevenShare * averageLossPnl / (averageWinPnl + averageLossPnl) * 100",
+  "Historical BE WR",
+  "styles.breakEvenTag",
+  "styles.breakEvenMarker",
+  "breakEvenWinRate * 3.6",
+]) if (!pies.includes(marker)) throw new Error(`Historical break-even Outcome Mix missing ${marker}`);
 fs.writeFileSync(piesPath, pies);
 
 let css = fs.readFileSync(piesCssPath, "utf8");
@@ -59,19 +54,7 @@ if (!css.includes("OUTCOME_BREAK_EVEN_WR_V1")) {
 if (!css.includes("OUTCOME_BREAK_EVEN_PIE_MARKER_V1")) {
   css += `\n/* OUTCOME_BREAK_EVEN_PIE_MARKER_V1 */\n.breakEvenMarker{position:absolute;inset:-5px;z-index:3;border-radius:50%;pointer-events:none;transform-origin:center center}\n.breakEvenMarker:before{content:\"\";position:absolute;left:50%;top:-1px;width:2px;height:19px;border-radius:2px;background:#f2f2f2;transform:translateX(-50%);box-shadow:0 0 0 1px rgba(0,0,0,.72),0 0 7px rgba(255,255,255,.38)}\n.breakEvenMarker:after{content:\"\";position:absolute;left:50%;top:-3px;width:6px;height:6px;border-radius:50%;background:#f2f2f2;transform:translateX(-50%);box-shadow:0 0 0 1px rgba(0,0,0,.72),0 0 6px rgba(255,255,255,.32)}\n`;
 }
-for (const marker of [".breakEvenMarker{", ".breakEvenMarker:before", ".breakEvenMarker:after"]) if (!css.includes(marker)) throw new Error(`Break-even pie marker CSS missing ${marker}`);
+for (const marker of [".breakEvenMarker{", ".breakEvenMarker:before", ".breakEvenMarker:after"]) if (!css.includes(marker)) throw new Error(`Historical break-even pie marker CSS missing ${marker}`);
 fs.writeFileSync(piesCssPath, css);
 
-let configurator = fs.readFileSync(configuratorPath, "utf8");
-const callFrom = "<AutomationBotInsightPies accountId={accountId} botId={botId!} outcomeOnly />";
-const callTo = "<AutomationBotInsightPies accountId={accountId} botId={botId!} outcomeOnly takeProfitPct={form.takeProfit} takeProfitTargets={form.takeProfitTargets} stopEnabled={form.stopEnabled} stopLossPct={form.stopPct} />";
-if (!configurator.includes(callTo)) {
-  if (!configurator.includes(callFrom)) throw new Error("Break-even DCA popup component call missing");
-  configurator = configurator.replace(callFrom, callTo);
-}
-for (const marker of ["takeProfitTargets={form.takeProfitTargets}", "takeProfitPct={form.takeProfit}", "stopEnabled={form.stopEnabled}", "stopLossPct={form.stopPct}"]) {
-  if (!configurator.includes(marker)) throw new Error(`Break-even DCA popup missing ${marker}`);
-}
-fs.writeFileSync(configuratorPath, configurator);
-
-console.log("Added allocation-weighted multi-TP break-even win-rate badge and ring marker to the DCA Outcome Mix popup.");
+console.log("Added historical realized-payoff break-even win-rate badge and ring marker to the DCA Outcome Mix popup.");
