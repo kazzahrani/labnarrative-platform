@@ -61,3 +61,5 @@ for (const required of [marker, "KuCoinConnectionCard", "trader-kucoin-control",
 fs.writeFileSync(connectionsPath, connections);
 fs.writeFileSync(overviewPath, overview);
 console.log("Prepared secure KuCoin General-only connection and Overview exchange health.");
+
+await import("./prepare-trader-exchange-readiness-v2.mjs");
