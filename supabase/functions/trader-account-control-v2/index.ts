@@ -24,7 +24,7 @@ Deno.serve(async(req:Request)=>{
   const bearer=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"").trim();
   const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
 
-  const forward=async(forwardBody:Json=body)=>{
+  const forward=async(forwardBody:Json=body,extra:Json={})=>{
     const response=await fetch(`${url}/functions/v1/trader-account-control`,{
       method:"POST",
       headers:{"content-type":"application/json","authorization":req.headers.get("Authorization")||"","apikey":service},
@@ -40,6 +40,7 @@ Deno.serve(async(req:Request)=>{
         payload.bots=(payload.bots as Json[]).filter(bot=>!deleted.has(String(bot.id||"")));
       }
     }
+    Object.assign(payload,extra);
     return json(payload,response.status);
   };
 
@@ -70,7 +71,7 @@ Deno.serve(async(req:Request)=>{
     if(action==="copy_bot"){
       const now=new Date().toISOString();
       const newClientId=`bot-${Date.now()}-${crypto.randomUUID().slice(0,8)}`;
-      const newName=`${String(bot.name||"DCA Bot")} Copy`;
+      const newName=`${String(bot.name||"DCA Bot")}_copy`;
       const nextState={...state,id:newClientId,name:newName,status:"Stopped",deleted:false,copiedFrom:String(bot.client_id),copiedAt:now,createdAt:now};
       delete nextState.deletedAt;
       const{error:insertError}=await admin.from("trader_bots").insert({
@@ -111,7 +112,7 @@ Deno.serve(async(req:Request)=>{
         updated_at:now
       });
       if(insertError)throw insertError;
-      return await forward({action:"workspace_state",accountId});
+      return await forward({action:"workspace_state",accountId},{botId:newClientId});
     }
 
     const[{count:activeTrades,error:tradeError},{count:openOrders,error:orderError}]=await Promise.all([
