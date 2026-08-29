@@ -58,11 +58,13 @@ const capitalGrid = '<div className={cfg.grid}>';
 if (!capital.includes(capitalGrid)) throw new Error("Compact plan layout could not find Capital Plan grid");
 capital = capital.replace(capitalGrid, '<div className={`${cfg.grid} ${cfg.capitalGrid}`}>');
 
-exit = exit.replace(
+for (const helper of [
   "Split the position across multiple Take Profit targets and optionally delay Stop Loss execution.",
-  "Set TP distribution and optional SL timing.",
-);
-if (!exit.includes("Set TP distribution and optional SL timing.")) {
+  "Configure Take Profit, optional trailing after the TP threshold, and Stop Loss protection.",
+]) {
+  if (exit.includes(helper)) exit = exit.replace(helper, "Set TP, trailing and optional SL timing.");
+}
+if (!exit.includes("Set TP, trailing and optional SL timing.")) {
   throw new Error("Compact plan layout could not shorten Exit Plan helper text");
 }
 
@@ -109,7 +111,7 @@ for (const forbidden of ["#", "rgb(", "rgba(", "hsl(", "hsla(", "color:", "backg
 
 if (!css.includes(".planSplit{")) css += layoutCss;
 
-for (const required of ["cfg.planSplit", "cfg.capitalGrid", "Define order ladder and capital use.", "Set TP distribution and optional SL timing."]) {
+for (const required of ["cfg.planSplit", "cfg.capitalGrid", "Define order ladder and capital use.", "Set TP, trailing and optional SL timing."]) {
   if (!source.includes(required)) throw new Error(`Compact plan layout missing required output: ${required}`);
 }
 
