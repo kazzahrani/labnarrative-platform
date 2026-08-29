@@ -16,8 +16,11 @@ if (!source.includes(marker)) {
   if (!source.includes(sectionBefore)) throw new Error("Overview command center could not find final Section union");
   source = source.replace(sectionBefore, sectionAfter);
 
-  const dashboardStart = source.indexOf("  const dashboard = <>");
-  const portfolioStart = source.indexOf("  const portfolio = <>", dashboardStart);
+  // Earlier build transforms may switch these declarations between fragment and
+  // parenthesized JSX. Anchor on the declaration names rather than JSX syntax so
+  // the final Overview transform remains stable across the existing chain.
+  const dashboardStart = source.indexOf("  const dashboard = ");
+  const portfolioStart = source.indexOf("  const portfolio = ", dashboardStart);
   if (dashboardStart < 0 || portfolioStart <= dashboardStart) throw new Error("Overview command center could not isolate final dashboard block");
   const dashboard = `  const dashboard = <OverviewCommandCenter\n    account={currentAccount}\n    workspace={stateAccount ?? null}\n    controls={workspace?.controls ?? null}\n    worker={workspace?.worker ?? null}\n    bots={bots}\n    trades={trades}\n    displayedEquity={displayedEquity}\n    displayedAvailable={displayedAvailable}\n    hasConnectedExchange={accounts.some((account) => account.kind === \"real\" && account.exchangeStatus === \"connected\")}\n    onConnections={() => setSection(\"Connections\")}\n    onExplorePaper={() => chooseAccount(\"paper\")}\n    onPortfolio={() => setSection(\"Portfolio\")}\n    onAutomations={() => setSection(\"Bots\")}\n    onPositions={() => setSection(\"Active Positions\")}\n    onAnalytics={() => setSection(\"Analytics\")}\n    onSignals={() => setSection(\"Signal Monitor\")}\n    onOpenAutomation={(botId) => { const bot = bots.find((candidate) => candidate.id === botId); if (bot) openBot(bot); }}\n  />;\n\n`;
   source = source.slice(0, dashboardStart) + dashboard + source.slice(portfolioStart);
