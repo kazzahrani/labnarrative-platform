@@ -47,26 +47,34 @@ if(!shell.includes("function botExchangeLabel(")){
   shell=apply(shell,s=>s.replace("export default function TraderV2FullShell",'function botExchangeLabel(value?:string){const raw=String(value||"binance").toLowerCase();return raw==="okx"?"OKX":raw==="bybit"?"Bybit":raw==="kraken"?"Kraken":raw==="kucoin"?"KuCoin":raw==="coinbase"?"Coinbase":"Binance";}\n\nexport default function TraderV2FullShell'),"Trader shell export");
 }
 if(!shell.includes("<span>Exchange</span>")){
-  const exactHeader="<span>Bot</span><span>Pair</span><span>Trades</span>";
-  if(shell.includes(exactHeader)){shell=shell.replace(exactHeader,"<span>Bot</span><span>Pair</span><span>Exchange</span><span>Trades</span>");changes++;}
-  else{
-    const next=shell.replace(/(<div className=\{dca\.botHead\}>[\s\S]{0,800}?<span[^>]*>Pair<\/span>)/,'$1<span>Exchange</span>');
+  const legacyHeader="<span>Bot</span><span>Pair</span><span>Trades</span>";
+  const automationHeader="<span>Automation</span><span>Market</span><span>Executions</span>";
+  if(shell.includes(automationHeader)){
+    shell=shell.replace(automationHeader,"<span>Automation</span><span>Market</span><span>Exchange</span><span>Executions</span>");changes++;
+  }else if(shell.includes(legacyHeader)){
+    shell=shell.replace(legacyHeader,"<span>Bot</span><span>Pair</span><span>Exchange</span><span>Trades</span>");changes++;
+  }else{
+    const next=shell.replace(/(<div className=\{dca\.botHead\}>[\s\S]{0,1000}?<span[^>]*>(?:Pair|Market)<\/span>)/,'$1<span>Exchange</span>');
     if(next===shell)throw new Error("Exchange-aware bot transform could not find Automation table header");
     shell=next;changes++;
   }
 }
 if(!shell.includes("className={dca.exchangeBadge}")){
+  const executionsCell='<span className={dca.botCell}>{bot.executedCount ?? (bot.activeTradeCount + bot.closedTradeCount)}</span>';
   const exactPairCell='<span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</span>';
-  if(shell.includes(exactPairCell)){shell=shell.replace(exactPairCell,exactPairCell+'<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>');changes++;}
-  else{
-    const next=shell.replace(/(<span className=\{dca\.botCell\}[^>]*>[\s\S]{0,350}?<CoinLogo[^>]*symbol=\{bot\.pair\}[^>]*\/>[\s\S]{0,120}?\{bot\.pair\}<\/span>)/,'$1<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>');
-    if(next===shell)throw new Error("Exchange-aware bot transform could not find Automation pair cell");
+  if(shell.includes(executionsCell)){
+    shell=shell.replace(executionsCell,'<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>'+executionsCell);changes++;
+  }else if(shell.includes(exactPairCell)){
+    shell=shell.replace(exactPairCell,exactPairCell+'<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>');changes++;
+  }else{
+    const next=shell.replace(/(<span className=\{dca\.botCell\}[^>]*>[\s\S]{0,450}?<CoinLogo[^>]*symbol=\{(?:bot\.marketLabel\s*\?\?\s*)?bot\.pair\}[^>]*\/>[\s\S]{0,180}?\{(?:bot\.marketLabel\s*\?\?\s*)?bot\.pair\}<\/span>)/,'$1<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>');
+    if(next===shell)throw new Error("Exchange-aware bot transform could not find Automation market cell");
     shell=next;changes++;
   }
 }
 
 if(!tableCss.includes("/* exchange-aware-bots-v1 */")){
-  tableCss+='\n/* exchange-aware-bots-v1 */\n.botHead,.botRow{grid-template-columns:minmax(210px,1.35fr) .62fr .62fr .52fr .72fr .62fr .55fr .55fr!important}.exchangeBadge{display:inline-flex;width:max-content;align-items:center;justify-content:center;min-height:24px;padding:0 8px;border:1px solid #30343b;border-radius:999px;background:#14171b;color:#d8dde4;font-size:11px;font-weight:700;line-height:1}@media(max-width:1100px){.botHead,.botRow{grid-template-columns:minmax(190px,1.25fr) .62fr .62fr .55fr .62fr .55fr .55fr!important}.botHead>*:nth-child(5),.botRow>*:nth-child(5){display:none!important}}@media(max-width:760px){.exchangeBadge{min-height:22px;font-size:10px}}\n';changes++;
+  tableCss+='\n/* exchange-aware-bots-v1 */\n.botHead,.botRow{grid-template-columns:minmax(210px,1.35fr) .62fr .58fr .52fr .52fr .72fr .62fr .55fr .55fr!important}.exchangeBadge{display:inline-flex;width:max-content;align-items:center;justify-content:center;min-height:24px;padding:0 8px;border:1px solid #30343b;border-radius:999px;background:#14171b;color:#d8dde4;font-size:11px;font-weight:700;line-height:1}@media(max-width:1100px){.botHead,.botRow{grid-template-columns:minmax(190px,1.25fr) .62fr .58fr .52fr .72fr .62fr .55fr .55fr!important}.botHead>*:nth-child(5),.botRow>*:nth-child(5){display:none!important}}@media(max-width:760px){.exchangeBadge{min-height:22px;font-size:10px}}\n';changes++;
 }
 if(!configuratorCss.includes("/* exchange-aware-bots-v1 */")){
   configuratorCss+='\n/* exchange-aware-bots-v1 */\n@media(min-width:1100px){.summaryGrid{grid-template-columns:repeat(5,minmax(0,1fr))}}\n';changes++;
