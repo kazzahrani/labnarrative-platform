@@ -1,0 +1,15 @@
+/* Slightly larger LabNarrative Trader sidebar section icons. */
+aside nav button > span:first-child {
+  width: 20px;
+  min-width: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+}
+
+aside nav button > span:first-child svg {
+  width: 15px;
+  height: 15px;
+}
