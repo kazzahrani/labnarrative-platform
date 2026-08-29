@@ -1,10 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const target=path.join(process.cwd(),"app","trader","TraderV2FullShell.tsx");
-if(!fs.existsSync(target))throw new Error("Trader bot popup target missing");
-let source=fs.readFileSync(target,"utf8");
-const marker="BOT_POPUP_COPY_DELETE_V1";
+const shellTarget=path.join(process.cwd(),"app","trader","TraderV2FullShell.tsx");
+const configuratorTarget=path.join(process.cwd(),"app","trader","DcaBotConfigurator.tsx");
+if(!fs.existsSync(shellTarget))throw new Error("Trader bot popup target missing");
+if(!fs.existsSync(configuratorTarget))throw new Error("DCA configurator target missing");
+let source=fs.readFileSync(shellTarget,"utf8");
+let configurator=fs.readFileSync(configuratorTarget,"utf8");
+const marker="BOT_POPUP_COPY_DRAFT_DELETE_V2";
 
 if(!source.includes(marker)){
   const invokeFrom='browserSupabase.functions.invoke("trader-account-control", { body });';
@@ -12,22 +15,74 @@ if(!source.includes(marker)){
   if(!source.includes(invokeFrom)&&!source.includes(invokeTo))throw new Error("Bot popup actions could not find account control invocation");
   if(source.includes(invokeFrom))source=source.replace(invokeFrom,invokeTo);
 
+  const stateFrom='  const [selectedBotId, setSelectedBotId] = useState<string | null>(null);';
+  const stateTo=stateFrom+'\n  const [copySourceBotId, setCopySourceBotId] = useState<string | null>(null);';
+  if(!source.includes(stateFrom)&&!source.includes('copySourceBotId'))throw new Error("Bot copy draft could not find bot selection state");
+  if(source.includes(stateFrom))source=source.replace(stateFrom,stateTo);
+
   const actionAnchor='\n  if (!authReady) return <div className={styles.loadingPage}>Checking secure session…</div>;';
   if(!source.includes(actionAnchor))throw new Error("Bot popup actions could not find action insertion anchor");
-  const actions=`\n  // ${marker}\n  const copyBot = async (bot: Bot) => {\n    if (!currentAccount || busy) return;\n    setBusy(true); setError(\"\");\n    try {\n      const result = await invokeAccount({ action: \"copy_bot\", accountId: currentAccount.id, botId: bot.id });\n      const copiedId = String((result as { botId?: string }).botId || \"\");\n      const copiedBot = (result.bots ?? []).find((candidate) => candidate.id === copiedId) ?? null;\n      setWorkspace(result); setBotTab(\"Active\");\n      if (copiedBot) {\n        setSelectedBotId(copiedBot.id);\n        setBotForm(botFormFrom(copiedBot));\n        setBotModalMode(\"edit\");\n        setNotice(copiedBot.name + \" created paused. Review the copied configuration, then save or resume when ready.\");\n      } else {\n        setBotModalMode(null); setSelectedBotId(null);\n        setNotice(bot.name + \"_copy created and left paused.\");\n      }\n    } catch (caught) {\n      const message = caught instanceof Error ? caught.message : \"Unable to copy bot.\";\n      setError(message.includes(\"strategy_copy_not_supported\") ? \"Strategy Execution automations cannot be copied from this DCA bot action.\" : message);\n    } finally { setBusy(false); }\n  };\n  const deleteBot = async (bot: Bot) => {\n    if (!currentAccount || busy) return;\n    if (!window.confirm(\"Delete \" + bot.name + \" from the bot list? Completed trades, orders and history will be kept. Deletion is blocked while the bot has an active position or open order.\")) return;\n    setBusy(true); setError(\"\");\n    try {\n      const result = await invokeAccount({ action: \"delete_bot\", accountId: currentAccount.id, botId: bot.id });\n      setWorkspace(result); setBotModalMode(null); setSelectedBotId(null);\n      setNotice(bot.name + \" deleted. Its completed trading history was preserved.\");\n    } catch (caught) {\n      const message = caught instanceof Error ? caught.message : \"Unable to delete bot.\";\n      const friendly = message.includes(\"bot_has_active_trades\") ? \"This bot cannot be deleted while it has an active position. Pause it and close the position first.\" : message.includes(\"bot_has_open_orders\") ? \"This bot cannot be deleted while it has an open order. Cancel or finish the order first.\" : message.includes(\"strategy_delete_not_supported\") ? \"Strategy Execution automations cannot be deleted from this DCA bot action.\" : message;\n      setError(friendly);\n    } finally { setBusy(false); }\n  };\n`;
+  const actions=`\n  // ${marker}\n  const copyBot = (bot: Bot) => {\n    if (busy) return;\n    setError(\"\");\n    setCopySourceBotId(bot.id);\n    setSelectedBotId(null);\n    setBotModalMode(\"create\");\n    setBotTab(\"Active\");\n    setNotice(\"\");\n  };\n  const deleteBot = async (bot: Bot) => {\n    if (!currentAccount || busy) return;\n    if (!window.confirm(\"Delete \" + bot.name + \" from the bot list? Completed trades, orders and history will be kept. Deletion is blocked while the bot has an active position or open order.\")) return;\n    setBusy(true); setError(\"\");\n    try {\n      const result = await invokeAccount({ action: \"delete_bot\", accountId: currentAccount.id, botId: bot.id });\n      setWorkspace(result); setBotModalMode(null); setSelectedBotId(null); setCopySourceBotId(null);\n      setNotice(bot.name + \" deleted. Its completed trading history was preserved.\");\n    } catch (caught) {\n      const message = caught instanceof Error ? caught.message : \"Unable to delete bot.\";\n      const friendly = message.includes(\"bot_has_active_trades\") ? \"This bot cannot be deleted while it has an active position. Pause it and close the position first.\" : message.includes(\"bot_has_open_orders\") ? \"This bot cannot be deleted while it has an open order. Cancel or finish the order first.\" : message.includes(\"strategy_delete_not_supported\") ? \"Strategy Execution automations cannot be deleted from this DCA bot action.\" : message;\n      setError(friendly);\n    } finally { setBusy(false); }\n  };\n`;
   source=source.replace(actionAnchor,actions+actionAnchor);
+
+  const modalBotId='  botId={selectedBotId}\n  onCancel=';
+  if(!source.includes(modalBotId))throw new Error("Bot copy draft could not find configurator botId prop");
+  source=source.replace(modalBotId,'  botId={selectedBotId}\n  copyFromBotId={copySourceBotId}\n  onCancel=');
+
+  const savedAnchor='  onSaved={(savedBotId, action) => {\n    if (savedBotId) setSelectedBotId(savedBotId);';
+  if(!source.includes(savedAnchor))throw new Error("Bot copy draft could not find configurator save callback");
+  source=source.replace(savedAnchor,'  onSaved={(savedBotId, action) => {\n    setCopySourceBotId(null);\n    if (savedBotId) setSelectedBotId(savedBotId);');
 
   const editButton='<button className={dca.primary} onClick={editBot}>Edit bot</button>';
   if(!source.includes(editButton))throw new Error("Bot popup actions could not find Edit bot button");
-  source=source.replace(editButton,editButton+'<button disabled={busy} onClick={() => void copyBot(selectedBot!)}>Copy bot</button>');
+  source=source.replace(editButton,editButton+'<button disabled={busy} onClick={() => copyBot(selectedBot!)}>Copy bot</button>');
 
   const closePattern=/<button disabled=\{busy\} onClick=\{\(\) => void closeBot\(selectedBot!\)\}>Close(?: bot)?<\/button>/;
   if(!closePattern.test(source))throw new Error("Bot popup actions could not find Close button");
   source=source.replace(closePattern,(match)=>match+'<button disabled={busy} onClick={() => void deleteBot(selectedBot!)}>Delete bot</button>');
+
+  // Any way of closing a create/copy modal must discard the copy source, so a later
+  // ordinary Create DCA action always starts from a clean default configuration.
+  const cleanupAnchor='  const copyBot = (bot: Bot) => {';
+  if(!source.includes(cleanupAnchor))throw new Error("Bot copy draft cleanup anchor missing");
+  source=source.replace(cleanupAnchor,'  useEffect(() => { if (!botModalMode) setCopySourceBotId(null); }, [botModalMode]);\n\n'+cleanupAnchor);
 }
 
-for(const required of[marker,'trader-account-control-v2','>Copy bot</button>','>Delete bot</button>','action: "copy_bot"','action: "delete_bot"','setBotModalMode("edit")']){
+if(!configurator.includes('copyFromBotId?: string | null;')){
+  const propsFrom='  botId: string | null;\n  onCancel: () => void;';
+  const propsTo='  botId: string | null;\n  copyFromBotId?: string | null;\n  onCancel: () => void;';
+  if(!configurator.includes(propsFrom))throw new Error("Bot copy draft could not extend configurator props");
+  configurator=configurator.replace(propsFrom,propsTo);
+
+  const signatureFrom='export default function DcaBotConfigurator({mode,accountId,accountKind,botId,onCancel,onSaved,onError}:Props){';
+  const signatureTo='export default function DcaBotConfigurator({mode,accountId,accountKind,botId,copyFromBotId,onCancel,onSaved,onError}:Props){';
+  if(!configurator.includes(signatureFrom))throw new Error("Bot copy draft could not extend configurator signature");
+  configurator=configurator.replace(signatureFrom,signatureTo);
+
+  const createGuard='    if(mode==="create"||!botId){setForm({...NEW_FORM,pairs:["BTC/USDT"]});setLoading(false);return()=>{alive=false};}\n    setLoading(true);setLocalError("");\n    void invokeDca({action:"bot_detail",accountId,botId})';
+  const draftGuard='    const detailBotId=mode==="create"?(copyFromBotId||null):botId;\n    if(!detailBotId){setForm({...NEW_FORM,pairs:["BTC/USDT"]});setLoading(false);return()=>{alive=false};}\n    setLoading(true);setLocalError("");\n    void invokeDca({action:"bot_detail",accountId,botId:detailBotId})';
+  if(!configurator.includes(createGuard))throw new Error("Bot copy draft could not find configurator load guard");
+  configurator=configurator.replace(createGuard,draftGuard);
+
+  const hydrateName='const bot=result.bot;setForm({name:bot.name,';
+  const hydrateDraftName='const bot=result.bot;const draftName=mode==="create"&&copyFromBotId?`${bot.name}_copy`:bot.name;setForm({name:draftName,';
+  if(!configurator.includes(hydrateName))throw new Error("Bot copy draft could not find bot hydration");
+  configurator=configurator.replace(hydrateName,hydrateDraftName);
+
+  const depsFrom='  },[accountId,botId,mode]);';
+  const depsTo='  },[accountId,botId,copyFromBotId,mode]);';
+  if(!configurator.includes(depsFrom))throw new Error("Bot copy draft could not extend configurator dependencies");
+  configurator=configurator.replace(depsFrom,depsTo);
+}
+
+for(const required of[marker,'trader-account-control-v2','copySourceBotId','copyFromBotId={copySourceBotId}','>Copy bot</button>','>Delete bot</button>','action: "delete_bot"','setBotModalMode("create")']){
   if(!source.includes(required))throw new Error(`Bot popup action output missing ${required}`);
 }
-fs.writeFileSync(target,source);
-console.log("Prepared bot popup Copy bot, immediate copied-configuration edit, and safe Delete bot actions.");
+for(const required of['copyFromBotId?: string | null;','botId:detailBotId','`${bot.name}_copy`','mode==="create"?"create_bot":"update_bot"']){
+  if(!configurator.includes(required))throw new Error(`Bot copy draft configurator output missing ${required}`);
+}
+if(source.includes('action: "copy_bot"'))throw new Error("Copy bot must not create a database bot before Launch DCA Strategy");
+
+fs.writeFileSync(shellTarget,source);
+fs.writeFileSync(configuratorTarget,configurator);
+console.log("Prepared bot popup Copy bot as an unsaved _copy draft plus safe Delete bot actions.");
