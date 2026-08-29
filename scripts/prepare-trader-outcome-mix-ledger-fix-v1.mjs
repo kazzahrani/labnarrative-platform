@@ -26,3 +26,5 @@ if (source.includes('functions.invoke("trader-analytics"')) throw new Error("Out
 
 fs.writeFileSync(target, source);
 console.log("Outcome Mix now derives bot history from the authoritative workspace trade ledger using client bot IDs.");
+
+await import("./prepare-trader-outcome-break-even-winrate-v1.mjs");
