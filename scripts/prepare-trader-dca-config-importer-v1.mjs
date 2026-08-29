@@ -29,4 +29,3 @@ console.log("Prepared browser-only DCA configuration importer with preview and s
 
 await import("./prepare-trader-dca-importer-all-conditions-v2.mjs");
 await import("./prepare-trader-dca-importer-exits-v3.mjs");
-await import("./prepare-trader-dca-importer-condition-scope-v4.mjs");
