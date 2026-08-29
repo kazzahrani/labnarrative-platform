@@ -63,6 +63,7 @@ type SignalEvent = {
   order: { status?: string | null } | null;
 };
 type SignalResponse = { ok?: boolean; events?: SignalEvent[]; error?: string };
+type ExchangeStatusResponse = { ok?: boolean; connection?: { status?: string } | null; error?: string };
 type Props = {
   account: Account;
   workspace: WorkspaceAccount | null;
@@ -133,6 +134,7 @@ export default function OverviewCommandCenter(props: Props) {
   const { account, workspace, controls, worker, bots, trades, displayedEquity, displayedAvailable, hasConnectedExchange } = props;
   const [signals, setSignals] = useState<SignalEvent[]>([]);
   const [signalError, setSignalError] = useState(false);
+  const [bybitConnected, setBybitConnected] = useState(false);
 
   const loadSignals = useCallback(async () => {
     if (!account.id) return;
@@ -148,6 +150,17 @@ export default function OverviewCommandCenter(props: Props) {
     }
   }, [account.id]);
 
+  const loadBybitStatus = useCallback(async () => {
+    try {
+      const { data, error } = await browserSupabase.functions.invoke("trader-bybit-control", { body: { action: "status" } });
+      if (error) throw error;
+      const response = (data ?? {}) as ExchangeStatusResponse;
+      setBybitConnected(response.ok === true && response.connection?.status === "connected");
+    } catch {
+      setBybitConnected(false);
+    }
+  }, []);
+
   useEffect(() => {
     setSignals([]);
     setSignalError(false);
@@ -155,6 +168,7 @@ export default function OverviewCommandCenter(props: Props) {
     const timer = window.setInterval(() => void loadSignals(), 15_000);
     return () => window.clearInterval(timer);
   }, [loadSignals]);
+  useEffect(() => { void loadBybitStatus(); }, [account.id, loadBybitStatus]);
 
   const activeBots = useMemo(() => bots.filter((bot) => bot.lifecycle !== "closed"), [bots]);
   const runningBots = activeBots.filter((bot) => bot.status === "Running");
@@ -172,6 +186,8 @@ export default function OverviewCommandCenter(props: Props) {
   const realizedRoi = startingBalance > 0 ? realized / startingBalance * 100 : 0;
   const best = activeTrades.length ? [...activeTrades].sort((a, b) => Number(b.pnl || 0) - Number(a.pnl || 0))[0] : null;
   const worst = activeTrades.length ? [...activeTrades].sort((a, b) => Number(a.pnl || 0) - Number(b.pnl || 0))[0] : null;
+  const anyConnectedExchange = hasConnectedExchange || bybitConnected;
+  const connectionHealthLabel = hasConnectedExchange && bybitConnected ? "2 exchanges connected" : hasConnectedExchange ? "Binance connected" : bybitConnected ? "Bybit connected · read only" : "Paper ready · no exchange";
 
   const thirtyDayTrades = useMemo(() => {
     const cutoff = Date.now() - 30 * 86_400_000;
@@ -203,19 +219,19 @@ export default function OverviewCommandCenter(props: Props) {
 
   const attention = useMemo(() => {
     const rows: Array<{ key: string; tone: "warn" | "info"; title: string; detail: string }> = [];
-    if (!hasConnectedExchange) rows.push({ key: "exchange", tone: "info", title: "No exchange connected", detail: "Paper trading is available. Connect an exchange when you are ready to sync real assets." });
+    if (!anyConnectedExchange) rows.push({ key: "exchange", tone: "info", title: "No exchange connected", detail: "Paper trading is available. Connect an exchange when you are ready to sync real assets." });
     if (worker?.error) rows.push({ key: "worker", tone: "warn", title: "Automation worker needs attention", detail: "The latest worker cycle reported an error. Review automation activity before relying on new executions." });
-    if (account.kind === "real" && hasConnectedExchange && controls?.kill_switch === false && controls?.global_live_enabled !== true) rows.push({ key: "live-off", tone: "info", title: "Live execution is disabled", detail: "Your exchange is connected, but real-money execution remains disabled by the account safety controls." });
+    if (account.kind === "real" && hasConnectedExchange && controls?.kill_switch === false && controls?.global_live_enabled !== true) rows.push({ key: "live-off", tone: "info", title: "Live execution is disabled", detail: "Your Binance exchange is connected, but real-money execution remains disabled by the account safety controls." });
     return rows;
-  }, [account.kind, controls?.global_live_enabled, controls?.kill_switch, hasConnectedExchange, worker?.error]);
+  }, [account.kind, anyConnectedExchange, controls?.global_live_enabled, controls?.kill_switch, hasConnectedExchange, worker?.error]);
 
-  const showPrimaryOnboarding = !hasConnectedExchange && account.kind === "real";
-  const showPaperReminder = !hasConnectedExchange && account.kind === "paper";
+  const showPrimaryOnboarding = !anyConnectedExchange && account.kind === "real";
+  const showPaperReminder = !anyConnectedExchange && account.kind === "paper";
 
   return <div className={styles.overview}>
     <div className={styles.heading}>
       <div><small>TRADING COMMAND CENTER</small><h1>Overview</h1><p>Account health, automation activity, positions and signals in one place.</p></div>
-      <div className={styles.health}>{hasConnectedExchange ? <><i className={styles.healthGood}/><span>Binance connected</span></> : <><i/><span>Paper ready · no exchange</span></>}</div>
+      <div className={styles.health}>{anyConnectedExchange ? <><i className={styles.healthGood}/><span>{connectionHealthLabel}</span></> : <><i/><span>{connectionHealthLabel}</span></>}</div>
     </div>
 
     {showPrimaryOnboarding && <section className={styles.onboarding}>
@@ -257,7 +273,7 @@ export default function OverviewCommandCenter(props: Props) {
       </section>
 
       <section className={styles.panel}>
-        <div className={styles.panelHead}><div><small>ATTENTION CENTER</small><h2>{attention.length ? `${attention.length} item${attention.length === 1 ? "" : "s"} to review` : "No action required"}</h2></div>{!hasConnectedExchange && <button type="button" onClick={props.onConnections}>Connections →</button>}</div>
+        <div className={styles.panelHead}><div><small>ATTENTION CENTER</small><h2>{attention.length ? `${attention.length} item${attention.length === 1 ? "" : "s"} to review` : "No action required"}</h2></div>{!anyConnectedExchange && <button type="button" onClick={props.onConnections}>Connections →</button>}</div>
         {attention.length ? <div className={styles.attentionList}>{attention.map((item) => <div key={item.key} className={item.tone === "warn" ? styles.attentionWarn : styles.attentionInfo}><i/><span><b>{item.title}</b><small>{item.detail}</small></span></div>)}</div> : <div className={styles.allClear}><span>✓</span><div><b>Workspace is healthy</b><small>No connection, worker, or execution-state issues require attention right now.</small></div></div>}
       </section>
     </div>
