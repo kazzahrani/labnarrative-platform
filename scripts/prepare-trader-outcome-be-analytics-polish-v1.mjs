@@ -17,31 +17,35 @@ if (!piesCss.includes("OUTCOME_BE_WHITE_LABELS_V1")) {
 fs.writeFileSync(piesCssPath, piesCss);
 
 let workspace = fs.readFileSync(workspacePath, "utf8");
+const functionAt = workspace.indexOf("function BotAnalyticsWorkspace");
+if (functionAt < 0) throw new Error("Bot workspace function missing");
 
-const typeAnchor = 'type ChartMode = "Cumulative PnL" | "Trade PnL" | "Drawdown" | "Trade frequency";';
 if (!workspace.includes("type ExitConfigTarget =")) {
-  if (!workspace.includes(typeAnchor)) throw new Error("Bot workspace BE config type anchor missing");
-  workspace = workspace.replace(typeAnchor, `${typeAnchor}\ntype ExitConfigTarget = { profitPct:number; allocationPct:number };\ntype ExitConfig = { takeProfit:number|null; takeProfitTargets:ExitConfigTarget[]; stopEnabled:boolean; stopPct:number|null };`);
+  const colorsAt = workspace.indexOf("const COLORS", 0);
+  if (colorsAt < 0 || colorsAt > functionAt) throw new Error("Bot workspace BE type insertion point missing");
+  const types = 'type ExitConfigTarget = { profitPct:number; allocationPct:number };\ntype ExitConfig = { takeProfit:number|null; takeProfitTargets:ExitConfigTarget[]; stopEnabled:boolean; stopPct:number|null };\n';
+  workspace = workspace.slice(0, colorsAt) + types + workspace.slice(colorsAt);
 }
 
-const stateAnchor = '  const [compareId,setCompareId]=useState("");';
 if (!workspace.includes("const [exitConfig,setExitConfig]")) {
-  if (!workspace.includes(stateAnchor)) throw new Error("Bot workspace BE config state anchor missing");
-  workspace = workspace.replace(stateAnchor, `${stateAnchor}\n  const [exitConfig,setExitConfig]=useState<ExitConfig|null>(null);`);
+  const firstEffectAt = workspace.indexOf("  useEffect(", functionAt);
+  if (firstEffectAt < 0) throw new Error("Bot workspace BE state insertion point missing");
+  workspace = workspace.slice(0, firstEffectAt) + '  const [exitConfig,setExitConfig]=useState<ExitConfig|null>(null);\n\n' + workspace.slice(firstEffectAt);
 }
 
-const effectAnchor = '  useEffect(()=>{ const fn=(e:KeyboardEvent)=>{if(e.key==="Escape")onClose();};';
 if (!workspace.includes('rpc("trader_bot_exit_config"')) {
-  if (!workspace.includes(effectAnchor)) throw new Error("Bot workspace BE config effect anchor missing");
+  const compareAt = workspace.indexOf("  const compare=", functionAt);
+  if (compareAt < 0) throw new Error("Bot workspace BE effect insertion point missing");
   const configEffect = `  useEffect(()=>{\n    let cancelled=false;\n    setExitConfig(null);\n    if(automation.type!=="DCA")return()=>{cancelled=true;};\n    void (async()=>{\n      const {data,error:configError}=await browserSupabase.rpc("trader_bot_exit_config",{p_account_id:accountId,p_bot_id:automation.id});\n      if(cancelled||configError)return;\n      const value=(data||null) as ExitConfig|null;\n      if(value)setExitConfig(value);\n    })();\n    return()=>{cancelled=true;};\n  },[accountId,automation.id,automation.type]);\n\n`;
-  workspace = workspace.replace(effectAnchor, configEffect + effectAnchor);
+  workspace = workspace.slice(0, compareAt) + configEffect + workspace.slice(compareAt);
 }
 
-const calcAnchor = '  const exitPie=pie(automation.exitReasons.map((r,i)=>({value:r.trades,color:COLORS[i%COLORS.length]})));';
-if (!workspace.includes("const historicalBreakEvenWinRate =")) {
-  if (!workspace.includes(calcAnchor)) throw new Error("Bot workspace BE calculation anchor missing");
-  const calc = `${calcAnchor}\n  const averageWinPnl=automation.wins>0?automation.grossProfit/automation.wins:0;\n  const averageLossPnl=automation.losses>0?automation.grossLoss/automation.losses:0;\n  const nonBreakevenShare=automation.closedTrades>0?(automation.wins+automation.losses)/automation.closedTrades:0;\n  const historicalBreakEvenWinRate=averageWinPnl>0&&averageLossPnl>0?nonBreakevenShare*averageLossPnl/(averageWinPnl+averageLossPnl)*100:null;\n  const historicalBreakEvenTitle=historicalBreakEvenWinRate==null?"Historical break-even needs at least one realized winning trade and one realized losing trade.":\`Historical break-even from the same closed trades and timeframe shown here. Average realized winner +$\${averageWinPnl.toFixed(2)}, average realized loser −$\${averageLossPnl.toFixed(2)}.\`;\n  const theoreticalTargets=exitConfig?.takeProfitTargets?.length?exitConfig.takeProfitTargets:Number(exitConfig?.takeProfit??0)>0?[{profitPct:Number(exitConfig?.takeProfit??0),allocationPct:100}]:[];\n  const theoreticalAllocation=theoreticalTargets.reduce((sum,target)=>sum+Math.max(0,Number(target.allocationPct??0)),0);\n  const weightedTakeProfit=theoreticalAllocation>0?theoreticalTargets.reduce((sum,target)=>sum+Math.max(0,Number(target.profitPct??0))*Math.max(0,Number(target.allocationPct??0)),0)/theoreticalAllocation:0;\n  const configuredStopLoss=Math.max(0,Number(exitConfig?.stopPct??0));\n  const theoreticalBreakEvenWinRate=exitConfig?.stopEnabled===true&&configuredStopLoss>0&&weightedTakeProfit>0?configuredStopLoss/(weightedTakeProfit+configuredStopLoss)*100:null;\n  const theoreticalBreakEvenTitle=theoreticalBreakEvenWinRate==null?"Theoretical break-even requires a DCA bot with an enabled Stop Loss and a valid current Take Profit plan.":\`Theoretical break-even from the bot's current exit configuration. Allocation-weighted TP \${weightedTakeProfit.toFixed(2)}%, Stop Loss \${configuredStopLoss.toFixed(2)}%.\`;`;
-  workspace = workspace.replace(calcAnchor, calc);
+if (!workspace.includes("const historicalBreakEvenWinRate=")) {
+  const exitPieAt = workspace.indexOf("  const exitPie=", functionAt);
+  const exitPieEnd = exitPieAt < 0 ? -1 : workspace.indexOf(";\n", exitPieAt);
+  if (exitPieAt < 0 || exitPieEnd < 0) throw new Error("Bot workspace BE calculation insertion point missing");
+  const calc = `\n  const averageWinPnl=automation.wins>0?automation.grossProfit/automation.wins:0;\n  const averageLossPnl=automation.losses>0?automation.grossLoss/automation.losses:0;\n  const nonBreakevenShare=automation.closedTrades>0?(automation.wins+automation.losses)/automation.closedTrades:0;\n  const historicalBreakEvenWinRate=averageWinPnl>0&&averageLossPnl>0?nonBreakevenShare*averageLossPnl/(averageWinPnl+averageLossPnl)*100:null;\n  const historicalBreakEvenTitle=historicalBreakEvenWinRate==null?"Historical break-even needs at least one realized winning trade and one realized losing trade.":\`Historical break-even from the same closed trades and timeframe shown here. Average realized winner +$\${averageWinPnl.toFixed(2)}, average realized loser −$\${averageLossPnl.toFixed(2)}.\`;\n  const theoreticalTargets=exitConfig?.takeProfitTargets?.length?exitConfig.takeProfitTargets:Number(exitConfig?.takeProfit??0)>0?[{profitPct:Number(exitConfig?.takeProfit??0),allocationPct:100}]:[];\n  const theoreticalAllocation=theoreticalTargets.reduce((sum,target)=>sum+Math.max(0,Number(target.allocationPct??0)),0);\n  const weightedTakeProfit=theoreticalAllocation>0?theoreticalTargets.reduce((sum,target)=>sum+Math.max(0,Number(target.profitPct??0))*Math.max(0,Number(target.allocationPct??0)),0)/theoreticalAllocation:0;\n  const configuredStopLoss=Math.max(0,Number(exitConfig?.stopPct??0));\n  const theoreticalBreakEvenWinRate=exitConfig?.stopEnabled===true&&configuredStopLoss>0&&weightedTakeProfit>0?configuredStopLoss/(weightedTakeProfit+configuredStopLoss)*100:null;\n  const theoreticalBreakEvenTitle=theoreticalBreakEvenWinRate==null?"Theoretical break-even requires a DCA bot with an enabled Stop Loss and a valid current Take Profit plan.":\`Theoretical break-even from the bot's current exit configuration. Allocation-weighted TP \${weightedTakeProfit.toFixed(2)}%, Stop Loss \${configuredStopLoss.toFixed(2)}%.\`;`;
+  workspace = workspace.slice(0, exitPieEnd + 2) + calc + workspace.slice(exitPieEnd + 2);
 }
 
 const outcomeAt = workspace.indexOf("<small>OUTCOME MIX</small>");
