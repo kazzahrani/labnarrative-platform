@@ -63,3 +63,4 @@ fs.writeFileSync(overviewPath, overview);
 console.log("Prepared secure Coinbase Advanced Trade read-only connection and Overview exchange health.");
 
 await import("./prepare-trader-kraken-connection-v1.mjs");
+await import("./prepare-trader-kucoin-connection-v1.mjs");
