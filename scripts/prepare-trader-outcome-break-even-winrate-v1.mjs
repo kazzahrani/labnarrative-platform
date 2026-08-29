@@ -40,7 +40,14 @@ if (!pies.includes("Break-even WR")) {
   pies = pies.replace(headerFrom, headerTo);
 }
 
-for (const marker of ["takeProfitPct?: number", "stopLossPct?: number", "configuredSl / (configuredTp + configuredSl) * 100", "Break-even WR", "styles.breakEvenTag"]) {
+const donutFrom = '<div className={styles.donut} style={{ background: outcomeGradient }}><i><b>{stats.closedTrades}</b><span>closed</span></i></div>';
+const donutTo = '<div className={styles.donut} style={{ background: outcomeGradient }}><i><b>{stats.closedTrades}</b><span>closed</span></i>{outcomeOnly && breakEvenWinRate != null && <div className={styles.breakEvenMarker} style={{ transform: `rotate(${breakEvenWinRate * 3.6}deg)` }} aria-hidden="true" />}</div>';
+if (!pies.includes("styles.breakEvenMarker")) {
+  if (!pies.includes(donutFrom)) throw new Error("Break-even pie marker donut anchor missing");
+  pies = pies.replace(donutFrom, donutTo);
+}
+
+for (const marker of ["takeProfitPct?: number", "stopLossPct?: number", "configuredSl / (configuredTp + configuredSl) * 100", "Break-even WR", "styles.breakEvenTag", "styles.breakEvenMarker", "breakEvenWinRate * 3.6"]) {
   if (!pies.includes(marker)) throw new Error(`Break-even Outcome Mix missing ${marker}`);
 }
 fs.writeFileSync(piesPath, pies);
@@ -49,6 +56,10 @@ let css = fs.readFileSync(piesCssPath, "utf8");
 if (!css.includes("OUTCOME_BREAK_EVEN_WR_V1")) {
   css += `\n/* OUTCOME_BREAK_EVEN_WR_V1 */\n.breakEvenTag{display:inline-flex;align-items:center;white-space:nowrap;border:1px solid #4a4a4a;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700;line-height:1;color:#bdbdbd;background:#252525;letter-spacing:.01em}\n.breakEvenAbove{border-color:rgba(94,226,160,.35);color:#79ddb0;background:rgba(94,226,160,.07)}\n.breakEvenBelow{border-color:rgba(255,125,138,.32);color:#ef929b;background:rgba(255,125,138,.06)}\n.outcomeOnly .card header{display:flex;align-items:center;justify-content:space-between;gap:8px}\n@media(max-width:860px){.breakEvenTag{font-size:9px;padding:3px 7px}}\n`;
 }
+if (!css.includes("OUTCOME_BREAK_EVEN_PIE_MARKER_V1")) {
+  css += `\n/* OUTCOME_BREAK_EVEN_PIE_MARKER_V1 */\n.breakEvenMarker{position:absolute;inset:-5px;z-index:3;border-radius:50%;pointer-events:none;transform-origin:center center}\n.breakEvenMarker:before{content:\"\";position:absolute;left:50%;top:-1px;width:2px;height:19px;border-radius:2px;background:#f2f2f2;transform:translateX(-50%);box-shadow:0 0 0 1px rgba(0,0,0,.72),0 0 7px rgba(255,255,255,.38)}\n.breakEvenMarker:after{content:\"\";position:absolute;left:50%;top:-3px;width:6px;height:6px;border-radius:50%;background:#f2f2f2;transform:translateX(-50%);box-shadow:0 0 0 1px rgba(0,0,0,.72),0 0 6px rgba(255,255,255,.32)}\n`;
+}
+for (const marker of [".breakEvenMarker{", ".breakEvenMarker:before", ".breakEvenMarker:after"]) if (!css.includes(marker)) throw new Error(`Break-even pie marker CSS missing ${marker}`);
 fs.writeFileSync(piesCssPath, css);
 
 let configurator = fs.readFileSync(configuratorPath, "utf8");
@@ -63,4 +74,4 @@ for (const marker of ["takeProfitPct={form.takeProfit}", "stopEnabled={form.stop
 }
 fs.writeFileSync(configuratorPath, configurator);
 
-console.log("Added nominal TP/SL break-even win-rate badge to the DCA Outcome Mix popup.");
+console.log("Added nominal TP/SL break-even win-rate badge and ring marker to the DCA Outcome Mix popup.");
