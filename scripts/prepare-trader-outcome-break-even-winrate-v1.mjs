@@ -13,22 +13,22 @@ for (const target of [piesPath, piesCssPath, configuratorPath]) {
 let pies = fs.readFileSync(piesPath, "utf8");
 
 const propsFrom = "type Props = { accountId: string; botId: string; outcomeOnly?: boolean };";
-const propsTo = "type Props = { accountId: string; botId: string; outcomeOnly?: boolean; takeProfitPct?: number; stopEnabled?: boolean; stopLossPct?: number };";
+const propsTo = "type Props = { accountId: string; botId: string; outcomeOnly?: boolean; takeProfitPct?: number; takeProfitTargets?: Array<{ profitPct: number; allocationPct: number }>; stopEnabled?: boolean; stopLossPct?: number };";
 if (!pies.includes(propsTo)) {
   if (!pies.includes(propsFrom)) throw new Error("Break-even badge Props anchor missing");
   pies = pies.replace(propsFrom, propsTo);
 }
 
 const fnFrom = "export default function AutomationBotInsightPies({ accountId, botId, outcomeOnly = false }: Props) {";
-const fnTo = "export default function AutomationBotInsightPies({ accountId, botId, outcomeOnly = false, takeProfitPct, stopEnabled = false, stopLossPct }: Props) {";
+const fnTo = "export default function AutomationBotInsightPies({ accountId, botId, outcomeOnly = false, takeProfitPct, takeProfitTargets, stopEnabled = false, stopLossPct }: Props) {";
 if (!pies.includes(fnTo)) {
   if (!pies.includes(fnFrom)) throw new Error("Break-even badge function anchor missing");
   pies = pies.replace(fnFrom, fnTo);
 }
 
 const calcAnchor = "  const exitTotal = exits.reduce((sum, item) => sum + item.trades, 0);";
-const calcBlock = `${calcAnchor}\n  const configuredTp = Number(takeProfitPct ?? 0);\n  const configuredSl = Number(stopLossPct ?? 0);\n  const breakEvenWinRate = stopEnabled && configuredTp > 0 && configuredSl > 0 ? configuredSl / (configuredTp + configuredSl) * 100 : null;\n  const breakEvenTitle = breakEvenWinRate == null\n    ? \"No fixed stop loss is configured, so a TP/SL break-even win rate is not defined.\"\n    : \`Minimum nominal win rate implied by TP \${configuredTp}% and SL \${configuredSl}% before fees, slippage, partial exits, trailing exits or other close reasons.\`;`;
-if (!pies.includes("const breakEvenWinRate =")) {
+const calcBlock = `${calcAnchor}\n  const fallbackTp = Number(takeProfitPct ?? 0);\n  const configuredSl = Number(stopLossPct ?? 0);\n  const validTpTargets = (takeProfitTargets ?? []).filter((target) => Number(target.profitPct) > 0 && Number(target.allocationPct) > 0);\n  const totalTpAllocation = validTpTargets.reduce((sum, target) => sum + Number(target.allocationPct), 0);\n  const weightedTakeProfit = totalTpAllocation > 0\n    ? validTpTargets.reduce((sum, target) => sum + Number(target.profitPct) * Number(target.allocationPct), 0) / totalTpAllocation\n    : fallbackTp;\n  const breakEvenWinRate = stopEnabled && weightedTakeProfit > 0 && configuredSl > 0 ? configuredSl / (weightedTakeProfit + configuredSl) * 100 : null;\n  const tpPlanLabel = validTpTargets.length\n    ? validTpTargets.map((target, index) => \`TP\${index + 1} \${Number(target.profitPct)}% × \${Number(target.allocationPct)}%\`).join(\", \")\n    : weightedTakeProfit > 0 ? \`TP \${weightedTakeProfit}% × 100%\` : \"No Take Profit plan\";\n  const breakEvenTitle = breakEvenWinRate == null\n    ? \"No fixed stop loss is configured, so a TP/SL break-even win rate is not defined.\"\n    : \`Minimum nominal win rate implied by allocation-weighted TP \${weightedTakeProfit.toFixed(2)}% and SL \${configuredSl}%. \${tpPlanLabel}. Before fees, slippage, partial execution differences, trailing exits or other close reasons.\`;`;
+if (!pies.includes("const weightedTakeProfit =")) {
   if (!pies.includes(calcAnchor)) throw new Error("Break-even calculation anchor missing");
   pies = pies.replace(calcAnchor, calcBlock);
 }
@@ -47,7 +47,7 @@ if (!pies.includes("styles.breakEvenMarker")) {
   pies = pies.replace(donutFrom, donutTo);
 }
 
-for (const marker of ["takeProfitPct?: number", "stopLossPct?: number", "configuredSl / (configuredTp + configuredSl) * 100", "Break-even WR", "styles.breakEvenTag", "styles.breakEvenMarker", "breakEvenWinRate * 3.6"]) {
+for (const marker of ["takeProfitTargets?: Array", "const weightedTakeProfit =", "Number(target.profitPct) * Number(target.allocationPct)", "configuredSl / (weightedTakeProfit + configuredSl) * 100", "Break-even WR", "styles.breakEvenTag", "styles.breakEvenMarker", "breakEvenWinRate * 3.6"]) {
   if (!pies.includes(marker)) throw new Error(`Break-even Outcome Mix missing ${marker}`);
 }
 fs.writeFileSync(piesPath, pies);
@@ -64,14 +64,14 @@ fs.writeFileSync(piesCssPath, css);
 
 let configurator = fs.readFileSync(configuratorPath, "utf8");
 const callFrom = "<AutomationBotInsightPies accountId={accountId} botId={botId!} outcomeOnly />";
-const callTo = "<AutomationBotInsightPies accountId={accountId} botId={botId!} outcomeOnly takeProfitPct={form.takeProfit} stopEnabled={form.stopEnabled} stopLossPct={form.stopPct} />";
+const callTo = "<AutomationBotInsightPies accountId={accountId} botId={botId!} outcomeOnly takeProfitPct={form.takeProfit} takeProfitTargets={form.takeProfitTargets} stopEnabled={form.stopEnabled} stopLossPct={form.stopPct} />";
 if (!configurator.includes(callTo)) {
   if (!configurator.includes(callFrom)) throw new Error("Break-even DCA popup component call missing");
   configurator = configurator.replace(callFrom, callTo);
 }
-for (const marker of ["takeProfitPct={form.takeProfit}", "stopEnabled={form.stopEnabled}", "stopLossPct={form.stopPct}"]) {
+for (const marker of ["takeProfitTargets={form.takeProfitTargets}", "takeProfitPct={form.takeProfit}", "stopEnabled={form.stopEnabled}", "stopLossPct={form.stopPct}"]) {
   if (!configurator.includes(marker)) throw new Error(`Break-even DCA popup missing ${marker}`);
 }
 fs.writeFileSync(configuratorPath, configurator);
 
-console.log("Added nominal TP/SL break-even win-rate badge and ring marker to the DCA Outcome Mix popup.");
+console.log("Added allocation-weighted multi-TP break-even win-rate badge and ring marker to the DCA Outcome Mix popup.");
