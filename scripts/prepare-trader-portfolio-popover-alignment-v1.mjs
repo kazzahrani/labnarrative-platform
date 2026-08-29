@@ -21,3 +21,5 @@ if (!css.includes("PORTFOLIO BOT POPOVER ALIGNMENT V1")) {
 
 fs.writeFileSync(cssTarget, css);
 console.log("Aligned Portfolio bot-position popover under its trigger.");
+
+await import("./prepare-trader-dca-config-importer-v1.mjs");
