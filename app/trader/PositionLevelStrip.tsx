@@ -17,7 +17,7 @@ type Props = {
   takeProfitPrice: number | null;
   nextAveragingPrice: number | null;
   fills: Fill[];
-  pnlPct: number;
+  pnl: number;
   active: boolean;
 };
 
@@ -30,6 +30,7 @@ type Level = {
 
 const GREEN = "#6CB38C";
 const RED = "#B26F74";
+const NEUTRAL = "#7D7D7D";
 
 function finitePositive(value: unknown) {
   const number = Number(value);
@@ -51,7 +52,7 @@ export default function PositionLevelStrip({
   takeProfitPrice,
   nextAveragingPrice,
   fills,
-  pnlPct,
+  pnl,
   active,
 }: Props) {
   const avg = finitePositive(averagePrice);
@@ -96,8 +97,8 @@ export default function PositionLevelStrip({
   const x = (price: number) => left + (price - min) / (max - min) * (right - left);
   const avgX = avg ? x(avg) : (left + right) / 2;
   const currentX = current ? x(current) : avgX;
-  const positive = Number(pnlPct) >= 0;
-  const accent = positive ? GREEN : RED;
+  const outcome = Number(pnl);
+  const accent = Number.isFinite(outcome) && outcome > 0 ? GREEN : Number.isFinite(outcome) && outcome < 0 ? RED : NEUTRAL;
   const moveStart = Math.min(avgX, currentX);
   const moveEnd = Math.max(avgX, currentX);
 
