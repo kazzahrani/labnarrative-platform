@@ -33,17 +33,11 @@ if(!configurator.includes('exchangeProvider:form.exchangeProvider??"binance"')){
 if(!configurator.includes("<span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b>")){
   configurator=apply(configurator,s=>s.replace(/(<div className=\{cfg\.summaryGrid\}>)/,'$1<div><span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b></div>'),"view exchange summary");
 }
-// Earlier template passes may rewrite the select markup but preserve the Exchange label. Avoid duplicating it.
 if(!configurator.includes("<span>Exchange</span>")){
   const exchangeField='<label><span>Exchange</span><select value={form.exchangeProvider??"binance"} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider}))}>{EXCHANGE_OPTIONS.map(option=><option key={option.id} value={option.id} disabled={!option.enabled}>{option.label}{option.enabled?"":" · "+option.note}</option>)}</select><small>Execution venue for this bot.</small></label>';
   const exactNameField='<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>';
-  if(configurator.includes(exactNameField)){
-    configurator=configurator.replace(exactNameField,exactNameField+exchangeField);changes++;
-  }else{
-    const next=configurator.replace(/(<label[^>]*>\s*<span>Bot name<\/span>[\s\S]*?<\/label>)/,`$1${exchangeField}`);
-    if(next===configurator)throw new Error("Exchange-aware bot transform could not find Bot name field");
-    configurator=next;changes++;
-  }
+  if(configurator.includes(exactNameField)){configurator=configurator.replace(exactNameField,exactNameField+exchangeField);changes++;}
+  else{const next=configurator.replace(/(<label[^>]*>\s*<span>Bot name<\/span>[\s\S]*?<\/label>)/,`$1${exchangeField}`);if(next===configurator)throw new Error("Exchange-aware bot transform could not find Bot name field");configurator=next;changes++;}
 }
 
 if(!/exchangeProvider\?:\s*string;/.test(shell)){
@@ -53,11 +47,22 @@ if(!shell.includes("function botExchangeLabel(")){
   shell=apply(shell,s=>s.replace("export default function TraderV2FullShell",'function botExchangeLabel(value?:string){const raw=String(value||"binance").toLowerCase();return raw==="okx"?"OKX":raw==="bybit"?"Bybit":raw==="kraken"?"Kraken":raw==="kucoin"?"KuCoin":raw==="coinbase"?"Coinbase":"Binance";}\n\nexport default function TraderV2FullShell'),"Trader shell export");
 }
 if(!shell.includes("<span>Exchange</span>")){
-  shell=apply(shell,s=>s.replace("<span>Bot</span><span>Pair</span><span>Trades</span>","<span>Bot</span><span>Pair</span><span>Exchange</span><span>Trades</span>"),"Automation table header");
+  const exactHeader="<span>Bot</span><span>Pair</span><span>Trades</span>";
+  if(shell.includes(exactHeader)){shell=shell.replace(exactHeader,"<span>Bot</span><span>Pair</span><span>Exchange</span><span>Trades</span>");changes++;}
+  else{
+    const next=shell.replace(/(<div className=\{dca\.botHead\}>[\s\S]{0,800}?<span[^>]*>Pair<\/span>)/,'$1<span>Exchange</span>');
+    if(next===shell)throw new Error("Exchange-aware bot transform could not find Automation table header");
+    shell=next;changes++;
+  }
 }
 if(!shell.includes("className={dca.exchangeBadge}")){
-  const pairCell='<span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</span>';
-  shell=apply(shell,s=>s.replace(pairCell,pairCell+'<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>'),"Automation pair cell");
+  const exactPairCell='<span className={dca.botCell} style={{display:"flex",alignItems:"center",gap:7}}><CoinLogo symbol={bot.pair} size={18}/>{bot.pair}</span>';
+  if(shell.includes(exactPairCell)){shell=shell.replace(exactPairCell,exactPairCell+'<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>');changes++;}
+  else{
+    const next=shell.replace(/(<span className=\{dca\.botCell\}[^>]*>[\s\S]{0,350}?<CoinLogo[^>]*symbol=\{bot\.pair\}[^>]*\/>[\s\S]{0,120}?\{bot\.pair\}<\/span>)/,'$1<span className={dca.exchangeBadge}>{botExchangeLabel(bot.exchangeProvider)}</span>');
+    if(next===shell)throw new Error("Exchange-aware bot transform could not find Automation pair cell");
+    shell=next;changes++;
+  }
 }
 
 if(!tableCss.includes("/* exchange-aware-bots-v1 */")){
