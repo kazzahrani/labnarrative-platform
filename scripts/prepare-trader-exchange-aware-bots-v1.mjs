@@ -86,7 +86,7 @@ if (!configurator.includes('<Summary label="Exchange" value={exchangeLabel(bot.e
 if (!configurator.includes('label="Exchange" hint="Execution venue assigned to this bot."')) {
   const botNameField = '<Field label="Bot name" hint="Internal name shown throughout Trader."><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></Field>';
   if (!configurator.includes(botNameField)) throw new Error("Exchange-aware bot transform could not find Bot name field");
-  const exchangeField = `${botNameField}<Field label="Exchange" hint="Execution venue assigned to this bot."><select value={form.exchangeProvider} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider}))}>{EXCHANGE_OPTIONS.map(option=><option key={option.id} value={option.id} disabled={!option.enabled}>{option.label}{option.enabled?"":` · ${option.note}`}</option>)}</select></Field>`;
+  const exchangeField = `${botNameField}<Field label="Exchange" hint="Execution venue assigned to this bot."><select value={form.exchangeProvider} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider}))}>{EXCHANGE_OPTIONS.map(option=><option key={option.id} value={option.id} disabled={!option.enabled}>{option.label}{option.enabled?"":" · "+option.note}</option>)}</select></Field>`;
   configurator = configurator.replace(botNameField, exchangeField);
   changes += 1;
 }
