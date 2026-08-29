@@ -61,3 +61,5 @@ for (const required of [marker, "CoinbaseConnectionCard", "trader-coinbase-contr
 fs.writeFileSync(connectionsPath, connections);
 fs.writeFileSync(overviewPath, overview);
 console.log("Prepared secure Coinbase Advanced Trade read-only connection and Overview exchange health.");
+
+await import("./prepare-trader-kraken-connection-v1.mjs");
