@@ -33,10 +33,17 @@ if(!configurator.includes('exchangeProvider:form.exchangeProvider??"binance"')){
 if(!configurator.includes("<span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b>")){
   configurator=apply(configurator,s=>s.replace(/(<div className=\{cfg\.summaryGrid\}>)/,'$1<div><span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b></div>'),"view exchange summary");
 }
-if(!configurator.includes('<span>Exchange</span><select value={form.exchangeProvider??"binance"}')){
-  const nameField='<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>';
+// Earlier template passes may rewrite the select markup but preserve the Exchange label. Avoid duplicating it.
+if(!configurator.includes("<span>Exchange</span>")){
   const exchangeField='<label><span>Exchange</span><select value={form.exchangeProvider??"binance"} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider}))}>{EXCHANGE_OPTIONS.map(option=><option key={option.id} value={option.id} disabled={!option.enabled}>{option.label}{option.enabled?"":" · "+option.note}</option>)}</select><small>Execution venue for this bot.</small></label>';
-  configurator=apply(configurator,s=>s.replace(nameField,nameField+exchangeField),"Bot name field");
+  const exactNameField='<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>';
+  if(configurator.includes(exactNameField)){
+    configurator=configurator.replace(exactNameField,exactNameField+exchangeField);changes++;
+  }else{
+    const next=configurator.replace(/(<label[^>]*>\s*<span>Bot name<\/span>[\s\S]*?<\/label>)/,`$1${exchangeField}`);
+    if(next===configurator)throw new Error("Exchange-aware bot transform could not find Bot name field");
+    configurator=next;changes++;
+  }
 }
 
 if(!/exchangeProvider\?:\s*string;/.test(shell)){
