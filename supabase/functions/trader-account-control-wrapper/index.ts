@@ -11,6 +11,7 @@ type BotMeta={type:"dca"|"tradingview_strategy";marketLabel:string;marketScope:"
 function n(v:unknown,f=0){const x=Number(v);return Number.isFinite(x)?x:f}
 function obj(v:unknown):Json{return v&&typeof v==="object"&&!Array.isArray(v)?v as Json:{}}
 function strings(v:unknown){return Array.isArray(v)?v.map(x=>String(x||"").trim()).filter(Boolean):[]}
+function has(o:Json,key:string){return Object.prototype.hasOwnProperty.call(o,key)}
 function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors,"content-type":"application/json","cache-control":"no-store"}})}
 function dcaPositionCapital(state:Json){
   let total=Math.max(0,n(state.baseOrder));
@@ -31,6 +32,45 @@ function botMetaFromState(state:Json):BotMeta{
   const marketCapacity=allPairs?maxActive:Math.max(1,pairs.length||1);
   const concurrent=Math.max(1,Math.min(maxActive,marketCapacity));
   return{type,marketLabel,marketScope,maxCapital:dcaPositionCapital(state)*concurrent};
+}
+function firstTpPct(tradeState:Json,botState:Json,fallback:number){
+  const candidates=[tradeState.takeProfitTargets,botState.takeProfitTargets];
+  for(const candidate of candidates){
+    if(!Array.isArray(candidate))continue;
+    const values=candidate.map(item=>n(obj(item).profitPct)).filter(value=>value>0).sort((a,b)=>a-b);
+    if(values.length)return values[0];
+  }
+  const direct=[tradeState.takeProfit,botState.takeProfit,botState.takeProfitPct,fallback].map(value=>n(value)).find(value=>value>0);
+  return direct??0;
+}
+function enrichDcaLevels(trade:Json,tradeState:Json,botState:Json){
+  const avg=n(trade.averagePrice),entry=n(trade.entryPrice,avg);
+  const tpPct=firstTpPct(tradeState,botState,n(trade.takeProfitPct));
+  if(tpPct>0){
+    trade.takeProfitPct=tpPct;
+    trade.takeProfitPrice=avg>0?avg*(1+tpPct/100):trade.takeProfitPrice??null;
+  }
+
+  const stopEnabled=has(tradeState,"stopEnabled")?tradeState.stopEnabled===true:has(botState,"stopEnabled")?botState.stopEnabled===true:trade.stopEnabled===true;
+  const stopPct=has(tradeState,"stopPct")?n(tradeState.stopPct):has(botState,"stopPct")?n(botState.stopPct):n(trade.stopPct);
+  trade.stopEnabled=stopEnabled;
+  trade.stopPct=stopPct;
+  trade.stopLossPrice=stopEnabled&&stopPct>0&&avg>0?avg*(1-stopPct/100):null;
+
+  const status=String(trade.status||"");
+  const averagingEnabled=has(tradeState,"averagingEnabled")?tradeState.averagingEnabled!==false:botState.averagingEnabled!==false;
+  const filled=Math.max(0,Math.round(n(trade.averagingFilled)));
+  const max=Math.max(0,Math.round(n(trade.maxAveraging,n(botState.maxSafetyOrders))));
+  const deviation=n(botState.deviation);
+  const stepScale=Math.max(0.000001,n(botState.stepScale,1));
+  let next:number|null=null;
+  if(status==="Active"&&averagingEnabled&&filled<max&&entry>0&&deviation>0){
+    let cumulative=0,step=deviation;
+    for(let index=0;index<=filled;index+=1){cumulative+=step;step*=stepScale;}
+    const price=entry*(1-cumulative/100);
+    if(Number.isFinite(price)&&price>0)next=price;
+  }
+  trade.nextAveragingPrice=next;
 }
 
 Deno.serve(async(req:Request)=>{
@@ -90,9 +130,14 @@ Deno.serve(async(req:Request)=>{
     if(accountId){
       const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
       const botMeta=new Map<string,BotMeta>();
+      const botStates=new Map<string,Json>();
       const{data:dbBots,error:botError}=await db.from("trader_bots").select("client_id,client_state").eq("account_id",accountId);
       if(botError)throw botError;
-      for(const row of dbBots??[])botMeta.set(String(row.client_id),botMetaFromState(obj(row.client_state)));
+      for(const row of dbBots??[]){
+        const id=String(row.client_id),state=obj(row.client_state);
+        botMeta.set(id,botMetaFromState(state));
+        botStates.set(id,state);
+      }
       if(Array.isArray(payload.bots))for(const bot of payload.bots as Json[]){
         const id=String(bot.id||""),meta=botMeta.get(id)??{type:"dca" as const,marketLabel:String(bot.pair||"—"),marketScope:"single" as const,maxCapital:null};
         bot.automationType=meta.type;
@@ -121,18 +166,26 @@ Deno.serve(async(req:Request)=>{
       if(trades.length){
         const clientIds=trades.map(t=>String(t.id||"")).filter(Boolean);
         const{data:dbTrades,error:tradeError}=await db.from("trader_trades")
-          .select("id,client_id,total_invested,status")
+          .select("id,client_id,total_invested,status,client_state")
           .eq("account_id",accountId)
           .in("client_id",clientIds);
         if(tradeError)throw tradeError;
 
         const lifetime=new Map<string,number>();
-        for(const row of dbTrades??[])lifetime.set(String(row.client_id),n(row.total_invested));
+        const tradeStates=new Map<string,Json>();
+        for(const row of dbTrades??[]){
+          const id=String(row.client_id);
+          lifetime.set(id,n(row.total_invested));
+          tradeStates.set(id,obj(row.client_state));
+        }
 
         let activeRealized=0,activeLifetime=0;
         const botPnl=new Map<string,number>(),botLifetime=new Map<string,number>();
         for(const trade of trades){
           const id=String(trade.id||""),status=String(trade.status||""),realized=n(trade.realizedPnl),oldPnl=n(trade.pnl),corrected=status==="Active"?oldPnl+realized:oldPnl,capital=lifetime.get(id)||0;
+          const botId=String(trade.botId||"");
+          const type=botMeta.get(botId)?.type||"dca";
+          if(type==="dca")enrichDcaLevels(trade,tradeStates.get(id)??{},botStates.get(botId)??{});
           const remainingCostBasis=n(trade.invested);
           trade.remainingCostBasis=remainingCostBasis;
           trade.lifetimeInvested=capital;
@@ -140,7 +193,6 @@ Deno.serve(async(req:Request)=>{
           trade.pnl=corrected;
           trade.pnlPct=capital>0?corrected/capital*100:0;
           if(status==="Active"){activeRealized+=realized;activeLifetime+=capital;}
-          const botId=String(trade.botId||"");
           if(botId){botPnl.set(botId,(botPnl.get(botId)||0)+corrected);botLifetime.set(botId,(botLifetime.get(botId)||0)+capital);}
         }
 
