@@ -1,0 +1,19 @@
+[class*="brandMark"] {
+  font-size: 0 !important;
+  color: transparent !important;
+  background-color: transparent !important;
+  background-image: url("/labnarrative-mark.png") !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+}
+
+[class*="authBrand"] > span {
+  font-size: 0 !important;
+  color: transparent !important;
+  background-color: transparent !important;
+  background-image: url("/labnarrative-mark.png") !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+}
