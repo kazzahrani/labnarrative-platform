@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
 import connectStyles from "./binance-connect.module.css";
+import OkxConnectionCard from "./OkxConnectionCard";
 import styles from "./overview-command-center.module.css";
 
 type RealAccount = {
@@ -200,8 +201,10 @@ export default function ConnectionsSettings({ realAccount, onConnectBinance, onB
           {bybitConnected && bybitTotal != null && <div className={styles.connectionMeta}><small>Unified equity {money(bybitTotal)}</small><small>{bybitAssetCount ?? 0} assets</small></div>}
           <button type="button" className={bybitConnected ? styles.secondaryButton : styles.primary} onClick={openBybit}>{bybitConnected ? "View connection" : "Connect Bybit"}</button>
         </article>
+
+        <OkxConnectionCard realAccountAvailable={Boolean(realAccount)} />
       </div>
-      <div className={styles.plannedConnections}><span><b>OKX</b><small>Planned</small></span><span><b>Coinbase</b><small>Planned</small></span><span><b>Kraken</b><small>Planned</small></span><span><b>KuCoin</b><small>Planned</small></span></div>
+      <div className={styles.plannedConnections}><span><b>Coinbase</b><small>Planned</small></span><span><b>Kraken</b><small>Planned</small></span><span><b>KuCoin</b><small>Planned</small></span></div>
     </section>
 
     <section className={styles.connectionSection}>
@@ -209,7 +212,7 @@ export default function ConnectionsSettings({ realAccount, onConnectBinance, onB
       <div className={styles.walletEmpty}><span>◇</span><div><b>No wallet connector enabled</b><small>This area is reserved for future read-only wallet portfolio connections. No nonfunctional connect button is shown until the feature is implemented.</small></div></div>
     </section>
 
-    <section className={styles.securityNote}><span>✓</span><div><b>Connection security</b><p>Binance keeps its fixed-IP execution gateway and existing live-trading safeguards. Bybit is isolated as a read-only balance connection in this first phase; write-enabled Bybit keys are rejected and LabNarrative does not send Bybit orders.</p></div></section>
+    <section className={styles.securityNote}><span>✓</span><div><b>Connection security</b><p>Binance keeps its fixed-IP execution gateway and existing live-trading safeguards. Bybit and OKX are isolated read-only balance connections in this phase; write-enabled keys are rejected and LabNarrative does not send orders to either exchange.</p></div></section>
 
     {bybitModal && <div className={connectStyles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget && !bybitBusy) setBybitModal(false); }}>
       <section className={connectStyles.modal}>
