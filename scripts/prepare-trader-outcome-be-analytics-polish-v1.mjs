@@ -61,11 +61,11 @@ if (!outcome.includes("styles.breakEvenTags")) {
 }
 
 if (!outcome.includes("styles.theoreticalBreakEvenMarker")) {
-  const donutAt = outcome.indexOf("className={styles.donut}");
-  const donutCenterEnd = donutAt < 0 ? -1 : outcome.indexOf("</i>", donutAt);
-  if (donutAt < 0 || donutCenterEnd < 0) throw new Error("Bot workspace Outcome Mix donut center missing");
+  const centerAt = outcome.indexOf("automation.closedTrades");
+  const centerEnd = centerAt < 0 ? -1 : outcome.indexOf("</i>", centerAt);
+  if (centerAt < 0 || centerEnd < 0) throw new Error("Bot workspace Outcome Mix closed-trade center missing");
   const markers = '{theoreticalBreakEvenWinRate!=null&&<div className={`${styles.breakEvenMarker} ${styles.theoreticalBreakEvenMarker}`} style={{transform:`rotate(${theoreticalBreakEvenWinRate*3.6}deg)`}} title={`Theoretical BE ${theoreticalBreakEvenWinRate.toFixed(1)}%`} aria-hidden="true"/>}{historicalBreakEvenWinRate!=null&&<div className={styles.breakEvenMarker} style={{transform:`rotate(${historicalBreakEvenWinRate*3.6}deg)`}} title={`Historical BE ${historicalBreakEvenWinRate.toFixed(1)}%`} aria-hidden="true"/>}';
-  outcome = outcome.slice(0, donutCenterEnd + 4) + markers + outcome.slice(donutCenterEnd + 4);
+  outcome = outcome.slice(0, centerEnd + 4) + markers + outcome.slice(centerEnd + 4);
 }
 
 workspace = workspace.slice(0, outcomeAt) + outcome + workspace.slice(exitAt);
