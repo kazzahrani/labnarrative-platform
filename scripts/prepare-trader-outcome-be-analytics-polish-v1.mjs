@@ -61,10 +61,11 @@ if (!outcome.includes("styles.breakEvenTags")) {
 }
 
 if (!outcome.includes("styles.theoreticalBreakEvenMarker")) {
-  const donutFrom = '<div className={styles.donut} style={{background:outcomePie}}><i><b>{automation.closedTrades}</b><span>closed</span></i></div>';
-  const donutTo = '<div className={styles.donut} style={{background:outcomePie}}><i><b>{automation.closedTrades}</b><span>closed</span></i>{theoreticalBreakEvenWinRate!=null&&<div className={`${styles.breakEvenMarker} ${styles.theoreticalBreakEvenMarker}`} style={{transform:`rotate(${theoreticalBreakEvenWinRate*3.6}deg)`}} title={`Theoretical BE ${theoreticalBreakEvenWinRate.toFixed(1)}%`} aria-hidden="true"/>}{historicalBreakEvenWinRate!=null&&<div className={styles.breakEvenMarker} style={{transform:`rotate(${historicalBreakEvenWinRate*3.6}deg)`}} title={`Historical BE ${historicalBreakEvenWinRate.toFixed(1)}%`} aria-hidden="true"/>}</div>';
-  if (!outcome.includes(donutFrom)) throw new Error("Bot workspace Outcome Mix donut anchor missing");
-  outcome = outcome.replace(donutFrom, donutTo);
+  const donutAt = outcome.indexOf("className={styles.donut}");
+  const donutCenterEnd = donutAt < 0 ? -1 : outcome.indexOf("</i>", donutAt);
+  if (donutAt < 0 || donutCenterEnd < 0) throw new Error("Bot workspace Outcome Mix donut center missing");
+  const markers = '{theoreticalBreakEvenWinRate!=null&&<div className={`${styles.breakEvenMarker} ${styles.theoreticalBreakEvenMarker}`} style={{transform:`rotate(${theoreticalBreakEvenWinRate*3.6}deg)`}} title={`Theoretical BE ${theoreticalBreakEvenWinRate.toFixed(1)}%`} aria-hidden="true"/>}{historicalBreakEvenWinRate!=null&&<div className={styles.breakEvenMarker} style={{transform:`rotate(${historicalBreakEvenWinRate*3.6}deg)`}} title={`Historical BE ${historicalBreakEvenWinRate.toFixed(1)}%`} aria-hidden="true"/>}';
+  outcome = outcome.slice(0, donutCenterEnd + 4) + markers + outcome.slice(donutCenterEnd + 4);
 }
 
 workspace = workspace.slice(0, outcomeAt) + outcome + workspace.slice(exitAt);
