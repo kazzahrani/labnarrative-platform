@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
+import styles from "./trade-pnl-value.module.css";
 
 type Props = {
   tradeId: string;
@@ -43,5 +44,5 @@ export default function TradePnlValue({ tradeId, pnl, active }: Props) {
   }, [tradeId, active]);
 
   const percentage = lifetimeInvested && lifetimeInvested > 0 ? Number(pnl || 0) / lifetimeInvested * 100 : null;
-  return <>{money(pnl)} · {percentage == null ? "—" : pct(percentage)}</>;
+  return <span className={styles.value}><span className={styles.amount}>{money(pnl)}</span><strong className={styles.percent}>{percentage == null ? "—" : pct(percentage)}</strong></span>;
 }
