@@ -1,3 +1,4 @@
+import "./prepare-trader-exchange-aware-bots-v1.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
