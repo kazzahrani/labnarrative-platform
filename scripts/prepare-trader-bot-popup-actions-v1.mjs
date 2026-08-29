@@ -8,6 +8,7 @@ if(!fs.existsSync(configuratorTarget))throw new Error("DCA configurator target m
 let source=fs.readFileSync(shellTarget,"utf8");
 let configurator=fs.readFileSync(configuratorTarget,"utf8");
 const marker="BOT_POPUP_COPY_DRAFT_DELETE_V2";
+const archivedMarker="BOT_POPUP_ARCHIVED_COPY_DELETE_V1";
 
 if(!source.includes(marker)){
   const invokeFrom='browserSupabase.functions.invoke("trader-account-control", { body });';
@@ -42,6 +43,13 @@ if(!source.includes(marker)){
   source=source.replace(closePattern,(match)=>match+'<button disabled={busy} onClick={() => void deleteBot(selectedBot!)}>Delete bot</button>');
 }
 
+if(!source.includes(archivedMarker)){
+  const closeX='<button className={dca.closeX} onClick={() => setBotModalMode(null)}>×</button>';
+  if(!source.includes(closeX))throw new Error("Archived bot actions could not find popup close button");
+  const archivedActions=`{/* ${archivedMarker} */}{botModalMode === "view" && selectedBot?.lifecycle === "closed" && <><button disabled={busy} onClick={() => copyBot(selectedBot!)}>Copy bot</button><button disabled={busy} onClick={() => void deleteBot(selectedBot!)}>Delete bot</button></>}`;
+  source=source.replace(closeX,archivedActions+closeX);
+}
+
 if(!configurator.includes('copyFromBotId?: string | null;')){
   const propsFrom='  botId: string | null;\n  onCancel: () => void;';
   const propsTo='  botId: string | null;\n  copyFromBotId?: string | null;\n  onCancel: () => void;';
@@ -73,7 +81,7 @@ if(!configurator.includes('copyFromBotId?: string | null;')){
   configurator=configurator.replace(depsFrom,depsTo);
 }
 
-for(const required of[marker,'trader-account-control-v2','copySourceBotId','copyFromBotId={copySourceBotId}','>Copy bot</button>','>Delete bot</button>','action: "delete_bot"','setBotModalMode("create")']){
+for(const required of[marker,archivedMarker,'trader-account-control-v2','copySourceBotId','copyFromBotId={copySourceBotId}','>Copy bot</button>','>Delete bot</button>','action: "delete_bot"','setBotModalMode("create")','selectedBot?.lifecycle === "closed"']){
   if(!source.includes(required))throw new Error(`Bot popup action output missing ${required}`);
 }
 for(const required of['copyFromBotId?: string | null;','botId:detailBotId','`${bot.name}_copy`','mode==="create"?"create_bot":"update_bot"']){
@@ -83,4 +91,4 @@ if(source.includes('action: "copy_bot"'))throw new Error("Copy bot must not crea
 
 fs.writeFileSync(shellTarget,source);
 fs.writeFileSync(configuratorTarget,configurator);
-console.log("Prepared bot popup Copy bot as an unsaved _copy draft plus safe Delete bot actions.");
+console.log("Prepared bot popup Copy bot as an unsaved _copy draft, including archived bots, plus safe Delete bot actions.");
