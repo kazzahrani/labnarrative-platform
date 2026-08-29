@@ -41,16 +41,20 @@ function friendlyError(value: unknown) {
   return map.find(([key]) => raw.includes(key))?.[1] || raw.replaceAll("_", " ").slice(0, 220);
 }
 
+function krakenGatewayIpProof(check?: Check) {
+  return check?.permission === true && check.gateway === true && check.direct === false;
+}
+
 function effectiveTradeReady(provider: Provider, check?: Check) {
   if (!check) return false;
   if (check.tradeReady === true) return true;
-  return provider === "kraken" && check.permission === true && check.gateway === true && check.ipRestriction === true;
+  return provider === "kraken" && krakenGatewayIpProof(check);
 }
 
 function effectiveFixedIp(provider: Provider, check?: Check) {
   if (!check) return false;
   if (check.ipMatchesGateway === true) return true;
-  return provider === "kraken" && check.gateway === true && check.ipRestriction === true;
+  return provider === "kraken" && krakenGatewayIpProof(check);
 }
 
 function diagnosticLabel(value: unknown) {
