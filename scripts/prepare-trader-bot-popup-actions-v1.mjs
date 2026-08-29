@@ -22,7 +22,7 @@ if(!source.includes(marker)){
 
   const actionAnchor='\n  if (!authReady) return <div className={styles.loadingPage}>Checking secure session…</div>;';
   if(!source.includes(actionAnchor))throw new Error("Bot popup actions could not find action insertion anchor");
-  const actions=`\n  // ${marker}\n  const copyBot = (bot: Bot) => {\n    if (busy) return;\n    setError(\"\");\n    setCopySourceBotId(bot.id);\n    setSelectedBotId(null);\n    setBotModalMode(\"create\");\n    setBotTab(\"Active\");\n    setNotice(\"\");\n  };\n  const deleteBot = async (bot: Bot) => {\n    if (!currentAccount || busy) return;\n    if (!window.confirm(\"Delete \" + bot.name + \" from the bot list? Completed trades, orders and history will be kept. Deletion is blocked while the bot has an active position or open order.\")) return;\n    setBusy(true); setError(\"\");\n    try {\n      const result = await invokeAccount({ action: \"delete_bot\", accountId: currentAccount.id, botId: bot.id });\n      setWorkspace(result); setBotModalMode(null); setSelectedBotId(null); setCopySourceBotId(null);\n      setNotice(bot.name + \" deleted. Its completed trading history was preserved.\");\n    } catch (caught) {\n      const message = caught instanceof Error ? caught.message : \"Unable to delete bot.\";\n      const friendly = message.includes(\"bot_has_active_trades\") ? \"This bot cannot be deleted while it has an active position. Pause it and close the position first.\" : message.includes(\"bot_has_open_orders\") ? \"This bot cannot be deleted while it has an open order. Cancel or finish the order first.\" : message.includes(\"strategy_delete_not_supported\") ? \"Strategy Execution automations cannot be deleted from this DCA bot action.\" : message;\n      setError(friendly);\n    } finally { setBusy(false); }\n  };\n`;
+  const actions=`\n  // ${marker}\n  useEffect(() => { if (!botModalMode) setCopySourceBotId(null); }, [botModalMode]);\n\n  const copyBot = (bot: Bot) => {\n    if (busy) return;\n    setError(\"\");\n    setCopySourceBotId(bot.id);\n    setSelectedBotId(null);\n    setBotModalMode(\"create\");\n    setBotTab(\"Active\");\n    setNotice(\"\");\n  };\n  const deleteBot = async (bot: Bot) => {\n    if (!currentAccount || busy) return;\n    if (!window.confirm(\"Delete \" + bot.name + \" from the bot list? Completed trades, orders and history will be kept. Deletion is blocked while the bot has an active position or open order.\")) return;\n    setBusy(true); setError(\"\");\n    try {\n      const result = await invokeAccount({ action: \"delete_bot\", accountId: currentAccount.id, botId: bot.id });\n      setWorkspace(result); setBotModalMode(null); setSelectedBotId(null); setCopySourceBotId(null);\n      setNotice(bot.name + \" deleted. Its completed trading history was preserved.\");\n    } catch (caught) {\n      const message = caught instanceof Error ? caught.message : \"Unable to delete bot.\";\n      const friendly = message.includes(\"bot_has_active_trades\") ? \"This bot cannot be deleted while it has an active position. Pause it and close the position first.\" : message.includes(\"bot_has_open_orders\") ? \"This bot cannot be deleted while it has an open order. Cancel or finish the order first.\" : message.includes(\"strategy_delete_not_supported\") ? \"Strategy Execution automations cannot be deleted from this DCA bot action.\" : message;\n      setError(friendly);\n    } finally { setBusy(false); }\n  };\n`;
   source=source.replace(actionAnchor,actions+actionAnchor);
 
   const modalBotId='  botId={selectedBotId}\n  onCancel=';
@@ -40,12 +40,6 @@ if(!source.includes(marker)){
   const closePattern=/<button disabled=\{busy\} onClick=\{\(\) => void closeBot\(selectedBot!\)\}>Close(?: bot)?<\/button>/;
   if(!closePattern.test(source))throw new Error("Bot popup actions could not find Close button");
   source=source.replace(closePattern,(match)=>match+'<button disabled={busy} onClick={() => void deleteBot(selectedBot!)}>Delete bot</button>');
-
-  // Any way of closing a create/copy modal must discard the copy source, so a later
-  // ordinary Create DCA action always starts from a clean default configuration.
-  const cleanupAnchor='  const copyBot = (bot: Bot) => {';
-  if(!source.includes(cleanupAnchor))throw new Error("Bot copy draft cleanup anchor missing");
-  source=source.replace(cleanupAnchor,'  useEffect(() => { if (!botModalMode) setCopySourceBotId(null); }, [botModalMode]);\n\n'+cleanupAnchor);
 }
 
 if(!configurator.includes('copyFromBotId?: string | null;')){
@@ -54,10 +48,14 @@ if(!configurator.includes('copyFromBotId?: string | null;')){
   if(!configurator.includes(propsFrom))throw new Error("Bot copy draft could not extend configurator props");
   configurator=configurator.replace(propsFrom,propsTo);
 
-  const signatureFrom='export default function DcaBotConfigurator({mode,accountId,accountKind,botId,onCancel,onSaved,onError}:Props){';
-  const signatureTo='export default function DcaBotConfigurator({mode,accountId,accountKind,botId,copyFromBotId,onCancel,onSaved,onError}:Props){';
-  if(!configurator.includes(signatureFrom))throw new Error("Bot copy draft could not extend configurator signature");
-  configurator=configurator.replace(signatureFrom,signatureTo);
+  const signaturePattern=/export default function DcaBotConfigurator\(\{([^}]*)\}:Props\)\{/;
+  const signatureMatch=configurator.match(signaturePattern);
+  if(!signatureMatch)throw new Error("Bot copy draft could not find configurator signature");
+  if(!signatureMatch[1].includes("copyFromBotId")){
+    if(!signatureMatch[1].includes("botId"))throw new Error("Bot copy draft configurator signature has no botId");
+    const nextSignature=signatureMatch[0].replace(/botId\s*,/,"botId,copyFromBotId,");
+    configurator=configurator.replace(signatureMatch[0],nextSignature);
+  }
 
   const createGuard='    if(mode==="create"||!botId){setForm({...NEW_FORM,pairs:["BTC/USDT"]});setLoading(false);return()=>{alive=false};}\n    setLoading(true);setLocalError("");\n    void invokeDca({action:"bot_detail",accountId,botId})';
   const draftGuard='    const detailBotId=mode==="create"?(copyFromBotId||null):botId;\n    if(!detailBotId){setForm({...NEW_FORM,pairs:["BTC/USDT"]});setLoading(false);return()=>{alive=false};}\n    setLoading(true);setLocalError("");\n    void invokeDca({action:"bot_detail",accountId,botId:detailBotId})';
