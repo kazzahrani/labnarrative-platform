@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const target=path.join(process.cwd(),"app","trader","DcaBotConfigurator.tsx");
+const target=path.join(process.cwd(),"app/trader/DcaBotConfigurator.tsx");
 if(!fs.existsSync(target))throw new Error("DCA configurator target missing for configuration importer");
 let source=fs.readFileSync(target,"utf8");
 
@@ -29,3 +29,4 @@ console.log("Prepared browser-only DCA configuration importer with preview and s
 
 await import("./prepare-trader-dca-importer-all-conditions-v2.mjs");
 await import("./prepare-trader-dca-importer-exits-v3.mjs");
+await import("./prepare-trader-dca-importer-condition-scope-v4.mjs");
