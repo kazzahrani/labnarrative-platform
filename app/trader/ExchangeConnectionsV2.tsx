@@ -10,7 +10,7 @@ type Props = { realAccount: RealAccount; onConnectBinance: () => void; onBackOve
 type Connection = { status?: string; apiKeyLast4?: string | null; permissionRead?: boolean; permissionTrade?: boolean; permissionWithdraw?: boolean; ipRestricted?: boolean | null; metadata?: Record<string, unknown> } | null;
 type Check = { provider: Provider; connected?: boolean; direct?: boolean; gateway?: boolean; permission?: boolean; withdrawalsDisabled?: boolean; ipRestriction?: boolean | null; ipMatchesGateway?: boolean | null; tradeReady?: boolean; gatewayEgressIp?: string; error?: string | null; directError?: string | null; gatewayError?: string | null; permissionSummary?: string | null };
 type StatusResponse = { ok?: boolean; connections?: Array<{ provider: Provider; connection: Connection }>; gateway?: { egressIp?: string; status?: string; lastHealthAt?: string | null }; error?: string };
-type DiagnosticsResponse = { ok?: boolean; checks?: Check[]; gateway?: { egressIp?: string; status?: string }; error?: string };
+type DiagnosticsResponse = { ok?: boolean; checks?: Check[]; check?: Check; gateway?: { egressIp?: string; status?: string }; error?: string };
 
 const providers: Array<{ id: Provider; name: string; mark: string; subtitle: string; permission: string; needsPassphrase?: boolean; coinbase?: boolean; ipRequired?: boolean }> = [
   { id: "bybit", name: "Bybit", mark: "B", subtitle: "Unified Spot", permission: "Read + SpotTrade only", ipRequired: true },
@@ -92,14 +92,17 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
       const next = { bybit: null, okx: null, coinbase: null, kraken: null, kucoin: null } as Record<Provider, Connection>;
       for (const item of result.connections ?? []) next[item.provider] = item.connection;
       setConnections(next);
-      setGatewayIp(result.gateway?.egressIp || "");
+      setGatewayIp((current) => result.gateway?.egressIp || current);
     } catch (caught) { setErrorMessage(friendlyError(caught)); }
   }, [realAccount]);
 
   useEffect(() => { void load(); }, [load]);
 
+  const coinbaseDeferred = connections.coinbase?.status !== "connected";
+  const readinessProviders = useMemo(() => providers.filter((p) => !coinbaseDeferred || p.id !== "coinbase"), [coinbaseDeferred]);
+  const readinessTarget = readinessProviders.length + 1;
   const connectedCount = useMemo(() => providers.filter((p) => connections[p.id]?.status === "connected").length + Number(binanceConnected), [connections, binanceConnected]);
-  const readyCount = useMemo(() => providers.filter((p) => checks[p.id]?.tradeReady).length + Number(binanceCheck === "ready"), [checks, binanceCheck]);
+  const readyCount = useMemo(() => readinessProviders.filter((p) => checks[p.id]?.tradeReady).length + Number(binanceCheck === "ready"), [readinessProviders, checks, binanceCheck]);
 
   const open = (provider: Provider) => {
     setModal(provider); setApiKey(""); setApiSecret(""); setPassphrase(""); setErrorMessage("");
@@ -116,10 +119,11 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
         : { provider: modal, apiKey: apiKey.trim(), apiSecret: apiSecret.trim(), ...(item.needsPassphrase ? { passphrase: passphrase.trim() } : {}) };
       const result = modal === "kraken" ? await invokeKraken("upgrade", payload) : await invoke("upgrade", payload);
       setConnections((current) => ({ ...current, [modal]: result.connection ?? null }));
-      const diag = modal === "kraken"
-        ? await invokeKraken("diagnostics") as DiagnosticsResponse & { check?: Check }
-        : await invoke("diagnostics", { provider: modal }) as DiagnosticsResponse & { check?: Check };
-      if (diag.check) setChecks((current) => ({ ...current, [modal]: diag.check }));
+      const diag = await invoke("diagnostics", { provider: modal }) as DiagnosticsResponse;
+      if (diag.check) {
+        setChecks((current) => ({ ...current, [modal]: diag.check }));
+        if (diag.check.gatewayEgressIp) setGatewayIp(diag.check.gatewayEgressIp);
+      }
       setApiKey(""); setApiSecret(""); setPassphrase("");
     } catch (caught) { setErrorMessage(friendlyError(caught)); }
     finally { setBusy(false); }
@@ -129,20 +133,24 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
     if (checkingAll) return;
     setCheckingAll(true); setErrorMessage(""); setBinanceCheck(binanceConnected ? "checking" : "idle");
     try {
-      const [multi, binance] = await Promise.allSettled([
-        invoke("diagnostics_all"),
-        binanceConnected ? browserSupabase.functions.invoke("trader-binance-control", { body: { action: "gateway_health" } }) : Promise.resolve({ data: null, error: null }),
-      ]);
-      if (multi.status === "fulfilled") {
-        const next: Partial<Record<Provider, Check>> = {};
-        for (const check of multi.value.checks ?? []) next[check.provider] = check;
-        setChecks(next); setGatewayIp(multi.value.gateway?.egressIp || gatewayIp);
-      } else setErrorMessage(friendlyError(multi.reason));
-      if (binanceConnected) {
-        if (binance.status === "fulfilled" && !binance.value.error && (binance.value.data as { ok?: boolean } | null)?.ok === true) setBinanceCheck("ready");
+      const activeProviders = providers.filter((p) => connections[p.id]?.status === "connected");
+      const exchangeJobs = activeProviders.map(async (item) => {
+        const result = await invoke("diagnostics", { provider: item.id }) as DiagnosticsResponse;
+        if (result.check) {
+          setChecks((current) => ({ ...current, [item.id]: result.check }));
+          if (result.check.gatewayEgressIp) setGatewayIp(result.check.gatewayEgressIp);
+        }
+        return result.check;
+      });
+      const binanceJob = async () => {
+        if (!binanceConnected) return;
+        const result = await browserSupabase.functions.invoke("trader-binance-control", { body: { action: "gateway_health" } });
+        if (!result.error && (result.data as { ok?: boolean } | null)?.ok === true) setBinanceCheck("ready");
         else setBinanceCheck("error");
-      }
-      await load();
+      };
+      const results = await Promise.allSettled([...exchangeJobs, binanceJob()]);
+      const failed = results.find((result) => result.status === "rejected") as PromiseRejectedResult | undefined;
+      if (failed) setErrorMessage(friendlyError(failed.reason));
     } finally { setCheckingAll(false); }
   };
 
@@ -161,9 +169,9 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
     </div>
 
     <section className={styles.readiness}>
-      <div><span className={styles.kicker}>TRADING READINESS</span><strong>{readyCount} / 6 ready</strong><small>{connectedCount} connected · no test orders are placed</small></div>
+      <div><span className={styles.kicker}>TRADING READINESS</span><strong>{readyCount} / {readinessTarget} ready</strong><small>{connectedCount} connected · {coinbaseDeferred ? "Coinbase deferred · " : ""}no test orders are placed</small></div>
       <div className={styles.gateway}><span>Fixed execution IP</span><b>{gatewayIp || "Loading…"}</b><small>Whitelist this IP on trade-enabled keys where supported.</small></div>
-      <button type="button" className={styles.runButton} disabled={checkingAll || !realAccount} onClick={() => void runAll()}>{checkingAll ? "Running checks…" : "Run all 6 checks"}</button>
+      <button type="button" className={styles.runButton} disabled={checkingAll || !realAccount} onClick={() => void runAll()}>{checkingAll ? "Running checks…" : `Run ${readinessTarget} active checks`}</button>
     </section>
 
     {errorMessage && <div className={styles.error}>{errorMessage}</div>}
@@ -180,10 +188,10 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
 
         {providers.map((item) => {
           const connection = connections[item.id], check = checks[item.id], connected = connection?.status === "connected", trade = connection?.permissionTrade === true;
-          const state = check?.tradeReady ? "Trade ready" : connected && trade ? "Needs gateway check" : connected ? "Read only" : "Not connected";
+          const state = check?.tradeReady ? "Trade ready" : connected && trade ? "Needs gateway check" : connected ? "Read only" : item.id === "coinbase" && coinbaseDeferred ? "Deferred" : "Not connected";
           return <article className={styles.card} key={item.id}>
             <div className={styles.brand}><span>{item.mark}</span><div><b>{item.name}</b><small>{item.subtitle}</small></div></div>
-            <div className={styles.statusRow}><span className={check?.tradeReady ? styles.good : connected ? styles.warn : styles.off}><i/>{state}</span><small>{connected && connection?.apiKeyLast4 ? `Key ••••${connection.apiKeyLast4}` : "Real Account"}</small></div>
+            <div className={styles.statusRow}><span className={check?.tradeReady ? styles.good : connected ? styles.warn : styles.off}><i/>{state}</span><small>{connected && connection?.apiKeyLast4 ? `Key ••••${connection.apiKeyLast4}` : item.id === "coinbase" && coinbaseDeferred ? "Verification pending" : "Real Account"}</small></div>
             <div className={styles.chips}><span>Balances</span><span>{trade ? "Spot trading" : "Read only"}</span><span>No withdrawals</span></div>
             {check && <div className={styles.checks}>
               <span className={check.permission ? styles.pass : styles.fail}>Trade permission {check.permission ? "✓" : "—"}</span>
