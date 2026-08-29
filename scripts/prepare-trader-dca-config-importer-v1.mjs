@@ -28,3 +28,4 @@ fs.writeFileSync(target,source);
 console.log("Prepared browser-only DCA configuration importer with preview and safe apply.");
 
 await import("./prepare-trader-dca-importer-all-conditions-v2.mjs");
+await import("./prepare-trader-dca-importer-exits-v3.mjs");
