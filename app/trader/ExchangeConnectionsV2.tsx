@@ -41,6 +41,22 @@ function friendlyError(value: unknown) {
   return map.find(([key]) => raw.includes(key))?.[1] || raw.replaceAll("_", " ").slice(0, 220);
 }
 
+function effectiveTradeReady(provider: Provider, check?: Check) {
+  if (!check) return false;
+  if (check.tradeReady === true) return true;
+  return provider === "kraken" && check.permission === true && check.gateway === true && check.ipRestriction === true;
+}
+
+function effectiveFixedIp(provider: Provider, check?: Check) {
+  if (!check) return false;
+  if (check.ipMatchesGateway === true) return true;
+  return provider === "kraken" && check.gateway === true && check.ipRestriction === true;
+}
+
+function diagnosticLabel(value: unknown) {
+  return String(value || "").replaceAll("_", " ").slice(0, 180);
+}
+
 async function invoke(action: string, extra: Record<string, unknown> = {}) {
   const { data, error } = await browserSupabase.functions.invoke("trader-multiexchange-control", { body: { action, ...extra } });
   if (error) {
@@ -102,7 +118,7 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
   const readinessProviders = useMemo(() => providers.filter((p) => !coinbaseDeferred || p.id !== "coinbase"), [coinbaseDeferred]);
   const readinessTarget = readinessProviders.length + 1;
   const connectedCount = useMemo(() => providers.filter((p) => connections[p.id]?.status === "connected").length + Number(binanceConnected), [connections, binanceConnected]);
-  const readyCount = useMemo(() => readinessProviders.filter((p) => checks[p.id]?.tradeReady).length + Number(binanceCheck === "ready"), [readinessProviders, checks, binanceCheck]);
+  const readyCount = useMemo(() => readinessProviders.filter((p) => effectiveTradeReady(p.id, checks[p.id])).length + Number(binanceCheck === "ready"), [readinessProviders, checks, binanceCheck]);
 
   const open = (provider: Provider) => {
     setModal(provider); setApiKey(""); setApiSecret(""); setPassphrase(""); setErrorMessage("");
@@ -188,15 +204,17 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
 
         {providers.map((item) => {
           const connection = connections[item.id], check = checks[item.id], connected = connection?.status === "connected", trade = connection?.permissionTrade === true;
-          const state = check?.tradeReady ? "Trade ready" : connected && trade ? "Needs gateway check" : connected ? "Read only" : item.id === "coinbase" && coinbaseDeferred ? "Deferred" : "Not connected";
+          const effectiveReady = effectiveTradeReady(item.id, check), fixedIpReady = effectiveFixedIp(item.id, check);
+          const state = effectiveReady ? "Trade ready" : connected && trade ? "Needs gateway check" : connected ? "Read only" : item.id === "coinbase" && coinbaseDeferred ? "Deferred" : "Not connected";
           return <article className={styles.card} key={item.id}>
             <div className={styles.brand}><span>{item.mark}</span><div><b>{item.name}</b><small>{item.subtitle}</small></div></div>
-            <div className={styles.statusRow}><span className={check?.tradeReady ? styles.good : connected ? styles.warn : styles.off}><i/>{state}</span><small>{connected && connection?.apiKeyLast4 ? `Key ••••${connection.apiKeyLast4}` : item.id === "coinbase" && coinbaseDeferred ? "Verification pending" : "Real Account"}</small></div>
+            <div className={styles.statusRow}><span className={effectiveReady ? styles.good : connected ? styles.warn : styles.off}><i/>{state}</span><small>{connected && connection?.apiKeyLast4 ? `Key ••••${connection.apiKeyLast4}` : item.id === "coinbase" && coinbaseDeferred ? "Verification pending" : "Real Account"}</small></div>
             <div className={styles.chips}><span>Balances</span><span>{trade ? "Spot trading" : "Read only"}</span><span>No withdrawals</span></div>
             {check && <div className={styles.checks}>
               <span className={check.permission ? styles.pass : styles.fail}>Trade permission {check.permission ? "✓" : "—"}</span>
               <span className={check.gateway ? styles.pass : styles.fail}>Gateway {check.gateway ? "✓" : "×"}</span>
-              {item.ipRequired && <span className={check.ipMatchesGateway ? styles.pass : styles.fail}>Fixed IP {check.ipMatchesGateway ? "✓" : "×"}</span>}
+              {item.ipRequired && <span className={fixedIpReady ? styles.pass : styles.fail}>Fixed IP {fixedIpReady ? "✓" : "×"}</span>}
+              {!check.gateway && check.gatewayError && <small title={check.gatewayError}>Gateway error: {diagnosticLabel(check.gatewayError)}</small>}
             </div>}
             <button type="button" className={connected ? styles.secondary : styles.primary} onClick={() => open(item.id)}>{connected ? (trade ? "Manage / re-key" : "Enable Spot trading") : `Connect ${item.name}`}</button>
           </article>;
@@ -216,7 +234,7 @@ export default function ExchangeConnectionsV2({ realAccount, onConnectBinance, o
         <section className={styles.modal}>
           <div className={styles.modalHead}><div><small>{item.name.toUpperCase()} · SPOT</small><h2>{connection?.status === "connected" ? `Manage ${item.name}` : `Connect ${item.name}`}</h2></div><button type="button" disabled={busy} onClick={() => setModal(null)}>×</button></div>
           <div className={styles.permissionBox}><b>Required permissions</b><span>{item.permission}</span>{item.ipRequired && <small>For Trade Ready status, whitelist fixed IP: <strong>{gatewayIp || "shown on Connections"}</strong></small>}</div>
-          {check && <div className={styles.modalChecks}><span>Gateway <b>{check.gateway ? "Passed" : "Not passed"}</b></span><span>Trade permission <b>{check.permission ? "Enabled" : "Not enabled"}</b></span><span>Trading ready <b>{check.tradeReady ? "Yes" : "No"}</b></span></div>}
+          {check && <div className={styles.modalChecks}><span>Gateway <b>{check.gateway ? "Passed" : "Not passed"}</b></span><span>Trade permission <b>{check.permission ? "Enabled" : "Not enabled"}</b></span><span>Trading ready <b>{effectiveTradeReady(item.id, check) ? "Yes" : "No"}</b></span></div>}
           <form onSubmit={save} className={styles.form}>
             <label><span>{item.coinbase ? "API Key Name" : "API Key"}</span><input type="password" autoComplete="off" value={apiKey} onChange={(e) => setApiKey(e.target.value)} disabled={busy} /></label>
             <label><span>{item.coinbase ? "EC Private Key" : item.id === "kraken" ? "Private Key" : "API Secret"}</span>{item.coinbase ? <textarea autoComplete="new-password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} disabled={busy} rows={5}/> : <input type="password" autoComplete="new-password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} disabled={busy}/>}</label>
