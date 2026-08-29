@@ -23,3 +23,4 @@ fs.writeFileSync(cssTarget, css);
 console.log("Aligned Portfolio bot-position popover under its trigger.");
 
 await import("./prepare-trader-dca-config-importer-v1.mjs");
+await import("./prepare-trader-position-row-theme-v4.mjs");
