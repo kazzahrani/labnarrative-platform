@@ -18,8 +18,8 @@ function apply(source,replacement,label){const next=replacement(source);if(next=
 if(!configurator.includes("type ExchangeProvider")){
   configurator=apply(configurator,s=>s.replace(/(type Mode\s*=\s*[^;]+;)/,'$1\ntype ExchangeProvider = "binance" | "bybit" | "okx" | "kraken" | "kucoin" | "coinbase";'),"Mode type");
 }
-if(!/exchangeProvider\s*:\s*ExchangeProvider/.test(configurator)){
-  configurator=apply(configurator,s=>s.replace(/(lifecycle:\s*string;\s*)(pair:\s*string;)/,'$1exchangeProvider: ExchangeProvider;\n  $2'),"BotDetail exchange field");
+if(!/exchangeProvider\??\s*:\s*ExchangeProvider/.test(configurator)){
+  configurator=apply(configurator,s=>s.replace(/(lifecycle:\s*string;\s*)(pair:\s*string;)/,'$1exchangeProvider?: ExchangeProvider;\n  $2'),"BotDetail exchange field");
 }
 if(!/exchangeProvider:\s*"binance"/.test(configurator)){
   configurator=apply(configurator,s=>s.replace(/(const NEW_FORM:\s*FormState\s*=\s*\{\s*)/,'$1exchangeProvider:"binance", '),"new bot exchange default");
@@ -27,18 +27,15 @@ if(!/exchangeProvider:\s*"binance"/.test(configurator)){
 if(!configurator.includes("const EXCHANGE_OPTIONS")){
   configurator=apply(configurator,s=>s.replace(/(const FALLBACK_PAIRS\s*=\s*\[[^;]+;)/,`$1\nconst EXCHANGE_OPTIONS = [\n  {id:"binance" as ExchangeProvider,label:"Binance",enabled:true,note:"Execution adapter ready"},\n  {id:"bybit" as ExchangeProvider,label:"Bybit",enabled:false,note:"Execution adapter pending"},\n  {id:"okx" as ExchangeProvider,label:"OKX",enabled:false,note:"Execution adapter pending"},\n  {id:"kraken" as ExchangeProvider,label:"Kraken",enabled:false,note:"Execution adapter pending"},\n  {id:"kucoin" as ExchangeProvider,label:"KuCoin",enabled:false,note:"Execution adapter pending"},\n  {id:"coinbase" as ExchangeProvider,label:"Coinbase",enabled:false,note:"Verification / adapter pending"},\n];\nfunction exchangeLabel(value?:string){const raw=String(value||"binance").toLowerCase();return raw==="okx"?"OKX":raw==="bybit"?"Bybit":raw==="kraken"?"Kraken":raw==="kucoin"?"KuCoin":raw==="coinbase"?"Coinbase":"Binance";}`),"fallback pair list");
 }
-if(!configurator.includes('exchangeProvider:bot.exchangeProvider??"binance"')){
-  configurator=apply(configurator,s=>s.replace(/setForm\(\{name:bot\.name,/, 'setForm({name:bot.name,exchangeProvider:bot.exchangeProvider??"binance",'),"edit hydration");
-}
-if(!configurator.includes("exchangeProvider:form.exchangeProvider")){
-  configurator=apply(configurator,s=>s.replace(/name:form\.name\.trim\(\),pair:/,'name:form.name.trim(),exchangeProvider:form.exchangeProvider,pair:'),"save payload");
+if(!configurator.includes('exchangeProvider:form.exchangeProvider??"binance"')){
+  configurator=apply(configurator,s=>s.replace(/name:form\.name\.trim\(\),\s*pair:/,'name:form.name.trim(),exchangeProvider:form.exchangeProvider??"binance",pair:'),"save payload");
 }
 if(!configurator.includes("<span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b>")){
   configurator=apply(configurator,s=>s.replace(/(<div className=\{cfg\.summaryGrid\}>)/,'$1<div><span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b></div>'),"view exchange summary");
 }
-if(!configurator.includes('<span>Exchange</span><select value={form.exchangeProvider}')){
+if(!configurator.includes('<span>Exchange</span><select value={form.exchangeProvider??"binance"}')){
   const nameField='<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>';
-  const exchangeField='<label><span>Exchange</span><select value={form.exchangeProvider} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider}))}>{EXCHANGE_OPTIONS.map(option=><option key={option.id} value={option.id} disabled={!option.enabled}>{option.label}{option.enabled?"":" · "+option.note}</option>)}</select><small>Execution venue for this bot.</small></label>';
+  const exchangeField='<label><span>Exchange</span><select value={form.exchangeProvider??"binance"} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider}))}>{EXCHANGE_OPTIONS.map(option=><option key={option.id} value={option.id} disabled={!option.enabled}>{option.label}{option.enabled?"":" · "+option.note}</option>)}</select><small>Execution venue for this bot.</small></label>';
   configurator=apply(configurator,s=>s.replace(nameField,nameField+exchangeField),"Bot name field");
 }
 
