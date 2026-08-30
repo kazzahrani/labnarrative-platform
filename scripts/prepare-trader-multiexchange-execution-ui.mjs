@@ -14,19 +14,34 @@ const replaceRegex = (pattern, replacement, label, donePattern) => {
   if (!pattern.test(source)) throw new Error(`Multi-exchange UI: missing ${label}`);
   source = source.replace(pattern, replacement);
 };
+const ensureTypeField = (typeName, fieldName, fieldType) => {
+  const pattern = new RegExp(`(type\\s+${typeName}\\s*=\\s*\\{)([\\s\\S]*?)(\\n\\};)`);
+  const match = source.match(pattern);
+  if (!match) throw new Error(`Multi-exchange UI: missing ${typeName} type`);
+  if (new RegExp(`\\b${fieldName}\\s*:`).test(match[2])) return;
+  source = source.replace(pattern, `$1$2\n  ${fieldName}: ${fieldType};$3`);
+};
 
-replace(
-  'type PairInfo = { pair:string; symbol:string; baseAsset:string };',
-  `type PairInfo = { pair:string; symbol:string; baseAsset:string; quoteVolume?:number };
-type LaunchProvider = "binance" | "bybit" | "okx" | "kucoin";
-const PROVIDER_LABELS: Record<LaunchProvider,string> = { binance:"Binance", bybit:"Bybit", okx:"OKX", kucoin:"KuCoin" };`,
-  "launch provider types",
-);
-replace(
-  '  executionMode: string;\n};',
-  '  executionMode: string;\n  exchangeProvider: LaunchProvider;\n};',
-  "bot exchange provider field",
-);
+if (source.includes('type PairInfo = { pair:string; symbol:string; baseAsset:string };')) {
+  source = source.replace(
+    'type PairInfo = { pair:string; symbol:string; baseAsset:string };',
+    'type PairInfo = { pair:string; symbol:string; baseAsset:string; quoteVolume?:number };',
+  );
+}
+if (!/type\s+ExchangeProvider\s*=/.test(source)) {
+  const pairType = /type PairInfo = \{[^\n]+\};/;
+  if (!pairType.test(source)) throw new Error("Multi-exchange UI: missing PairInfo type");
+  source = source.replace(pairType, '$&\ntype ExchangeProvider = "binance" | "bybit" | "okx" | "kucoin";');
+}
+if (!source.includes('const PROVIDER_LABELS:')) {
+  const providerType = /type ExchangeProvider = "binance" \| "bybit" \| "okx" \| "kucoin";/;
+  if (!providerType.test(source)) throw new Error("Multi-exchange UI: missing exchange provider type");
+  source = source.replace(providerType, '$&\nconst PROVIDER_LABELS: Record<ExchangeProvider,string> = { binance:"Binance", bybit:"Bybit", okx:"OKX", kucoin:"KuCoin" };');
+}
+
+ensureTypeField("BotDetail", "exchangeProvider", "ExchangeProvider");
+ensureTypeField("FormState", "exchangeProvider", "ExchangeProvider");
+
 replaceRegex(
   /(const NEW_FORM:\s*FormState\s*=\s*\{\s*\n\s*name:[^,\n]+,)(?!\s*exchangeProvider:)/,
   '$1 exchangeProvider:"binance",',
@@ -35,8 +50,8 @@ replaceRegex(
 );
 
 if (!source.includes('async function connectedLaunchProviders()')) {
-  const helper = `async function connectedLaunchProviders():Promise<LaunchProvider[]>{
-  const providers:LaunchProvider[]=[];
+  const helper = `async function connectedLaunchProviders():Promise<ExchangeProvider[]>{
+  const providers:ExchangeProvider[]=[];
   const [binance,multi]=await Promise.allSettled([
     browserSupabase.functions.invoke("trader-binance-control",{body:{action:"status"}}),
     browserSupabase.functions.invoke("trader-multiexchange-control",{body:{action:"status_all"}}),
@@ -58,13 +73,15 @@ if (!source.includes('async function connectedLaunchProviders()')) {
   replaceRegex(/(export\s+default\s+function\s+DcaBotConfigurator\s*\()/,`${helper}$1`,"configurator function anchor",/async function connectedLaunchProviders\(\)/);
 }
 
-replace(
-  '  const [localError,setLocalError]=useState("");',
-  `  const [localError,setLocalError]=useState("");
-  const [connectedProviders,setConnectedProviders]=useState<LaunchProvider[]>(accountKind==="paper"?["binance"]:[]);
+if (!source.includes('const [connectedProviders,setConnectedProviders]')) {
+  replace(
+    '  const [localError,setLocalError]=useState("");',
+    `  const [localError,setLocalError]=useState("");
+  const [connectedProviders,setConnectedProviders]=useState<ExchangeProvider[]>(accountKind==="paper"?["binance"]:[]);
   const [connectionLoading,setConnectionLoading]=useState(accountKind==="real");`,
-  "connection state",
-);
+    "connection state",
+  );
+}
 
 const oldPairEffect = '  useEffect(()=>{let alive=true;void fetch("/api/trader/binance-pairs",{cache:"no-store"}).then(r=>r.json()).then((data:{pairs?:PairInfo[]})=>{if(alive&&data.pairs?.length)setPairs(data.pairs);}).catch(()=>{});return()=>{alive=false};},[]);';
 const newPairEffect = `  useEffect(()=>{
@@ -82,7 +99,7 @@ const newPairEffect = `  useEffect(()=>{
     }).catch(()=>{});
     return()=>{alive=false};
   },[form.exchangeProvider]);`;
-replace(oldPairEffect,newPairEffect,"provider pair effect");
+if (!source.includes('/api/trader/exchange-pairs?provider=')) replace(oldPairEffect,newPairEffect,"provider pair effect");
 
 if (!source.includes('void connectedLaunchProviders().then')) {
   replace(
@@ -128,14 +145,12 @@ replaceRegex(
   /exchange_trade_permission_required[\s\S]{0,180}?PROVIDER_LABELS/,
 );
 
-// Read-only card layouts are changed by several legacy transforms. Show the provider
-// there when the expected card exists, but never block the executable selector on it.
 const summaryPattern=/<div className=\{cfg\.summaryGrid\}>\s*<div><span>Coin universe<\/span>/;
 if(summaryPattern.test(source)) source=source.replace(summaryPattern,'<div className={cfg.summaryGrid}>{accountKind==="real"&&<div><span>Exchange</span><b>{PROVIDER_LABELS[form.exchangeProvider]}</b></div>}<div><span>Coin universe</span>');
 
 replaceRegex(
   /(<label><span>Bot name<\/span><input value=\{form\.name\}[\s\S]*?<\/label>)\s*(<label><span>Base order<\/span>)/,
-  '$1{accountKind==="real"&&<label><span>Exchange</span><select value={form.exchangeProvider} disabled={mode!=="create"||connectionLoading||!connectedProviders.length} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as LaunchProvider,pairs:[],allPairs:false}))}>{connectedProviders.length?connectedProviders.map(provider=><option key={provider} value={provider}>{PROVIDER_LABELS[provider]}</option>):<option value={form.exchangeProvider}>No connected exchange</option>}</select><small>{mode==="create"?"This bot and every order it creates stay on this exchange.":"Exchange is locked after the bot is created."}</small></label>}$2',
+  '$1{accountKind==="real"&&<label><span>Exchange</span><select value={form.exchangeProvider} disabled={mode!=="create"||connectionLoading||!connectedProviders.length} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider,pairs:[],allPairs:false}))}>{connectedProviders.length?connectedProviders.map(provider=><option key={provider} value={provider}>{PROVIDER_LABELS[provider]}</option>):<option value={form.exchangeProvider}>No connected exchange</option>}</select><small>{mode==="create"?"This bot and every order it creates stay on this exchange.":"Exchange is locked after the bot is created."}</small></label>}$2',
   "exchange selector",
   /<span>Exchange<\/span><select value=\{form\.exchangeProvider\}/,
 );
