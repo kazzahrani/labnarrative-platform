@@ -16,8 +16,10 @@ function serviceKey() { return envMap("SUPABASE_SECRET_KEYS").default || Deno.en
 function paypalBase() { return (Deno.env.get("PAYPAL_ENVIRONMENT") || "live").toLowerCase() === "sandbox" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com"; }
 function environment() { return paypalBase().includes("sandbox") ? "sandbox" : "live"; }
 function asIso(v: unknown) { const s = text(v, 100); return s && Number.isFinite(Date.parse(s)) ? s : null; }
+function future(v: unknown) { const s = asIso(v); return Boolean(s && Date.parse(s) > Date.now()); }
 function centsFromPayPal(v: unknown) { const n = Number(v); return Number.isFinite(n) ? Math.max(0, Math.round(n * 100)) : 0; }
 function discounted(price: number, bps: number) { return Math.max(1, Math.round(price * Math.max(0, 10000 - bps) / 10000)); }
+function link(payload: J, rels: string[]) { const x = arr(payload.links).find((v) => rels.includes(text(v.rel, 60))); return x ? text(x.href) : ""; }
 
 async function accessToken() {
   const id = Deno.env.get("PAYPAL_CLIENT_ID") || "", secret = Deno.env.get("PAYPAL_CLIENT_SECRET") || "";
@@ -33,8 +35,6 @@ async function paypal(path: string, init: RequestInit = {}) {
   const p = await r.json().catch(() => ({})) as J;
   return { r, p };
 }
-function link(payload: J, rels: string[]) { const x = arr(payload.links).find((v) => rels.includes(text(v.rel, 60))); return x ? text(x.href) : ""; }
-
 async function authenticate(admin: any, req: Request) {
   const auth = text(req.headers.get("authorization"), 8000);
   const token = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7) : "";
@@ -51,12 +51,25 @@ async function canonicalAccount(admin: any, owner: string) {
 async function billingConfig(admin: any) {
   const q = await admin.from("trader_billing_config").select("*").eq("id", 1).maybeSingle();
   if (q.error) throw q.error;
-  return q.data || { checkout_enabled: false, provider: "paypal", currency: "USD", referral_discount_bps: 1000 };
+  return q.data || { checkout_enabled: false, provider: "paypal", currency: "USD", referral_discount_bps: 1000, payment_grace_days: 3 };
 }
 async function activeAttribution(admin: any, owner: string) {
   const q = await admin.from("trader_referral_attributions").select("referral_code,referrer_account_id,referrer_owner_user_id").eq("referred_owner_user_id", owner).maybeSingle();
   if (q.error) throw q.error;
   return q.data || null;
+}
+async function ownerSubscriptions(admin: any, owner: string) {
+  const q = await admin.from("trader_subscriptions").select("*,trader_subscription_plans(slug,name)").eq("owner_user_id", owner).order("created_at", { ascending: false }).limit(20);
+  if (q.error) throw q.error;
+  return q.data || [];
+}
+function pendingSubscription(rows: any[]) { return rows.find((s) => s.status === "approval_pending") || null; }
+function currentSubscription(rows: any[]) {
+  return rows.find((s) => s.status === "active")
+    || rows.find((s) => s.status === "payment_failed" && future(s.access_ends_at))
+    || rows.find((s) => s.status === "suspended")
+    || rows.find((s) => s.status === "cancelled" && future(s.access_ends_at))
+    || null;
 }
 
 async function ensureProvider(admin: any) {
@@ -109,6 +122,24 @@ async function ensurePayPalPlan(admin: any, plan: any, interval: "monthly" | "an
   if (saved.error) throw saved.error;
   return providerId;
 }
+async function providerPlanInfo(admin: any, providerPlanId: string, discountBps: number) {
+  if (!providerPlanId) return null;
+  const q = await admin.from("trader_subscription_plans").select("*").eq("is_active", true);
+  if (q.error) throw q.error;
+  for (const plan of q.data || []) {
+    const variants: Array<{ field: string; interval: "monthly" | "annual"; referred: boolean }> = [
+      { field: "paypal_monthly_plan_id", interval: "monthly", referred: false },
+      { field: "paypal_monthly_referral_plan_id", interval: "monthly", referred: true },
+      { field: "paypal_annual_plan_id", interval: "annual", referred: false },
+      { field: "paypal_annual_referral_plan_id", interval: "annual", referred: true },
+    ];
+    const hit = variants.find((v) => text(plan[v.field], 200) === providerPlanId);
+    if (!hit) continue;
+    const listPrice = Number(hit.interval === "monthly" ? plan.monthly_price_cents : plan.annual_price_cents);
+    return { plan, interval: hit.interval, referred: hit.referred, listPrice, price: hit.referred ? discounted(listPrice, discountBps) : listPrice };
+  }
+  return null;
+}
 
 async function referralUpline(admin: any, referredOwner: string) {
   const chain: Array<{ level: 1 | 2 | 3; accountId: string; ownerId: string }> = [];
@@ -143,13 +174,50 @@ async function reverseCommissions(admin: any, providerPaymentId: string) {
 }
 
 async function syncSubscription(admin: any, providerId: string) {
+  const cfg = await billingConfig(admin);
+  const currentQ = await admin.from("trader_subscriptions").select("*").eq("provider_subscription_id", providerId).maybeSingle();
+  if (currentQ.error) throw currentQ.error;
+  const current = currentQ.data;
+  if (!current) throw new Error("subscription_not_found");
   const got = await paypal(`/v1/billing/subscriptions/${encodeURIComponent(providerId)}`, { method: "GET" });
   if (!got.r.ok) throw new Error(text(got.p.message, 1000) || "Could not verify PayPal subscription.");
   const statusMap: Record<string, string> = { ACTIVE: "active", APPROVAL_PENDING: "approval_pending", APPROVED: "approval_pending", SUSPENDED: "suspended", CANCELLED: "cancelled", EXPIRED: "expired" };
-  const status = statusMap[text(got.p.status, 50)] || "approval_pending";
+  const providerStatus = text(got.p.status, 50);
+  const status = statusMap[providerStatus] || current.status || "approval_pending";
   const billing = obj(got.p.billing_info);
-  const update = { status, started_at: asIso(got.p.start_time), next_billing_at: asIso(billing.next_billing_time), cancelled_at: status === "cancelled" ? new Date().toISOString() : null, provider_metadata: { paypal_status: text(got.p.status, 50), paypal_plan_id: text(got.p.plan_id, 200) }, updated_at: new Date().toISOString() };
-  const saved = await admin.from("trader_subscriptions").update(update).eq("provider_subscription_id", providerId).select("*").maybeSingle();
+  const nextBilling = asIso(billing.next_billing_time);
+  const providerPlanId = text(got.p.plan_id, 200);
+  const match = await providerPlanInfo(admin, providerPlanId, Number(cfg.referral_discount_bps || 1000));
+  const now = new Date().toISOString();
+  const pendingApplied = Boolean(match && current.pending_provider_plan_id && text(current.pending_provider_plan_id, 200) === providerPlanId);
+  let accessEndsAt: string | null = current.access_ends_at || null;
+  if (status === "active") accessEndsAt = null;
+  if (status === "cancelled" && !accessEndsAt) accessEndsAt = future(nextBilling) ? nextBilling : now;
+  if (status === "expired") accessEndsAt = now;
+  const update: J = {
+    status,
+    started_at: asIso(got.p.start_time) || current.started_at || null,
+    next_billing_at: nextBilling,
+    cancelled_at: status === "cancelled" ? (current.cancelled_at || now) : current.cancelled_at || null,
+    access_ends_at: accessEndsAt,
+    provider_synced_at: now,
+    provider_metadata: { ...obj(current.provider_metadata), paypal_status: providerStatus, paypal_plan_id: providerPlanId },
+    updated_at: now,
+  };
+  if (match) {
+    update.plan_id = match.plan.id;
+    update.billing_interval = match.interval;
+    update.list_price_cents = match.listPrice;
+    update.subscription_price_cents = match.price;
+    update.referral_discount_applied = match.referred;
+  }
+  if (pendingApplied) {
+    update.pending_plan_id = null;
+    update.pending_billing_interval = null;
+    update.pending_provider_plan_id = null;
+    update.plan_change_effective_at = now;
+  }
+  const saved = await admin.from("trader_subscriptions").update(update).eq("id", current.id).select("*").single();
   if (saved.error) throw saved.error;
   return saved.data;
 }
@@ -174,7 +242,9 @@ Deno.serve(async (req: Request) => {
       if (eventType.startsWith("BILLING.SUBSCRIPTION.")) {
         if (resourceId) {
           if (eventType === "BILLING.SUBSCRIPTION.PAYMENT.FAILED") {
-            const failed = await admin.from("trader_subscriptions").update({ status: "payment_failed", updated_at: new Date().toISOString() }).eq("provider_subscription_id", resourceId);
+            const cfg = await billingConfig(admin);
+            const grace = new Date(Date.now() + Number(cfg.payment_grace_days || 3) * 86400000).toISOString();
+            const failed = await admin.from("trader_subscriptions").update({ status: "payment_failed", access_ends_at: grace, provider_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("provider_subscription_id", resourceId);
             if (failed.error) throw failed.error;
           } else await syncSubscription(admin, resourceId);
         }
@@ -182,15 +252,17 @@ Deno.serve(async (req: Request) => {
         const providerSub = text(resource.billing_agreement_id, 300), paymentId = resourceId;
         const amount = obj(resource.amount); const amountCents = centsFromPayPal(amount.total || amount.value); const currency = text(amount.currency || amount.currency_code, 20).toUpperCase() || "USD";
         if (providerSub && paymentId && amountCents > 0) {
-          const subQ = await admin.from("trader_subscriptions").select("*").eq("provider_subscription_id", providerSub).maybeSingle();
-          if (subQ.error) throw subQ.error;
-          const sub = subQ.data;
+          let sub: any = null;
+          try { sub = await syncSubscription(admin, providerSub); } catch {
+            const subQ = await admin.from("trader_subscriptions").select("*").eq("provider_subscription_id", providerSub).maybeSingle();
+            if (subQ.error) throw subQ.error;
+            sub = subQ.data;
+          }
           if (sub) {
             const paidAt = asIso(resource.create_time || body.create_time) || new Date().toISOString();
             const payment = await admin.from("trader_subscription_payments").upsert({ subscription_id: sub.id, owner_user_id: sub.owner_user_id, provider: "paypal", provider_payment_id: paymentId, billing_interval: sub.billing_interval, gross_amount_cents: amountCents, currency, status: "paid", paid_at: paidAt, provider_metadata: { event_id: text(body.id, 300) } }, { onConflict: "provider,provider_payment_id", ignoreDuplicates: true }).select("id").maybeSingle();
             if (payment.error) throw payment.error;
             if (payment.data) await createCommissions(admin, sub, paymentId, amountCents, currency, paidAt);
-            try { await syncSubscription(admin, providerSub); } catch {}
           }
         }
       } else if (eventType === "PAYMENT.SALE.REFUNDED" || eventType === "PAYMENT.SALE.REVERSED") {
@@ -219,13 +291,35 @@ Deno.serve(async (req: Request) => {
       try { await accessToken(); providerVerified = true; } catch (e) { providerError = e instanceof Error ? e.message : "PayPal verification failed."; }
       const plansQ = await admin.from("trader_subscription_plans").select("id,slug,name,description,sort_order,monthly_price_cents,annual_price_cents,currency,is_active,provider_status").order("sort_order");
       if (plansQ.error) throw plansQ.error;
-      const subQ = await admin.from("trader_subscriptions").select("*,trader_subscription_plans(slug,name)").eq("owner_user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (subQ.error) throw subQ.error;
-      return json({ ok: true, checkoutEnabled: Boolean(cfg.checkout_enabled), provider: "paypal", providerConfigured: Boolean(Deno.env.get("PAYPAL_CLIENT_ID") && Deno.env.get("PAYPAL_CLIENT_SECRET")), providerVerified, providerError: providerError || null, referralDiscountBps: Number(cfg.referral_discount_bps || 1000), plans: plansQ.data || [], subscription: subQ.data || null });
+      const rows = await ownerSubscriptions(admin, user.id);
+      return json({ ok: true, checkoutEnabled: Boolean(cfg.checkout_enabled), provider: "paypal", providerConfigured: Boolean(Deno.env.get("PAYPAL_CLIENT_ID") && Deno.env.get("PAYPAL_CLIENT_SECRET")), providerVerified, providerError: providerError || null, referralDiscountBps: Number(cfg.referral_discount_bps || 1000), paymentGraceDays: Number(cfg.payment_grace_days || 3), plans: plansQ.data || [], subscription: currentSubscription(rows) || pendingSubscription(rows), pendingSubscription: pendingSubscription(rows) });
+    }
+
+    if (action === "sync_subscription") {
+      const rows = await ownerSubscriptions(admin, user.id);
+      const sub = currentSubscription(rows) || pendingSubscription(rows) || rows.find((s: any) => s.provider_subscription_id) || null;
+      if (!sub?.provider_subscription_id) return json({ ok: true, subscription: null });
+      const synced = await syncSubscription(admin, String(sub.provider_subscription_id));
+      return json({ ok: true, subscription: synced });
     }
 
     if (action === "create_subscription") {
       if (!cfg.checkout_enabled) return json({ error: "checkout_not_enabled" }, 409);
+      const rows = await ownerSubscriptions(admin, user.id);
+      const existing = currentSubscription(rows);
+      if (existing) return json({ error: existing.status === "cancelled" ? "subscription_access_still_active" : "subscription_already_active", accessEndsAt: existing.access_ends_at || null }, 409);
+      const pending = pendingSubscription(rows);
+      if (pending?.provider_subscription_id) {
+        const got = await paypal(`/v1/billing/subscriptions/${encodeURIComponent(String(pending.provider_subscription_id))}`, { method: "GET" });
+        if (got.r.ok) {
+          const providerStatus = text(got.p.status, 50);
+          if (["APPROVAL_PENDING", "APPROVED"].includes(providerStatus)) {
+            const approve = link(got.p, ["approve"]);
+            if (approve) return json({ ok: true, reused: true, subscriptionId: pending.id, providerSubscriptionId: pending.provider_subscription_id, approvalUrl: approve });
+          }
+          if (["ACTIVE", "CANCELLED", "EXPIRED", "SUSPENDED"].includes(providerStatus)) await syncSubscription(admin, String(pending.provider_subscription_id));
+        }
+      }
       const slug = text(body.plan, 100), interval = text(body.interval, 20) as "monthly" | "annual";
       if (!slug || !["monthly", "annual"].includes(interval)) return json({ error: "invalid_plan_request" }, 400);
       const planQ = await admin.from("trader_subscription_plans").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
@@ -234,13 +328,53 @@ Deno.serve(async (req: Request) => {
       if (!Number.isFinite(listPrice) || listPrice <= 0) return json({ error: "plan_price_not_configured" }, 409);
       const attribution = await activeAttribution(admin, user.id); const referred = Boolean(attribution); const price = referred ? discounted(listPrice, Number(cfg.referral_discount_bps || 1000)) : listPrice;
       const providerPlanId = await ensurePayPalPlan(admin, plan, interval, referred, Number(cfg.referral_discount_bps || 1000));
-      const returnUrl = "https://platform.labnarrative.com/trader?billing=return", cancelUrl = "https://platform.labnarrative.com/trader?billing=cancelled";
-      const made = await paypal("/v1/billing/subscriptions", { method: "POST", headers: { "PayPal-Request-Id": `trader-sub-${user.id}-${slug}-${interval}-${Date.now()}`.slice(0, 100) }, body: JSON.stringify({ plan_id: providerPlanId, custom_id: user.id, application_context: { brand_name: "LabNarrative Trading", shipping_preference: "NO_SHIPPING", user_action: "SUBSCRIBE_NOW", return_url: returnUrl, cancel_url: cancelUrl } }) });
+      const made = await paypal("/v1/billing/subscriptions", { method: "POST", headers: { "PayPal-Request-Id": `trader-sub-${user.id}-${slug}-${interval}-${Date.now()}`.slice(0, 100) }, body: JSON.stringify({ plan_id: providerPlanId, custom_id: user.id, application_context: { brand_name: "LabNarrative Trading", shipping_preference: "NO_SHIPPING", user_action: "SUBSCRIBE_NOW", return_url: "https://platform.labnarrative.com/trader?billing=return", cancel_url: "https://platform.labnarrative.com/trader?billing=cancelled" } }) });
       const providerId = text(made.p.id, 300), approve = link(made.p, ["approve"]);
       if (!made.r.ok || !providerId || !approve) return json({ error: text(made.p.message, 1000) || "paypal_subscription_create_failed" }, 502);
       const saved = await admin.from("trader_subscriptions").insert({ owner_user_id: user.id, account_id: account.id, plan_id: plan.id, billing_interval: interval, provider: "paypal", provider_subscription_id: providerId, status: "approval_pending", referral_discount_applied: referred, referral_code: attribution?.referral_code || null, list_price_cents: listPrice, subscription_price_cents: price, currency: plan.currency || cfg.currency || "USD", provider_metadata: { paypal_plan_id: providerPlanId } }).select("id").single();
-      if (saved.error) throw saved.error;
+      if (saved.error) {
+        if (saved.error.code === "23505") return json({ error: "subscription_checkout_already_exists" }, 409);
+        throw saved.error;
+      }
       return json({ ok: true, subscriptionId: saved.data.id, providerSubscriptionId: providerId, approvalUrl: approve, referralDiscountApplied: referred, listPriceCents: listPrice, priceCents: price });
+    }
+
+    if (action === "change_subscription") {
+      if (!cfg.checkout_enabled) return json({ error: "checkout_not_enabled" }, 409);
+      const rows = await ownerSubscriptions(admin, user.id);
+      const sub = rows.find((s: any) => s.status === "active") || null;
+      if (!sub?.provider_subscription_id) return json({ error: "active_subscription_required" }, 409);
+      const slug = text(body.plan, 100), interval = text(body.interval, 20) as "monthly" | "annual";
+      if (!slug || !["monthly", "annual"].includes(interval)) return json({ error: "invalid_plan_request" }, 400);
+      const planQ = await admin.from("trader_subscription_plans").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
+      if (planQ.error) throw planQ.error; if (!planQ.data) return json({ error: "plan_unavailable" }, 404);
+      const plan = planQ.data;
+      if (String(sub.plan_id) === String(plan.id) && sub.billing_interval === interval) return json({ ok: true, unchanged: true });
+      const referred = Boolean(sub.referral_discount_applied);
+      const providerPlanId = await ensurePayPalPlan(admin, plan, interval, referred, Number(cfg.referral_discount_bps || 1000));
+      const revised = await paypal(`/v1/billing/subscriptions/${encodeURIComponent(String(sub.provider_subscription_id))}/revise`, { method: "POST", body: JSON.stringify({ plan_id: providerPlanId, application_context: { brand_name: "LabNarrative Trading", shipping_preference: "NO_SHIPPING", return_url: "https://platform.labnarrative.com/trader?billing=changed", cancel_url: "https://platform.labnarrative.com/trader?billing=change-cancelled" } }) });
+      if (!revised.r.ok) return json({ error: text(revised.p.message, 1000) || "paypal_subscription_revise_failed" }, 502);
+      const approvalUrl = link(revised.p, ["approve"]);
+      const updated = await admin.from("trader_subscriptions").update({ pending_plan_id: plan.id, pending_billing_interval: interval, pending_provider_plan_id: providerPlanId, plan_change_requested_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", sub.id);
+      if (updated.error) throw updated.error;
+      if (!approvalUrl) {
+        try { const synced = await syncSubscription(admin, String(sub.provider_subscription_id)); return json({ ok: true, approvalUrl: null, subscription: synced, effectiveAt: sub.next_billing_at || null, noProration: true }); } catch {}
+      }
+      return json({ ok: true, approvalUrl: approvalUrl || null, effectiveAt: sub.next_billing_at || null, noProration: true });
+    }
+
+    if (action === "cancel_subscription") {
+      const rows = await ownerSubscriptions(admin, user.id);
+      const sub = rows.find((s: any) => ["active", "suspended", "payment_failed"].includes(s.status)) || currentSubscription(rows);
+      if (!sub?.provider_subscription_id) return json({ error: "active_subscription_required" }, 409);
+      if (sub.status === "cancelled") return json({ ok: true, alreadyCancelled: true, accessEndsAt: sub.access_ends_at || null });
+      const cancelled = await paypal(`/v1/billing/subscriptions/${encodeURIComponent(String(sub.provider_subscription_id))}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Customer requested cancellation from LabNarrative Trading." }) });
+      if (!cancelled.r.ok && cancelled.r.status !== 204) return json({ error: text(cancelled.p.message, 1000) || "paypal_subscription_cancel_failed" }, 502);
+      const now = new Date().toISOString();
+      const accessEndsAt = future(sub.next_billing_at) ? sub.next_billing_at : now;
+      const saved = await admin.from("trader_subscriptions").update({ status: "cancelled", cancel_at_period_end: true, cancellation_requested_at: now, cancelled_at: now, access_ends_at: accessEndsAt, pending_plan_id: null, pending_billing_interval: null, pending_provider_plan_id: null, updated_at: now }).eq("id", sub.id).select("*").single();
+      if (saved.error) throw saved.error;
+      return json({ ok: true, subscription: saved.data, accessEndsAt });
     }
 
     return json({ error: "unsupported_action" }, 400);
