@@ -1,9 +1,5 @@
 import type { Db, LaunchExchangeProvider } from "./trader-exchange.ts";
 
-function object(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
 export async function requireLiveExchangeConnection(
   db: Db,
   accountId: string,
@@ -27,7 +23,7 @@ export async function requireLiveExchangeConnection(
 
   const { data, error } = await db
     .from("trader_exchange_connections")
-    .select("status,environment,permission_read,permission_trade,permission_withdraw,capabilities")
+    .select("status,environment,permission_read,permission_trade,permission_withdraw")
     .eq("account_id", accountId)
     .eq("provider", provider)
     .maybeSingle();
@@ -36,5 +32,4 @@ export async function requireLiveExchangeConnection(
     throw new Error("exchange_trade_permission_required");
   }
   if (data.permission_withdraw === true) throw new Error("exchange_withdraw_permission_forbidden");
-  if (object(data.capabilities).liveExecution !== true) throw new Error("exchange_live_execution_not_enabled");
 }
