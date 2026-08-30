@@ -35,6 +35,7 @@ Group=ubuntu
 WorkingDirectory=/opt/labnarrative-trader-gateway
 Environment=NODE_ENV=production
 Environment=PORT=8080
+Environment=NODE_OPTIONS=--dns-result-order=ipv4first
 ExecStart=/usr/bin/node /opt/labnarrative-trader-gateway/server.mjs
 Restart=always
 RestartSec=3
