@@ -27,4 +27,4 @@ export default function ConnectionsSettings(props: Props) {
 `;
 
 fs.writeFileSync(file, source);
-console.log("Prepared final six-exchange Connections workspace.");
+console.log("Prepared simple four-exchange Connections workspace.");
