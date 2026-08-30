@@ -2,8 +2,14 @@ import http from "node:http";
 import { createHash, verify as verifySignature } from "node:crypto";
 
 const PORT = Number(process.env.PORT || 8080);
-const BINANCE_ORIGIN = "https://api.binance.com";
+const ORIGINS = Object.freeze({
+  binance: "https://api.binance.com",
+  bybit: "https://api.bybit.com",
+  okx: "https://www.okx.com",
+  kucoin: "https://api.kucoin.com",
+});
 const MAX_BODY_BYTES = 64 * 1024;
+const MAX_INNER_BODY_BYTES = 48 * 1024;
 const MAX_CLOCK_SKEW_MS = 30_000;
 const NONCE_TTL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -15,18 +21,62 @@ xctNegKl/b1/1PYc1ENJ3ET0UuRXSkPwBWHpaDoioCV8hlJ7Dpu6JOr61w==
 -----END PUBLIC KEY-----
 `;
 
-const allowed = new Set([
-  "GET /api/v3/time",
-  "GET /api/v3/account",
-  "GET /api/v3/openOrders",
-  "GET /api/v3/order",
-  "POST /api/v3/order",
-  "DELETE /api/v3/order",
-  "POST /api/v3/order/test",
-  "GET /api/v3/allOrders",
-  "GET /api/v3/myTrades",
-  "GET /api/v3/account/commission",
-  "GET /sapi/v1/account/apiRestrictions",
+const EXACT_ROUTES = new Map([
+  [ORIGINS.binance, new Set([
+    "GET /api/v3/time",
+    "GET /api/v3/account",
+    "GET /api/v3/openOrders",
+    "GET /api/v3/order",
+    "POST /api/v3/order",
+    "DELETE /api/v3/order",
+    "POST /api/v3/order/test",
+    "GET /api/v3/allOrders",
+    "GET /api/v3/myTrades",
+    "GET /api/v3/account/commission",
+    "GET /sapi/v1/account/apiRestrictions",
+  ])],
+  [ORIGINS.bybit, new Set([
+    "GET /v5/market/instruments-info",
+    "GET /v5/market/tickers",
+    "GET /v5/market/kline",
+    "GET /v5/user/query-api",
+    "GET /v5/account/wallet-balance",
+    "GET /v5/order/realtime",
+    "GET /v5/order/history",
+    "GET /v5/execution/list",
+    "POST /v5/order/create",
+    "POST /v5/order/cancel",
+  ])],
+  [ORIGINS.okx, new Set([
+    "GET /api/v5/account/config",
+    "GET /api/v5/account/balance",
+    "GET /api/v5/trade/order",
+    "GET /api/v5/trade/fills",
+    "POST /api/v5/trade/order",
+    "POST /api/v5/trade/cancel-order",
+  ])],
+  [ORIGINS.kucoin, new Set([
+    "GET /api/v1/user/api-key",
+    "GET /api/v1/accounts",
+    "GET /api/v1/hf/fills",
+    "POST /api/v1/hf/orders/sync",
+  ])],
+]);
+
+const DYNAMIC_ROUTES = new Map([
+  [ORIGINS.kucoin, [
+    { method: "GET", pattern: /^\/api\/v1\/hf\/orders\/[A-Za-z0-9_-]{1,128}$/ },
+    { method: "GET", pattern: /^\/api\/v1\/hf\/orders\/client-order\/[A-Za-z0-9_-]{1,64}$/ },
+    { method: "DELETE", pattern: /^\/api\/v1\/hf\/orders\/sync\/[A-Za-z0-9_-]{1,128}$/ },
+    { method: "DELETE", pattern: /^\/api\/v1\/hf\/orders\/sync\/client-order\/[A-Za-z0-9_-]{1,64}$/ },
+  ]],
+]);
+
+const HEADER_ALLOWLIST = new Map([
+  [ORIGINS.binance, new Set(["accept", "x-mbx-apikey", "content-type"])],
+  [ORIGINS.bybit, new Set(["accept", "content-type", "x-bapi-api-key", "x-bapi-timestamp", "x-bapi-recv-window", "x-bapi-sign"])],
+  [ORIGINS.okx, new Set(["accept", "content-type", "ok-access-key", "ok-access-sign", "ok-access-timestamp", "ok-access-passphrase"])],
+  [ORIGINS.kucoin, new Set(["accept", "content-type", "kc-api-key", "kc-api-sign", "kc-api-timestamp", "kc-api-passphrase", "kc-api-key-version"])],
 ]);
 
 const seenNonces = new Map();
@@ -105,8 +155,6 @@ const verifyRelayAuth = (req, rawBody) => {
 const refreshEgressIp = async () => {
   if (egressIp && Date.now() - egressCheckedAt < 10 * 60_000) return egressIp;
 
-  // Prefer OCI's local Instance Metadata Service so health does not depend on
-  // a third-party public-IP service being reachable from the VM.
   try {
     const response = await fetch("http://169.254.169.254/opc/v2/vnics/", {
       headers: { Authorization: "Bearer Oracle" },
@@ -134,32 +182,72 @@ const refreshEgressIp = async () => {
   return egressIp;
 };
 
+const normalizeOrigin = (value) => {
+  if (!value) return ORIGINS.binance; // Backwards compatibility with the existing Binance relay payload.
+  let origin;
+  try { origin = new URL(String(value)).origin; } catch { throw Object.assign(new Error("upstream_not_allowed"), { status: 403 }); }
+  if (!Object.values(ORIGINS).includes(origin)) throw Object.assign(new Error("upstream_not_allowed"), { status: 403 });
+  return origin;
+};
+
+const routeAllowed = (origin, method, path) => {
+  if (EXACT_ROUTES.get(origin)?.has(`${method} ${path}`)) return true;
+  return (DYNAMIC_ROUTES.get(origin) || []).some((route) => route.method === method && route.pattern.test(path));
+};
+
+const safeHeaders = (origin, supplied, legacyApiKey) => {
+  const allowed = HEADER_ALLOWLIST.get(origin) || new Set();
+  const headers = { accept: "application/json" };
+  if (supplied != null && (typeof supplied !== "object" || Array.isArray(supplied))) {
+    throw Object.assign(new Error("invalid_headers"), { status: 400 });
+  }
+  for (const [rawName, rawValue] of Object.entries(supplied || {})) {
+    const name = String(rawName).toLowerCase();
+    const value = String(rawValue ?? "");
+    if (!allowed.has(name)) throw Object.assign(new Error("header_not_allowed"), { status: 403 });
+    if (value.length > 4096 || /[\r\n]/.test(value)) throw Object.assign(new Error("invalid_header"), { status: 400 });
+    headers[name] = value;
+  }
+  if (origin === ORIGINS.binance && legacyApiKey) headers["x-mbx-apikey"] = legacyApiKey;
+  return headers;
+};
+
+const requestBody = (method, value) => {
+  if (method === "GET" || method === "DELETE" || value == null) return undefined;
+  const body = typeof value === "string" ? value : JSON.stringify(value);
+  if (Buffer.byteLength(body) > MAX_INNER_BODY_BYTES) throw Object.assign(new Error("upstream_body_too_large"), { status: 400 });
+  return body;
+};
+
 const relay = async (payload) => {
   const method = String(payload?.method || "").toUpperCase();
   const path = String(payload?.path || "");
   const requestId = String(payload?.requestId || "").slice(0, 128);
-  if (!allowed.has(`${method} ${path}`)) throw Object.assign(new Error("route_not_allowed"), { status: 403 });
-  if (!path.startsWith("/api/v3/") && path !== "/sapi/v1/account/apiRestrictions") throw Object.assign(new Error("route_not_allowed"), { status: 403 });
+  const origin = normalizeOrigin(payload?.upstream);
+  if (!/^(GET|POST|DELETE)$/.test(method)) throw Object.assign(new Error("method_not_allowed"), { status: 405 });
+  if (!/^\/[A-Za-z0-9._~!$&'()*+,;=:@%\/-]{1,512}$/.test(path) || path.includes("..")) throw Object.assign(new Error("invalid_path"), { status: 400 });
+  if (!routeAllowed(origin, method, path)) throw Object.assign(new Error("route_not_allowed"), { status: 403 });
 
   const query = String(payload?.query || "");
-  if (query.length > 16_384 || query.includes("#")) throw Object.assign(new Error("invalid_query"), { status: 400 });
-  const url = `${BINANCE_ORIGIN}${path}${query ? `?${query}` : ""}`;
+  if (query.length > 16_384 || query.includes("#") || /[\r\n]/.test(query)) throw Object.assign(new Error("invalid_query"), { status: 400 });
   const apiKey = typeof payload?.apiKey === "string" ? payload.apiKey.trim() : "";
-  if (apiKey && apiKey.length > 256) throw Object.assign(new Error("invalid_api_key"), { status: 400 });
+  if (apiKey && (apiKey.length > 256 || /[\r\n]/.test(apiKey))) throw Object.assign(new Error("invalid_api_key"), { status: 400 });
 
-  const headers = { accept: "application/json" };
-  if (apiKey) headers["x-mbx-apikey"] = apiKey;
-  if (payload?.body != null) headers["content-type"] = "application/json";
+  const headers = safeHeaders(origin, payload?.headers, apiKey);
+  const body = requestBody(method, payload?.body);
+  if (body != null && !headers["content-type"]) headers["content-type"] = "application/json";
+  const url = `${origin}${path}${query ? `?${query}` : ""}`;
 
   const upstream = await fetch(url, {
     method,
     headers,
-    body: method === "GET" || method === "DELETE" || payload?.body == null ? undefined : JSON.stringify(payload.body),
+    body,
     redirect: "error",
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const text = await upstream.text();
-  console.log(JSON.stringify({ event: "binance_relay", requestId, method, path, status: upstream.status }));
+  const provider = Object.entries(ORIGINS).find(([, value]) => value === origin)?.[0] || "unknown";
+  console.log(JSON.stringify({ event: "exchange_relay", provider, requestId, method, path, status: upstream.status }));
   return {
     status: upstream.status,
     body: text,
@@ -176,16 +264,15 @@ const server = http.createServer(async (req, res) => {
   try {
     if (!rateAllowed()) return json(res, 429, { error: "gateway_rate_limited" });
 
-    // Vercel external rewrites can alter the request-target form. Route by method instead:
-    // GET is public health only; POST is always signature-gated and payload allowlisted.
+    // GET is public health only; POST is signature-gated and origin/method/path/header allowlisted.
     if (req.method === "GET") {
       const ip = await refreshEgressIp();
       return json(res, 200, {
         ok: true,
-        service: "labnarrative-binance-gateway",
+        service: "labnarrative-trader-gateway",
         auth: "ecdsa-p256",
         egressIp: ip,
-        binanceOrigin: BINANCE_ORIGIN,
+        providers: Object.keys(ORIGINS),
       });
     }
 
@@ -206,6 +293,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(JSON.stringify({ event: "gateway_started", port: PORT, auth: "ecdsa-p256" }));
+  console.log(JSON.stringify({ event: "gateway_started", port: PORT, auth: "ecdsa-p256", providers: Object.keys(ORIGINS) }));
   void refreshEgressIp();
 });
