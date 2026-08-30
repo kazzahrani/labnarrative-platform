@@ -75,8 +75,13 @@ if(!shell.includes(marker)){
 
   if(!shell.includes("botExchangeLabel(trade.exchangeProvider)")){
     const identity="{trade.botName} · {trade.executionMode}";
-    if(!shell.includes(identity))throw new Error("Multi-exchange final could not find Position identity line");
-    shell=shell.replaceAll(identity,"{trade.botName} · {botExchangeLabel(trade.exchangeProvider)} · {trade.executionMode}");changes++;
+    if(shell.includes(identity)){
+      shell=shell.replaceAll(identity,"{trade.botName} · {botExchangeLabel(trade.exchangeProvider)} · {trade.executionMode}");changes++;
+    }else{
+      const compactIdentity=/(<div className=\{dca\.tradeIdentity\}>[\s\S]{0,600}?<small>)([\s\S]{0,350}?)(<\/small>)/;
+      if(!compactIdentity.test(shell))throw new Error("Multi-exchange final could not find compact Position identity");
+      shell=shell.replace(compactIdentity,'$1$2 · {botExchangeLabel(trade.exchangeProvider)}$3');changes++;
+    }
   }
 }
 
