@@ -29,6 +29,7 @@ export default function ConnectionsSettings(props: Props) {
 fs.writeFileSync(file, source);
 console.log("Prepared simple four-exchange Connections workspace.");
 
-// This must run last: legacy Trader transforms rewrite the DCA source earlier in the
-// build. Apply exchange selection only after those transforms have settled.
+// These must run last: legacy Trader transforms rewrite the DCA source and shell
+// earlier in the build. Apply exchange selection only after those transforms settle.
 await import("./prepare-trader-multiexchange-execution-ui.mjs");
+await import("./prepare-trader-multiexchange-shell-ui.mjs");
