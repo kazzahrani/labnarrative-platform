@@ -2,36 +2,37 @@ import type { Metadata } from "next";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Affiliate Program — LabNarrative",
+  title: "Referral & Affiliate Program — LabNarrative",
   description:
-    "Join the LabNarrative Founding Affiliate Program for crypto creators, educators, strategy publishers, and trading communities.",
+    "Earn on annual LabNarrative Trading subscriptions, monthly referrals, and a three-level referral network.",
 };
 
 const APP_URL = "https://platform.labnarrative.com/trader";
 const APPLY_URL = "mailto:hello@labnarrative.com?subject=LabNarrative%20Founding%20Affiliate%20Program&body=Channel%20or%20community%20URL%3A%0AAudience%20size%3A%0AMain%20platform%3A%0AAnything%20you%27d%20like%20us%20to%20know%3A";
 
 const steps = [
-  ["01", "Apply", "Tell us where you publish and who your audience is. We are prioritizing creators with a genuine crypto automation or systematic-trading audience."],
-  ["02", "Test it first", "Founding partners get full beta access. Use the product yourself before deciding whether it deserves a place in your content."],
-  ["03", "Share honestly", "Create tutorials, comparisons, strategy walkthroughs, reviews, or community content in your own voice. Positive coverage is never required."],
-  ["04", "Earn recurring revenue", "Once paid subscriptions open, approved partners receive 30% of eligible referred subscription revenue while those customers remain active."],
+  ["01", "Use LabNarrative", "Test the trading platform yourself first. We want referrals from people who understand the product, not one-off promotional traffic."],
+  ["02", "Share your referral", "Your referral code and tracked link connect new customers to you. Strategy and bot sharing will become additional attribution paths as those sharing tools launch."],
+  ["03", "Build a network", "Monthly subscriptions pay 25% to the direct referrer, 15% to the next level, and 10% to the third level while eligible payments continue."],
+  ["04", "Earn more on annual sales", "Annual prepaid subscriptions pay 30% direct, 10% at level two, and 5% at level three from the eligible annual payment, subject to the safety hold."],
 ];
 
 const audiences = [
+  ["Every LabNarrative user", "The standard referral structure is designed for users who simply want to recommend a product they already use."],
   ["YouTube creators", "Crypto automation, DCA bots, exchange-connected trading, TradingView, portfolio strategy, or systematic trading."],
-  ["TradingView publishers", "Indicator and strategy authors whose audience already thinks in rules, signals, and repeatable systems."],
   ["Trading communities", "Discord, Telegram, forums, academies, and private groups built around active crypto traders."],
   ["Writers & educators", "Newsletters, blogs, courses, and educational channels explaining disciplined crypto trading workflows."],
 ];
 
 const terms = [
-  "Approved founding partners receive full beta product access at no charge while the program is in beta.",
-  "Once paid subscriptions open, the founding program targets a 30% recurring share of eligible net subscription revenue from referred paid customers.",
-  "Eligible net revenue excludes taxes, refunds, chargebacks, fraudulent transactions, and amounts otherwise reversed.",
-  "Referral tracking details and payout mechanics will be issued to approved partners before paid subscriptions open.",
-  "No self-referrals, spam, impersonation, misleading performance claims, or promises of guaranteed trading profits.",
+  "Monthly subscriptions: 25% direct commission, 15% level-two commission, and 10% level-three commission on eligible subscription revenue as payments are received.",
+  "Annual prepaid subscriptions: 30% direct commission, 10% level-two commission, and 5% level-three commission on the eligible annual payment.",
+  "The referred-customer benefit is set at 10% and will activate with the paid checkout flow.",
+  "New commissions remain pending for 30 days to protect against refunds, chargebacks, fraud, and payment reversals.",
+  "The payout threshold is $25. Payout methods and exact payout schedule will be published before paid subscriptions open.",
+  "Eligible subscription revenue excludes taxes, refunds, chargebacks, fraudulent transactions, and amounts otherwise reversed.",
+  "No self-referrals, circular referral chains, spam, impersonation, misleading performance claims, or promises of guaranteed trading profits.",
   "Partners must clearly disclose the affiliate relationship wherever required by law or platform rules.",
-  "You are free to publish an honest review. Participation never requires positive coverage.",
   "Formal program terms will govern payouts and eligibility when paid subscriptions launch.",
 ];
 
@@ -60,18 +61,18 @@ export default function AffiliatePage() {
       <section className={styles.affiliateHero}>
         <div className={styles.affiliateHeroInner}>
           <div>
-            <p className={styles.eyebrow}>Founding Affiliate Program</p>
-            <h1>Build trust.<br /><em>Earn when they stay.</em></h1>
-            <p className={styles.affiliateLead}>LabNarrative is opening its first partner group for creators, educators, strategy publishers, and trading communities. Test the platform yourself, share it honestly with your audience, and earn recurring revenue from customers you introduce.</p>
+            <p className={styles.eyebrow}>Referral & Affiliate Program</p>
+            <h1>Earn big on annual sales.<br /><em>Build recurring income monthly.</em></h1>
+            <p className={styles.affiliateLead}>Recommend LabNarrative Trading to people who will actually use it. Annual prepaid customers earn you a larger direct commission, while monthly customers can build recurring income across a three-level referral network.</p>
             <div className={styles.heroActions}>
-              <a className={styles.primary} href={APPLY_URL}>Apply as a founding partner →</a>
-              <a className={styles.secondary} href={APP_URL}>Test LabNarrative first</a>
+              <a className={styles.primary} href={APP_URL}>Test LabNarrative first →</a>
+              <a className={styles.secondary} href={APPLY_URL}>Founding creator access</a>
             </div>
           </div>
           <aside className={styles.commissionPanel}>
-            <small>Founding revenue share</small>
+            <small>Direct annual commission</small>
             <strong>30%</strong>
-            <p>Try it first. Recommend it only if you genuinely like it. Positive coverage is never required.</p>
+            <p>Calculated from the eligible annual prepaid subscription. Monthly referrals earn 25% direct recurring commission, with 15% and 10% network levels.</p>
           </aside>
         </div>
       </section>
@@ -79,7 +80,7 @@ export default function AffiliatePage() {
       <section className={styles.section} id="program">
         <div className={styles.sectionIntro}>
           <p className={styles.label}>How the program works</p>
-          <h2>A partnership designed around long-term users, not one-off clicks.</h2>
+          <h2>Immediate annual upside. Recurring monthly upside. Network effects underneath both.</h2>
         </div>
         <div className={styles.programGrid}>
           {steps.map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
@@ -88,8 +89,8 @@ export default function AffiliatePage() {
 
       <section className={styles.fitSection} id="fit">
         <div className={styles.sectionIntro}>
-          <p className={styles.label}>Who we want to work with</p>
-          <h2>Smaller, trusted audiences can matter more than huge generic reach.</h2>
+          <p className={styles.label}>Who can participate</p>
+          <h2>Built for normal users first, with stronger tools coming for serious creators.</h2>
         </div>
         <div className={styles.partnerGrid}>
           {audiences.map(([title, copy]) => <article key={title}><h3>{title}</h3><p>{copy}</p></article>)}
@@ -99,22 +100,22 @@ export default function AffiliatePage() {
       <section className={styles.terms} id="terms">
         <div>
           <div className={styles.sectionIntro}>
-            <p className={styles.label}>Founding terms</p>
-            <h2>Simple enough to understand before you promote us.</h2>
+            <p className={styles.label}>Program rules</p>
+            <h2>The economics are simple enough to understand before you share a link.</h2>
           </div>
           <ul className={styles.termList}>{terms.map((term) => <li key={term}>{term}</li>)}</ul>
         </div>
         <aside className={styles.applyBox}>
-          <h3>Want to test it?</h3>
-          <p>Send your channel, community, newsletter, or TradingView profile. We are starting with a small founding group and prioritizing audiences already interested in DCA, crypto automation, exchange-connected trading, and systematic strategies.</p>
-          <a className={styles.applyCta} href={APPLY_URL}>Apply to the program →</a>
+          <h3>Creating for traders?</h3>
+          <p>Founding creators can contact us now for beta access and partnership onboarding. Referral attribution is being built directly into LabNarrative Trading; paid commissions and payouts activate with paid subscriptions.</p>
+          <a className={styles.applyCta} href={APPLY_URL}>Apply as a founding creator →</a>
         </aside>
       </section>
 
       <footer className={styles.footer}>
         <a href="/"><Brand /></a>
         <div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div>
-        <small>Affiliate participation does not permit misleading claims, investment advice, or guaranteed-profit marketing.</small>
+        <small>Referral participation does not permit misleading claims, investment advice, or guaranteed-profit marketing.</small>
       </footer>
     </main>
   );
