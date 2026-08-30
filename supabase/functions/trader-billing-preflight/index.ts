@@ -5,7 +5,7 @@ type J = Record<string, unknown>;
 const cors = {
   "Access-Control-Allow-Origin": "https://platform.labnarrative.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 function json(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status, headers: { ...cors, "content-type": "application/json", "cache-control": "no-store" } }); }
 function text(v: unknown, max = 4000) { return typeof v === "string" ? v.trim().slice(0, max) : ""; }
@@ -20,6 +20,10 @@ function fixedPrice(payload: J) {
   const cycle = arr(payload.billing_cycles).find((x) => text(x.tenure_type, 40) === "REGULAR") || arr(payload.billing_cycles)[0] || {};
   const fixed = obj(obj(cycle.pricing_scheme).fixed_price);
   return { cents: Math.round(Number(fixed.value || 0) * 100), currency: text(fixed.currency_code, 20).toUpperCase() };
+}
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function accessToken() {
@@ -49,6 +53,30 @@ async function authenticateFounder(admin: any, req: Request) {
   if (!active || override.data?.reason !== "founder_tester") throw new Error("founder_access_required");
   return result.data.user;
 }
+async function authenticateOperatorToken(admin: any, req: Request) {
+  const url = new URL(req.url);
+  let supplied = text(url.searchParams.get("preflight_token"), 1000);
+  if (!supplied && req.method === "POST") {
+    const body = await req.clone().json().catch(() => ({})) as J;
+    supplied = text(body.preflight_token, 1000);
+  }
+  if (!supplied) throw new Error("unauthorized");
+  const stateQ = await admin.from("trader_billing_provider_state").select("preflight_status,preflight_details").eq("id", 1).maybeSingle();
+  if (stateQ.error) throw stateQ.error;
+  const details = obj(stateQ.data?.preflight_details);
+  const expected = text(details.operator_token_hash, 200);
+  const expiresAt = text(details.operator_token_expires_at, 100);
+  if (stateQ.data?.preflight_status !== "armed" || !expected || !expiresAt || Date.parse(expiresAt) <= Date.now()) throw new Error("operator_token_expired");
+  const actual = await sha256Hex(supplied);
+  if (actual !== expected) throw new Error("unauthorized");
+  const nextDetails = { ...details } as J;
+  delete nextDetails.operator_token_hash;
+  delete nextDetails.operator_token_expires_at;
+  const claimed = await admin.from("trader_billing_provider_state").update({ preflight_status: "authorized", preflight_details: nextDetails, updated_at: new Date().toISOString() }).eq("id", 1).eq("preflight_status", "armed").select("id").maybeSingle();
+  if (claimed.error) throw claimed.error;
+  if (!claimed.data) throw new Error("operator_token_already_used");
+  return true;
+}
 
 async function ensureProduct(admin: any, state: any) {
   let id = text(state?.paypal_product_id, 200);
@@ -60,7 +88,8 @@ async function ensureProduct(admin: any, state: any) {
   const made = await paypal("/v1/catalogs/products", { method: "POST", headers: { "PayPal-Request-Id": "labnarrative-trader-product-v1" }, body: JSON.stringify({ name: "LabNarrative Trading", description: "Crypto trading automation software subscription", type: "SERVICE", category: "SOFTWARE", home_url: "https://platform.labnarrative.com/trader" }) });
   if (!made.r.ok || !text(made.p.id, 200)) throw new Error(text(made.p.message, 1000) || "Could not create PayPal Trading product.");
   id = text(made.p.id, 200);
-  await admin.from("trader_billing_provider_state").update({ paypal_product_id: id, updated_at: new Date().toISOString() }).eq("id", 1);
+  const saved = await admin.from("trader_billing_provider_state").update({ paypal_product_id: id, updated_at: new Date().toISOString() }).eq("id", 1);
+  if (saved.error) throw saved.error;
   return { id, status: "created" };
 }
 
@@ -100,7 +129,8 @@ async function ensureWebhook(admin: any, state: any) {
   if (!verified.r.ok || text(verified.p.url, 4000) !== webhookUrl) throw new Error("PayPal Trading webhook verification failed.");
   const names = arr(verified.p.event_types).map((x) => text(x.name, 100));
   if (!webhookEvents.every((name) => names.includes(name))) throw new Error("PayPal Trading webhook is missing required event types.");
-  await admin.from("trader_billing_provider_state").update({ paypal_webhook_id: id, webhook_status: "ready", updated_at: new Date().toISOString() }).eq("id", 1);
+  const saved = await admin.from("trader_billing_provider_state").update({ paypal_webhook_id: id, webhook_status: "ready", updated_at: new Date().toISOString() }).eq("id", 1);
+  if (saved.error) throw saved.error;
   return { id, status: "ready", url: webhookUrl };
 }
 
@@ -111,7 +141,7 @@ const variants: Variant[] = [
   { field: "paypal_annual_plan_id", interval: "annual", referred: false, label: "annual" },
   { field: "paypal_annual_referral_plan_id", interval: "annual", referred: true, label: "annual_referral" },
 ];
-async function createPlan(productId: string, plan: any, variant: Variant, discountBps: number, expectedCents: number) {
+async function createPlan(productId: string, plan: any, variant: Variant, expectedCents: number) {
   const made = await paypal("/v1/billing/plans", { method: "POST", headers: { "PayPal-Request-Id": `trader-${plan.slug}-${variant.label}-v2` }, body: JSON.stringify({
     product_id: productId,
     name: `${plan.name} · ${variant.interval === "annual" ? "Annual" : "Monthly"}${variant.referred ? " · Referral" : ""}`,
@@ -125,6 +155,7 @@ async function createPlan(productId: string, plan: any, variant: Variant, discou
 }
 async function ensurePlanVariant(admin: any, productId: string, plan: any, variant: Variant, discountBps: number) {
   const listPrice = Number(variant.interval === "monthly" ? plan.monthly_price_cents : plan.annual_price_cents);
+  if (!Number.isInteger(listPrice) || listPrice <= 0) throw new Error(`${plan.slug} ${variant.interval} price is invalid.`);
   const expectedCents = variant.referred ? discounted(listPrice, discountBps) : listPrice;
   const expectedCurrency = String(plan.currency || "USD").toUpperCase();
   let id = text(plan[variant.field], 200);
@@ -135,7 +166,7 @@ async function ensurePlanVariant(admin: any, productId: string, plan: any, varia
     if (!got.r.ok || text(got.p.status, 40) !== "ACTIVE" || text(got.p.product_id, 200) !== productId || price.cents !== expectedCents || price.currency !== expectedCurrency) id = "";
   }
   if (!id) {
-    id = await createPlan(productId, plan, variant, discountBps, expectedCents);
+    id = await createPlan(productId, plan, variant, expectedCents);
     status = "created";
     const saved = await admin.from("trader_subscription_plans").update({ [variant.field]: id, provider_status: "synced", provider_synced_at: new Date().toISOString(), provider_error: null, updated_at: new Date().toISOString() }).eq("id", plan.id);
     if (saved.error) throw saved.error;
@@ -155,6 +186,7 @@ async function runPreflight(admin: any) {
     if (stateQ.error) throw stateQ.error;
     const cfgQ = await admin.from("trader_billing_config").select("checkout_enabled,entitlements_enforced,referral_discount_bps").eq("id", 1).maybeSingle();
     if (cfgQ.error) throw cfgQ.error;
+    if (cfgQ.data?.checkout_enabled || cfgQ.data?.entitlements_enforced) throw new Error("Preflight requires checkout and entitlement enforcement to remain disabled.");
     const plansQ = await admin.from("trader_subscription_plans").select("*").eq("is_active", true).order("sort_order");
     if (plansQ.error) throw plansQ.error;
     if ((plansQ.data || []).length !== 3) throw new Error("Expected exactly three active Trader subscription plans.");
@@ -178,8 +210,8 @@ async function runPreflight(admin: any) {
       webhook: { id: webhook.id, status: webhook.status, requiredEventCount: webhookEvents.length },
       planVariantCount: verified.length,
       planVariants: verified,
-      checkoutEnabled: Boolean(cfgQ.data?.checkout_enabled),
-      entitlementsEnforced: Boolean(cfgQ.data?.entitlements_enforced),
+      checkoutEnabled: false,
+      entitlementsEnforced: false,
       launchReady,
     };
     const finishedAt = new Date().toISOString();
@@ -195,17 +227,19 @@ async function runPreflight(admin: any) {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  if (req.method !== "GET" && req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const base = Deno.env.get("SUPABASE_URL") || "", key = serviceKey();
   if (!base || !key) return json({ error: "server_configuration_missing" }, 500);
   const admin = createClient(base, key, { auth: { persistSession: false, autoRefreshToken: false } });
   try {
-    await authenticateFounder(admin, req);
+    const auth = text(req.headers.get("authorization"), 8000);
+    if (auth.toLowerCase().startsWith("bearer ")) await authenticateFounder(admin, req);
+    else await authenticateOperatorToken(admin, req);
     const details = await runPreflight(admin);
     return json({ ok: true, ...details });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const status = message === "unauthorized" ? 401 : message === "founder_access_required" ? 403 : 500;
+    const status = ["unauthorized", "operator_token_expired", "operator_token_already_used"].includes(message) ? 401 : message === "founder_access_required" ? 403 : 500;
     console.error("trader-billing-preflight", message);
     return json({ error: message }, status);
   }
