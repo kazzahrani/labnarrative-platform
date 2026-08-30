@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const REFERRAL_PENDING_COOKIE = "ln_referral_pending_v1";
+export const REFERRAL_SIGN_IN_REQUIRED = "referral_sign_in_required";
 
 export type ReferralLevel = 1 | 2 | 3;
 export type BillingInterval = "monthly" | "annual";
@@ -67,45 +68,118 @@ export async function loadReferralProgramConfig(db: SupabaseClient): Promise<Ref
   };
 }
 
-function referralCodeForAccount(accountId: string, length = 12) {
-  const digest = createHash("sha256").update(`labnarrative-referral:${accountId}`).digest("hex").toUpperCase();
+async function accountOwnerUserId(db: SupabaseClient, accountId: string) {
+  const { data, error } = await db.from("trader_accounts").select("owner_user_id").eq("id", accountId).maybeSingle();
+  if (error) throw error;
+  return data?.owner_user_id ? String(data.owner_user_id) : null;
+}
+
+function referralCodeForOwner(ownerUserId: string, length = 12) {
+  const digest = createHash("sha256").update(`labnarrative-referral:${ownerUserId}`).digest("hex").toUpperCase();
   return `LN${digest.slice(0, length)}`;
 }
 
 export async function ensureReferralProfile(db: SupabaseClient, accountId: string) {
-  const existing = await db.from("trader_referral_profiles").select("account_id,referral_code,status").eq("account_id", accountId).maybeSingle();
-  if (existing.error) throw existing.error;
-  if (existing.data) return existing.data;
+  const ownerUserId = await accountOwnerUserId(db, accountId);
+  if (!ownerUserId) throw new Error(REFERRAL_SIGN_IN_REQUIRED);
+
+  const ownerProfile = await db.from("trader_referral_profiles").select("account_id,owner_user_id,referral_code,status").eq("owner_user_id", ownerUserId).maybeSingle();
+  if (ownerProfile.error) throw ownerProfile.error;
+  if (ownerProfile.data) return ownerProfile.data;
+
+  const accountProfile = await db.from("trader_referral_profiles").select("account_id,owner_user_id,referral_code,status").eq("account_id", accountId).maybeSingle();
+  if (accountProfile.error) throw accountProfile.error;
+  if (accountProfile.data) {
+    const updated = await db.from("trader_referral_profiles").update({ owner_user_id: ownerUserId, updated_at: new Date().toISOString() }).eq("account_id", accountId).select("account_id,owner_user_id,referral_code,status").single();
+    if (updated.error) throw updated.error;
+    return updated.data;
+  }
 
   for (const length of [12, 16, 24]) {
-    const referralCode = referralCodeForAccount(accountId, length);
-    const inserted = await db.from("trader_referral_profiles").insert({ account_id: accountId, referral_code: referralCode }).select("account_id,referral_code,status").single();
+    const referralCode = referralCodeForOwner(ownerUserId, length);
+    const inserted = await db.from("trader_referral_profiles").insert({ account_id: accountId, owner_user_id: ownerUserId, referral_code: referralCode }).select("account_id,owner_user_id,referral_code,status").single();
     if (!inserted.error && inserted.data) return inserted.data;
     if (inserted.error?.code !== "23505") throw inserted.error;
 
-    const retryExisting = await db.from("trader_referral_profiles").select("account_id,referral_code,status").eq("account_id", accountId).maybeSingle();
-    if (retryExisting.error) throw retryExisting.error;
-    if (retryExisting.data) return retryExisting.data;
+    const retryOwner = await db.from("trader_referral_profiles").select("account_id,owner_user_id,referral_code,status").eq("owner_user_id", ownerUserId).maybeSingle();
+    if (retryOwner.error) throw retryOwner.error;
+    if (retryOwner.data) return retryOwner.data;
   }
   throw new Error("Unable to create a unique referral code.");
 }
 
-async function wouldCreateReferralCycle(db: SupabaseClient, referredAccountId: string, prospectiveReferrerId: string) {
-  let cursor: string | null = prospectiveReferrerId;
+async function wouldCreateOwnerCycle(db: SupabaseClient, referredOwnerUserId: string, prospectiveReferrerOwnerUserId: string) {
+  let cursor: string | null = prospectiveReferrerOwnerUserId;
   const visited = new Set<string>();
   for (let depth = 0; depth < 25 && cursor; depth += 1) {
-    if (cursor === referredAccountId) return true;
+    if (cursor === referredOwnerUserId) return true;
     if (visited.has(cursor)) return true;
     visited.add(cursor);
-    const { data, error } = await db.from("trader_referral_attributions").select("referrer_account_id").eq("referred_account_id", cursor).maybeSingle();
+    const { data, error } = await db.from("trader_referral_attributions").select("referrer_owner_user_id").eq("referred_owner_user_id", cursor).maybeSingle();
     if (error) throw error;
-    cursor = data?.referrer_account_id ? String(data.referrer_account_id) : null;
+    cursor = data?.referrer_owner_user_id ? String(data.referrer_owner_user_id) : null;
   }
   return false;
 }
 
+export async function bindReferralAttributionToOwner(db: SupabaseClient, accountId: string) {
+  const ownerUserId = await accountOwnerUserId(db, accountId);
+  if (!ownerUserId) return null;
+
+  const accountAttribution = await db.from("trader_referral_attributions").select("referred_account_id,referred_owner_user_id,referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at").eq("referred_account_id", accountId).maybeSingle();
+  if (accountAttribution.error) throw accountAttribution.error;
+  if (!accountAttribution.data) return null;
+  if (String(accountAttribution.data.referred_owner_user_id ?? "") === ownerUserId) return accountAttribution.data;
+
+  const referrerOwnerUserId = accountAttribution.data.referrer_owner_user_id ? String(accountAttribution.data.referrer_owner_user_id) : null;
+  if (referrerOwnerUserId === ownerUserId || (referrerOwnerUserId && await wouldCreateOwnerCycle(db, ownerUserId, referrerOwnerUserId))) {
+    const removed = await db.from("trader_referral_attributions").delete().eq("referred_account_id", accountId);
+    if (removed.error) throw removed.error;
+    return null;
+  }
+
+  const ownerAttribution = await db.from("trader_referral_attributions").select("referred_account_id,referred_owner_user_id,referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at").eq("referred_owner_user_id", ownerUserId).maybeSingle();
+  if (ownerAttribution.error) throw ownerAttribution.error;
+  if (ownerAttribution.data && String(ownerAttribution.data.referred_account_id) !== accountId) {
+    const removed = await db.from("trader_referral_attributions").delete().eq("referred_account_id", accountId);
+    if (removed.error) throw removed.error;
+    return ownerAttribution.data;
+  }
+
+  const updated = await db.from("trader_referral_attributions").update({ referred_owner_user_id: ownerUserId }).eq("referred_account_id", accountId).select("referred_account_id,referred_owner_user_id,referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at").single();
+  if (updated.error) throw updated.error;
+  return updated.data;
+}
+
+async function findAttributionForPrincipal(db: SupabaseClient, accountId: string | null, ownerUserId: string | null) {
+  if (ownerUserId) {
+    const ownerMatch = await db.from("trader_referral_attributions").select("referred_account_id,referred_owner_user_id,referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at").eq("referred_owner_user_id", ownerUserId).maybeSingle();
+    if (ownerMatch.error) throw ownerMatch.error;
+    if (ownerMatch.data) return ownerMatch.data;
+
+    const ownedAccounts = await db.from("trader_accounts").select("id").eq("owner_user_id", ownerUserId);
+    if (ownedAccounts.error) throw ownedAccounts.error;
+    const accountIds = (ownedAccounts.data ?? []).map((row) => String(row.id));
+    if (accountIds.length) {
+      const legacyMatch = await db.from("trader_referral_attributions").select("referred_account_id,referred_owner_user_id,referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at").in("referred_account_id", accountIds).order("attributed_at", { ascending: true }).limit(1).maybeSingle();
+      if (legacyMatch.error) throw legacyMatch.error;
+      if (legacyMatch.data) {
+        const legacyAccountId = String(legacyMatch.data.referred_account_id);
+        return await bindReferralAttributionToOwner(db, legacyAccountId) ?? legacyMatch.data;
+      }
+    }
+  }
+
+  if (accountId) {
+    const accountMatch = await db.from("trader_referral_attributions").select("referred_account_id,referred_owner_user_id,referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at").eq("referred_account_id", accountId).maybeSingle();
+    if (accountMatch.error) throw accountMatch.error;
+    if (accountMatch.data) return accountMatch.data;
+  }
+  return null;
+}
+
 export type ReferralClaimResult =
-  | { ok: true; status: "attributed" | "already_attributed"; referrerAccountId: string; referralCode: string }
+  | { ok: true; status: "attributed" | "already_attributed"; referrerAccountId: string; referrerOwnerUserId: string | null; referralCode: string }
   | { ok: false; status: "inactive" | "invalid_code" | "self_referral" | "cycle" | "already_attributed_elsewhere" };
 
 export async function claimReferralCode(db: SupabaseClient, referredAccountId: string, rawCode: unknown, source: ReferralSource = "code"): Promise<ReferralClaimResult> {
@@ -115,42 +189,57 @@ export async function claimReferralCode(db: SupabaseClient, referredAccountId: s
   const referralCode = normalizeReferralCode(rawCode);
   if (referralCode.length < 4) return { ok: false, status: "invalid_code" };
 
-  const existing = await db.from("trader_referral_attributions").select("referrer_account_id,referral_code").eq("referred_account_id", referredAccountId).maybeSingle();
-  if (existing.error) throw existing.error;
-  if (existing.data) {
-    if (normalizeReferralCode(existing.data.referral_code) === referralCode) {
-      return { ok: true, status: "already_attributed", referrerAccountId: String(existing.data.referrer_account_id), referralCode };
+  await bindReferralAttributionToOwner(db, referredAccountId);
+  const referredOwnerUserId = await accountOwnerUserId(db, referredAccountId);
+  const existing = await findAttributionForPrincipal(db, referredAccountId, referredOwnerUserId);
+  if (existing) {
+    if (normalizeReferralCode(existing.referral_code) === referralCode) {
+      return {
+        ok: true,
+        status: "already_attributed",
+        referrerAccountId: String(existing.referrer_account_id),
+        referrerOwnerUserId: existing.referrer_owner_user_id ? String(existing.referrer_owner_user_id) : null,
+        referralCode,
+      };
     }
     return { ok: false, status: "already_attributed_elsewhere" };
   }
 
-  const profile = await db.from("trader_referral_profiles").select("account_id,referral_code,status").eq("referral_code", referralCode).eq("status", "active").maybeSingle();
+  const profile = await db.from("trader_referral_profiles").select("account_id,owner_user_id,referral_code,status").eq("referral_code", referralCode).eq("status", "active").maybeSingle();
   if (profile.error) throw profile.error;
   if (!profile.data) return { ok: false, status: "invalid_code" };
 
   const referrerAccountId = String(profile.data.account_id);
-  if (referrerAccountId === referredAccountId) return { ok: false, status: "self_referral" };
-  if (await wouldCreateReferralCycle(db, referredAccountId, referrerAccountId)) return { ok: false, status: "cycle" };
+  const referrerOwnerUserId = profile.data.owner_user_id ? String(profile.data.owner_user_id) : await accountOwnerUserId(db, referrerAccountId);
+  if (referrerAccountId === referredAccountId || (referredOwnerUserId && referrerOwnerUserId === referredOwnerUserId)) return { ok: false, status: "self_referral" };
+  if (referredOwnerUserId && referrerOwnerUserId && await wouldCreateOwnerCycle(db, referredOwnerUserId, referrerOwnerUserId)) return { ok: false, status: "cycle" };
 
   const inserted = await db.from("trader_referral_attributions").insert({
     referred_account_id: referredAccountId,
+    referred_owner_user_id: referredOwnerUserId,
     referrer_account_id: referrerAccountId,
+    referrer_owner_user_id: referrerOwnerUserId,
     referral_code: referralCode,
     source,
   });
   if (inserted.error) {
     if (inserted.error.code === "23505") {
-      const concurrent = await db.from("trader_referral_attributions").select("referrer_account_id,referral_code").eq("referred_account_id", referredAccountId).maybeSingle();
-      if (concurrent.error) throw concurrent.error;
-      if (concurrent.data && normalizeReferralCode(concurrent.data.referral_code) === referralCode) {
-        return { ok: true, status: "already_attributed", referrerAccountId: String(concurrent.data.referrer_account_id), referralCode };
+      const concurrent = await findAttributionForPrincipal(db, referredAccountId, referredOwnerUserId);
+      if (concurrent && normalizeReferralCode(concurrent.referral_code) === referralCode) {
+        return {
+          ok: true,
+          status: "already_attributed",
+          referrerAccountId: String(concurrent.referrer_account_id),
+          referrerOwnerUserId: concurrent.referrer_owner_user_id ? String(concurrent.referrer_owner_user_id) : null,
+          referralCode,
+        };
       }
       return { ok: false, status: "already_attributed_elsewhere" };
     }
     throw inserted.error;
   }
 
-  return { ok: true, status: "attributed", referrerAccountId, referralCode };
+  return { ok: true, status: "attributed", referrerAccountId, referrerOwnerUserId, referralCode };
 }
 
 export async function claimPendingReferral(db: SupabaseClient, accountId: string, request: NextRequest) {
@@ -161,6 +250,7 @@ export async function claimPendingReferral(db: SupabaseClient, accountId: string
 
 export type ReferralPaymentInput = {
   referredAccountId: string;
+  referredOwnerUserId?: string | null;
   provider: string;
   externalPaymentId: string;
   billingInterval: BillingInterval;
@@ -177,21 +267,27 @@ export async function createReferralCommissionsForPayment(db: SupabaseClient, in
   const paidAt = input.paidAt instanceof Date ? input.paidAt : new Date(input.paidAt ?? Date.now());
   if (!Number.isFinite(paidAt.getTime())) throw new Error("Invalid referral payment timestamp.");
   const holdUntil = new Date(paidAt.getTime() + config.commission_hold_days * 24 * 60 * 60 * 1000).toISOString();
+  const referredOwnerUserId = input.referredOwnerUserId ?? await accountOwnerUserId(db, input.referredAccountId);
+  if (referredOwnerUserId) await bindReferralAttributionToOwner(db, input.referredAccountId);
+
   const rows: Record<string, unknown>[] = [];
-  let referredNodeId = input.referredAccountId;
+  let lookupAccountId: string | null = input.referredAccountId;
+  let lookupOwnerUserId: string | null = referredOwnerUserId;
 
   for (const level of [1, 2, 3] as ReferralLevel[]) {
-    const { data: attribution, error } = await db.from("trader_referral_attributions").select("referrer_account_id,referral_code,source").eq("referred_account_id", referredNodeId).maybeSingle();
-    if (error) throw error;
+    const attribution = await findAttributionForPrincipal(db, lookupAccountId, lookupOwnerUserId);
     if (!attribution) break;
 
     const beneficiaryAccountId = String(attribution.referrer_account_id);
+    const beneficiaryOwnerUserId = attribution.referrer_owner_user_id ? String(attribution.referrer_owner_user_id) : await accountOwnerUserId(db, beneficiaryAccountId);
     const rateBps = referralRateBps(config, input.billingInterval, level);
     const amountCents = commissionAmountCents(input.grossAmountCents, rateBps);
     if (rateBps > 0 && amountCents > 0) {
       rows.push({
         beneficiary_account_id: beneficiaryAccountId,
+        beneficiary_owner_user_id: beneficiaryOwnerUserId,
         referred_account_id: input.referredAccountId,
+        referred_owner_user_id: referredOwnerUserId,
         provider: input.provider,
         external_payment_id: input.externalPaymentId,
         billing_interval: input.billingInterval,
@@ -209,7 +305,8 @@ export async function createReferralCommissionsForPayment(db: SupabaseClient, in
         },
       });
     }
-    referredNodeId = beneficiaryAccountId;
+    lookupAccountId = beneficiaryAccountId;
+    lookupOwnerUserId = beneficiaryOwnerUserId;
   }
 
   if (!rows.length) return [];
