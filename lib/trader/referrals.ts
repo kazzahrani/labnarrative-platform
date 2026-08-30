@@ -50,13 +50,13 @@ export function commissionAmountCents(gross: number, rate: number) {
 }
 
 export async function loadReferralProgramConfig(db: SupabaseClient): Promise<ReferralProgramConfig> {
-  const result = await db
+  const result: any = await db
     .from("trader_referral_program_config")
     .select("active,currency,monthly_l1_bps,monthly_l2_bps,monthly_l3_bps,annual_l1_bps,annual_l2_bps,annual_l3_bps,customer_discount_bps,commission_hold_days,payout_minimum_cents")
     .eq("id", 1)
     .maybeSingle();
   if (result.error) throw result.error;
-  const data = result.data;
+  const data: any = result.data;
   if (!data) return REFERRAL_FALLBACK_CONFIG;
   return {
     active: data.active !== false,
@@ -74,7 +74,7 @@ export async function loadReferralProgramConfig(db: SupabaseClient): Promise<Ref
 }
 
 async function accountOwnerUserId(db: SupabaseClient, accountId: string) {
-  const result = await db.from("trader_accounts").select("owner_user_id").eq("id", accountId).maybeSingle();
+  const result: any = await db.from("trader_accounts").select("owner_user_id").eq("id", accountId).maybeSingle();
   if (result.error) throw result.error;
   return result.data?.owner_user_id ? String(result.data.owner_user_id) : null;
 }
@@ -87,7 +87,7 @@ export async function ensureReferralProfile(db: SupabaseClient, accountId: strin
   const owner = await accountOwnerUserId(db, accountId);
   if (!owner) throw new Error(REFERRAL_SIGN_IN_REQUIRED);
 
-  const existing = await db
+  const existing: any = await db
     .from("trader_referral_profiles")
     .select("account_id,owner_user_id,referral_code,status")
     .eq("owner_user_id", owner)
@@ -96,7 +96,7 @@ export async function ensureReferralProfile(db: SupabaseClient, accountId: strin
   if (existing.data) return existing.data;
 
   for (const length of [12, 16, 24]) {
-    const inserted = await db
+    const inserted: any = await db
       .from("trader_referral_profiles")
       .insert({ account_id: accountId, owner_user_id: owner, referral_code: referralCodeForOwner(owner, length) })
       .select("account_id,owner_user_id,referral_code,status")
@@ -113,7 +113,7 @@ async function wouldCreateOwnerCycle(db: SupabaseClient, referred: string, refer
   for (let depth = 0; depth < 25 && cursor; depth += 1) {
     if (cursor === referred || visited.has(cursor)) return true;
     visited.add(cursor);
-    const queryResult = await db
+    const queryResult: any = await db
       .from("trader_referral_attributions")
       .select("referrer_owner_user_id")
       .eq("referred_owner_user_id", cursor)
@@ -129,7 +129,7 @@ export async function bindReferralAttributionToOwner(db: SupabaseClient, account
   const owner = await accountOwnerUserId(db, accountId);
   if (!owner) return null;
 
-  const result = await db
+  const result: any = await db
     .from("trader_referral_attributions")
     .select("referred_account_id,referred_owner_user_id,referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at")
     .eq("referred_account_id", accountId)
@@ -140,24 +140,24 @@ export async function bindReferralAttributionToOwner(db: SupabaseClient, account
 
   const refOwner = result.data.referrer_owner_user_id ? String(result.data.referrer_owner_user_id) : null;
   if (refOwner === owner || (refOwner && await wouldCreateOwnerCycle(db, owner, refOwner))) {
-    const removed = await db.from("trader_referral_attributions").delete().eq("referred_account_id", accountId);
+    const removed: any = await db.from("trader_referral_attributions").delete().eq("referred_account_id", accountId);
     if (removed.error) throw removed.error;
     return null;
   }
 
-  const existing = await db
+  const existing: any = await db
     .from("trader_referral_attributions")
     .select("referred_account_id")
     .eq("referred_owner_user_id", owner)
     .maybeSingle();
   if (existing.error) throw existing.error;
   if (existing.data && String(existing.data.referred_account_id) !== accountId) {
-    const removed = await db.from("trader_referral_attributions").delete().eq("referred_account_id", accountId);
+    const removed: any = await db.from("trader_referral_attributions").delete().eq("referred_account_id", accountId);
     if (removed.error) throw removed.error;
     return existing.data;
   }
 
-  const updated = await db
+  const updated: any = await db
     .from("trader_referral_attributions")
     .update({ referred_owner_user_id: owner })
     .eq("referred_account_id", accountId)
@@ -174,7 +174,7 @@ export async function claimReferralCode(db: SupabaseClient, accountId: string, r
   const owner = await accountOwnerUserId(db, accountId);
   if (!owner) return { ok: false as const, status: REFERRAL_SIGN_IN_REQUIRED };
 
-  const existing = await db
+  const existing: any = await db
     .from("trader_referral_attributions")
     .select("referrer_account_id,referrer_owner_user_id,referral_code,source,attributed_at,locked_at")
     .eq("referred_owner_user_id", owner)
@@ -182,7 +182,7 @@ export async function claimReferralCode(db: SupabaseClient, accountId: string, r
   if (existing.error) throw existing.error;
   if (existing.data) return { ok: true as const, status: "already_attributed" as const, ...existing.data };
 
-  const profile = await db
+  const profile: any = await db
     .from("trader_referral_profiles")
     .select("account_id,owner_user_id,referral_code,status")
     .eq("referral_code", code)
@@ -196,7 +196,7 @@ export async function claimReferralCode(db: SupabaseClient, accountId: string, r
   if (!refOwner || refOwner === owner) return { ok: false as const, status: "self_referral" as const };
   if (await wouldCreateOwnerCycle(db, owner, refOwner)) return { ok: false as const, status: "cycle" as const };
 
-  const inserted = await db
+  const inserted: any = await db
     .from("trader_referral_attributions")
     .insert({
       referred_account_id: accountId,
@@ -225,7 +225,7 @@ export async function referralUpline(db: SupabaseClient, accountId: string) {
   const chain: Array<{ level: ReferralLevel; accountId: string; ownerUserId: string }> = [];
   let cursor: string | null = owner;
   for (let level = 1 as ReferralLevel; level <= 3 && cursor; level = (level + 1) as ReferralLevel) {
-    const result = await db
+    const result: any = await db
       .from("trader_referral_attributions")
       .select("referrer_account_id,referrer_owner_user_id")
       .eq("referred_owner_user_id", cursor)
@@ -277,7 +277,7 @@ export async function recordReferralPayment(db: SupabaseClient, input: {
   }).filter((row) => row.rate_bps > 0 && row.commission_amount_cents > 0);
 
   if (!rows.length) return [];
-  const result = await db
+  const result: any = await db
     .from("trader_referral_commissions")
     .upsert(rows, {
       onConflict: "provider,external_payment_id,beneficiary_account_id,referral_level",
@@ -291,7 +291,7 @@ export async function recordReferralPayment(db: SupabaseClient, input: {
 export const createReferralCommissionsForPayment = recordReferralPayment;
 
 export async function reverseReferralPayment(db: SupabaseClient, provider: string, id: string) {
-  const result = await db
+  const result: any = await db
     .from("trader_referral_commissions")
     .update({ status: "reversed", reversed_at: new Date().toISOString() })
     .eq("provider", provider)
@@ -306,7 +306,7 @@ export const reverseReferralCommissionsForPayment = reverseReferralPayment;
 
 export async function releaseMatureReferralCommissions(db: SupabaseClient, now = new Date()) {
   const timestamp = now.toISOString();
-  const result = await db
+  const result: any = await db
     .from("trader_referral_commissions")
     .update({ status: "available", available_at: timestamp })
     .eq("status", "pending")
