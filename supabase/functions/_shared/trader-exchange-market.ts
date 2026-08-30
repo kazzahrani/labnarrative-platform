@@ -1,4 +1,6 @@
+import { createClient } from "jsr:@supabase/supabase-js@2";
 import type { LaunchExchangeProvider } from "./trader-exchange.ts";
+import { providerGatewayRequest } from "./trader-exchange-provider-transport.ts";
 
 export type SpotMarket = { pair:string; baseAsset:string; quoteAsset:"USDT"; quoteVolume:number };
 export type ClosedCandle = { close:number; closeTime:number };
@@ -8,13 +10,17 @@ const BYBIT = "https://api.bybit.com";
 const OKX = "https://www.okx.com";
 const KUCOIN = "https://api.kucoin.com";
 
+type ServiceDb = ReturnType<typeof createClient>;
+let serviceDbCache:ServiceDb|null=null;
+
 function n(value:unknown,fallback=0){const x=Number(value);return Number.isFinite(x)?x:fallback;}
 function obj(value:unknown):Record<string,unknown>{return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};}
 function arr(value:unknown):unknown[]{return Array.isArray(value)?value:[];}
 function text(value:unknown){return String(value??"");}
 function pairValue(value:string){const pair=value.trim().toUpperCase();if(!/^[A-Z0-9]{1,20}\/USDT$/.test(pair)||pair==="USDT/USDT")throw new Error("unsupported_spot_pair");return pair;}
 function symbol(provider:LaunchExchangeProvider,pairInput:string){const pair=pairValue(pairInput),base=pair.slice(0,-5);if(provider==="okx"||provider==="kucoin")return `${base}-USDT`;return `${base}USDT`;}
-async function get(url:string){const response=await fetch(url,{headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error(`market_data_${response.status}`);return await response.json();}
+function serviceDb(){if(serviceDbCache)return serviceDbCache;const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!url||!key)throw new Error("server_configuration_missing");serviceDbCache=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});return serviceDbCache;}
+async function get(url:string){if(url.startsWith(`${BYBIT}/`)){const parsed=new URL(url),response=await providerGatewayRequest(serviceDb(),{upstream:parsed.origin,method:"GET",path:parsed.pathname,query:parsed.searchParams.toString(),headers:{accept:"application/json"}});if(response.status<200||response.status>=300)throw new Error(`market_data_${response.status}`);return response.body;}const response=await fetch(url,{headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error(`market_data_${response.status}`);return await response.json();}
 
 export function timeframeMs(tf:string){const value=({"1 minute":60000,"3 minutes":180000,"5 minutes":300000,"15 minutes":900000,"30 minutes":1800000,"1 hour":3600000,"2 hours":7200000,"4 hours":14400000,"6 hours":21600000,"8 hours":28800000,"12 hours":43200000,"1 day":86400000,"3 days":259200000,"1 week":604800000,"1 month":2592000000} as Record<string,number>)[tf];if(!value)throw new Error(`unsupported_timeframe:${tf}`);return value;}
 function interval(map:Record<string,string>,tf:string,provider:LaunchExchangeProvider){const value=map[tf];if(!value)throw new Error(`unsupported_native_timeframe:${provider}:${tf}`);return value;}
