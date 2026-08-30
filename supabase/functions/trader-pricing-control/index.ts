@@ -58,14 +58,15 @@ Deno.serve(async (req: Request) => {
   const ent = Array.isArray(entitlementsQ.data) ? (entitlementsQ.data[0] || null) : entitlementsQ.data;
   const override = overrideQ.data && (!overrideQ.data.expires_at || future(overrideQ.data.expires_at)) ? overrideQ.data : null;
   const checkoutMode = String(config.checkout_mode || (config.checkout_enabled ? "public" : "disabled"));
-  const founderCanary = checkoutMode === "founder_canary" && override?.reason === "founder_tester";
-  const checkoutEnabled = checkoutMode === "public" ? Boolean(config.checkout_enabled) : founderCanary;
+  const founderCanaryEligible = checkoutMode === "founder_canary" && override?.reason === "founder_tester";
+  const checkoutCanary = Boolean(config.checkout_enabled) && founderCanaryEligible;
+  const checkoutEnabled = Boolean(config.checkout_enabled) && (checkoutMode === "public" || checkoutCanary);
 
   return json({
     ok: true,
     checkoutEnabled,
     checkoutMode,
-    checkoutCanary: founderCanary,
+    checkoutCanary,
     entitlementsEnforced: Boolean(config.entitlements_enforced),
     provider: config.provider || "paypal",
     currency: config.currency || "USD",
