@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { traderGatewayPublicGet } from "../../../../lib/trader/gateway";
 
 type Provider = "binance" | "bybit" | "okx" | "kucoin";
 type Pair = { pair:string; symbol:string; baseAsset:string; quoteVolume:number };
@@ -15,7 +16,7 @@ function n(value:unknown){const result=Number(value);return Number.isFinite(resu
 function obj(value:unknown):Json{return value&&typeof value==="object"&&!Array.isArray(value)?value as Json:{};}
 function arr(value:unknown):unknown[]{return Array.isArray(value)?value:[];}
 function text(value:unknown){return String(value??"");}
-async function get(url:string){const response=await fetch(url,{cache:"no-store",headers:{accept:"application/json"},signal:AbortSignal.timeout(9000)});if(!response.ok)throw new Error(`exchange_pairs_${response.status}`);return await response.json();}
+async function get(url:string){if(url.startsWith(`${ENDPOINTS.bybit}/`))return await traderGatewayPublicGet(url);const response=await fetch(url,{cache:"no-store",headers:{accept:"application/json"},signal:AbortSignal.timeout(9000)});if(!response.ok)throw new Error(`exchange_pairs_${response.status}`);return await response.json();}
 function providerValue(value:string|null):Provider{return value==="bybit"||value==="okx"||value==="kucoin"?value:"binance";}
 
 async function pairsFor(provider:Provider):Promise<Pair[]>{
