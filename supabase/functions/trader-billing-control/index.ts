@@ -51,7 +51,18 @@ async function canonicalAccount(admin: any, owner: string) {
 async function billingConfig(admin: any) {
   const q = await admin.from("trader_billing_config").select("*").eq("id", 1).maybeSingle();
   if (q.error) throw q.error;
-  return q.data || { checkout_enabled: false, provider: "paypal", currency: "USD", referral_discount_bps: 1000, payment_grace_days: 3 };
+  return q.data || { checkout_enabled: false, checkout_mode: "disabled", provider: "paypal", currency: "USD", referral_discount_bps: 1000, payment_grace_days: 3 };
+}
+async function checkoutAccess(admin: any, cfg: any, owner: string) {
+  const mode = text(cfg?.checkout_mode, 50) || (cfg?.checkout_enabled ? "public" : "disabled");
+  if (!cfg?.checkout_enabled) return { enabled: false, mode, canary: false };
+  if (mode === "public") return { enabled: true, mode, canary: false };
+  if (mode !== "founder_canary") return { enabled: false, mode, canary: false };
+  const q = await admin.from("trader_entitlement_overrides").select("reason,expires_at").eq("owner_user_id", owner).eq("is_active", true).eq("reason", "founder_tester").limit(1).maybeSingle();
+  if (q.error) throw q.error;
+  const row = q.data;
+  const canary = Boolean(row && (!row.expires_at || future(row.expires_at)));
+  return { enabled: canary, mode, canary };
 }
 async function activeAttribution(admin: any, owner: string) {
   const q = await admin.from("trader_referral_attributions").select("referral_code,referrer_account_id,referrer_owner_user_id").eq("referred_owner_user_id", owner).maybeSingle();
@@ -285,6 +296,7 @@ Deno.serve(async (req: Request) => {
     const cfg = await billingConfig(admin);
     const account = await canonicalAccount(admin, user.id);
     if (!account) return json({ error: "trader_account_not_ready" }, 409);
+    const checkout = await checkoutAccess(admin, cfg, user.id);
 
     if (action === "status") {
       let providerVerified = false, providerError = "";
@@ -292,7 +304,7 @@ Deno.serve(async (req: Request) => {
       const plansQ = await admin.from("trader_subscription_plans").select("id,slug,name,description,sort_order,monthly_price_cents,annual_price_cents,currency,is_active,provider_status").order("sort_order");
       if (plansQ.error) throw plansQ.error;
       const rows = await ownerSubscriptions(admin, user.id);
-      return json({ ok: true, checkoutEnabled: Boolean(cfg.checkout_enabled), provider: "paypal", providerConfigured: Boolean(Deno.env.get("PAYPAL_CLIENT_ID") && Deno.env.get("PAYPAL_CLIENT_SECRET")), providerVerified, providerError: providerError || null, referralDiscountBps: Number(cfg.referral_discount_bps || 1000), paymentGraceDays: Number(cfg.payment_grace_days || 3), plans: plansQ.data || [], subscription: currentSubscription(rows) || pendingSubscription(rows), pendingSubscription: pendingSubscription(rows) });
+      return json({ ok: true, checkoutEnabled: checkout.enabled, checkoutMode: checkout.mode, checkoutCanary: checkout.canary, provider: "paypal", providerConfigured: Boolean(Deno.env.get("PAYPAL_CLIENT_ID") && Deno.env.get("PAYPAL_CLIENT_SECRET")), providerVerified, providerError: providerError || null, referralDiscountBps: Number(cfg.referral_discount_bps || 1000), paymentGraceDays: Number(cfg.payment_grace_days || 3), plans: plansQ.data || [], subscription: currentSubscription(rows) || pendingSubscription(rows), pendingSubscription: pendingSubscription(rows) });
     }
 
     if (action === "sync_subscription") {
@@ -304,7 +316,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "create_subscription") {
-      if (!cfg.checkout_enabled) return json({ error: "checkout_not_enabled" }, 409);
+      if (!checkout.enabled) return json({ error: "checkout_not_enabled" }, 409);
       const rows = await ownerSubscriptions(admin, user.id);
       const existing = currentSubscription(rows);
       if (existing) return json({ error: existing.status === "cancelled" ? "subscription_access_still_active" : "subscription_already_active", accessEndsAt: existing.access_ends_at || null }, 409);
@@ -340,7 +352,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "change_subscription") {
-      if (!cfg.checkout_enabled) return json({ error: "checkout_not_enabled" }, 409);
+      if (!checkout.enabled) return json({ error: "checkout_not_enabled" }, 409);
       const rows = await ownerSubscriptions(admin, user.id);
       const sub = rows.find((s: any) => s.status === "active") || null;
       if (!sub?.provider_subscription_id) return json({ error: "active_subscription_required" }, 409);
