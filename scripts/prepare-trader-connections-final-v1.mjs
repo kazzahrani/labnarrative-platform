@@ -30,6 +30,8 @@ fs.writeFileSync(file, source);
 console.log("Prepared simple four-exchange Connections workspace.");
 
 // These must run last: legacy Trader transforms rewrite the DCA source and shell
-// earlier in the build. Apply exchange selection only after those transforms settle.
+// earlier in the build. Anchor the provider selector to the form boundary first,
+// then inject provider state/behavior and remove the old Binance-only shell gate.
+await import("./prepare-trader-multiexchange-selector-anchor.mjs");
 await import("./prepare-trader-multiexchange-execution-ui.mjs");
 await import("./prepare-trader-multiexchange-shell-ui.mjs");
