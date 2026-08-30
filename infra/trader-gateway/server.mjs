@@ -1,5 +1,5 @@
 import http from "node:http";
-import https from "node:https";
+import { spawn } from "node:child_process";
 import { createHash, verify as verifySignature } from "node:crypto";
 
 const PORT = Number(process.env.PORT || 8080);
@@ -12,6 +12,7 @@ const ORIGINS = Object.freeze({
 });
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_INNER_BODY_BYTES = 48 * 1024;
+const MAX_UPSTREAM_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_CLOCK_SKEW_MS = 30_000;
 const NONCE_TTL_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -124,31 +125,60 @@ const readBody = async (req) => {
   return Buffer.concat(chunks).toString("utf8");
 };
 
-const httpsRequestIpv4 = (url, { method, headers, body, timeoutMs }) => new Promise((resolve, reject) => {
-  const target = new URL(url);
-  const req = https.request({
-    protocol: "https:",
-    hostname: target.hostname,
-    port: target.port || 443,
-    path: `${target.pathname}${target.search}`,
-    method,
-    headers,
-    family: 4,
-    servername: target.hostname,
-    timeout: timeoutMs,
-  }, (res) => {
-    const chunks = [];
-    res.on("data", (chunk) => chunks.push(chunk));
-    res.on("end", () => resolve({
-      status: Number(res.statusCode || 0),
-      body: Buffer.concat(chunks).toString("utf8"),
-      headers: res.headers,
-    }));
+const curlRequestIpv4 = (url, { method, headers, body, timeoutMs }) => new Promise((resolve, reject) => {
+  const args = [
+    "--silent",
+    "--show-error",
+    "--ipv4",
+    "--max-time", String(Math.max(1, Math.ceil(timeoutMs / 1000))),
+    "--request", method,
+    "--url", url,
+    "--header", "@/dev/fd/3",
+    "--write-out", "\n%{http_code}",
+  ];
+  if (body != null) args.push("--data-binary", "@-");
+
+  const child = spawn("/usr/bin/curl", args, { stdio: ["pipe", "pipe", "pipe", "pipe"] });
+  const stdout = [];
+  const stderr = [];
+  let outputBytes = 0;
+  let settled = false;
+
+  const fail = (error) => {
+    if (settled) return;
+    settled = true;
+    try { child.kill("SIGKILL"); } catch {}
+    reject(error);
+  };
+
+  child.stdout.on("data", (chunk) => {
+    outputBytes += chunk.length;
+    if (outputBytes > MAX_UPSTREAM_RESPONSE_BYTES) return fail(new Error("upstream_response_too_large"));
+    stdout.push(chunk);
   });
-  req.on("timeout", () => req.destroy(new Error("upstream_timeout")));
-  req.on("error", reject);
-  if (body != null) req.write(body);
-  req.end();
+  child.stderr.on("data", (chunk) => {
+    if (Buffer.concat(stderr).length < 16 * 1024) stderr.push(chunk);
+  });
+  child.on("error", fail);
+  child.on("close", (code) => {
+    if (settled) return;
+    settled = true;
+    const raw = Buffer.concat(stdout).toString("utf8");
+    const split = raw.lastIndexOf("\n");
+    const statusText = split >= 0 ? raw.slice(split + 1).trim() : "";
+    const responseBody = split >= 0 ? raw.slice(0, split) : raw;
+    const status = Number(statusText);
+    if (code !== 0 || !Number.isInteger(status) || status < 100 || status > 599) {
+      const diagnostic = Buffer.concat(stderr).toString("utf8").trim().slice(0, 300);
+      reject(new Error(code === 28 ? "upstream_timeout" : `curl_upstream_${code ?? "error"}${diagnostic ? `:${diagnostic}` : ""}`));
+      return;
+    }
+    resolve({ status, body: responseBody, headers: {} });
+  });
+
+  const headerText = Object.entries(headers).map(([name, value]) => `${name}: ${String(value)}\r\n`).join("");
+  child.stdio[3].end(headerText);
+  child.stdin.end(body == null ? undefined : body);
 });
 
 const verifyRelayAuth = (req, rawBody) => {
@@ -365,14 +395,10 @@ const relay = async (payload) => {
   let text;
   let headerGet;
   if (origin === ORIGINS.kucoin || origin === ORIGINS.okx) {
-    const upstream = await httpsRequestIpv4(url, { method, headers, body, timeoutMs: REQUEST_TIMEOUT_MS });
+    const upstream = await curlRequestIpv4(url, { method, headers, body, timeoutMs: REQUEST_TIMEOUT_MS });
     upstreamStatus = upstream.status;
     text = upstream.body;
-    headerGet = (name) => {
-      const value = upstream.headers[String(name).toLowerCase()];
-      if (Array.isArray(value)) return value.join(", ");
-      return value == null ? null : String(value);
-    };
+    headerGet = () => null;
   } else {
     const upstream = await fetch(url, {
       method,
