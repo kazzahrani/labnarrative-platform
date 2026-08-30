@@ -22,13 +22,11 @@ type LaunchProvider = "binance" | "bybit" | "okx" | "kucoin";
 const PROVIDER_LABELS: Record<LaunchProvider,string> = { binance:"Binance", bybit:"Bybit", okx:"OKX", kucoin:"KuCoin" };`,
   "launch provider types",
 );
-
 replace(
   '  executionMode: string;\n};',
   '  executionMode: string;\n  exchangeProvider: LaunchProvider;\n};',
   "bot exchange provider field",
 );
-
 replaceRegex(
   /(const NEW_FORM:\s*FormState\s*=\s*\{\s*\n\s*name:[^,\n]+,)(?!\s*exchangeProvider:)/,
   '$1 exchangeProvider:"binance",',
@@ -57,12 +55,7 @@ if (!source.includes('async function connectedLaunchProviders()')) {
 }
 
 `;
-  replaceRegex(
-    /(export\s+default\s+function\s+DcaBotConfigurator\s*\()/,
-    `${helper}$1`,
-    "configurator function anchor",
-    /async function connectedLaunchProviders\(\)/,
-  );
+  replaceRegex(/(export\s+default\s+function\s+DcaBotConfigurator\s*\()/,`${helper}$1`,"configurator function anchor",/async function connectedLaunchProviders\(\)/);
 }
 
 replace(
@@ -92,9 +85,8 @@ const newPairEffect = `  useEffect(()=>{
 replace(oldPairEffect,newPairEffect,"provider pair effect");
 
 if (!source.includes('void connectedLaunchProviders().then')) {
-  const anchor = newPairEffect;
   replace(
-    anchor,
+    newPairEffect,
     `${newPairEffect}
   useEffect(()=>{
     let alive=true;
@@ -111,40 +103,46 @@ if (!source.includes('void connectedLaunchProviders().then')) {
   );
 }
 
-replace(
-  'setForm({name:bot.name,pair:bot.pair,pairs:bot.pairs?.length?bot.pairs:[bot.pair],allPairs:bot.allPairs,',
-  'setForm({name:bot.name,exchangeProvider:bot.exchangeProvider||"binance",pair:bot.pair,pairs:bot.pairs?.length?bot.pairs:[bot.pair],allPairs:bot.allPairs,',
+replaceRegex(
+  /setForm\(\{\s*name\s*:\s*bot\.name\s*,(?!\s*exchangeProvider)/,
+  'setForm({name:bot.name,exchangeProvider:bot.exchangeProvider||"binance",',
   "bot detail provider load",
+  /setForm\(\{\s*name\s*:\s*bot\.name\s*,\s*exchangeProvider\s*:/,
 );
 
-replace(
-  '    if(!form.allPairs&&!form.pairs.length)return setLocalError("Choose at least one Binance Spot pair or select All USDT pairs.");',
-  '    if(accountKind==="real"&&!connectedProviders.includes(form.exchangeProvider))return setLocalError(`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before saving this Real Account bot.`);\n    if(!form.allPairs&&!form.pairs.length)return setLocalError(`Choose at least one ${PROVIDER_LABELS[form.exchangeProvider]} Spot pair or select All USDT pairs.`);',
+replaceRegex(
+  /\s*if\s*\(!form\.allPairs\s*&&\s*!form\.pairs\.length\)\s*return\s+setLocalError\("Choose at least one Binance Spot pair or select All USDT pairs\."\);/,
+  '\n    if(accountKind==="real"&&!connectedProviders.includes(form.exchangeProvider))return setLocalError(`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before saving this Real Account bot.`);\n    if(!form.allPairs&&!form.pairs.length)return setLocalError(`Choose at least one ${PROVIDER_LABELS[form.exchangeProvider]} Spot pair or select All USDT pairs.`);',
   "save connection validation",
+  /connectedProviders\.includes\(form\.exchangeProvider\)[\s\S]{0,220}?Choose at least one/,
 );
 
-replace(
-  'name:form.name.trim(),pair:form.pairs[0]||form.pair,',
-  'name:form.name.trim(),exchangeProvider:form.exchangeProvider,pair:form.pairs[0]||form.pair,',
+replaceRegex(
+  /name\s*:\s*form\.name\.trim\(\)\s*,\s*(?!exchangeProvider\s*:)/,
+  'name:form.name.trim(),exchangeProvider:form.exchangeProvider,',
   "save exchange provider",
+  /name\s*:\s*form\.name\.trim\(\)\s*,\s*exchangeProvider\s*:/,
 );
 
-replace(
-  'message.includes("exchange_connection_required")?"Connect Binance before creating a Real Account bot.":message;',
-  'message.includes("exchange_connection_required")||message.includes("exchange_trade_permission_required")?`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before creating this Real Account bot.`:message;',
+replaceRegex(
+  /message\.includes\("exchange_connection_required"\)\s*\?\s*"Connect Binance before creating a Real Account bot\."\s*:\s*message/,
+  'message.includes("exchange_connection_required")||message.includes("exchange_trade_permission_required")?`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before creating this Real Account bot.`:message',
   "provider connection error copy",
+  /exchange_trade_permission_required[\s\S]{0,180}?PROVIDER_LABELS/,
 );
 
-replace(
-  '<div className={cfg.summaryGrid}><div><span>Coin universe</span>',
+replaceRegex(
+  /<div className=\{cfg\.summaryGrid\}>\s*<div><span>Coin universe<\/span>/,
   '<div className={cfg.summaryGrid}>{accountKind==="real"&&<div><span>Exchange</span><b>{PROVIDER_LABELS[form.exchangeProvider]}</b></div>}<div><span>Coin universe</span>',
   "read summary exchange",
+  /cfg\.summaryGrid[\s\S]{0,180}?PROVIDER_LABELS\[form\.exchangeProvider\]/,
 );
 
-replace(
-  '<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label><label><span>Base order</span>',
-  '<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>{accountKind==="real"&&<label><span>Exchange</span><select value={form.exchangeProvider} disabled={mode!=="create"||connectionLoading||!connectedProviders.length} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as LaunchProvider,pairs:[],allPairs:false}))}>{connectedProviders.length?connectedProviders.map(provider=><option key={provider} value={provider}>{PROVIDER_LABELS[provider]}</option>):<option value={form.exchangeProvider}>No connected exchange</option>}</select><small>{mode==="create"?"This bot and every order it creates stay on this exchange.":"Exchange is locked after the bot is created."}</small></label>}<label><span>Base order</span>',
+replaceRegex(
+  /(<label><span>Bot name<\/span><input value=\{form\.name\}[\s\S]*?<\/label>)\s*(<label><span>Base order<\/span>)/,
+  '$1{accountKind==="real"&&<label><span>Exchange</span><select value={form.exchangeProvider} disabled={mode!=="create"||connectionLoading||!connectedProviders.length} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as LaunchProvider,pairs:[],allPairs:false}))}>{connectedProviders.length?connectedProviders.map(provider=><option key={provider} value={provider}>{PROVIDER_LABELS[provider]}</option>):<option value={form.exchangeProvider}>No connected exchange</option>}</select><small>{mode==="create"?"This bot and every order it creates stay on this exchange.":"Exchange is locked after the bot is created."}</small></label>}$2',
   "exchange selector",
+  /<span>Exchange<\/span><select value=\{form\.exchangeProvider\}/,
 );
 
 source = source
