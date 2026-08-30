@@ -40,6 +40,8 @@ type Subscription = {
 type PricingData = {
   ok?: boolean;
   checkoutEnabled: boolean;
+  checkoutMode?: "disabled" | "founder_canary" | "public" | string;
+  checkoutCanary?: boolean;
   entitlementsEnforced?: boolean;
   provider: string;
   currency: string;
@@ -69,10 +71,14 @@ const annualBadge = (slug: string, monthly: number, annual: number) => {
 };
 const friendlyError = (message: string) => ({
   checkout_not_enabled: "Checkout is not open yet.",
+  founder_canary_required: "This checkout canary is limited to the protected founder/tester account.",
+  founder_canary_not_enabled: "The founder checkout canary is not enabled.",
+  billing_provider_not_launch_ready: "The billing provider is not launch-ready.",
   subscription_already_active: "You already have an active subscription.",
   subscription_access_still_active: "Your cancelled subscription is still active through its paid period.",
   active_subscription_required: "An active paid subscription is required for this action.",
   subscription_checkout_already_exists: "A subscription checkout is already in progress.",
+  pending_subscription_requires_sync: "The pending PayPal checkout needs to be synchronized before it can continue.",
 }[message] || message.replaceAll("_", " "));
 
 async function invokePricing() {
@@ -83,8 +89,8 @@ async function invokePricing() {
   return payload;
 }
 
-async function billingAction(action: string, body: Record<string, unknown> = {}) {
-  const { data, error } = await browserSupabase.functions.invoke("trader-billing-control", { body: { action, ...body } });
+async function billingAction(action: string, body: Record<string, unknown> = {}, functionName = "trader-billing-control") {
+  const { data, error } = await browserSupabase.functions.invoke(functionName, { body: { action, ...body } });
   if (error) {
     let message = error.message || "billing_action_failed";
     const context = (error as { context?: Response }).context;
@@ -126,17 +132,20 @@ export default function BillingDashboard() {
   const sub = data?.subscription ?? null;
   const currentSlug = sub?.trader_subscription_plans?.slug || "";
   const activePaid = sub?.status === "active";
+  const pendingApproval = sub?.status === "approval_pending";
   const paidThrough = sub?.status === "cancelled" && Boolean(sub.access_ends_at && Date.parse(sub.access_ends_at) > Date.now());
-  const canStartCheckout = Boolean(data?.checkoutEnabled && !sub);
-  const canChangePlan = Boolean(data?.checkoutEnabled && activePaid && !sub?.cancel_at_period_end && !sub?.pending_plan_id);
+  const canStartCheckout = Boolean(data?.checkoutEnabled && (!sub || pendingApproval));
+  const canChangePlan = Boolean(data?.checkoutEnabled && !data?.checkoutCanary && activePaid && !sub?.cancel_at_period_end && !sub?.pending_plan_id);
 
   const choose = async (slug: string) => {
     if (!data?.checkoutEnabled || busy) return;
     setBusy(slug); setError("");
     try {
-      const result = sub
-        ? await billingAction("change_subscription", { plan: slug, interval })
-        : await billingAction("create_subscription", { plan: slug, interval });
+      const creating = !sub || pendingApproval;
+      const functionName = creating && data.checkoutCanary ? "trader-billing-canary-control" : "trader-billing-control";
+      const result = creating
+        ? await billingAction("create_subscription", { plan: slug, interval }, functionName)
+        : await billingAction("change_subscription", { plan: slug, interval });
       if (result.approvalUrl) { window.location.assign(result.approvalUrl); return; }
       await refresh();
     } catch (caught) {
@@ -163,6 +172,8 @@ export default function BillingDashboard() {
 
     {data?.accessOverride && <div className={styles.overrideNote}><div><small>FOUNDER / TESTER ACCESS</small><strong>{data.entitlements?.plan === "pro" ? "Pro entitlements are protected" : "Protected test access"}</strong></div><span>This access is independent of billing and will remain available when paid limits are activated.</span></div>}
 
+    {data?.checkoutCanary && <div className={styles.referralNote}><b>Live checkout canary:</b> PayPal checkout is enabled only for this protected founder/tester account. Public checkout and plan-limit enforcement remain off.</div>}
+
     {data?.referralAttached && <div className={styles.referralNote}>Your referral is attached. An additional <b>{percent(data.referralDiscountBps)}</b> customer discount will be applied by the billing engine when checkout opens.</div>}
 
     {sub && <section className={styles.current}>
@@ -171,6 +182,7 @@ export default function BillingDashboard() {
         <strong>{sub.trader_subscription_plans?.name || "LabNarrative Trading"} · {sub.billing_interval}</strong>
         <div className={styles.meta}>
           {activePaid && !sub.cancel_at_period_end && <span>Next billing: {date(sub.next_billing_at)}</span>}
+          {pendingApproval && <span>PayPal approval pending</span>}
           {paidThrough && <span>Paid access through: {date(sub.access_ends_at)}</span>}
           {sub.status === "payment_failed" && <span>Payment grace through: {date(sub.access_ends_at)}</span>}
           {sub.pending_plan_id && <span>Plan change pending buyer approval / provider confirmation</span>}
@@ -198,10 +210,12 @@ export default function BillingDashboard() {
         const effective = interval === "annual" ? annual / 12 : monthly;
         const currentPlanAndInterval = currentSlug === plan.slug && sub?.billing_interval === interval && activePaid;
         const currentPlanOtherInterval = currentSlug === plan.slug && sub?.billing_interval !== interval && activePaid;
-        const canChoose = !busy && (canStartCheckout || canChangePlan) && !currentPlanAndInterval;
+        const pendingThisPlan = pendingApproval && currentSlug === plan.slug && sub?.billing_interval === interval;
+        const canChoose = !busy && !currentPlanAndInterval && (canChangePlan || (!sub && canStartCheckout) || (pendingThisPlan && canStartCheckout));
         let buttonLabel = "Checkout opening soon";
         if (currentPlanAndInterval) buttonLabel = "Current plan";
-        else if (busy === plan.slug) buttonLabel = sub ? "Preparing change…" : "Opening checkout…";
+        else if (busy === plan.slug) buttonLabel = sub && !pendingApproval ? "Preparing change…" : "Opening checkout…";
+        else if (pendingApproval) buttonLabel = pendingThisPlan ? "Resume PayPal approval" : "Checkout pending";
         else if (paidThrough) buttonLabel = `Access active until ${date(sub?.access_ends_at)}`;
         else if (sub?.status === "payment_failed") buttonLabel = "Resolve current subscription first";
         else if (sub?.pending_plan_id) buttonLabel = "Plan change pending";

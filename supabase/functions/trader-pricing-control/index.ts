@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
   const owner = userResult.data.user.id;
 
   const [configQ, plansQ, subscriptionsQ, attributionQ, overrideQ, entitlementsQ] = await Promise.all([
-    admin.from("trader_billing_config").select("checkout_enabled,provider,currency,referral_discount_bps,payment_grace_days,entitlements_enforced").eq("id", 1).maybeSingle(),
+    admin.from("trader_billing_config").select("checkout_enabled,checkout_mode,provider,currency,referral_discount_bps,payment_grace_days,entitlements_enforced").eq("id", 1).maybeSingle(),
     admin.from("trader_subscription_plans").select("id,slug,name,description,sort_order,monthly_price_cents,annual_price_cents,currency,is_active,max_single_pair_bots,max_multi_pair_bots,max_active_exchanges").eq("is_active", true).order("sort_order"),
     admin.from("trader_subscriptions").select("id,plan_id,status,billing_interval,list_price_cents,subscription_price_cents,currency,started_at,next_billing_at,referral_discount_applied,cancel_at_period_end,cancellation_requested_at,access_ends_at,pending_plan_id,pending_billing_interval,plan_change_requested_at,plan_change_effective_at,provider_synced_at,trader_subscription_plans(slug,name,max_single_pair_bots,max_multi_pair_bots,max_active_exchanges)").eq("owner_user_id", owner).order("created_at", { ascending: false }).limit(20),
     admin.from("trader_referral_attributions").select("referral_code").eq("referred_owner_user_id", owner).maybeSingle(),
@@ -51,16 +51,21 @@ Deno.serve(async (req: Request) => {
   const error = configQ.error || plansQ.error || subscriptionsQ.error || attributionQ.error || overrideQ.error || entitlementsQ.error;
   if (error) return json({ error: error.message || "pricing_load_failed" }, 500);
 
-  const config = configQ.data || { checkout_enabled: false, provider: "paypal", currency: "USD", referral_discount_bps: 1000, payment_grace_days: 3, entitlements_enforced: false };
+  const config = configQ.data || { checkout_enabled: false, checkout_mode: "disabled", provider: "paypal", currency: "USD", referral_discount_bps: 1000, payment_grace_days: 3, entitlements_enforced: false };
   const rows = subscriptionsQ.data || [];
   const current = currentSubscription(rows);
   const pending = rows.find((s: any) => s.status === "approval_pending") || null;
   const ent = Array.isArray(entitlementsQ.data) ? (entitlementsQ.data[0] || null) : entitlementsQ.data;
   const override = overrideQ.data && (!overrideQ.data.expires_at || future(overrideQ.data.expires_at)) ? overrideQ.data : null;
+  const checkoutMode = String(config.checkout_mode || (config.checkout_enabled ? "public" : "disabled"));
+  const founderCanary = checkoutMode === "founder_canary" && override?.reason === "founder_tester";
+  const checkoutEnabled = checkoutMode === "public" ? Boolean(config.checkout_enabled) : founderCanary;
 
   return json({
     ok: true,
-    checkoutEnabled: Boolean(config.checkout_enabled),
+    checkoutEnabled,
+    checkoutMode,
+    checkoutCanary: founderCanary,
     entitlementsEnforced: Boolean(config.entitlements_enforced),
     provider: config.provider || "paypal",
     currency: config.currency || "USD",
