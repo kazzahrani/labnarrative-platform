@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { attachTraderCookie, resolveTraderAccount } from "../../../../lib/trader/server";
-import { claimReferralCode, ensureReferralProfile, loadReferralProgramConfig } from "../../../../lib/trader/referrals";
+import { claimReferralCode, ensureReferralProfile, loadReferralProgramConfig, REFERRAL_SIGN_IN_REQUIRED } from "../../../../lib/trader/referrals";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,11 +28,12 @@ export async function GET(request: NextRequest) {
       ensureReferralProfile(db, account.id),
       loadReferralProgramConfig(db),
     ]);
+    const ownerUserId = String(profile.owner_user_id);
 
     const [directResult, commissionsResult, attributionResult] = await Promise.all([
-      db.from("trader_referral_attributions").select("referred_account_id", { count: "exact", head: true }).eq("referrer_account_id", account.id),
-      db.from("trader_referral_commissions").select("status,commission_amount_cents").eq("beneficiary_account_id", account.id),
-      db.from("trader_referral_attributions").select("referral_code,source,attributed_at,locked_at").eq("referred_account_id", account.id).maybeSingle(),
+      db.from("trader_referral_attributions").select("referred_account_id", { count: "exact", head: true }).eq("referrer_owner_user_id", ownerUserId),
+      db.from("trader_referral_commissions").select("status,commission_amount_cents").eq("beneficiary_owner_user_id", ownerUserId),
+      db.from("trader_referral_attributions").select("referral_code,source,attributed_at,locked_at").eq("referred_owner_user_id", ownerUserId).maybeSingle(),
     ]);
 
     if (directResult.error) throw directResult.error;
@@ -62,7 +63,9 @@ export async function GET(request: NextRequest) {
     }, tokenToSet);
   } catch (error) {
     console.error("trader-referrals-get", error);
-    return noStore(NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Unable to load referral program." }, { status: 500 }));
+    const message = error instanceof Error ? error.message : "Unable to load referral program.";
+    const status = message === REFERRAL_SIGN_IN_REQUIRED ? 401 : 500;
+    return noStore(NextResponse.json({ ok: false, error: message }, { status }));
   }
 }
 
