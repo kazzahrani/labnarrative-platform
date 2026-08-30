@@ -39,11 +39,17 @@ if(!configurator.includes('exchangeProvider:bot.exchangeProvider??"binance"')){
 if(!configurator.includes('exchangeProvider:form.exchangeProvider??"binance"')) configurator=apply(configurator,s=>s.replace(/name:form\.name\.trim\(\),\s*pair:/,'name:form.name.trim(),exchangeProvider:form.exchangeProvider??"binance",pair:'),"save payload");
 configurator=configurator.replaceAll('Choose at least one Binance Spot pair or select All USDT pairs.','Choose at least one Spot pair or select All USDT pairs.').replaceAll('complete Binance Spot USDT universe','complete selected-exchange Spot USDT universe').replaceAll('ALL BINANCE USDT SPOT PAIRS','ALL USDT SPOT PAIRS').replaceAll('every Binance Spot USDT pair','every Spot USDT pair on this exchange').replaceAll('All Binance USDT Spot pairs','All USDT Spot pairs').replaceAll('live Binance Spot universe','live selected-exchange Spot universe').replaceAll('closed Binance candles','closed exchange candles');
 if(!configurator.includes("<span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b>")) configurator=apply(configurator,s=>s.replace(/(<div className=\{cfg\.summaryGrid\}>)/,'$1<div><span>Exchange</span><b>{exchangeLabel(form.exchangeProvider)}</b></div>'),"view exchange summary");
-if(!configurator.includes('onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider,pairs:["BTC/USDT"],pair:"BTC/USDT",allPairs:false}))}')){
+if(!configurator.includes('value={form.exchangeProvider??"binance"} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider')){
   const exchangeField='<label><span>Exchange</span><select value={form.exchangeProvider??"binance"} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as ExchangeProvider,pairs:["BTC/USDT"],pair:"BTC/USDT",allPairs:false}))}>{EXCHANGE_OPTIONS.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</select><small>Market and execution venue for this bot.</small></label>';
-  const exactNameField='<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>';
-  if(configurator.includes(exactNameField)){configurator=configurator.replace(exactNameField,exactNameField+exchangeField);changes++;}
-  else{const next=configurator.replace(/(<label[^>]*>\s*<span>Bot name<\/span>[\s\S]*?<\/label>)/,`$1${exchangeField}`);if(next===configurator)throw new Error("Exchange-aware bot transform could not find Bot name field");configurator=next;changes++;}
+  let next=configurator;
+  const mainGrid=/(<section[^>]*>[\s\S]{0,500}?<h3>Main settings<\/h3>[\s\S]{0,700}?<div className=\{cfg\.grid\}>)/;
+  if(mainGrid.test(next)) next=next.replace(mainGrid,`$1${exchangeField}`);
+  else {
+    const baseOrder=/(<label[^>]*>\s*<span>Base order<\/span>)/;
+    if(baseOrder.test(next)) next=next.replace(baseOrder,`${exchangeField}$1`);
+  }
+  if(next===configurator)throw new Error("Exchange-aware bot transform could not find Main settings grid");
+  configurator=next;changes++;
 }
 if(!configurator.includes('execution_activation_pending')){
   const marker='if(message.includes("exchange_connection_required"))';
