@@ -4,7 +4,7 @@ import { traderAdmin } from "./server";
 
 const EXPECTED_GATEWAY_ORIGIN = "https://trader-gateway.labnarrative.com";
 const ALLOWED_PUBLIC_UPSTREAMS = new Set(["https://api.bybit.com", "https://api.bytick.com"]);
-let cachedSigningKey: CryptoKey | null = null;
+let cachedSigningKey: Awaited<ReturnType<typeof webcrypto.subtle.importKey>> | null = null;
 
 function text(value: unknown) {
   return String(value ?? "");
