@@ -20,6 +20,7 @@ type ClosedTrade = {
   closed_at: string | null;
   client_state: Json;
   execution_mode: string;
+  exchange_provider: string;
 };
 type GroupedSell = {
   orderId: string;
@@ -182,6 +183,7 @@ function groupSells(rows: Json[]): GroupedSell[] {
 }
 
 async function reconcileTrade(db: Db, trade: ClosedTrade, creds: Creds) {
+  if (trade.exchange_provider !== "binance") return { status: "skip_non_binance" };
   const state = obj(trade.client_state);
   const residual = n(state.residualDustQty);
   if (!(residual > 0) || state.externalResidualReconciled === true) return { status: "skip" };
@@ -191,6 +193,7 @@ async function reconcileTrade(db: Db, trade: ClosedTrade, creds: Creds) {
     .select("id", { count: "exact", head: true })
     .eq("account_id", trade.account_id)
     .eq("pair", trade.pair)
+    .eq("exchange_provider", "binance")
     .eq("execution_mode", "live")
     .eq("status", "Active");
   if (activeError) throw activeError;
@@ -200,6 +203,7 @@ async function reconcileTrade(db: Db, trade: ClosedTrade, creds: Creds) {
     .select("id,client_state")
     .eq("account_id", trade.account_id)
     .eq("pair", trade.pair)
+    .eq("exchange_provider", "binance")
     .eq("execution_mode", "live")
     .eq("status", "Closed")
     .gte("closed_at", new Date(Date.now() - LOOKBACK_MS).toISOString());
@@ -217,6 +221,7 @@ async function reconcileTrade(db: Db, trade: ClosedTrade, creds: Creds) {
     .select("exchange_trade_id")
     .eq("account_id", trade.account_id)
     .eq("pair", trade.pair)
+    .contains("metadata", { exchange: "binance" })
     .not("exchange_trade_id", "is", null);
   if (localFillError) throw localFillError;
   const knownTradeIds = new Set((localFills ?? []).map((row) => String(row.exchange_trade_id || "")).filter(Boolean));
@@ -323,7 +328,7 @@ async function reconcileTrade(db: Db, trade: ClosedTrade, creds: Creds) {
     pair: trade.pair,
     client_order_id: clientOrderId,
     exchange_order_id: match.orderId,
-    payload: { qty: match.qty, quote: match.quote, avgPrice: averagePrice, realizedPnl },
+    payload: { qty: match.qty, quote: match.quote, avgPrice: averagePrice, realizedPnl, exchange: "binance" },
   });
   return { status: "reconciled", tradeId: trade.client_id, pair: trade.pair, qty: match.qty, quote: match.quote, realizedPnl };
 }
@@ -338,9 +343,10 @@ Deno.serve(async (req: Request) => {
 
   const cutoff = new Date(Date.now() - LOOKBACK_MS).toISOString();
   const { data: rows, error } = await db.from("trader_trades")
-    .select("id,account_id,bot_id,client_id,pair,status,total_invested,realized_pnl,closed_at,client_state,execution_mode")
+    .select("id,account_id,bot_id,client_id,pair,status,total_invested,realized_pnl,closed_at,client_state,execution_mode,exchange_provider")
     .eq("status", "Closed")
     .eq("execution_mode", "live")
+    .eq("exchange_provider", "binance")
     .gte("closed_at", cutoff)
     .order("closed_at", { ascending: true });
   if (error) return json({ error: error.message }, 500);
@@ -364,5 +370,5 @@ Deno.serve(async (req: Request) => {
       results.push({ status: "error", tradeId: trade.client_id, error: clean(error) });
     }
   }
-  return json({ ok: true, candidates: candidates.length, results });
+  return json({ ok: true, exchange: "binance", candidates: candidates.length, results });
 });

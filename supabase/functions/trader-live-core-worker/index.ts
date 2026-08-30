@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-// Keep the live core source immutable per deployed version so a production worker
-// can never drift when main changes. This revision keeps the 55s normal lease,
-// collision-safe DCA reconciliation, and adds real trailing Take Profit support.
-await import("https://raw.githubusercontent.com/kazzahrani/labnarrative-platform/71c6094834b96905c6afe2f30ddcc1230471c7ac/supabase/functions/trader-live-worker/index.ts");
+// Keep the production live core immutable: this wrapper always executes the exact
+// reviewed provider-aware worker revision, so later main-branch edits cannot change
+// live execution behavior until a new immutable pin is deliberately deployed.
+await import("https://raw.githubusercontent.com/kazzahrani/labnarrative-platform/ccbea94d40adcdb14d24987c16cd7f9f85eeb906/supabase/functions/trader-live-worker/index.ts");

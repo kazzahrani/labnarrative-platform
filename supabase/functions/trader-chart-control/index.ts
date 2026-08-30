@@ -93,11 +93,12 @@ Deno.serve(async (req: Request) => {
     const stopEnabled = strategyV2 ? state.stopEnabled === true : trade.stop_enabled === true;
     const activeOrders = (ordersResult.data ?? []).filter((order) => ["OPEN", "PENDING", "NEW", "PARTIALLY_FILLED"].includes(String(order.status || "").toUpperCase()));
     const orderById = new Map((ordersResult.data ?? []).map((order) => [String(order.id), order]));
+    const exchangeProvider = ["bybit", "okx", "kucoin"].includes(String(trade.exchange_provider || "")) ? String(trade.exchange_provider) : "binance";
 
     return json({
       ok: true,
       trade: {
-        id: String(trade.client_id), pair: String(trade.pair), status: String(trade.status),
+        id: String(trade.client_id), pair: String(trade.pair), status: String(trade.status), exchangeProvider,
         entryPrice: n(trade.entry_price), averagePrice, quantity: n(trade.quantity), invested: n(trade.invested),
         takeProfitPct,
         takeProfitPrice: takeProfitTargets[0]?.price ?? (averagePrice > 0 && legacyTakeProfitPct > 0 ? averagePrice * (1 + legacyTakeProfitPct / 100) : null),
