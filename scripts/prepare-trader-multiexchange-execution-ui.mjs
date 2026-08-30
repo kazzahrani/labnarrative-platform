@@ -9,6 +9,11 @@ const replace = (before, after, label) => {
   if (!source.includes(before)) throw new Error(`Multi-exchange UI: missing ${label}`);
   source = source.replace(before, after);
 };
+const replaceRegex = (pattern, replacement, label, donePattern) => {
+  if (donePattern?.test(source)) return;
+  if (!pattern.test(source)) throw new Error(`Multi-exchange UI: missing ${label}`);
+  source = source.replace(pattern, replacement);
+};
 
 replace(
   'type PairInfo = { pair:string; symbol:string; baseAsset:string };',
@@ -24,10 +29,11 @@ replace(
   "bot exchange provider field",
 );
 
-replace(
-  '  name:"My DCA Bot", pair:"BTC/USDT", pairs:["BTC/USDT"], allPairs:false,',
-  '  name:"My DCA Bot", exchangeProvider:"binance", pair:"BTC/USDT", pairs:["BTC/USDT"], allPairs:false,',
+replaceRegex(
+  /(const NEW_FORM:\s*FormState\s*=\s*\{\s*\n\s*name:[^,\n]+,)(?!\s*exchangeProvider:)/,
+  '$1 exchangeProvider:"binance",',
   "new form provider",
+  /const NEW_FORM:[\s\S]{0,180}?exchangeProvider:"binance"/,
 );
 
 const helperAnchor = 'export default function DcaBotConfigurator({mode,accountId,accountKind,botId,onCancel,onSaved,onError}:Props){';
