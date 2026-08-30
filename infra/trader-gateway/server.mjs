@@ -219,6 +219,98 @@ const requestBody = (method, value) => {
   return body;
 };
 
+const parseJsonBody = (body) => {
+  if (body == null || body === "") return {};
+  try {
+    const parsed = JSON.parse(body);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    return parsed;
+  } catch {
+    throw Object.assign(new Error("invalid_upstream_json"), { status: 400 });
+  }
+};
+
+const usdtSymbol = (value, dashed = false) => {
+  const text = String(value || "");
+  const pattern = dashed ? /^[A-Z0-9]{1,20}-USDT$/ : /^[A-Z0-9]{1,20}USDT$/;
+  return pattern.test(text) && text !== (dashed ? "USDT-USDT" : "USDTUSDT");
+};
+
+const enforceSpotOnly = (origin, method, path, query, body) => {
+  const params = new URLSearchParams(query);
+  if (origin === ORIGINS.bybit) {
+    if (path.startsWith("/v5/market/")) {
+      if (params.get("category") !== "spot") throw Object.assign(new Error("spot_only"), { status: 403 });
+      const symbol = params.get("symbol");
+      if (symbol && !usdtSymbol(symbol)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
+      return;
+    }
+    if (path === "/v5/account/wallet-balance") {
+      if (params.get("accountType") !== "UNIFIED") throw Object.assign(new Error("spot_account_only"), { status: 403 });
+      return;
+    }
+    if (["/v5/order/realtime", "/v5/order/history", "/v5/execution/list"].includes(path)) {
+      if (params.get("category") !== "spot") throw Object.assign(new Error("spot_only"), { status: 403 });
+      const symbol = params.get("symbol");
+      if (symbol && !usdtSymbol(symbol)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
+      const filter = params.get("orderFilter");
+      if (filter && filter !== "Order") throw Object.assign(new Error("spot_order_filter_only"), { status: 403 });
+      return;
+    }
+    if (method === "POST" && ["/v5/order/create", "/v5/order/cancel"].includes(path)) {
+      const value = parseJsonBody(body);
+      if (value.category !== "spot" || !usdtSymbol(value.symbol)) throw Object.assign(new Error("spot_only"), { status: 403 });
+      if (value.orderFilter != null && value.orderFilter !== "Order") throw Object.assign(new Error("spot_order_filter_only"), { status: 403 });
+      if (value.isLeverage != null && Number(value.isLeverage) !== 0) throw Object.assign(new Error("leverage_forbidden"), { status: 403 });
+      if (path === "/v5/order/create") {
+        if (!["Buy", "Sell"].includes(value.side) || !["Market", "Limit"].includes(value.orderType)) throw Object.assign(new Error("spot_order_type_only"), { status: 403 });
+      }
+      return;
+    }
+    return;
+  }
+
+  if (origin === ORIGINS.okx) {
+    if (path === "/api/v5/trade/fills") {
+      if (params.get("instType") !== "SPOT") throw Object.assign(new Error("spot_only"), { status: 403 });
+      return;
+    }
+    if (method === "GET" && path === "/api/v5/trade/order") {
+      if (!usdtSymbol(params.get("instId"), true)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
+      return;
+    }
+    if (method === "POST" && ["/api/v5/trade/order", "/api/v5/trade/cancel-order"].includes(path)) {
+      const value = parseJsonBody(body);
+      if (!usdtSymbol(value.instId, true)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
+      if (path === "/api/v5/trade/order") {
+        if (value.tdMode !== "cash") throw Object.assign(new Error("cash_spot_only"), { status: 403 });
+        if (!["buy", "sell"].includes(value.side) || !["market", "limit"].includes(value.ordType)) throw Object.assign(new Error("spot_order_type_only"), { status: 403 });
+        if (value.tgtCcy != null && !["quote_ccy", "base_ccy"].includes(value.tgtCcy)) throw Object.assign(new Error("spot_currency_mode_only"), { status: 403 });
+      }
+      return;
+    }
+    return;
+  }
+
+  if (origin === ORIGINS.kucoin) {
+    if (path === "/api/v1/accounts") {
+      if (params.get("type") !== "trade") throw Object.assign(new Error("spot_account_only"), { status: 403 });
+      return;
+    }
+    if (path === "/api/v1/hf/fills" || path.startsWith("/api/v1/hf/orders/")) {
+      const symbol = params.get("symbol");
+      if (!usdtSymbol(symbol, true)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
+      return;
+    }
+    if (method === "POST" && path === "/api/v1/hf/orders/sync") {
+      const value = parseJsonBody(body);
+      if (!usdtSymbol(value.symbol, true)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
+      if (!["buy", "sell"].includes(value.side) || !["market", "limit"].includes(value.type)) throw Object.assign(new Error("spot_order_type_only"), { status: 403 });
+      return;
+    }
+  }
+};
+
 const relay = async (payload) => {
   const method = String(payload?.method || "").toUpperCase();
   const path = String(payload?.path || "");
@@ -235,6 +327,7 @@ const relay = async (payload) => {
 
   const headers = safeHeaders(origin, payload?.headers, apiKey);
   const body = requestBody(method, payload?.body);
+  enforceSpotOnly(origin, method, path, query, body);
   if (body != null && !headers["content-type"]) headers["content-type"] = "application/json";
   const url = `${origin}${path}${query ? `?${query}` : ""}`;
 
