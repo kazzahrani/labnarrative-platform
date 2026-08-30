@@ -35,7 +35,7 @@ source = source.replaceAll("LaunchProvider", "ExchangeProvider");
 if (!source.includes('const PROVIDER_LABELS:')) {
   const providerType = /type\s+ExchangeProvider\s*=\s*[^;]+;/;
   if (!providerType.test(source)) throw new Error("Multi-exchange UI: missing exchange provider type");
-  source = source.replace(providerType, '$&\nconst PROVIDER_LABELS: Record<ExchangeProvider,string> = { binance:"Binance", bybit:"Bybit", okx:"OKX", kucoin:"KuCoin" };');
+  source = source.replace(providerType, '$&\nconst PROVIDER_LABELS = { binance:"Binance", bybit:"Bybit", okx:"OKX", kucoin:"KuCoin", coinbase:"Coinbase", kraken:"Kraken" } as const;');
 }
 
 ensureTypeField("BotDetail", "exchangeProvider", "ExchangeProvider");
