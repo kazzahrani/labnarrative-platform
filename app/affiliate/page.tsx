@@ -80,7 +80,7 @@ export default function AffiliatePage() {
       <section className={styles.section} id="program">
         <div className={styles.sectionIntro}>
           <p className={styles.label}>How the program works</p>
-          <h2>Immediate annual upside. Recurring monthly upside. Network effects underneath both.</h2>
+          <h2>Higher annual upside. Recurring monthly upside. Network effects underneath both.</h2>
         </div>
         <div className={styles.programGrid}>
           {steps.map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
