@@ -59,7 +59,7 @@ async function activeAttribution(admin: any, owner: string) {
   return q.data || null;
 }
 async function ownerSubscriptions(admin: any, owner: string) {
-  const q = await admin.from("trader_subscriptions").select("*,trader_subscription_plans(slug,name)").eq("owner_user_id", owner).order("created_at", { ascending: false }).limit(20);
+  const q = await admin.from("trader_subscriptions").select("*,trader_subscription_plans!trader_subscriptions_plan_id_fkey(slug,name)").eq("owner_user_id", owner).order("created_at", { ascending: false }).limit(20);
   if (q.error) throw q.error;
   return q.data || [];
 }
