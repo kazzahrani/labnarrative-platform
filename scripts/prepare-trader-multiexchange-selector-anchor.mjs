@@ -4,6 +4,10 @@ import path from "node:path";
 const filePath=path.join(process.cwd(),"app/trader/DcaBotConfigurator.tsx");
 let source=fs.readFileSync(filePath,"utf8");
 
+// Earlier Trader transforms may already add provider fields as optional. Normalize
+// those declarations before the final execution transform so it remains idempotent.
+source=source.replace(/exchangeProvider\?\s*:\s*ExchangeProvider;/g,"exchangeProvider: ExchangeProvider;");
+
 if(!source.includes('<span>Exchange</span><select value={form.exchangeProvider}')){
   const formOpen=/(return\s*<form\b[^>]*onSubmit=\{save\}[^>]*>)/;
   if(!formOpen.test(source))throw new Error("Multi-exchange selector: DCA save form not found");
