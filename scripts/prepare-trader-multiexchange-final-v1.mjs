@@ -61,10 +61,16 @@ if(!shell.includes(marker)){
   if(shell.includes(overviewConnected)){shell=shell.replace(overviewConnected,'hasConnectedExchange={hasAnyExchange}');changes++;}
 
   if(!shell.includes("<ExchangePortfolioOverview")){
-    const portfolioMatch=shell.match(/(\s+const portfolio\s*=\s*(?:\(\s*)?<>\s*)/);
-    if(!portfolioMatch)throw new Error("Multi-exchange final could not find Portfolio fragment");
-    const addition=`$1{currentAccount.kind === \"real\" && <ExchangePortfolioOverview binanceConnected={connected} binanceLast4={currentAccount.apiKeyLast4} refreshKey={workspace?.account?.lastWorkerAt ?? \"\"} />}\n    `;
-    shell=shell.replace(portfolioMatch[0],addition);changes++;
+    const portfolioStart=shell.indexOf("  const portfolio = ");
+    const botsStart=shell.indexOf("  const botsPage = ",portfolioStart);
+    if(portfolioStart<0||botsStart<=portfolioStart)throw new Error("Multi-exchange final could not isolate Portfolio expression");
+    const declaration=shell.slice(portfolioStart,botsStart);
+    const prefix="  const portfolio = ";
+    let expression=declaration.slice(prefix.length).trim();
+    if(!expression.endsWith(";"))throw new Error("Multi-exchange final Portfolio expression has unexpected ending");
+    expression=expression.slice(0,-1).trim();
+    const replacement=`  const portfolio = <>\n    {currentAccount.kind === \"real\" && <ExchangePortfolioOverview binanceConnected={connected} binanceLast4={currentAccount.apiKeyLast4} refreshKey={workspace?.account?.lastWorkerAt ?? \"\"} />}\n    {${expression}}\n  </>;\n\n`;
+    shell=shell.slice(0,portfolioStart)+replacement+shell.slice(botsStart);changes++;
   }
 
   if(!shell.includes("botExchangeLabel(trade.exchangeProvider)")){
