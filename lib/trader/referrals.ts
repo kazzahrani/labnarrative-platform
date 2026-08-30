@@ -158,3 +158,79 @@ export async function claimPendingReferral(db: SupabaseClient, accountId: string
   if (!code) return null;
   return claimReferralCode(db, accountId, code, "link");
 }
+
+export type ReferralPaymentInput = {
+  referredAccountId: string;
+  provider: string;
+  externalPaymentId: string;
+  billingInterval: BillingInterval;
+  grossAmountCents: number;
+  currency?: string;
+  paidAt?: string | Date;
+  metadata?: Record<string, unknown>;
+};
+
+export async function createReferralCommissionsForPayment(db: SupabaseClient, input: ReferralPaymentInput) {
+  const config = await loadReferralProgramConfig(db);
+  if (!config.active || input.grossAmountCents <= 0) return [];
+
+  const paidAt = input.paidAt instanceof Date ? input.paidAt : new Date(input.paidAt ?? Date.now());
+  if (!Number.isFinite(paidAt.getTime())) throw new Error("Invalid referral payment timestamp.");
+  const holdUntil = new Date(paidAt.getTime() + config.commission_hold_days * 24 * 60 * 60 * 1000).toISOString();
+  const rows: Record<string, unknown>[] = [];
+  let referredNodeId = input.referredAccountId;
+
+  for (const level of [1, 2, 3] as ReferralLevel[]) {
+    const { data: attribution, error } = await db.from("trader_referral_attributions").select("referrer_account_id,referral_code,source").eq("referred_account_id", referredNodeId).maybeSingle();
+    if (error) throw error;
+    if (!attribution) break;
+
+    const beneficiaryAccountId = String(attribution.referrer_account_id);
+    const rateBps = referralRateBps(config, input.billingInterval, level);
+    const amountCents = commissionAmountCents(input.grossAmountCents, rateBps);
+    if (rateBps > 0 && amountCents > 0) {
+      rows.push({
+        beneficiary_account_id: beneficiaryAccountId,
+        referred_account_id: input.referredAccountId,
+        provider: input.provider,
+        external_payment_id: input.externalPaymentId,
+        billing_interval: input.billingInterval,
+        referral_level: level,
+        gross_amount_cents: Math.round(input.grossAmountCents),
+        rate_bps: rateBps,
+        commission_amount_cents: amountCents,
+        currency: input.currency || config.currency,
+        status: "pending",
+        hold_until: holdUntil,
+        metadata: {
+          ...(input.metadata ?? {}),
+          referral_code: attribution.referral_code,
+          referral_source: attribution.source,
+        },
+      });
+    }
+    referredNodeId = beneficiaryAccountId;
+  }
+
+  if (!rows.length) return [];
+  const { data, error } = await db.from("trader_referral_commissions").upsert(rows, {
+    onConflict: "provider,external_payment_id,beneficiary_account_id,referral_level",
+    ignoreDuplicates: true,
+  }).select("*");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function releaseMaturedReferralCommissions(db: SupabaseClient, now = new Date()) {
+  const timestamp = now.toISOString();
+  const { data, error } = await db.from("trader_referral_commissions").update({ status: "available", available_at: timestamp }).eq("status", "pending").lte("hold_until", timestamp).select("id");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function reverseReferralCommissionsForPayment(db: SupabaseClient, provider: string, externalPaymentId: string) {
+  const reversedAt = new Date().toISOString();
+  const { data, error } = await db.from("trader_referral_commissions").update({ status: "reversed", reversed_at: reversedAt }).eq("provider", provider).eq("external_payment_id", externalPaymentId).in("status", ["pending", "available"]).select("id");
+  if (error) throw error;
+  return data ?? [];
+}
