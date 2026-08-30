@@ -9,7 +9,7 @@ const marker = "TRADER_BILLING_DASHBOARD_V1";
 if (!source.includes(marker)) {
   const importAnchor = 'import ReferralDashboard from "./ReferralDashboard";';
   if (!source.includes(importAnchor)) throw new Error("Billing dashboard requires Referral dashboard transform first");
-  source = source.replace(importAnchor, `${importAnchor}\nimport BillingDashboard from "./BillingDashboard";\n// ${marker}`);
+  source = source.replace(importAnchor, `${importAnchor}\nimport BillingDashboard from "./BillingDashboard";\nimport BillingReturnBridge from "./BillingReturnBridge";\n// ${marker}`);
 
   const sectionBefore = 'type Section = "Dashboard" | "Portfolio" | "Bots" | "Signal Monitor" | "Active Positions" | "Closed Positions" | "Analytics" | "Connections" | "Referrals";';
   const sectionAfter = 'type Section = "Dashboard" | "Portfolio" | "Bots" | "Signal Monitor" | "Active Positions" | "Closed Positions" | "Analytics" | "Connections" | "Referrals" | "Billing";';
@@ -28,11 +28,16 @@ if (!source.includes(marker)) {
   const routerNeedle = 'section === "Connections" ? <ConnectionsSettings realAccount={accounts.find((account) => account.kind === "real") ?? null} onConnectBinance={openBinance} onBackOverview={() => setSection("Dashboard")} /> : section === "Referrals" ? <ReferralDashboard /> : section === "Active Positions" ? tradesPage("Active") : tradesPage("Closed")';
   if (!source.includes(routerNeedle)) throw new Error("Billing dashboard could not find final content router");
   source = source.replace(routerNeedle, 'section === "Connections" ? <ConnectionsSettings realAccount={accounts.find((account) => account.kind === "real") ?? null} onConnectBinance={openBinance} onBackOverview={() => setSection("Dashboard")} /> : section === "Referrals" ? <ReferralDashboard /> : section === "Billing" ? <BillingDashboard /> : section === "Active Positions" ? tradesPage("Active") : tradesPage("Closed")');
+
+  const bridgeAnchor = '<ReferralAttributionBridge ready={signedIn && accountsReady} />';
+  if (!source.includes(bridgeAnchor)) throw new Error("Billing dashboard requires Referral attribution bridge before billing return synchronization");
+  source = source.replace(bridgeAnchor, `${bridgeAnchor}<BillingReturnBridge ready={signedIn && accountsReady} />`);
 }
 
 for (const required of [
   "TRADER_BILLING_DASHBOARD_V1",
   '<BillingDashboard />',
+  '<BillingReturnBridge ready={signedIn && accountsReady} />',
   '<strong>Plans & billing</strong><small>Pricing & subscription</small>',
   'section === "Billing" ? "PLANS & BILLING"',
 ]) {
@@ -40,4 +45,4 @@ for (const required of [
 }
 
 fs.writeFileSync(shellPath, source);
-console.log("Prepared LabNarrative Plans & Billing workspace in the signed-in Trader shell.");
+console.log("Prepared LabNarrative Plans & Billing workspace and subscription return synchronization in the signed-in Trader shell.");
