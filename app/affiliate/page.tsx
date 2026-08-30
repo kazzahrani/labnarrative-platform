@@ -14,7 +14,7 @@ const steps = [
   ["01", "Use LabNarrative", "Test the trading platform yourself first. We want referrals from people who understand the product, not one-off promotional traffic."],
   ["02", "Share your referral", "Your referral code and tracked link connect new customers to you. Strategy and bot sharing will become additional attribution paths as those sharing tools launch."],
   ["03", "Build a network", "Monthly subscriptions pay 25% to the direct referrer, 15% to the next level, and 10% to the third level while eligible payments continue."],
-  ["04", "Earn more on annual sales", "Annual prepaid subscriptions pay 30% direct, 10% at level two, and 5% at level three from the eligible annual payment, subject to the safety hold."],
+  ["04", "Earn more on annual sales", "Annual prepaid subscriptions pay 30% direct, 15% at level two, and 10% at level three from the eligible annual payment, subject to the safety hold."],
 ];
 
 const audiences = [
@@ -26,7 +26,7 @@ const audiences = [
 
 const terms = [
   "Monthly subscriptions: 25% direct commission, 15% level-two commission, and 10% level-three commission on eligible subscription revenue as payments are received.",
-  "Annual prepaid subscriptions: 30% direct commission, 10% level-two commission, and 5% level-three commission on the eligible annual payment.",
+  "Annual prepaid subscriptions: 30% direct commission, 15% level-two commission, and 10% level-three commission on the eligible annual payment.",
   "The referred-customer benefit is set at 10% and will activate with the paid checkout flow.",
   "New commissions remain pending for 30 days to protect against refunds, chargebacks, fraud, and payment reversals.",
   "The payout threshold is $25. Payout methods and exact payout schedule will be published before paid subscriptions open.",
@@ -72,7 +72,7 @@ export default function AffiliatePage() {
           <aside className={styles.commissionPanel}>
             <small>Direct annual commission</small>
             <strong>30%</strong>
-            <p>Calculated from the eligible annual prepaid subscription. Monthly referrals earn 25% direct recurring commission, with 15% and 10% network levels.</p>
+            <p>Calculated from the eligible annual prepaid subscription. Annual network levels pay 15% and 10%; monthly referrals pay 25% direct with 15% and 10% network levels.</p>
           </aside>
         </div>
       </section>
