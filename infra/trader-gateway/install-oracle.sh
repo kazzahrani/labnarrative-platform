@@ -2,7 +2,8 @@
 set -euo pipefail
 
 INSTALL_ROOT="/opt/labnarrative-trader-gateway"
-SERVER_URL="https://raw.githubusercontent.com/kazzahrani/labnarrative-platform/main/infra/trader-gateway/server.mjs"
+GATEWAY_REF="${GATEWAY_REF:-main}"
+SERVER_URL="https://raw.githubusercontent.com/kazzahrani/labnarrative-platform/${GATEWAY_REF}/infra/trader-gateway/server.mjs"
 SERVICE_FILE="/etc/systemd/system/labnarrative-trader-gateway.service"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -23,7 +24,7 @@ sudo netfilter-persistent save >/dev/null 2>&1 || true
 
 sudo tee "$SERVICE_FILE" >/dev/null <<'EOF'
 [Unit]
-Description=LabNarrative Binance Trader Gateway
+Description=LabNarrative Trader Gateway
 After=network-online.target
 Wants=network-online.target
 
@@ -46,11 +47,13 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable --now labnarrative-trader-gateway.service
+sudo systemctl enable labnarrative-trader-gateway.service
+# Always restart after replacing server.mjs so rerunning this script performs a real upgrade.
+sudo systemctl restart labnarrative-trader-gateway.service
 
 for _ in $(seq 1 20); do
   if curl -fsS --max-time 3 http://127.0.0.1:8080/health; then
-    printf '\nGateway installed.\n'
+    printf '\nGateway installed from ref %s.\n' "$GATEWAY_REF"
     exit 0
   fi
   sleep 1
