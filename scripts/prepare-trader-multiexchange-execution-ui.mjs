@@ -33,8 +33,9 @@ if (!/type\s+ExchangeProvider\s*=/.test(source)) {
   if (!pairType.test(source)) throw new Error("Multi-exchange UI: missing PairInfo type");
   source = source.replace(pairType, '$&\ntype ExchangeProvider = "binance" | "bybit" | "okx" | "kucoin";');
 }
+source = source.replaceAll("LaunchProvider", "ExchangeProvider");
 if (!source.includes('const PROVIDER_LABELS:')) {
-  const providerType = /type ExchangeProvider = "binance" \| "bybit" \| "okx" \| "kucoin";/;
+  const providerType = /type\s+ExchangeProvider\s*=\s*[^;]+;/;
   if (!providerType.test(source)) throw new Error("Multi-exchange UI: missing exchange provider type");
   source = source.replace(providerType, '$&\nconst PROVIDER_LABELS: Record<ExchangeProvider,string> = { binance:"Binance", bybit:"Bybit", okx:"OKX", kucoin:"KuCoin" };');
 }
