@@ -364,7 +364,7 @@ const relay = async (payload) => {
   let upstreamStatus;
   let text;
   let headerGet;
-  if (origin === ORIGINS.kucoin) {
+  if (origin === ORIGINS.kucoin || origin === ORIGINS.okx) {
     const upstream = await httpsRequestIpv4(url, { method, headers, body, timeoutMs: REQUEST_TIMEOUT_MS });
     upstreamStatus = upstream.status;
     text = upstream.body;
