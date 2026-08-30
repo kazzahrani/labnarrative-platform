@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import { createHash, verify as verifySignature } from "node:crypto";
 
 const PORT = Number(process.env.PORT || 8080);
@@ -122,6 +123,33 @@ const readBody = async (req) => {
   }
   return Buffer.concat(chunks).toString("utf8");
 };
+
+const httpsRequestIpv4 = (url, { method, headers, body, timeoutMs }) => new Promise((resolve, reject) => {
+  const target = new URL(url);
+  const req = https.request({
+    protocol: "https:",
+    hostname: target.hostname,
+    port: target.port || 443,
+    path: `${target.pathname}${target.search}`,
+    method,
+    headers,
+    family: 4,
+    servername: target.hostname,
+    timeout: timeoutMs,
+  }, (res) => {
+    const chunks = [];
+    res.on("data", (chunk) => chunks.push(chunk));
+    res.on("end", () => resolve({
+      status: Number(res.statusCode || 0),
+      body: Buffer.concat(chunks).toString("utf8"),
+      headers: res.headers,
+    }));
+  });
+  req.on("timeout", () => req.destroy(new Error("upstream_timeout")));
+  req.on("error", reject);
+  if (body != null) req.write(body);
+  req.end();
+});
 
 const verifyRelayAuth = (req, rawBody) => {
   const timestamp = Number(req.headers["x-ln-timestamp"] || 0);
@@ -333,24 +361,41 @@ const relay = async (payload) => {
   if (body != null && !headers["content-type"]) headers["content-type"] = "application/json";
   const url = `${origin}${path}${query ? `?${query}` : ""}`;
 
-  const upstream = await fetch(url, {
-    method,
-    headers,
-    body,
-    redirect: "error",
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  const text = await upstream.text();
+  let upstreamStatus;
+  let text;
+  let headerGet;
+  if (origin === ORIGINS.kucoin) {
+    const upstream = await httpsRequestIpv4(url, { method, headers, body, timeoutMs: REQUEST_TIMEOUT_MS });
+    upstreamStatus = upstream.status;
+    text = upstream.body;
+    headerGet = (name) => {
+      const value = upstream.headers[String(name).toLowerCase()];
+      if (Array.isArray(value)) return value.join(", ");
+      return value == null ? null : String(value);
+    };
+  } else {
+    const upstream = await fetch(url, {
+      method,
+      headers,
+      body,
+      redirect: "error",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    upstreamStatus = upstream.status;
+    text = await upstream.text();
+    headerGet = (name) => upstream.headers.get(name);
+  }
+
   const provider = Object.entries(ORIGINS).find(([, value]) => value === origin)?.[0] || "unknown";
-  console.log(JSON.stringify({ event: "exchange_relay", provider, requestId, method, path, status: upstream.status }));
+  console.log(JSON.stringify({ event: "exchange_relay", provider, requestId, method, path, status: upstreamStatus }));
   return {
-    status: upstream.status,
+    status: upstreamStatus,
     body: text,
     headers: {
-      usedWeight1m: upstream.headers.get("x-mbx-used-weight-1m"),
-      orderCount10s: upstream.headers.get("x-mbx-order-count-10s"),
-      orderCount1m: upstream.headers.get("x-mbx-order-count-1m"),
-      retryAfter: upstream.headers.get("retry-after"),
+      usedWeight1m: headerGet("x-mbx-used-weight-1m"),
+      orderCount10s: headerGet("x-mbx-order-count-10s"),
+      orderCount1m: headerGet("x-mbx-order-count-1m"),
+      retryAfter: headerGet("retry-after"),
     },
   };
 };
