@@ -29,9 +29,9 @@ export default function ConnectionsSettings(props: Props) {
 fs.writeFileSync(file, source);
 console.log("Prepared simple four-exchange Connections workspace.");
 
-// These must run last: legacy Trader transforms rewrite the DCA source and shell
-// earlier in the build. Anchor the provider selector to the form boundary first,
-// then inject provider state/behavior and remove the old Binance-only shell gate.
+// These must run last: legacy Trader transforms rewrite the DCA source, shell and
+// chart workstation earlier in the build. Apply provider execution UI after them.
 await import("./prepare-trader-multiexchange-selector-anchor.mjs");
 await import("./prepare-trader-multiexchange-execution-ui.mjs");
 await import("./prepare-trader-multiexchange-shell-ui.mjs");
+await import("./prepare-trader-multiexchange-chart-ui.mjs");
