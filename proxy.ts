@@ -7,6 +7,7 @@ const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform-git-main-lab-narrative.vercel.app",
 ]);
 const LEGACY_PLATFORM_HOST = "platform.labnarrative.com";
+const REFERRAL_PENDING_COOKIE = "ln_referral_pending_v1";
 const WEBSITE_ADMIN_SEGMENTS = new Set([
   "sites",
   "sites-v3",
@@ -23,6 +24,10 @@ const WEBSITE_ADMIN_SEGMENTS = new Set([
   "recovery",
 ]);
 
+function normalizeReferralCode(value: string | null) {
+  return String(value ?? "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 32);
+}
+
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
@@ -34,6 +39,29 @@ export function proxy(request: NextRequest) {
   const isTendersHost = host === `tenders.${rootDomain}`;
   const isSaasHost = host === `app.${rootDomain}`;
   const isCareerHost = host === `career.${rootDomain}`;
+  const isTraderHost =
+    host === rootDomain ||
+    host === `www.${rootDomain}` ||
+    host === LEGACY_PLATFORM_HOST ||
+    host === "localhost" ||
+    host.endsWith(".vercel.app");
+
+  const referralCode = normalizeReferralCode(request.nextUrl.searchParams.get("ref"));
+  if (
+    isTraderHost &&
+    referralCode.length >= 4 &&
+    (request.nextUrl.pathname === "/trader" || request.nextUrl.pathname.startsWith("/trader/"))
+  ) {
+    const response = NextResponse.next();
+    response.cookies.set(REFERRAL_PENDING_COOKIE, referralCode, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 10,
+    });
+    return response;
+  }
 
   if (request.nextUrl.pathname.startsWith("/engine-v4/render/")) {
     const response = NextResponse.next();
