@@ -6,11 +6,11 @@ import { join } from "node:path";
 import { createHash, verify as verifySignature } from "node:crypto";
 
 const PORT = Number(process.env.PORT || 8080);
-const OKX_LEGACY_ORIGIN = "https://www.okx.com";
+const OKX_RECOMMENDED_ORIGIN = "https://openapi.okx.com";
 const ORIGINS = Object.freeze({
   binance: "https://api.binance.com",
   bybit: "https://api.bybit.com",
-  okx: "https://openapi.okx.com",
+  okx: "https://www.okx.com",
   kucoin: "https://api.kucoin.com",
 });
 const MAX_BODY_BYTES = 64 * 1024;
@@ -273,7 +273,7 @@ const normalizeOrigin = (value) => {
   if (!value) return ORIGINS.binance; // Backwards compatibility with the existing Binance relay payload.
   let origin;
   try { origin = new URL(String(value)).origin; } catch { throw Object.assign(new Error("upstream_not_allowed"), { status: 403 }); }
-  if (origin === OKX_LEGACY_ORIGIN) return ORIGINS.okx;
+  if (origin === OKX_RECOMMENDED_ORIGIN) return ORIGINS.okx;
   if (!Object.values(ORIGINS).includes(origin)) throw Object.assign(new Error("upstream_not_allowed"), { status: 403 });
   return origin;
 };
