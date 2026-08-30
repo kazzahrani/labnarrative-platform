@@ -172,7 +172,7 @@ export async function claimReferralCode(db: SupabaseClient, accountId: string, r
   if (!code) return { ok: false as const, status: "invalid_code" as const };
 
   const owner = await accountOwnerUserId(db, accountId);
-  if (!owner) return { ok: false as const, status: REFERRAL_SIGN_IN_REQUIRED as const };
+  if (!owner) return { ok: false as const, status: REFERRAL_SIGN_IN_REQUIRED };
 
   const existing = await db
     .from("trader_referral_attributions")
