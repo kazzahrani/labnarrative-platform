@@ -15,23 +15,23 @@ function mustReplace(from,to,label){
 }
 
 if(!shell.includes(marker)){
-  // The Overview transform creates the Settings → Connections route. Replace only
-  // after every legacy connection transform has completed.
   mustReplace('import ConnectionsSettings from "./ConnectionsSettings";','import ExchangeConnectionsSimple from "./ExchangeConnectionsSimple";\nimport ExchangePortfolioOverview from "./ExchangePortfolioOverview";\n// MULTIEXCHANGE_FINAL_V1','ConnectionsSettings import');
   shell=shell.replaceAll('<ConnectionsSettings ','<ExchangeConnectionsSimple ');changes++;
 
-  // Workspace results are still produced by the mature account controller. Enrich
-  // those objects client-side with first-class venue metadata without disturbing
-  // accounting, PnL, fills, orders, or the existing Binance live engine.
+  if(!/type WorkspaceResponse\s*=\s*\{[\s\S]*?exchangeConnectionCount\?:\s*number;/.test(shell)){
+    const workspaceType=/type WorkspaceResponse\s*=\s*\{[\s\S]*?error\?:\s*string;\s*\};/;
+    const match=shell.match(workspaceType);
+    if(!match)throw new Error("Multi-exchange final could not find WorkspaceResponse type");
+    shell=shell.replace(match[0],match[0].replace(/error\?:\s*string;/,'exchangeConnectionCount?: number;\n  error?: string;'));changes++;
+  }
+
   if(!shell.includes("async function enrichWorkspaceExchanges")){
     const exportAnchor="export default function TraderV2FullShell";
     if(!shell.includes(exportAnchor))throw new Error("Multi-exchange final could not find Trader shell export");
-    const helper=`async function enrichWorkspaceExchanges(result: WorkspaceResponse, accountId: string): Promise<WorkspaceResponse> {\n  try {\n    const { data, error } = await browserSupabase.functions.invoke(\"trader-exchange-workspace-meta\", { body: { accountId } });\n    if (error || !data) return result;\n    const meta = data as { bots?: Array<{id:string;exchangeProvider:string}>; trades?: Array<{id:string;exchangeProvider:string}> };\n    const botMap = new Map((meta.bots ?? []).map(item => [item.id, item.exchangeProvider]));\n    const tradeMap = new Map((meta.trades ?? []).map(item => [item.id, item.exchangeProvider]));\n    return {\n      ...result,\n      bots: (result.bots ?? []).map(bot => ({ ...bot, exchangeProvider: botMap.get(bot.id) ?? bot.exchangeProvider ?? \"binance\" })),\n      trades: (result.trades ?? []).map(trade => ({ ...trade, exchangeProvider: tradeMap.get(trade.id) ?? trade.exchangeProvider ?? \"binance\" })),\n    };\n  } catch {\n    return result;\n  }\n}\n\n`;
+    const helper=`async function enrichWorkspaceExchanges(result: WorkspaceResponse, accountId: string): Promise<WorkspaceResponse> {\n  try {\n    const { data, error } = await browserSupabase.functions.invoke(\"trader-exchange-workspace-meta\", { body: { accountId } });\n    if (error || !data) return result;\n    const meta = data as { bots?: Array<{id:string;exchangeProvider:string}>; trades?: Array<{id:string;exchangeProvider:string}>; connections?: Array<{provider:string;status:string}> };\n    const botMap = new Map((meta.bots ?? []).map(item => [item.id, item.exchangeProvider]));\n    const tradeMap = new Map((meta.trades ?? []).map(item => [item.id, item.exchangeProvider]));\n    const exchangeConnectionCount = (meta.connections ?? []).filter(item => item.status === \"connected\").length;\n    return {\n      ...result,\n      exchangeConnectionCount,\n      bots: (result.bots ?? []).map(bot => ({ ...bot, exchangeProvider: botMap.get(bot.id) ?? bot.exchangeProvider ?? \"binance\" })),\n      trades: (result.trades ?? []).map(trade => ({ ...trade, exchangeProvider: tradeMap.get(trade.id) ?? trade.exchangeProvider ?? \"binance\" })),\n    };\n  } catch {\n    return result;\n  }\n}\n\n`;
     shell=shell.replace(exportAnchor,helper+exportAnchor);changes++;
   }
 
-  // The exchange-aware bot transform has already added Bot.exchangeProvider. Add
-  // the equivalent property to trades so Positions carry the venue as well.
   if(!/type Trade\s*=\s*\{[\s\S]*?exchangeProvider\?:\s*string;/.test(shell)){
     const tradeType=/type Trade\s*=\s*\{[\s\S]*?botName:\s*string;/;
     const match=shell.match(tradeType);
@@ -39,8 +39,6 @@ if(!shell.includes(marker)){
     shell=shell.replace(match[0],match[0]+"\n  exchangeProvider?: string;");changes++;
   }
 
-  // Enrich only the workspace load path. Other setWorkspace calls are responses
-  // from mutations and will be refreshed by the normal workspace polling cycle.
   const loadStart=shell.indexOf("  const loadWorkspace = async");
   const loadEnd=shell.indexOf("  const loadBalances",loadStart);
   if(loadStart<0||loadEnd<=loadStart)throw new Error("Multi-exchange final could not isolate loadWorkspace");
@@ -51,8 +49,17 @@ if(!shell.includes(marker)){
     shell=shell.slice(0,loadStart)+loadBlock+shell.slice(loadEnd);changes++;
   }
 
-  // Add an exchange-level portfolio summary above the existing mature Binance
-  // asset detail. The old detail remains untouched to preserve its accounting UX.
+  if(!shell.includes("const hasAnyExchange =")){
+    const connectedLine='  const connected = currentAccount?.kind === "real" && currentAccount.exchangeStatus === "connected";';
+    if(!shell.includes(connectedLine))throw new Error("Multi-exchange final could not find Binance connected state");
+    shell=shell.replace(connectedLine,connectedLine+'\n  const hasAnyExchange = connected || Number(workspace?.exchangeConnectionCount ?? 0) > 0;');changes++;
+  }
+  if(shell.includes('if (currentAccount.kind === "real" && !connected) { setExchangeModal(true); return; }')){
+    shell=shell.replace('if (currentAccount.kind === "real" && !connected) { setExchangeModal(true); return; }','if (currentAccount.kind === "real" && !hasAnyExchange) { setExchangeModal(true); return; }');changes++;
+  }
+  const overviewConnected='hasConnectedExchange={accounts.some((account) => account.kind === "real" && account.exchangeStatus === "connected")}';
+  if(shell.includes(overviewConnected)){shell=shell.replace(overviewConnected,'hasConnectedExchange={hasAnyExchange}');changes++;}
+
   if(!shell.includes("<ExchangePortfolioOverview")){
     const portfolioMatch=shell.match(/(\s+const portfolio\s*=\s*(?:\(\s*)?<>\s*)/);
     if(!portfolioMatch)throw new Error("Multi-exchange final could not find Portfolio fragment");
@@ -60,8 +67,6 @@ if(!shell.includes(marker)){
     shell=shell.replace(portfolioMatch[0],addition);changes++;
   }
 
-  // Positions: show the venue beside the automation identity while leaving every
-  // price/PnL/action component from position-row-v4 unchanged.
   if(!shell.includes("botExchangeLabel(trade.exchangeProvider)")){
     const identity="{trade.botName} · {trade.executionMode}";
     if(!shell.includes(identity))throw new Error("Multi-exchange final could not find Position identity line");
@@ -74,6 +79,8 @@ for(const required of [
   "<ExchangeConnectionsSimple",
   "<ExchangePortfolioOverview",
   "async function enrichWorkspaceExchanges",
+  "exchangeConnectionCount?: number;",
+  "const hasAnyExchange =",
   "exchangeProvider?: string;",
   "botExchangeLabel(trade.exchangeProvider)",
 ]) if(!shell.includes(required))throw new Error(`Multi-exchange final shell missing ${required}`);
