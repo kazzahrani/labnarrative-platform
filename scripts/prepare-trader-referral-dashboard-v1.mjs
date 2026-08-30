@@ -9,7 +9,7 @@ const marker = "REFERRAL_DASHBOARD_V1";
 if (!source.includes(marker)) {
   const importAnchor = 'import ConnectionsSettings from "./ConnectionsSettings";';
   if (!source.includes(importAnchor)) throw new Error("Referral dashboard requires Overview command center transform first");
-  source = source.replace(importAnchor, `${importAnchor}\nimport ReferralDashboard from "./ReferralDashboard";\n// ${marker}`);
+  source = source.replace(importAnchor, `${importAnchor}\nimport ReferralDashboard from "./ReferralDashboard";\nimport ReferralAttributionBridge from "./ReferralAttributionBridge";\n// ${marker}`);
 
   const sectionBefore = 'type Section = "Dashboard" | "Portfolio" | "Bots" | "Signal Monitor" | "Active Positions" | "Closed Positions" | "Analytics" | "Connections";';
   const sectionAfter = 'type Section = "Dashboard" | "Portfolio" | "Bots" | "Signal Monitor" | "Active Positions" | "Closed Positions" | "Analytics" | "Connections" | "Referrals";';
@@ -28,11 +28,21 @@ if (!source.includes(marker)) {
   const routerNeedle = 'section === "Connections" ? <ConnectionsSettings realAccount={accounts.find((account) => account.kind === "real") ?? null} onConnectBinance={openBinance} onBackOverview={() => setSection("Dashboard")} /> : section === "Active Positions" ? tradesPage("Active") : tradesPage("Closed")';
   if (!source.includes(routerNeedle)) throw new Error("Referral dashboard could not find final content router");
   source = source.replace(routerNeedle, 'section === "Connections" ? <ConnectionsSettings realAccount={accounts.find((account) => account.kind === "real") ?? null} onConnectBinance={openBinance} onBackOverview={() => setSection("Dashboard")} /> : section === "Referrals" ? <ReferralDashboard /> : section === "Active Positions" ? tradesPage("Active") : tradesPage("Closed")');
+
+  const pageReturn = 'return <div className={styles.page}>';
+  if (!source.includes(pageReturn)) throw new Error("Referral dashboard could not find final signed-in page return");
+  source = source.replace(pageReturn, 'return <div className={styles.page}><ReferralAttributionBridge ready={signedIn && accountsReady} />');
 }
 
-for (const required of ["REFERRAL_DASHBOARD_V1", '<ReferralDashboard />', '<strong>Referral program</strong><small>Links & earnings</small>', 'section === "Referrals" ? "REFERRAL PROGRAM"']) {
+for (const required of [
+  "REFERRAL_DASHBOARD_V1",
+  '<ReferralDashboard />',
+  '<ReferralAttributionBridge ready={signedIn && accountsReady} />',
+  '<strong>Referral program</strong><small>Links & earnings</small>',
+  'section === "Referrals" ? "REFERRAL PROGRAM"',
+]) {
   if (!source.includes(required)) throw new Error(`Referral dashboard final shell missing ${required}`);
 }
 
 fs.writeFileSync(shellPath, source);
-console.log("Prepared LabNarrative Referral Dashboard in the signed-in account menu.");
+console.log("Prepared LabNarrative Referral Dashboard and referral-link attribution bridge in the signed-in Trader shell.");
