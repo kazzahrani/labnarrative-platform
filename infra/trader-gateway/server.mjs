@@ -140,16 +140,30 @@ const curlRequestIpv4 = async (url, { method, headers, body, timeoutMs }) => {
     if (body != null) await writeFile(bodyPath, body, { mode: 0o600 });
 
     return await new Promise((resolve, reject) => {
+      // Signed GETs are safe to retry once on transient network failure. Keep each
+      // attempt short so the original exchange timestamp remains fresh. Never retry
+      // POST/DELETE requests here, which could otherwise duplicate an order action.
+      const safeRead = method === "GET";
+      const attemptTimeoutMs = safeRead ? Math.min(timeoutMs, 4_000) : timeoutMs;
       const args = [
         "--silent",
         "--show-error",
         "--ipv4",
-        "--max-time", String(Math.max(1, Math.ceil(timeoutMs / 1000))),
+        "--connect-timeout", safeRead ? "2" : String(Math.max(2, Math.min(5, Math.ceil(timeoutMs / 1000)))),
+        "--max-time", String(Math.max(1, Math.ceil(attemptTimeoutMs / 1000))),
         "--request", method,
         "--url", url,
         "--header", `@${headerPath}`,
         "--write-out", "\n%{http_code}",
       ];
+      if (safeRead) {
+        args.push(
+          "--retry", "1",
+          "--retry-delay", "0",
+          "--retry-all-errors",
+          "--retry-max-time", String(Math.max(2, Math.ceil((attemptTimeoutMs * 2) / 1000))),
+        );
+      }
       if (body != null) args.push("--data-binary", `@${bodyPath}`);
 
       const child = spawn("/usr/bin/curl", args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -157,12 +171,13 @@ const curlRequestIpv4 = async (url, { method, headers, body, timeoutMs }) => {
       const stderr = [];
       let outputBytes = 0;
       let settled = false;
+      const hardTimeoutMs = safeRead ? attemptTimeoutMs * 2 + 2_000 : timeoutMs + 2_000;
       const hardTimer = setTimeout(() => {
         if (settled) return;
         settled = true;
         try { child.kill("SIGKILL"); } catch {}
         reject(new Error("upstream_timeout"));
-      }, timeoutMs + 2000);
+      }, hardTimeoutMs);
 
       const finish = (fn) => {
         if (settled) return false;
