@@ -1,0 +1,152 @@
+import fs from "node:fs";
+import path from "node:path";
+
+const filePath = path.join(process.cwd(), "app/trader/DcaBotConfigurator.tsx");
+let source = fs.readFileSync(filePath, "utf8");
+
+const replace = (before, after, label) => {
+  if (source.includes(after)) return;
+  if (!source.includes(before)) throw new Error(`Multi-exchange UI: missing ${label}`);
+  source = source.replace(before, after);
+};
+
+replace(
+  'type PairInfo = { pair:string; symbol:string; baseAsset:string };',
+  `type PairInfo = { pair:string; symbol:string; baseAsset:string; quoteVolume?:number };
+type LaunchProvider = "binance" | "bybit" | "okx" | "kucoin";
+const PROVIDER_LABELS: Record<LaunchProvider,string> = { binance:"Binance", bybit:"Bybit", okx:"OKX", kucoin:"KuCoin" };`,
+  "launch provider types",
+);
+
+replace(
+  '  executionMode: string;\n};',
+  '  executionMode: string;\n  exchangeProvider: LaunchProvider;\n};',
+  "bot exchange provider field",
+);
+
+replace(
+  '  name:"My DCA Bot", pair:"BTC/USDT", pairs:["BTC/USDT"], allPairs:false,',
+  '  name:"My DCA Bot", exchangeProvider:"binance", pair:"BTC/USDT", pairs:["BTC/USDT"], allPairs:false,',
+  "new form provider",
+);
+
+const helperAnchor = 'export default function DcaBotConfigurator({mode,accountId,accountKind,botId,onCancel,onSaved,onError}:Props){';
+if (!source.includes('async function connectedLaunchProviders()')) {
+  replace(
+    helperAnchor,
+    `async function connectedLaunchProviders():Promise<LaunchProvider[]>{
+  const providers:LaunchProvider[]=[];
+  const [binance,multi]=await Promise.allSettled([
+    browserSupabase.functions.invoke("trader-binance-control",{body:{action:"status"}}),
+    browserSupabase.functions.invoke("trader-multiexchange-control",{body:{action:"status_all"}}),
+  ]);
+  if(binance.status==="fulfilled"){
+    const payload=(binance.value.data??{}) as {connection?:{status?:string;permissionTrade?:boolean}};
+    if(!binance.value.error&&payload.connection?.status==="connected"&&payload.connection.permissionTrade!==false)providers.push("binance");
+  }
+  if(multi.status==="fulfilled"){
+    const payload=(multi.value.data??{}) as {connections?:Array<{provider?:string;connection?:{status?:string;permissionTrade?:boolean;permissionWithdraw?:boolean}}>} ;
+    if(!multi.value.error)for(const row of payload.connections??[]){
+      if((row.provider==="bybit"||row.provider==="okx"||row.provider==="kucoin")&&row.connection?.status==="connected"&&row.connection.permissionTrade===true&&row.connection.permissionWithdraw!==true)providers.push(row.provider);
+    }
+  }
+  return providers;
+}
+
+${helperAnchor}`,
+    "configurator function anchor",
+  );
+}
+
+replace(
+  '  const [localError,setLocalError]=useState("");',
+  `  const [localError,setLocalError]=useState("");
+  const [connectedProviders,setConnectedProviders]=useState<LaunchProvider[]>(accountKind==="paper"?["binance"]:[]);
+  const [connectionLoading,setConnectionLoading]=useState(accountKind==="real");`,
+  "connection state",
+);
+
+const oldPairEffect = '  useEffect(()=>{let alive=true;void fetch("/api/trader/binance-pairs",{cache:"no-store"}).then(r=>r.json()).then((data:{pairs?:PairInfo[]})=>{if(alive&&data.pairs?.length)setPairs(data.pairs);}).catch(()=>{});return()=>{alive=false};},[]);';
+const newPairEffect = `  useEffect(()=>{
+    let alive=true;const provider=form.exchangeProvider;
+    void fetch(\`/api/trader/exchange-pairs?provider=\${encodeURIComponent(provider)}\`,{cache:"no-store"}).then(r=>r.json()).then((data:{pairs?:PairInfo[]})=>{
+      if(!alive||!data.pairs?.length)return;
+      setPairs(data.pairs);
+      const allowed=new Set(data.pairs.map(item=>item.pair));
+      setForm(value=>{
+        if(value.exchangeProvider!==provider)return value;
+        const selected=value.pairs.filter(pair=>allowed.has(pair));
+        const next=selected.length?selected:[data.pairs![0].pair];
+        return {...value,pairs:next,pair:next[0]};
+      });
+    }).catch(()=>{});
+    return()=>{alive=false};
+  },[form.exchangeProvider]);`;
+replace(oldPairEffect,newPairEffect,"provider pair effect");
+
+if (!source.includes('void connectedLaunchProviders().then')) {
+  const anchor = newPairEffect;
+  replace(
+    anchor,
+    `${newPairEffect}
+  useEffect(()=>{
+    let alive=true;
+    if(accountKind!=="real"){setConnectedProviders(["binance"]);setConnectionLoading(false);return()=>{alive=false};}
+    setConnectionLoading(true);
+    void connectedLaunchProviders().then(providers=>{
+      if(!alive)return;
+      setConnectedProviders(providers);
+      if(mode==="create"&&providers.length)setForm(value=>providers.includes(value.exchangeProvider)?value:{...value,exchangeProvider:providers[0]});
+    }).catch(()=>{if(alive)setConnectedProviders([])}).finally(()=>{if(alive)setConnectionLoading(false)});
+    return()=>{alive=false};
+  },[accountKind,mode]);`,
+    "connected provider effect",
+  );
+}
+
+replace(
+  'setForm({name:bot.name,pair:bot.pair,pairs:bot.pairs?.length?bot.pairs:[bot.pair],allPairs:bot.allPairs,',
+  'setForm({name:bot.name,exchangeProvider:bot.exchangeProvider||"binance",pair:bot.pair,pairs:bot.pairs?.length?bot.pairs:[bot.pair],allPairs:bot.allPairs,',
+  "bot detail provider load",
+);
+
+replace(
+  '    if(!form.allPairs&&!form.pairs.length)return setLocalError("Choose at least one Binance Spot pair or select All USDT pairs.");',
+  '    if(accountKind==="real"&&!connectedProviders.includes(form.exchangeProvider))return setLocalError(`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before saving this Real Account bot.`);\n    if(!form.allPairs&&!form.pairs.length)return setLocalError(`Choose at least one ${PROVIDER_LABELS[form.exchangeProvider]} Spot pair or select All USDT pairs.`);',
+  "save connection validation",
+);
+
+replace(
+  'name:form.name.trim(),pair:form.pairs[0]||form.pair,',
+  'name:form.name.trim(),exchangeProvider:form.exchangeProvider,pair:form.pairs[0]||form.pair,',
+  "save exchange provider",
+);
+
+replace(
+  'message.includes("exchange_connection_required")?"Connect Binance before creating a Real Account bot.":message;',
+  'message.includes("exchange_connection_required")||message.includes("exchange_trade_permission_required")?`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before creating this Real Account bot.`:message;',
+  "provider connection error copy",
+);
+
+replace(
+  '<div className={cfg.summaryGrid}><div><span>Coin universe</span>',
+  '<div className={cfg.summaryGrid}>{accountKind==="real"&&<div><span>Exchange</span><b>{PROVIDER_LABELS[form.exchangeProvider]}</b></div>}<div><span>Coin universe</span>',
+  "read summary exchange",
+);
+
+replace(
+  '<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label><label><span>Base order</span>',
+  '<label><span>Bot name</span><input value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))}/></label>{accountKind==="real"&&<label><span>Exchange</span><select value={form.exchangeProvider} disabled={mode!=="create"||connectionLoading||!connectedProviders.length} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as LaunchProvider,pairs:[],allPairs:false}))}>{connectedProviders.length?connectedProviders.map(provider=><option key={provider} value={provider}>{PROVIDER_LABELS[provider]}</option>):<option value={form.exchangeProvider}>No connected exchange</option>}</select><small>{mode==="create"?"This bot and every order it creates stay on this exchange.":"Exchange is locked after the bot is created."}</small></label>}<label><span>Base order</span>',
+  "exchange selector",
+);
+
+source = source
+  .replaceAll('Use every Binance Spot USDT pair or build a custom market list.', 'Use every {PROVIDER_LABELS[form.exchangeProvider]} Spot USDT pair or build a custom market list.')
+  .replaceAll('All Binance USDT Spot pairs', 'All {PROVIDER_LABELS[form.exchangeProvider]} USDT Spot pairs')
+  .replaceAll('The server scans the live Binance Spot universe and ranks the scan by liquidity.', 'The server scans the live {PROVIDER_LABELS[form.exchangeProvider]} Spot universe and ranks the scan by liquidity.')
+  .replaceAll('evaluated on closed Binance candles.', 'evaluated on closed {PROVIDER_LABELS[form.exchangeProvider]} candles.')
+  .replaceAll('The worker scans the complete Binance Spot USDT universe.', 'The worker scans the complete {PROVIDER_LABELS[form.exchangeProvider]} Spot USDT universe.')
+  .replaceAll('ALL BINANCE USDT SPOT PAIRS', 'ALL {PROVIDER_LABELS[form.exchangeProvider].toUpperCase()} USDT SPOT PAIRS');
+
+fs.writeFileSync(filePath, source);
+console.log("Trader multi-exchange DCA selection applied after legacy transforms");
