@@ -297,15 +297,15 @@ const enforceSpotOnly = (origin, method, path, query, body) => {
       if (params.get("type") !== "trade") throw Object.assign(new Error("spot_account_only"), { status: 403 });
       return;
     }
-    if (path === "/api/v1/hf/fills" || path.startsWith("/api/v1/hf/orders/")) {
-      const symbol = params.get("symbol");
-      if (!usdtSymbol(symbol, true)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
-      return;
-    }
     if (method === "POST" && path === "/api/v1/hf/orders/sync") {
       const value = parseJsonBody(body);
       if (!usdtSymbol(value.symbol, true)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
       if (!["buy", "sell"].includes(value.side) || !["market", "limit"].includes(value.type)) throw Object.assign(new Error("spot_order_type_only"), { status: 403 });
+      return;
+    }
+    if (path === "/api/v1/hf/fills" || path.startsWith("/api/v1/hf/orders/")) {
+      const symbol = params.get("symbol");
+      if (!usdtSymbol(symbol, true)) throw Object.assign(new Error("usdt_spot_only"), { status: 403 });
       return;
     }
   }
