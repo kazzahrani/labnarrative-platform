@@ -30,20 +30,8 @@ replaceOnce(
 const pairLoadEffect = '  useEffect(()=>{let alive=true;void fetch("/api/trader/binance-pairs",{cache:"no-store"}).then(r=>r.json()).then((data:{pairs?:PairInfo[]})=>{if(alive&&data.pairs?.length)setPairs(data.pairs);}).catch(()=>{});return()=>{alive=false};},[]);';
 replaceOnce(
   pairLoadEffect,
-  `${pairLoadEffect}\n  useEffect(()=>{\n    let alive=true;\n    void browserSupabase.functions.invoke("trader-entitlements-control",{body:{}}).then(({data,error})=>{\n      if(!alive||error||!data)return;\n      const snapshot=data as EntitlementSnapshot;\n      if(snapshot.ok===true)setEntitlements(snapshot);\n    }).catch(()=>{});\n    return()=>{alive=false};\n  },[accountId]);`,
+  `${pairLoadEffect}\n  useEffect(()=>{\n    let alive=true;\n    void browserSupabase.functions.invoke("trader-entitlements-control",{body:{}}).then(({data,error})=>{\n      if(!alive||error||!data)return;\n      const snapshot=data as EntitlementSnapshot;\n      if(snapshot.ok===true)setEntitlements(snapshot);\n    }).catch(()=>{});\n    return()=>{alive=false};\n  },[accountId]);\n  useEffect(()=>{\n    if(mode==="create"||!botId){setInitialMultiPair(false);return;}\n    if(!loading)setInitialMultiPair(form.allPairs||form.pairs.length>1);\n  },[mode,botId,loading]);`,
   "pair loading effect",
-);
-
-replaceOnce(
-  'if(mode==="create"||!botId){setForm({...NEW_FORM,pairs:["BTC/USDT"]});setLoading(false);return()=>{alive=false};}',
-  'if(mode==="create"||!botId){setInitialMultiPair(false);setForm({...NEW_FORM,pairs:["BTC/USDT"]});setLoading(false);return()=>{alive=false};}',
-  "create-mode reset",
-);
-
-replaceOnce(
-  'const bot=result.bot;setForm(',
-  'const bot=result.bot;setInitialMultiPair(bot.allPairs||(bot.pairs?.length??0)>1);setForm(',
-  "bot detail hydration",
 );
 
 replaceOnce(
