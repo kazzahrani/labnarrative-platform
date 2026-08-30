@@ -109,7 +109,6 @@ replaceRegex(
   "bot detail provider load",
   /const\s+bot\s*=\s*result\.bot[\s\S]{0,400}?exchangeProvider\s*:\s*bot\.exchangeProvider/,
 );
-
 replaceRegex(
   /\s*if\s*\(!form\.allPairs\s*&&\s*!form\.pairs\.length\)\s*return\s+setLocalError\("Choose at least one Binance Spot pair or select All USDT pairs\."\);/,
   '\n    if(accountKind==="real"&&!connectedProviders.includes(form.exchangeProvider))return setLocalError(`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before saving this Real Account bot.`);\n    if(!form.allPairs&&!form.pairs.length)return setLocalError(`Choose at least one ${PROVIDER_LABELS[form.exchangeProvider]} Spot pair or select All USDT pairs.`);',
@@ -128,12 +127,12 @@ replaceRegex(
   "provider connection error copy",
   /exchange_trade_permission_required[\s\S]{0,180}?PROVIDER_LABELS/,
 );
-replaceRegex(
-  /<div className=\{cfg\.summaryGrid\}>\s*<div><span>Coin universe<\/span>/,
-  '<div className={cfg.summaryGrid}>{accountKind==="real"&&<div><span>Exchange</span><b>{PROVIDER_LABELS[form.exchangeProvider]}</b></div>}<div><span>Coin universe</span>',
-  "read summary exchange",
-  /cfg\.summaryGrid[\s\S]{0,180}?PROVIDER_LABELS\[form\.exchangeProvider\]/,
-);
+
+// Read-only card layouts are changed by several legacy transforms. Show the provider
+// there when the expected card exists, but never block the executable selector on it.
+const summaryPattern=/<div className=\{cfg\.summaryGrid\}>\s*<div><span>Coin universe<\/span>/;
+if(summaryPattern.test(source)) source=source.replace(summaryPattern,'<div className={cfg.summaryGrid}>{accountKind==="real"&&<div><span>Exchange</span><b>{PROVIDER_LABELS[form.exchangeProvider]}</b></div>}<div><span>Coin universe</span>');
+
 replaceRegex(
   /(<label><span>Bot name<\/span><input value=\{form\.name\}[\s\S]*?<\/label>)\s*(<label><span>Base order<\/span>)/,
   '$1{accountKind==="real"&&<label><span>Exchange</span><select value={form.exchangeProvider} disabled={mode!=="create"||connectionLoading||!connectedProviders.length} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as LaunchProvider,pairs:[],allPairs:false}))}>{connectedProviders.length?connectedProviders.map(provider=><option key={provider} value={provider}>{PROVIDER_LABELS[provider]}</option>):<option value={form.exchangeProvider}>No connected exchange</option>}</select><small>{mode==="create"?"This bot and every order it creates stay on this exchange.":"Exchange is locked after the bot is created."}</small></label>}$2',
