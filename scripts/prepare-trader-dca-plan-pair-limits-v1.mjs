@@ -53,9 +53,9 @@ replaceOnce(
 );
 
 replaceOnce(
-  '<p>Use every Binance Spot USDT pair or build a custom market list.</p>',
-  '<p>{multiPairBlockedReason||"Use every Binance Spot USDT pair or build a custom market list."}</p>',
-  "coins helper copy",
+  '<h3>Coins</h3>',
+  '<h3>Coins</h3>{multiPairBlockedReason&&<p>{multiPairBlockedReason}</p>}',
+  "coins heading",
 );
 
 replaceOnce(
