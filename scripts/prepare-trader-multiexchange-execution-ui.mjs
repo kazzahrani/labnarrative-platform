@@ -36,11 +36,8 @@ replaceRegex(
   /const NEW_FORM:[\s\S]{0,180}?exchangeProvider:"binance"/,
 );
 
-const helperAnchor = 'export default function DcaBotConfigurator({mode,accountId,accountKind,botId,onCancel,onSaved,onError}:Props){';
 if (!source.includes('async function connectedLaunchProviders()')) {
-  replace(
-    helperAnchor,
-    `async function connectedLaunchProviders():Promise<LaunchProvider[]>{
+  const helper = `async function connectedLaunchProviders():Promise<LaunchProvider[]>{
   const providers:LaunchProvider[]=[];
   const [binance,multi]=await Promise.allSettled([
     browserSupabase.functions.invoke("trader-binance-control",{body:{action:"status"}}),
@@ -59,8 +56,12 @@ if (!source.includes('async function connectedLaunchProviders()')) {
   return providers;
 }
 
-${helperAnchor}`,
+`;
+  replaceRegex(
+    /(export\s+default\s+function\s+DcaBotConfigurator\s*\()/,
+    `${helper}$1`,
     "configurator function anchor",
+    /async function connectedLaunchProviders\(\)/,
   );
 }
 
