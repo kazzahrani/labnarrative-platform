@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { browserSupabase } from "../../lib/supabase-browser";
 import styles from "./referral-dashboard.module.css";
 
 type Program = {
@@ -26,6 +27,24 @@ type ReferralData = {
 const percent = (bps = 0) => `${(bps / 100).toFixed(bps % 100 === 0 ? 0 : 2)}%`;
 const money = (cents = 0, currency = "USD") => new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(cents / 100);
 
+async function invokeReferral(body: Record<string, unknown>) {
+  const { data, error } = await browserSupabase.functions.invoke("trader-referral-control", { body });
+  if (error) {
+    let message = error.message || "referral_request_failed";
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const payload = await context.clone().json() as { error?: string };
+        if (payload.error) message = payload.error;
+      } catch {}
+    }
+    throw new Error(message);
+  }
+  const payload = (data ?? {}) as ReferralData;
+  if (payload.error || payload.ok !== true) throw new Error(payload.error || "referral_request_failed");
+  return payload;
+}
+
 export default function ReferralDashboard() {
   const [data, setData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,10 +57,7 @@ export default function ReferralDashboard() {
   const load = async () => {
     setLoading(true); setError("");
     try {
-      const response = await fetch("/api/trader/referrals", { cache: "no-store" });
-      const payload = await response.json() as ReferralData;
-      if (!response.ok || !payload.ok) throw new Error(payload.error || "Unable to load referrals.");
-      setData(payload);
+      setData(await invokeReferral({ action: "dashboard" }));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to load referrals.");
     } finally { setLoading(false); }
@@ -59,9 +75,7 @@ export default function ReferralDashboard() {
     if (!claimCode.trim() || claimBusy) return;
     setClaimBusy(true); setClaimMessage("");
     try {
-      const response = await fetch("/api/trader/referrals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: claimCode.trim() }) });
-      const payload = await response.json() as { ok?: boolean; error?: string };
-      if (!response.ok || !payload.ok) throw new Error(payload.error || "Unable to apply referral code.");
+      await invokeReferral({ action: "claim_code", code: claimCode.trim(), source: "code" });
       setClaimCode(""); setClaimMessage("Referral code applied.");
       await load();
     } catch (caught) { setClaimMessage(caught instanceof Error ? caught.message : "Unable to apply referral code."); }
