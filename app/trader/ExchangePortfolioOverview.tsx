@@ -21,7 +21,7 @@ export default function ExchangePortfolioOverview({binanceConnected=false,binanc
     setLoading(true);
     try{
       const status=await invoke("trader-multiexchange-control",{action:"status_all"});
-      const connectionMap=new Map<string,Connection>((status.connections??[]).map((item:any)=>[String(item.provider),item.connection as Connection]));
+      const connectionMap=new Map<string,Connection>((status.connections??[]).map((item:any)=>[String(item.provider),item.connection as Connection] as const));
       const base:Venue[]=[];
       if(binanceConnected) base.push({provider:"binance",connected:true,last4:binanceLast4,totalUsd:null,assetCount:null});
       for(const provider of GENERIC){const connection=connectionMap.get(provider);if(connection?.status==="connected")base.push({provider,connected:true,last4:connection.apiKeyLast4,totalUsd:null,assetCount:null});}
