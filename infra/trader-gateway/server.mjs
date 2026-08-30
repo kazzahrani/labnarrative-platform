@@ -1,5 +1,8 @@
 import http from "node:http";
 import { spawn } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createHash, verify as verifySignature } from "node:crypto";
 
 const PORT = Number(process.env.PORT || 8080);
@@ -125,61 +128,86 @@ const readBody = async (req) => {
   return Buffer.concat(chunks).toString("utf8");
 };
 
-const curlRequestIpv4 = (url, { method, headers, body, timeoutMs }) => new Promise((resolve, reject) => {
-  const args = [
-    "--silent",
-    "--show-error",
-    "--ipv4",
-    "--max-time", String(Math.max(1, Math.ceil(timeoutMs / 1000))),
-    "--request", method,
-    "--url", url,
-    "--header", "@/dev/fd/3",
-    "--write-out", "\n%{http_code}",
-  ];
-  if (body != null) args.push("--data-binary", "@-");
+const curlRequestIpv4 = async (url, { method, headers, body, timeoutMs }) => {
+  const workDir = await mkdtemp(join(tmpdir(), "labnarrative-gateway-"));
+  const headerPath = join(workDir, "headers.txt");
+  const bodyPath = join(workDir, "body.bin");
+  try {
+    const headerText = Object.entries(headers)
+      .map(([name, value]) => `${name}: ${String(value)}\r\n`)
+      .join("");
+    await writeFile(headerPath, headerText, { mode: 0o600 });
+    if (body != null) await writeFile(bodyPath, body, { mode: 0o600 });
 
-  const child = spawn("/usr/bin/curl", args, { stdio: ["pipe", "pipe", "pipe", "pipe"] });
-  const stdout = [];
-  const stderr = [];
-  let outputBytes = 0;
-  let settled = false;
+    return await new Promise((resolve, reject) => {
+      const args = [
+        "--silent",
+        "--show-error",
+        "--ipv4",
+        "--max-time", String(Math.max(1, Math.ceil(timeoutMs / 1000))),
+        "--request", method,
+        "--url", url,
+        "--header", `@${headerPath}`,
+        "--write-out", "\n%{http_code}",
+      ];
+      if (body != null) args.push("--data-binary", `@${bodyPath}`);
 
-  const fail = (error) => {
-    if (settled) return;
-    settled = true;
-    try { child.kill("SIGKILL"); } catch {}
-    reject(error);
-  };
+      const child = spawn("/usr/bin/curl", args, { stdio: ["ignore", "pipe", "pipe"] });
+      const stdout = [];
+      const stderr = [];
+      let outputBytes = 0;
+      let settled = false;
+      const hardTimer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try { child.kill("SIGKILL"); } catch {}
+        reject(new Error("upstream_timeout"));
+      }, timeoutMs + 2000);
 
-  child.stdout.on("data", (chunk) => {
-    outputBytes += chunk.length;
-    if (outputBytes > MAX_UPSTREAM_RESPONSE_BYTES) return fail(new Error("upstream_response_too_large"));
-    stdout.push(chunk);
-  });
-  child.stderr.on("data", (chunk) => {
-    if (Buffer.concat(stderr).length < 16 * 1024) stderr.push(chunk);
-  });
-  child.on("error", fail);
-  child.on("close", (code) => {
-    if (settled) return;
-    settled = true;
-    const raw = Buffer.concat(stdout).toString("utf8");
-    const split = raw.lastIndexOf("\n");
-    const statusText = split >= 0 ? raw.slice(split + 1).trim() : "";
-    const responseBody = split >= 0 ? raw.slice(0, split) : raw;
-    const status = Number(statusText);
-    if (code !== 0 || !Number.isInteger(status) || status < 100 || status > 599) {
-      const diagnostic = Buffer.concat(stderr).toString("utf8").trim().slice(0, 300);
-      reject(new Error(code === 28 ? "upstream_timeout" : `curl_upstream_${code ?? "error"}${diagnostic ? `:${diagnostic}` : ""}`));
-      return;
-    }
-    resolve({ status, body: responseBody, headers: {} });
-  });
+      const finish = (fn) => {
+        if (settled) return false;
+        settled = true;
+        clearTimeout(hardTimer);
+        fn();
+        return true;
+      };
 
-  const headerText = Object.entries(headers).map(([name, value]) => `${name}: ${String(value)}\r\n`).join("");
-  child.stdio[3].end(headerText);
-  child.stdin.end(body == null ? undefined : body);
-});
+      child.stdout.on("data", (chunk) => {
+        outputBytes += chunk.length;
+        if (outputBytes > MAX_UPSTREAM_RESPONSE_BYTES) {
+          finish(() => {
+            try { child.kill("SIGKILL"); } catch {}
+            reject(new Error("upstream_response_too_large"));
+          });
+          return;
+        }
+        stdout.push(chunk);
+      });
+      child.stderr.on("data", (chunk) => {
+        const current = stderr.reduce((sum, item) => sum + item.length, 0);
+        if (current < 16 * 1024) stderr.push(chunk);
+      });
+      child.on("error", (error) => finish(() => reject(error)));
+      child.on("close", (code) => {
+        finish(() => {
+          const raw = Buffer.concat(stdout).toString("utf8");
+          const split = raw.lastIndexOf("\n");
+          const statusText = split >= 0 ? raw.slice(split + 1).trim() : "";
+          const responseBody = split >= 0 ? raw.slice(0, split) : raw;
+          const status = Number(statusText);
+          if (code !== 0 || !Number.isInteger(status) || status < 100 || status > 599) {
+            const diagnostic = Buffer.concat(stderr).toString("utf8").trim().slice(0, 300);
+            reject(new Error(code === 28 ? "upstream_timeout" : `curl_upstream_${code ?? "error"}${diagnostic ? `:${diagnostic}` : ""}`));
+            return;
+          }
+          resolve({ status, body: responseBody, headers: {} });
+        });
+      });
+    });
+  } finally {
+    await rm(workDir, { recursive: true, force: true }).catch(() => {});
+  }
+};
 
 const verifyRelayAuth = (req, rawBody) => {
   const timestamp = Number(req.headers["x-ln-timestamp"] || 0);
