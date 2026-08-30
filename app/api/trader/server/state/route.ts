@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { attachTraderCookie, bootstrapLegacyState, resolveTraderAccount, traderSnapshot } from "../../../../../lib/trader/server";
-import { claimPendingReferral, REFERRAL_PENDING_COOKIE } from "../../../../../lib/trader/referrals";
+import { bindReferralAttributionToOwner, claimPendingReferral, REFERRAL_PENDING_COOKIE } from "../../../../../lib/trader/referrals";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,11 +13,12 @@ function noStore(response: NextResponse) {
   return response;
 }
 
-async function processPendingReferral(request: NextRequest, db: Awaited<ReturnType<typeof resolveTraderAccount>>["db"], accountId: string) {
-  if (!request.cookies.get(REFERRAL_PENDING_COOKIE)?.value) return false;
+async function processReferralState(request: NextRequest, db: Awaited<ReturnType<typeof resolveTraderAccount>>["db"], accountId: string) {
+  const hasPendingCode = Boolean(request.cookies.get(REFERRAL_PENDING_COOKIE)?.value);
   try {
-    await claimPendingReferral(db, accountId, request);
-    return true;
+    await bindReferralAttributionToOwner(db, accountId);
+    if (hasPendingCode) await claimPendingReferral(db, accountId, request);
+    return hasPendingCode;
   } catch (error) {
     console.error("trader-referral-attribution", error);
     return false;
@@ -33,7 +34,7 @@ function stateResponse(payload: unknown, tokenToSet: string | null, clearReferra
 export async function GET(request: NextRequest) {
   try {
     const { db, account, tokenToSet } = await resolveTraderAccount(request);
-    const clearReferralCookie = await processPendingReferral(request, db, account.id);
+    const clearReferralCookie = await processReferralState(request, db, account.id);
     const snapshot = await traderSnapshot(db, account);
     return stateResponse(snapshot, tokenToSet, clearReferralCookie);
   } catch (error) {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { db, account, tokenToSet } = await resolveTraderAccount(request);
-    const clearReferralCookie = await processPendingReferral(request, db, account.id);
+    const clearReferralCookie = await processReferralState(request, db, account.id);
     const body = await request.json().catch(() => ({})) as { bots?: unknown; trades?: unknown };
     const bootstrap = await bootstrapLegacyState(db, account.id, body.bots, body.trades);
     const snapshot = await traderSnapshot(db, account);
