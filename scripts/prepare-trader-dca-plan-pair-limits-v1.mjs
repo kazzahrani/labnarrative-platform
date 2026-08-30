@@ -36,7 +36,7 @@ replaceOnce(
 
 replaceOnce(
   '  const plannedPerTrade=capital(form);',
-  `  const plannedPerTrade=capital(form);\n  const multiPairBlockedReason=useMemo(()=>{\n    if(!entitlements||initialMultiPair)return "";\n    const maxMulti=Number(entitlements.limits?.multiPairBots??0);\n    const remainingMulti=Number(entitlements.remaining?.multiPairBots??0);\n    const plan=String(entitlements.plan||"free");\n    const planLabel=plan.charAt(0).toUpperCase()+plan.slice(1);\n    if(maxMulti<=0){\n      return plan==="starter"\n        ? "Starter supports one pair per DCA bot. Multi-pair DCA is available on Growth and Pro."\n        : "Multi-pair DCA is available on Growth and Pro.";\n    }\n    if(remainingMulti<=0)return \`Your \${planLabel} plan's multi-pair DCA bot limit is already in use.\`;\n    return "";\n  },[entitlements,initialMultiPair]);\n  const wantsMultiPair=form.allPairs||form.pairs.length>1;`,
+  `  const plannedPerTrade=capital(form);\n  const multiPairBlockedReason=useMemo(()=>{\n    if(!entitlements||initialMultiPair)return "";\n    const maxMulti=Number(entitlements.limits?.multiPairBots??0);\n    const remainingMulti=Number(entitlements.remaining?.multiPairBots??0);\n    const plan=String(entitlements.plan||"free");\n    const planLabel=plan.charAt(0).toUpperCase()+plan.slice(1);\n    if(maxMulti<=0){\n      return plan==="starter"\n        ? "Starter supports one pair per DCA bot. Multi-pair DCA is available on Growth and Pro."\n        : "Multi-pair DCA is available on Growth and Pro.";\n    }\n    if(remainingMulti<=0)return \`Your \${planLabel} plan's multi-pair DCA bot limit is already in use.\`;\n    return "";\n  },[entitlements,initialMultiPair]);\n  const wantsMultiPair=form.allPairs||form.pairs.length>1;\n  useEffect(()=>{\n    if(multiPairBlockedReason)setLocalError(multiPairBlockedReason);\n    else setLocalError(current=>(current.includes("Multi-pair DCA")||current.includes("multi-pair DCA"))?"":current);\n  },[multiPairBlockedReason]);`,
   "planned capital calculation",
 );
 
@@ -50,12 +50,6 @@ replaceOnce(
   '    if(!form.allPairs&&!form.pairs.length)return setLocalError("Choose at least one Binance Spot pair or select All USDT pairs.");',
   `    if(!form.allPairs&&!form.pairs.length)return setLocalError("Choose at least one Binance Spot pair or select All USDT pairs.");\n    if(wantsMultiPair&&multiPairBlockedReason)return setLocalError(multiPairBlockedReason);`,
   "save pair validation",
-);
-
-replaceOnce(
-  '<h3>Coins</h3>',
-  '<h3>Coins</h3>{multiPairBlockedReason&&<p>{multiPairBlockedReason}</p>}',
-  "coins heading",
 );
 
 replaceOnce(
