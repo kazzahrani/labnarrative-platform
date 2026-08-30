@@ -41,3 +41,4 @@ for (const required of [
 
 fs.writeFileSync(shellPath, source);
 console.log("Prepared LabNarrative Plans & Billing workspace in the signed-in Trader shell.");
+await import("./prepare-trader-multiexchange-final-v1.mjs");
