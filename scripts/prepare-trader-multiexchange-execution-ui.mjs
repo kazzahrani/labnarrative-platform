@@ -104,10 +104,10 @@ if (!source.includes('void connectedLaunchProviders().then')) {
 }
 
 replaceRegex(
-  /setForm\(\{\s*name\s*:\s*bot\.name\s*,(?!\s*exchangeProvider)/,
-  'setForm({name:bot.name,exchangeProvider:bot.exchangeProvider||"binance",',
+  /(const\s+bot\s*=\s*result\.bot\s*;[\s\S]{0,350}?setForm\s*\(\s*\{)(?!\s*exchangeProvider\s*:)/,
+  '$1exchangeProvider:bot.exchangeProvider||"binance",',
   "bot detail provider load",
-  /setForm\(\{\s*name\s*:\s*bot\.name\s*,\s*exchangeProvider\s*:/,
+  /const\s+bot\s*=\s*result\.bot[\s\S]{0,400}?exchangeProvider\s*:\s*bot\.exchangeProvider/,
 );
 
 replaceRegex(
@@ -116,28 +116,24 @@ replaceRegex(
   "save connection validation",
   /connectedProviders\.includes\(form\.exchangeProvider\)[\s\S]{0,220}?Choose at least one/,
 );
-
 replaceRegex(
   /name\s*:\s*form\.name\.trim\(\)\s*,\s*(?!exchangeProvider\s*:)/,
   'name:form.name.trim(),exchangeProvider:form.exchangeProvider,',
   "save exchange provider",
   /name\s*:\s*form\.name\.trim\(\)\s*,\s*exchangeProvider\s*:/,
 );
-
 replaceRegex(
   /message\.includes\("exchange_connection_required"\)\s*\?\s*"Connect Binance before creating a Real Account bot\."\s*:\s*message/,
   'message.includes("exchange_connection_required")||message.includes("exchange_trade_permission_required")?`Connect ${PROVIDER_LABELS[form.exchangeProvider]} with Spot trading permission before creating this Real Account bot.`:message',
   "provider connection error copy",
   /exchange_trade_permission_required[\s\S]{0,180}?PROVIDER_LABELS/,
 );
-
 replaceRegex(
   /<div className=\{cfg\.summaryGrid\}>\s*<div><span>Coin universe<\/span>/,
   '<div className={cfg.summaryGrid}>{accountKind==="real"&&<div><span>Exchange</span><b>{PROVIDER_LABELS[form.exchangeProvider]}</b></div>}<div><span>Coin universe</span>',
   "read summary exchange",
   /cfg\.summaryGrid[\s\S]{0,180}?PROVIDER_LABELS\[form\.exchangeProvider\]/,
 );
-
 replaceRegex(
   /(<label><span>Bot name<\/span><input value=\{form\.name\}[\s\S]*?<\/label>)\s*(<label><span>Base order<\/span>)/,
   '$1{accountKind==="real"&&<label><span>Exchange</span><select value={form.exchangeProvider} disabled={mode!=="create"||connectionLoading||!connectedProviders.length} onChange={e=>setForm(v=>({...v,exchangeProvider:e.target.value as LaunchProvider,pairs:[],allPairs:false}))}>{connectedProviders.length?connectedProviders.map(provider=><option key={provider} value={provider}>{PROVIDER_LABELS[provider]}</option>):<option value={form.exchangeProvider}>No connected exchange</option>}</select><small>{mode==="create"?"This bot and every order it creates stay on this exchange.":"Exchange is locked after the bot is created."}</small></label>}$2',
