@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import CoreV2ExitPlanCanary from "./CoreV2ExitPlanCanary";
 import TraderV2FullShell from "./TraderV2FullShell";
 
 export const metadata: Metadata = {
@@ -7,5 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default function TraderPage() {
-  return <TraderV2FullShell />;
+  return <>
+    <TraderV2FullShell />
+    <CoreV2ExitPlanCanary />
+  </>;
 }
