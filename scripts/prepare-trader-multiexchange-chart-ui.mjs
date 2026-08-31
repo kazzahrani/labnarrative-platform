@@ -23,11 +23,13 @@ source=source.replaceAll('/api/trader/klines?${params.toString()}', '/api/trader
 source=source.replaceAll('Unable to load Binance candles','Unable to load exchange candles');
 source=source.replace('  }, [symbol, interval]);','  }, [symbol, interval, trade.exchangeProvider]);');
 source=source.replaceAll('· BINANCE ·','· {trade.exchangeProvider.toUpperCase()} ·');
+source=source.replaceAll('· BINANCE</span>','· {trade.exchangeProvider.toUpperCase()}</span>');
+source=source.replaceAll('Volume uses Binance candle volume','Volume uses exchange candle volume');
 source=source.replaceAll('Loading Binance candles and exact trade ledger…','Loading exchange candles and exact trade ledger…');
 
 if(!source.includes('provider: trade.exchangeProvider'))throw new Error("Multi-exchange chart: provider candle request not installed");
 if(!source.includes('/api/trader/exchange-klines?'))throw new Error("Multi-exchange chart: exchange candle endpoint not installed");
-if(source.includes('· BINANCE ·'))throw new Error("Multi-exchange chart: Binance-only chart label remains");
+if(source.includes('· BINANCE ·')||source.includes('· BINANCE</span>'))throw new Error("Multi-exchange chart: Binance-only chart label remains");
 
 fs.writeFileSync(filePath,source);
 console.log("Trader provider-aware chart UI applied");
