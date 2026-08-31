@@ -5,6 +5,7 @@ import HistoryApp from "./HistoryApp";
 import AnalyticsApp from "./AnalyticsApp";
 import SignalMonitorApp from "./SignalMonitorApp";
 import AutomationsApp from "./AutomationsApp";
+import ConnectionsApp from "./ConnectionsApp";
 
 type View = "overview" | "portfolio" | "positions" | "automations" | "signal-monitor" | "analytics" | "history" | "connections";
 
@@ -17,5 +18,6 @@ export default async function HostRoute({ view }: { view: View }) {
   if (view === "analytics") return <AnalyticsApp />;
   if (view === "signal-monitor") return <SignalMonitorApp />;
   if (view === "automations") return <AutomationsApp />;
+  if (view === "connections") return <ConnectionsApp />;
   return <TraderApp view={view} />;
 }
