@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const portfolio = obj(portfolioResult.data);
-    if (!portfolioResult.data) return json(req, { ok: true, ready: false, accountId, error: "v2_snapshot_pending" }, 409);
+    const snapshotReady = Boolean(portfolioResult.data);
     const positions = (positionsResult.data ?? []) as Json[];
     const bots = (botsResult.data ?? []) as Json[];
     const rawTrades = (tradesResult.data ?? []) as Json[];
@@ -191,7 +191,7 @@ Deno.serve(async (req: Request) => {
     const cashUsd = n(portfolio.cash_usd);
 
     return json(req, {
-      ok: true, ready: true, source: "core_v2", accountId,
+      ok: true, ready: snapshotReady, source: "core_v2", accountId,
       account: {
         id: accountId, name: String(account.name || "Real Account"), kind: "real", mode: String(account.mode || "live"),
         quoteAsset: String(account.quote_asset || "USDT"), startingBalance: n(account.starting_balance), invested, reserved,
