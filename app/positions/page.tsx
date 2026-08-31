@@ -4,6 +4,7 @@ import CoreV2ExitPlanControl from "../trader/CoreV2ExitPlanControl";
 export default function PositionsPage() {
   return <>
     <HostRoute view="positions" />
-    <CoreV2ExitPlanControl />
+    <div className="core-v2-position-inline-control"><CoreV2ExitPlanControl /></div>
+    <style>{`.core-v2-position-inline-control > button:first-child{display:none!important}`}</style>
   </>;
 }
