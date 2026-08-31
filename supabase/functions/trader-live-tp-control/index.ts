@@ -90,10 +90,10 @@ Deno.serve(async (req: Request) => {
     if (control.global_live_enabled !== true || control.kill_switch !== false) throw new Error("live_trading_not_enabled");
 
     lockId = crypto.randomUUID();
-    const { data: locked, error: lockError } = await admin.rpc("trader_begin_command", {
+    const { data: locked, error: lockError } = await admin.rpc("trader_begin_exit_command", {
       p_account_id: accountId,
       p_lock_id: lockId,
-      p_lease_seconds: 20,
+      p_lease_seconds: 31,
     });
     if (lockError) throw lockError;
     if (!locked) throw new Error("account_busy");
@@ -140,7 +140,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: clean(error) }, 400);
   } finally {
     if (lockId && accountId) {
-      await admin.rpc("trader_release_account", { p_account_id: accountId, p_worker_id: lockId }).catch(() => undefined);
+      await admin.rpc("trader_release_exit_account", { p_account_id: accountId, p_worker_id: lockId }).catch(() => undefined);
     }
   }
 });
