@@ -35,3 +35,4 @@ await import("./prepare-trader-multiexchange-selector-anchor.mjs");
 await import("./prepare-trader-multiexchange-execution-ui.mjs");
 await import("./prepare-trader-multiexchange-shell-ui.mjs");
 await import("./prepare-trader-multiexchange-chart-ui.mjs");
+await import("./prepare-trader-live-exchange-portfolio-v1.mjs");
