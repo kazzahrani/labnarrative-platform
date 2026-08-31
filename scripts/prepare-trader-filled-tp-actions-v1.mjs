@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 const file=path.join(process.cwd(),"app/trader/TradeActionsV2.tsx"),cssFile=path.join(process.cwd(),"app/trader/trade-actions-v2.module.css");
 let s=fs.readFileSync(file,"utf8");
+if(s.includes('labnarrative:edit-exit-plan')){console.log("Filled TP editor legacy transform skipped: Core V2 exit-plan bridge active");process.exit(0)}
 const r=(a,b,n)=>{if(!s.includes(a))throw new Error("Filled TP editor: missing "+n);s=s.replace(a,b)};
 r('type ExactTrade = {\n  takeProfitPct?: number;\n  takeProfitTargets?: TpTarget[];','type ExactTrade = {\n  takeProfitPct?: number;\n  takeProfitTargets?: TpTarget[];\n  takeProfitFilled?: number[];',"type");
 r('  if (message.includes("too_many_take_profit_targets")) return "A trade can have up to 8 TP targets.";','  if (message.includes("too_many_take_profit_targets")) return "A trade can have up to 8 TP targets.";\n  if (message.includes("filled_take_profit_locked")) return "A take-profit target that already executed cannot be changed or removed.";\n  if (message.includes("future_take_profit_must_follow_filled")) return "Future TP targets must stay above the highest TP already filled.";\n  if (message.includes("dca_cancel_pending")) return "The DCA setting was reduced, but Binance has not yet confirmed cancellation of an old open DCA order. Retry the edit before placing any new DCA.";',"errors");
