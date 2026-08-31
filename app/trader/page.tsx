@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import CoreV2ExitPlanCanary from "./CoreV2ExitPlanCanary";
-import TraderV2FullShell from "./TraderV2FullShell";
+import TraderV2FullShellCutover from "./TraderV2FullShellCutover";
 
 export const metadata: Metadata = {
   title: "LabNarrative Trading",
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function TraderPage() {
   return <>
-    <TraderV2FullShell />
+    <TraderV2FullShellCutover />
     <CoreV2ExitPlanCanary />
   </>;
 }
