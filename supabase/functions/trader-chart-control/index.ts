@@ -66,12 +66,21 @@ Deno.serve(async (req: Request) => {
     if (accountError) throw accountError;
     if (!account) return json({ error: "trader_account_not_owned" }, 403);
 
-    const { data: trade, error: tradeError } = await admin.from("trader_trades")
+    let { data: trade, error: tradeError } = await admin.from("trader_trades")
       .select("*")
       .eq("account_id", accountId)
       .eq("client_id", tradeId)
       .maybeSingle();
     if (tradeError) throw tradeError;
+    if (!trade && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tradeId)) {
+      const byId = await admin.from("trader_trades")
+        .select("*")
+        .eq("account_id", accountId)
+        .eq("id", tradeId)
+        .maybeSingle();
+      if (byId.error) throw byId.error;
+      trade = byId.data;
+    }
     if (!trade) return json({ error: "trade_not_found" }, 404);
 
     const [botResult, fillsResult, ordersResult] = await Promise.all([
@@ -98,7 +107,7 @@ Deno.serve(async (req: Request) => {
     return json({
       ok: true,
       trade: {
-        id: String(trade.client_id), pair: String(trade.pair), status: String(trade.status), exchangeProvider,
+        id: String(trade.client_id || trade.id), pair: String(trade.pair), status: String(trade.status), exchangeProvider,
         entryPrice: n(trade.entry_price), averagePrice, quantity: n(trade.quantity), invested: n(trade.invested),
         takeProfitPct,
         takeProfitPrice: takeProfitTargets[0]?.price ?? (averagePrice > 0 && legacyTakeProfitPct > 0 ? averagePrice * (1 + legacyTakeProfitPct / 100) : null),
