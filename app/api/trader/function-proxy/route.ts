@@ -68,7 +68,7 @@ function permittedHost(host: string) {
 function permittedOrigin(origin: string, host: string) {
   if (!origin) return true;
   try {
-    return new URL(origin).host.toLowerCase() === host;
+    return new URL(origin).hostname.toLowerCase() === host;
   } catch {
     return false;
   }
