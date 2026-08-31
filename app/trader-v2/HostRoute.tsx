@@ -1,0 +1,11 @@
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import TraderApp from "./TraderApp";
+
+type View = "overview" | "portfolio" | "positions" | "automations" | "signal-monitor" | "analytics" | "history" | "connections";
+
+export default async function HostRoute({ view }: { view: View }) {
+  const host = (await headers()).get("host")?.split(":")[0].toLowerCase() ?? "";
+  if (host !== "app.labnarrative.com" && host !== "localhost") notFound();
+  return <TraderApp view={view} />;
+}
