@@ -1,7 +1,7 @@
 import "server-only";
 
 const PUBLIC_MARKET_RELAY = "https://umhkpflyzlifiufvejwr.supabase.co/functions/v1/trader-bybit-public-market";
-const PUBLIC_BYBIT_KLINE = "https://trader-gateway.labnarrative.com/public/bybit/kline";
+const PUBLIC_BYBIT_KLINE = "http://84.13.156.194:8080/public/bybit/kline";
 const ALLOWED_PUBLIC_UPSTREAMS = new Set(["https://api.bybit.com", "https://api.bytick.com"]);
 const MAX_PUBLIC_BATCH = 6;
 
