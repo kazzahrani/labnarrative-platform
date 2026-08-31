@@ -27,6 +27,19 @@ if ! grep -Fq "$BYBIT_IPV4_AFTER" "$INSTALL_ROOT/server.mjs"; then
   exit 1
 fi
 
+# Binance signed reads also use the hardened IPv4 curl path. Only GET is included;
+# Binance POST/DELETE order writes stay on the existing single-attempt transport.
+# curlRequestIpv4 retries safe GETs once but never retries write methods.
+BINANCE_READ_BEFORE='if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit) {'
+BINANCE_READ_AFTER='if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit || (origin === ORIGINS.binance && method === "GET")) {'
+if grep -Fq "$BINANCE_READ_BEFORE" "$INSTALL_ROOT/server.mjs"; then
+  sudo sed -i 's/if (origin === ORIGINS\.kucoin || origin === ORIGINS\.okx || origin === ORIGINS\.bybit) {/if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit || (origin === ORIGINS.binance \&\& method === "GET")) {/' "$INSTALL_ROOT/server.mjs"
+fi
+if ! grep -Fq "$BINANCE_READ_AFTER" "$INSTALL_ROOT/server.mjs"; then
+  echo "Binance GET IPv4 gateway transport patch could not be applied safely." >&2
+  exit 1
+fi
+
 # Add only authenticated GET routes required to reconcile deposit/withdrawal history.
 # No wallet-transfer or withdrawal write route is allowed. The generic relay remains
 # ECDSA-signed and all existing origin/header/rate-limit protections stay in force.
