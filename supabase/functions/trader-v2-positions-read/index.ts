@@ -1,13 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const ALLOWED_ORIGINS = new Set(["https://platform.labnarrative.com", "https://app.labnarrative.com"]);
 type Db = ReturnType<typeof createClient>;
+type TradeIdRow = { id: string; client_id: string | null };
 
 function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
+  const allowed = origin === "https://app.labnarrative.com" || origin === "https://platform.labnarrative.com" || /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "https://app.labnarrative.com",
+    "Access-Control-Allow-Origin": allowed ? origin : "https://app.labnarrative.com",
     "Vary": "Origin",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -44,7 +45,25 @@ Deno.serve(async (req: Request) => {
       .eq("account_id", accountId)
       .order("opened_at", { ascending: false });
     if (error) throw error;
-    const positions = data ?? [];
+
+    const basePositions = data ?? [];
+    const tradeIds = basePositions.map((row) => String(row.trade_id || "")).filter(Boolean);
+    const clientIdByTrade = new Map<string, string>();
+    if (tradeIds.length) {
+      const { data: tradeRows, error: tradeError } = await db.from("trader_trades")
+        .select("id,client_id")
+        .eq("account_id", accountId)
+        .in("id", tradeIds);
+      if (tradeError) throw tradeError;
+      for (const row of (tradeRows ?? []) as TradeIdRow[]) {
+        if (row.client_id) clientIdByTrade.set(String(row.id), String(row.client_id));
+      }
+    }
+
+    const positions = basePositions.map((row) => ({
+      ...row,
+      client_id: clientIdByTrade.get(String(row.trade_id || "")) ?? null,
+    }));
     const summary = positions.reduce((acc, row) => {
       acc.costBasis += n(row.remaining_cost_basis);
       acc.marketValue += n(row.market_value);
