@@ -283,11 +283,13 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       results.push({ ok: false, accountId, error: clean(error) });
     } finally {
-      await db.rpc("trader_v2_release_portfolio_refresh", {
-        p_account_id: accountId,
-        p_lock_id: lockId,
-        p_status: releaseStatus,
-      }).catch(() => undefined);
+      try {
+        await db.rpc("trader_v2_release_portfolio_refresh", {
+          p_account_id: accountId,
+          p_lock_id: lockId,
+          p_status: releaseStatus,
+        });
+      } catch {}
     }
   }
   return json({ ok: true, shadow: true, results });
