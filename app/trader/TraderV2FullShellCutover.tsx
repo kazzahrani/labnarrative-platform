@@ -9,6 +9,7 @@ type Json = Record<string, unknown>;
 
 type Account = Json & { id?: string; kind?: string; exchangeStatus?: string };
 
+const REAL_AUTOMATION_WRITES = new Set(["create_bot", "update_bot", "set_bot_status", "close_bot"]);
 let installed = false;
 let cachedAccounts: Account[] = [];
 let defaultAccount: string = "real";
@@ -19,13 +20,14 @@ function asJson(value: unknown): Json {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
 }
 
-function installCoreV2ReadCutover() {
+function installCoreV2Cutover() {
   if (installed) return;
   installed = true;
 
   const functions = browserSupabase.functions as unknown as { invoke: InvokeFn };
   const original = functions.invoke.bind(browserSupabase.functions) as InvokeFn;
 
+  const invalidateV2 = () => { v2Cache = null; };
   const readV2 = () => {
     const now = Date.now();
     if (v2Cache && now < v2Cache.expiresAt) return v2Cache.promise;
@@ -69,6 +71,37 @@ function installCoreV2ReadCutover() {
       return { data: { ok: true, accounts: cachedAccounts, defaultAccount }, error: null };
     }
 
+    if (name === "trader-account-control" && REAL_AUTOMATION_WRITES.has(action)) {
+      const accountId = String(body.accountId || "");
+      if (realAccountIds.has(accountId)) {
+        const submitted = await original("trader-v2-automation-submit", {
+          body: { ...body, idempotencyKey: `ui-${action}-${crypto.randomUUID()}` },
+        });
+        if (submitted.error) return submitted;
+        const submitData = asJson(submitted.data);
+        if (submitData.ok !== true) return submitted;
+        if (submitData.pending === true) {
+          return { data: { ok: false, error: "automation_command_pending" }, error: null };
+        }
+
+        invalidateV2();
+        const refreshed = await readV2();
+        if (refreshed.error) return refreshed;
+        const workspace = asJson(refreshed.data);
+        updateRealConnectionState(workspace);
+        const command = asJson(submitData.command);
+        const commandResult = asJson(command.result);
+        return {
+          data: {
+            ...workspace,
+            botId: action === "create_bot" ? String(commandResult.clientId || "") : undefined,
+            coreV2Command: { id: command.id, type: command.type, status: command.status, replayed: command.replayed === true },
+          },
+          error: null,
+        };
+      }
+    }
+
     if (name === "trader-account-control" && action === "workspace_state") {
       const accountId = String(body.accountId || "");
       if (realAccountIds.has(accountId)) return await readV2();
@@ -83,6 +116,6 @@ function installCoreV2ReadCutover() {
 }
 
 export default function TraderV2FullShellCutover() {
-  installCoreV2ReadCutover();
+  installCoreV2Cutover();
   return <TraderV2FullShell />;
 }
