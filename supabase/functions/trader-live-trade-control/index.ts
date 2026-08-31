@@ -1,53 +1,273 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import type { ExchangeExecutionAdapter, LaunchExchangeProvider, MarketRule, NormalizedOrder } from "../_shared/trader-exchange.ts";
 import { normalizeLaunchExchangeProvider } from "../_shared/trader-exchange.ts";
-import { createLaunchExchangeExecutionAdapter } from "../_shared/trader-exchange-router.ts";
 import { requireLiveExchangeConnection } from "../_shared/trader-exchange-live-guard.ts";
 
-const cors={"Access-Control-Allow-Origin":"https://platform.labnarrative.com","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
-const ACTIVE=["OPEN","PENDING","NEW","PARTIALLY_FILLED"];
-type Db=ReturnType<typeof createClient>;
-type Json=Record<string,unknown>;
-type Account={id:string;owner_user_id:string;account_kind:string;mode:string;status:string};
-type Controls={global_live_enabled:boolean;kill_switch:boolean;max_live_capital:number|string;max_single_order:number|string;max_concurrent_live_trades:number};
-type Trade={id:string;account_id:string;bot_id:string;client_id:string;pair:string;status:string;entry_price:number|string;average_price:number|string;quantity:number|string;invested:number|string;realized_pnl:number|string|null;averaging_filled:number;max_averaging:number;active_orders_limit:number;take_profit_pct:number|string;stop_enabled:boolean;stop_pct:number|string;last_price:number|string|null;client_state:Json;execution_mode:string;exchange_provider:string};
-type Bot={id:string;safety_order:number|string;deviation:number|string;step_scale:number|string;volume_scale:number|string};
-type Ledger={id:string;client_order_id:string;exchange_order_id:string|null;status:string;sequence_no:number|null;kind:string;side:string;price:number|null;requested_quote:number;requested_qty:number;metadata:Json};
-function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors,"content-type":"application/json","cache-control":"no-store"}})}
-function n(v:unknown,f=0){const x=Number(v);return Number.isFinite(x)?x:f}
-function bool(v:unknown,f=false){return typeof v==="boolean"?v:f}
-function obj(v:unknown):Json{return v&&typeof v==="object"&&!Array.isArray(v)?v as Json:{}}
-function clean(e:unknown){return e instanceof Error?e.message:String(e||"unknown_error")}
-function floorStep(value:number,step:number){if(!(step>0))return value;const p=Math.max(0,Math.min(12,(String(step).split(".")[1]??"").replace(/0+$/,"" ).length));return Number((Math.floor((value+1e-14)/step)*step).toFixed(p))}
-function priceStep(value:number,step:number){return step>0?floorStep(value,step):value}
-function providerFor(trade:Trade){return normalizeLaunchExchangeProvider(trade.exchange_provider,"binance")}
-function clientId(prefix:string,id:string){return (`LN${prefix}${id.replace(/[^A-Za-z0-9]/g,"").slice(0,9)}${Date.now().toString(36)}${crypto.randomUUID().replace(/-/g,"").slice(0,4)}`).slice(0,32)}
-function ledgerStatus(order:NormalizedOrder){return order.status==="open"?"NEW":order.status==="partially_filled"?"PARTIALLY_FILLED":order.status==="filled"?"FILLED":order.status==="cancelled"?"CANCELED":order.status==="rejected"?"REJECTED":order.status==="expired"?"EXPIRED":"PENDING"}
-function fees(order:NormalizedOrder,asset:string){return order.fills.reduce((s,f)=>s+(String(f.feeAsset||"").toUpperCase()===asset.toUpperCase()?n(f.feeAmount):0),0)}
-function buyFill(order:NormalizedOrder,rule:MarketRule){const qty=Math.max(0,n(order.filledQty)-fees(order,rule.baseAsset)),quote=Math.max(0,n(order.filledQuote)+fees(order,rule.quoteAsset));return{qty,quote,average:qty>0?quote/qty:n(order.averageFillPrice)}}
-function sellFill(order:NormalizedOrder,rule:MarketRule){const qty=Math.max(0,n(order.filledQty)),gross=Math.max(0,n(order.filledQuote)),proceeds=Math.max(0,gross-fees(order,rule.quoteAsset));return{qty,gross,proceeds,average:qty>0?gross/qty:n(order.averageFillPrice)}}
-async function acquire(db:Db,accountId:string){const id=crypto.randomUUID();const{data,error}=await db.rpc("trader_begin_command",{p_account_id:accountId,p_lock_id:id,p_lease_seconds:30});if(error)throw error;if(data===true)return id;throw new Error("account_busy")}
-async function release(db:Db,accountId:string,id:string){try{await db.rpc("trader_release_account",{p_account_id:accountId,p_worker_id:id})}catch{}}
-async function ownedAccount(db:Db,userId:string,accountId:string){const{data,error}=await db.from("trader_accounts").select("id,owner_user_id,account_kind,mode,status").eq("id",accountId).eq("owner_user_id",userId).eq("account_kind","real").eq("status","active").maybeSingle();if(error)throw error;if(!data)throw new Error("real_account_required");return data as Account}
-async function controls(db:Db,accountId:string){const{data,error}=await db.from("trader_execution_controls").select("global_live_enabled,kill_switch,max_live_capital,max_single_order,max_concurrent_live_trades").eq("account_id",accountId).single();if(error||!data)throw new Error("execution_controls_missing");return data as Controls}
-function requireLive(account:Account,ctl:Controls){if(account.mode!=="live"||ctl.global_live_enabled!==true||ctl.kill_switch!==false)throw new Error("live_trading_not_enabled")}
-async function ownedTrade(db:Db,accountId:string,tradeId:string){const{data,error}=await db.from("trader_trades").select("id,account_id,bot_id,client_id,pair,status,entry_price,average_price,quantity,invested,realized_pnl,averaging_filled,max_averaging,active_orders_limit,take_profit_pct,stop_enabled,stop_pct,last_price,client_state,execution_mode,exchange_provider").eq("account_id",accountId).eq("client_id",tradeId).maybeSingle();if(error)throw error;if(!data)throw new Error("trade_not_found");return data as Trade}
-async function refreshTrade(db:Db,id:string){const{data,error}=await db.from("trader_trades").select("id,account_id,bot_id,client_id,pair,status,entry_price,average_price,quantity,invested,realized_pnl,averaging_filled,max_averaging,active_orders_limit,take_profit_pct,stop_enabled,stop_pct,last_price,client_state,execution_mode,exchange_provider").eq("id",id).single();if(error||!data)throw error||new Error("trade_not_found");return data as Trade}
-async function liveExposure(db:Db,accountId:string){const[{data:t,error:te},{data:o,error:oe}]=await Promise.all([db.from("trader_trades").select("invested").eq("account_id",accountId).eq("status","Active").eq("execution_mode","live"),db.from("trader_orders").select("requested_quote").eq("account_id",accountId).in("exchange",["binance","bybit","okx","kucoin"]).eq("side","BUY").in("status",ACTIVE)]);if(te)throw te;if(oe)throw oe;return(t??[]).reduce((s,x)=>s+n(x.invested),0)+(o??[]).reduce((s,x)=>s+n(x.requested_quote),0)}
-async function freeAsset(adapter:ExchangeExecutionAdapter,asset:string){const balances=await adapter.fetchBalances();return n(balances.find(x=>x.asset.toUpperCase()===asset.toUpperCase())?.free)}
-async function brokerEvent(db:Db,trade:Trade,eventType:string,cid:string|null,payload:Json,orderId?:string|null,xid?:string|null){await db.from("trader_broker_events").insert({account_id:trade.account_id,bot_id:trade.bot_id,trade_id:trade.id,order_id:orderId??null,mode:"live",event_type:eventType,pair:trade.pair,client_order_id:cid,exchange_order_id:xid??null,payload})}
-async function persistFills(db:Db,ledgerId:string,trade:Trade,provider:LaunchExchangeProvider,side:"BUY"|"SELL",kind:string,remote:NormalizedOrder){if(!remote.fills.length)return;const now=new Date().toISOString(),{error}=await db.from("trader_fills").insert(remote.fills.filter(f=>n(f.quantity)>0).map(f=>({account_id:trade.account_id,bot_id:trade.bot_id,trade_id:trade.id,order_id:ledgerId,pair:trade.pair,side,kind,price:n(f.price),quantity:n(f.quantity),quote_amount:n(f.quoteAmount),fee_asset:f.feeAsset,fee_amount:n(f.feeAmount),exchange_trade_id:f.tradeId,filled_at:now,metadata:{exchange:provider,manual:true}})));if(error)throw error}
-async function loadDca(db:Db,trade:Trade,provider:LaunchExchangeProvider){const{data,error}=await db.from("trader_orders").select("id,client_order_id,exchange_order_id,status,sequence_no,kind,side,price,requested_quote,requested_qty,metadata").eq("trade_id",trade.id).eq("exchange",provider).eq("kind","averaging").eq("side","BUY").order("created_at",{ascending:true});if(error)throw error;return(data??[]) as Ledger[]}
-async function applyDcaFill(db:Db,trade:Trade,provider:LaunchExchangeProvider,rule:MarketRule,ledger:Ledger,remote:NormalizedOrder){const fill=buyFill(remote,rule);if(!(fill.qty>0&&fill.quote>0))return false;const{error}=await db.rpc("trader_fill_buy_order",{p_order_id:ledger.id,p_fill_price:fill.average,p_fill_quantity:fill.qty,p_fill_quote:fill.quote,p_fee_amount:0,p_increment_averaging:true});if(error)throw error;await db.from("trader_orders").update({status:"FILLED",reserved_quote:0,exchange_order_id:remote.orderId||ledger.exchange_order_id,filled_qty:fill.qty,filled_quote:fill.quote,average_fill_price:fill.average,filled_at:new Date().toISOString(),updated_at:new Date().toISOString(),metadata:{...obj(ledger.metadata),exchange:provider,remote_status:remote.rawStatus,terminal_partial_fill:remote.status!=="filled"}}).eq("id",ledger.id);await persistFills(db,ledger.id,trade,provider,"BUY","Averaging",remote);return true}
-async function reconcileDcaRow(db:Db,trade:Trade,provider:LaunchExchangeProvider,adapter:ExchangeExecutionAdapter,rule:MarketRule,ledger:Ledger,cancel=false){if(!ACTIVE.includes(String(ledger.status||"").toUpperCase()))return;let remote=await adapter.queryOrder({pair:trade.pair,clientOrderId:ledger.client_order_id||undefined,orderId:ledger.exchange_order_id||undefined});if(cancel&&remote&&["open","partially_filled","unknown"].includes(remote.status)){remote=await adapter.cancelOrder({pair:trade.pair,clientOrderId:ledger.client_order_id||undefined,orderId:ledger.exchange_order_id||undefined})??await adapter.queryOrder({pair:trade.pair,clientOrderId:ledger.client_order_id||undefined,orderId:ledger.exchange_order_id||undefined})}if(!remote){if(String(ledger.status).toUpperCase()==="PENDING"&&obj(ledger.metadata).placement_uncertain===true&&!ledger.exchange_order_id){await db.from("trader_orders").update({status:"REJECTED",reserved_quote:0,updated_at:new Date().toISOString(),metadata:{...obj(ledger.metadata),reconciled_not_found:true}}).eq("id",ledger.id);return}if(cancel){await db.from("trader_orders").update({status:"CANCELED",reserved_quote:0,cancelled_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",ledger.id);return}throw new Error("dca_reconciliation_unavailable")}const terminal=["filled","cancelled","expired","rejected"].includes(remote.status);if(terminal&&remote.filledQty>0){await applyDcaFill(db,trade,provider,rule,ledger,remote);return}if(cancel&&!terminal)throw new Error("dca_cancel_pending");await db.from("trader_orders").update({status:ledgerStatus(remote),reserved_quote:terminal?0:ledger.requested_quote,exchange_order_id:remote.orderId||ledger.exchange_order_id,cancelled_at:remote.status==="cancelled"?new Date().toISOString():null,filled_qty:remote.filledQty,filled_quote:remote.filledQuote,updated_at:new Date().toISOString(),metadata:{...obj(ledger.metadata),exchange:provider,remote_status:remote.rawStatus}}).eq("id",ledger.id)}
+const cors = {
+  "Access-Control-Allow-Origin": "https://platform.labnarrative.com",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
-async function addFunds(db:Db,trade:Trade,ctl:Controls,provider:LaunchExchangeProvider,adapter:ExchangeExecutionAdapter,amount:number){if(trade.status!=="Active")throw new Error("trade_not_active");if(!(amount>0))throw new Error("invalid_add_funds_amount");const maxOrder=n(ctl.max_single_order);if(!(maxOrder>0)||amount>maxOrder+1e-9)throw new Error(`live_order_limit_exceeded:${maxOrder}`);if(await liveExposure(db,trade.account_id)+amount>n(ctl.max_live_capital)+1e-9)throw new Error(`live_capital_limit_exceeded:${n(ctl.max_live_capital)}`);const rule=await adapter.getMarketRule(trade.pair),free=await freeAsset(adapter,rule.quoteAsset);if(free+1e-8<amount)throw new Error(`insufficient_usdt:${free.toFixed(8)}`);const cid=clientId("A",trade.id),now=new Date().toISOString(),{data:ledger,error:le}=await db.from("trader_orders").insert({account_id:trade.account_id,bot_id:trade.bot_id,trade_id:trade.id,client_order_id:cid,pair:trade.pair,kind:"add_funds",side:"BUY",order_type:"MARKET",status:"PENDING",requested_quote:amount,requested_qty:0,reserved_quote:amount,exchange:provider,opened_at:now,metadata:{source:"manual_live",exchange:provider}}).select("id").single();if(le||!ledger)throw le||new Error("live_order_ledger_failed");try{const remote=await adapter.placeMarketBuy({pair:trade.pair,quoteAmount:amount,clientOrderId:cid}),fill=buyFill(remote,rule);if(!(fill.qty>0&&fill.quote>0&&fill.average>0))throw new Error(`${provider}_add_funds_fill_invalid`);await db.from("trader_orders").update({status:ledgerStatus(remote),reserved_quote:0,price:fill.average,requested_qty:fill.qty,filled_qty:fill.qty,filled_quote:fill.quote,average_fill_price:fill.average,exchange_order_id:remote.orderId,filled_at:now,updated_at:now,metadata:{source:"manual_live",exchange:provider,remote_status:remote.rawStatus}}).eq("id",ledger.id);await persistFills(db,ledger.id,trade,provider,"BUY","Add Funds",remote);const newQty=n(trade.quantity)+fill.qty,newInvested=n(trade.invested)+fill.quote,newAvg=newQty>0?newInvested/newQty:n(trade.average_price),{error:ue}=await db.from("trader_trades").update({quantity:newQty,invested:newInvested,average_price:newAvg,last_price:fill.average,updated_at:now}).eq("id",trade.id).eq("status","Active");if(ue)throw ue;await brokerEvent(db,trade,"manual_add_funds",cid,{exchange:provider,amount:fill.quote,quantity:fill.qty,averageFillPrice:fill.average,newAveragePrice:newAvg},ledger.id,remote.orderId);return{exchange:provider,amount:fill.quote,quantity:fill.qty,averageFillPrice:fill.average,newAveragePrice:newAvg}}catch(e){await db.from("trader_orders").update({status:"REJECTED",reserved_quote:0,updated_at:new Date().toISOString(),metadata:{source:"manual_live",exchange:provider,error:clean(e)}}).eq("id",ledger.id);throw e}}
-function orderAmount(bot:Bot,index:number){return n(bot.safety_order)*Math.pow(Math.max(.000001,n(bot.volume_scale,1)),index)}
-function orderPrice(bot:Bot,entry:number,index:number){let cumulative=0,step=n(bot.deviation);for(let i=0;i<=index;i++){cumulative+=step;step*=Math.max(.000001,n(bot.step_scale,1))}return entry*(1-cumulative/100)}
-async function createDca(db:Db,trade:Trade,bot:Bot,ctl:Controls,provider:LaunchExchangeProvider,adapter:ExchangeExecutionAdapter,rule:MarketRule,sequence:number){const rawQuote=orderAmount(bot,sequence-1);if(rawQuote>n(ctl.max_single_order)+1e-9)throw new Error(`live_order_limit_exceeded:${n(ctl.max_single_order)}`);const price=priceStep(orderPrice(bot,n(trade.entry_price),sequence-1),rule.tickSize),qty=floorStep(rawQuote/price,rule.stepSize),quote=qty*price;if(!(qty>0)||rule.minQty>0&&qty<rule.minQty-1e-15||rule.minNotional>0&&quote<rule.minNotional-1e-9)throw new Error("dca_order_below_exchange_minimum");if(await liveExposure(db,trade.account_id)+quote>n(ctl.max_live_capital)+1e-9)throw new Error(`live_capital_limit_exceeded:${n(ctl.max_live_capital)}`);const cid=clientId(`D${sequence}`,trade.id),now=new Date().toISOString(),{data:ledger,error:le}=await db.from("trader_orders").insert({account_id:trade.account_id,bot_id:trade.bot_id,trade_id:trade.id,client_order_id:cid,pair:trade.pair,kind:"averaging",side:"BUY",order_type:"LIMIT",status:"PENDING",sequence_no:sequence,price,requested_quote:quote,requested_qty:qty,reserved_quote:quote,exchange:provider,opened_at:now,metadata:{planner:"manual_live_v2",exchange:provider}}).select("*").single();if(le||!ledger)throw le||new Error("dca_order_ledger_failed");try{const remote=await adapter.placeLimit({pair:trade.pair,side:"BUY",quantity:qty,price,clientOrderId:cid});if(["filled","cancelled","expired","rejected"].includes(remote.status)&&remote.filledQty>0)await applyDcaFill(db,trade,provider,rule,ledger as Ledger,remote);else await db.from("trader_orders").update({status:ledgerStatus(remote),exchange_order_id:remote.orderId,updated_at:new Date().toISOString(),metadata:{planner:"manual_live_v2",exchange:provider,remote_status:remote.rawStatus}}).eq("id",ledger.id);await brokerEvent(db,trade,"manual_dca_open",cid,{exchange:provider,sequence,price,quote},ledger.id,remote.orderId)}catch(e){await db.from("trader_orders").update({status:"PENDING",metadata:{planner:"manual_live_v2",exchange:provider,placement_uncertain:true,error:clean(e)},updated_at:new Date().toISOString()}).eq("id",ledger.id);throw e}}
-async function updateTrade(db:Db,initial:Trade,ctl:Controls,provider:LaunchExchangeProvider,adapter:ExchangeExecutionAdapter,body:Json){if(initial.status!=="Active")throw new Error("trade_not_active");let trade=await refreshTrade(db,initial.id),completed=Math.max(0,Math.round(n(trade.averaging_filled))),currentMaxAveraging=Math.max(completed,Math.min(100,Math.round(n(trade.max_averaging)))),currentRemaining=Math.max(0,currentMaxAveraging-completed),currentActiveOrdersLimit=Math.min(currentRemaining,Math.max(0,Math.round(n(trade.active_orders_limit)))),maxAveraging=Math.max(completed,Math.min(100,Math.round(n(body.maxAveraging,trade.max_averaging)))),remaining=Math.max(0,maxAveraging-completed),requested=Math.max(0,Math.round(n(body.activeOrdersLimit,trade.active_orders_limit))),activeOrdersLimit=Math.min(remaining,requested),dcaChanged=maxAveraging!==currentMaxAveraging||activeOrdersLimit!==currentActiveOrdersLimit;if(dcaChanged){const rule=await adapter.getMarketRule(initial.pair);for(const row of await loadDca(db,initial,provider))if(ACTIVE.includes(String(row.status).toUpperCase()))await reconcileDcaRow(db,initial,provider,adapter,rule,row,false);trade=await refreshTrade(db,initial.id);completed=Math.max(0,Math.round(n(trade.averaging_filled)));maxAveraging=Math.max(completed,Math.min(100,Math.round(n(body.maxAveraging,trade.max_averaging))));remaining=Math.max(0,maxAveraging-completed);requested=Math.max(0,Math.round(n(body.activeOrdersLimit,trade.active_orders_limit)));activeOrdersLimit=Math.min(remaining,requested);let desired=new Set<number>();for(let seq=completed+1;seq<=completed+activeOrdersLimit;seq++)desired.add(seq);let rows=await loadDca(db,trade,provider);for(const row of rows){const seq=Math.round(n(row.sequence_no));if(ACTIVE.includes(String(row.status).toUpperCase())&&!desired.has(seq))await reconcileDcaRow(db,trade,provider,adapter,rule,row,true)}trade=await refreshTrade(db,trade.id);completed=Math.max(0,Math.round(n(trade.averaging_filled)));maxAveraging=Math.max(completed,maxAveraging);remaining=Math.max(0,maxAveraging-completed);activeOrdersLimit=Math.min(remaining,requested);desired=new Set<number>();for(let seq=completed+1;seq<=completed+activeOrdersLimit;seq++)desired.add(seq);rows=await loadDca(db,trade,provider);const activeBySeq=new Set(rows.filter(r=>ACTIVE.includes(String(r.status).toUpperCase())).map(r=>Math.round(n(r.sequence_no))));const{data:botData,error:be}=await db.from("trader_bots").select("id,safety_order,deviation,step_scale,volume_scale").eq("id",trade.bot_id).eq("account_id",trade.account_id).single();if(be||!botData)throw be||new Error("bot_not_found");for(const seq of desired)if(!activeBySeq.has(seq))await createDca(db,trade,botData as Bot,ctl,provider,adapter,rule,seq)}const stopEnabled=body.stopEnabled===undefined?(obj(trade.client_state).exitStrategyV2===true?obj(trade.client_state).stopEnabled===true:trade.stop_enabled):bool(body.stopEnabled),stopPct=Math.max(0,n(body.stopPct,trade.stop_pct));if(stopEnabled&&!(stopPct>0))throw new Error("invalid_stop_loss");const state=obj(trade.client_state),v2=state.exitStrategyV2===true,nextState={...state,maxAveraging,activeOrdersLimit,manualEditAt:new Date().toISOString(),exchange:provider,exchangeProvider:provider};if(v2){nextState.stopEnabled=stopEnabled;nextState.stopPct=stopPct;delete nextState.stopLossTriggeredAt}else{nextState.takeProfitPct=Math.max(0,n(body.takeProfitPct,trade.take_profit_pct));nextState.stopEnabled=stopEnabled;nextState.stopPct=stopPct}const update:Json={max_averaging:maxAveraging,active_orders_limit:activeOrdersLimit,stop_enabled:v2?false:stopEnabled,stop_pct:stopPct,client_state:nextState,updated_at:new Date().toISOString()};if(!v2)update.take_profit_pct=Math.max(0,n(body.takeProfitPct,trade.take_profit_pct));const{error:ue}=await db.from("trader_trades").update(update).eq("id",trade.id).eq("status","Active");if(ue)throw ue;await brokerEvent(db,trade,"manual_trade_updated",null,{exchange:provider,maxAveraging,activeOrdersLimit,stopEnabled,stopPct,exitStrategyV2:v2,dcaReconciled:dcaChanged});return{exchange:provider,maxAveraging,activeOrdersLimit,stopEnabled,stopPct,exitStrategyV2:v2,dcaReconciled:dcaChanged}}
+type Json = Record<string, unknown>;
+type Db = ReturnType<typeof createClient>;
+type Trade = {
+  id: string;
+  account_id: string;
+  bot_id: string;
+  client_id: string;
+  pair: string;
+  status: string;
+  averaging_filled: number;
+  max_averaging: number;
+  active_orders_limit: number;
+  stop_enabled: boolean;
+  stop_pct: number | string;
+  client_state: Json;
+  execution_mode: string;
+  exchange_provider: string;
+};
 
-async function closeTrade(db:Db,initial:Trade,provider:LaunchExchangeProvider,adapter:ExchangeExecutionAdapter){if(initial.status!=="Active")throw new Error("trade_not_active");const{data:locked,error:le}=await db.from("trader_trades").update({status:"Closing",updated_at:new Date().toISOString()}).eq("id",initial.id).eq("status","Active").select("id").maybeSingle();if(le)throw le;if(!locked)throw new Error("trade_not_active");try{const rule=await adapter.getMarketRule(initial.pair);for(const row of await loadDca(db,initial,provider))if(ACTIVE.includes(String(row.status).toUpperCase()))await reconcileDcaRow(db,initial,provider,adapter,rule,row,true);let trade=await refreshTrade(db,initial.id);const qty=floorStep(n(trade.quantity),rule.stepSize);if(!(qty>0)||(rule.minQty>0&&qty<rule.minQty-1e-15))throw new Error("live_exit_quantity_invalid");const quote=await adapter.getQuote(trade.pair);if(rule.minNotional>0&&quote.bid*qty<rule.minNotional-1e-9)throw new Error("live_exit_below_exchange_minimum");const free=await freeAsset(adapter,rule.baseAsset),sellQty=floorStep(Math.min(qty,free),rule.stepSize);if(!(sellQty>0))throw new Error(`live_exit_insufficient_free_balance:${qty}:${free}`);const cid=clientId("C",trade.id),now=new Date().toISOString(),{data:ledger,error:oe}=await db.from("trader_orders").insert({account_id:trade.account_id,bot_id:trade.bot_id,trade_id:trade.id,client_order_id:cid,pair:trade.pair,kind:"manual_exit",side:"SELL",order_type:"MARKET",status:"PENDING",requested_quote:0,requested_qty:sellQty,reserved_quote:0,exchange:provider,opened_at:now,metadata:{source:"manual_live_v2",exchange:provider}}).select("id").single();if(oe||!ledger)throw oe||new Error("live_exit_ledger_failed");const remote=await adapter.placeMarketSell({pair:trade.pair,quantity:sellQty,clientOrderId:cid}),fill=sellFill(remote,rule);if(!(fill.qty>0&&fill.average>0))throw new Error(`${provider}_exit_fill_invalid`);await db.from("trader_orders").update({status:ledgerStatus(remote),price:fill.average,filled_qty:fill.qty,filled_quote:fill.gross,average_fill_price:fill.average,exchange_order_id:remote.orderId,filled_at:now,updated_at:now,metadata:{source:"manual_live_v2",exchange:provider,remote_status:remote.rawStatus}}).eq("id",ledger.id);await persistFills(db,ledger.id,trade,provider,"SELL","Manual Close",remote);const sold=Math.min(n(trade.quantity),fill.qty),ratio=n(trade.quantity)>0?sold/n(trade.quantity):1,costBasis=n(trade.invested)*ratio,pnl=fill.proceeds-costBasis,realized=n(trade.realized_pnl)+pnl,remainingQty=Math.max(0,n(trade.quantity)-sold),remainingInvested=Math.max(0,n(trade.invested)-costBasis),fullyClosed=remainingQty<=Math.max(rule.stepSize,rule.minQty)*1.001,state={...obj(trade.client_state),manualClosedAt:fullyClosed?now:undefined,lastManualExitAt:now,exchange:provider,exchangeProvider:provider};delete state.stopLossTriggeredAt;if(fullyClosed){const{error:ce}=await db.from("trader_trades").update({status:"Closed",quantity:0,invested:0,last_price:fill.average,exit_price:fill.average,realized_pnl:realized,close_reason:"Manual close",closed_at:now,client_state:state,updated_at:now}).eq("id",trade.id).eq("status","Closing");if(ce)throw ce}else{const{error:pe}=await db.from("trader_trades").update({status:"Active",quantity:remainingQty,invested:remainingInvested,realized_pnl:realized,last_price:fill.average,client_state:state,updated_at:now}).eq("id",trade.id).eq("status","Closing");if(pe)throw pe}await brokerEvent(db,trade,fullyClosed?"manual_trade_closed":"manual_trade_partial_exit",cid,{exchange:provider,average:fill.average,executedQty:fill.qty,proceeds:fill.proceeds,pnl,remainingQty,fullyClosed},ledger.id,remote.orderId);return{exchange:provider,averageFillPrice:fill.average,executedQty:fill.qty,proceeds:fill.proceeds,realizedPnl:realized,remainingQty,fullyClosed}}catch(e){await db.from("trader_trades").update({status:"Active",updated_at:new Date().toISOString()}).eq("id",initial.id).eq("status","Closing");throw e}}
+type DcaShape = {
+  completed: number;
+  maxAveraging: number;
+  activeOrdersLimit: number;
+};
 
-Deno.serve(async(req:Request)=>{if(req.method==="OPTIONS")return new Response(null,{headers:cors});if(req.method!=="POST")return json({error:"method_not_allowed"},405);const url=Deno.env.get("SUPABASE_URL"),service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");if(!url||!service)return json({error:"server_configuration_missing"},500);const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}}),token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token)return json({error:"unauthorized"},401);const{data:userData,error:userError}=await db.auth.getUser(token);if(userError||!userData.user)return json({error:"unauthorized"},401);let accountId="",lockId="";try{const body=await req.json().catch(()=>({})) as Json,action=String(body.action||""),tradeId=String(body.tradeId||"");accountId=String(body.accountId||"");if(!accountId)throw new Error("account_id_required");if(!tradeId)throw new Error("trade_id_required");const account=await ownedAccount(db,userData.user.id,accountId),ctl=await controls(db,account.id);requireLive(account,ctl);let trade=await ownedTrade(db,account.id,tradeId);if(trade.execution_mode!=="live")throw new Error("trade_not_live");const provider=providerFor(trade);await requireLiveExchangeConnection(db,account.id,provider);const adapter=createLaunchExchangeExecutionAdapter(db,account.id,provider);lockId=await acquire(db,account.id);trade=await ownedTrade(db,account.id,tradeId);let result:unknown;if(action==="add_funds")result=await addFunds(db,trade,ctl,provider,adapter,n(body.amount));else if(action==="update_trade")result=await updateTrade(db,trade,ctl,provider,adapter,body);else if(action==="close_trade"||action==="finish_close")result=await closeTrade(db,trade,provider,adapter);else throw new Error("unknown_action");return json({ok:true,action,result})}catch(e){const message=clean(e);console.error("trader-live-trade-control",message);const publicErrors=["real_account_required","execution_controls_missing","binance_not_connected","live_trading_not_enabled","binance_trade_permission_required","binance_connection_not_safe","exchange_connection_required","exchange_trade_permission_required","exchange_withdraw_permission_forbidden","exchange_live_execution_not_enabled","trade_not_found","trade_not_active","trade_not_live","account_id_required","trade_id_required","invalid_add_funds_amount","invalid_stop_loss","bot_not_found","spot_symbol_not_tradeable","live_exit_quantity_invalid","live_exit_below_exchange_minimum","dca_order_below_exchange_minimum","dca_reconciliation_unavailable","dca_cancel_pending","order_identifier_required","account_busy","unknown_action"];const safe=publicErrors.includes(message)||message.startsWith("live_order_limit_exceeded:")||message.startsWith("live_capital_limit_exceeded:")||message.startsWith("live_exit_insufficient_free_balance:")||message.startsWith("insufficient_usdt:")||message.startsWith("binance_")||message.startsWith("bybit_")||message.startsWith("okx_")||message.startsWith("kucoin_")||message.startsWith("gateway_")?message:"live_trade_control_failed";return json({error:safe},safe==="real_account_required"?403:400)}finally{if(accountId&&lockId)await release(db,accountId,lockId)}});
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "content-type": "application/json", "cache-control": "no-store" },
+  });
+}
+function n(value: unknown, fallback = 0) {
+  const result = Number(value);
+  return Number.isFinite(result) ? result : fallback;
+}
+function bool(value: unknown, fallback = false) {
+  return typeof value === "boolean" ? value : fallback;
+}
+function obj(value: unknown): Json {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
+}
+function clean(error: unknown) {
+  return error instanceof Error ? error.message : String(error || "unknown_error");
+}
+function dcaShape(trade: Trade, body: Json): { current: DcaShape; requested: DcaShape; changed: boolean } {
+  const completed = Math.max(0, Math.round(n(trade.averaging_filled)));
+  const currentMax = Math.max(completed, Math.min(100, Math.round(n(trade.max_averaging))));
+  const currentRemaining = Math.max(0, currentMax - completed);
+  const currentActive = Math.min(currentRemaining, Math.max(0, Math.round(n(trade.active_orders_limit))));
+  const requestedMax = Math.max(completed, Math.min(100, Math.round(n(body.maxAveraging, trade.max_averaging))));
+  const requestedRemaining = Math.max(0, requestedMax - completed);
+  const requestedActive = Math.min(
+    requestedRemaining,
+    Math.max(0, Math.round(n(body.activeOrdersLimit, trade.active_orders_limit))),
+  );
+  return {
+    current: { completed, maxAveraging: currentMax, activeOrdersLimit: currentActive },
+    requested: { completed, maxAveraging: requestedMax, activeOrdersLimit: requestedActive },
+    changed: requestedMax !== currentMax || requestedActive !== currentActive,
+  };
+}
+async function forwardCore(req: Request, url: string, body: Json) {
+  const headers = new Headers({ "content-type": "application/json" });
+  const authorization = req.headers.get("Authorization");
+  if (authorization) headers.set("Authorization", authorization);
+  const apiKey = req.headers.get("apikey") || Deno.env.get("SUPABASE_ANON_KEY") || "";
+  if (apiKey) headers.set("apikey", apiKey);
+  const response = await fetch(`${url}/functions/v1/trader-live-trade-control-core`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60_000),
+  });
+  const responseHeaders = new Headers(response.headers);
+  for (const [key, value] of Object.entries(cors)) responseHeaders.set(key, value);
+  responseHeaders.set("cache-control", "no-store");
+  return new Response(await response.text(), { status: response.status, headers: responseHeaders });
+}
+async function ownedTrade(db: Db, accountId: string, tradeId: string) {
+  const { data, error } = await db.from("trader_trades")
+    .select("id,account_id,bot_id,client_id,pair,status,averaging_filled,max_averaging,active_orders_limit,stop_enabled,stop_pct,client_state,execution_mode,exchange_provider")
+    .eq("account_id", accountId)
+    .eq("client_id", tradeId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("trade_not_found");
+  return data as Trade;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) return json({ error: "server_configuration_missing" }, 500);
+
+  const body = await req.json().catch(() => ({})) as Json;
+  const action = String(body.action || "");
+  if (action !== "update_trade") return forwardCore(req, url, body);
+
+  const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return json({ error: "unauthorized" }, 401);
+  const { data: userData, error: userError } = await admin.auth.getUser(token);
+  if (userError || !userData.user) return json({ error: "unauthorized" }, 401);
+
+  let accountId = "";
+  let lockId = "";
+  try {
+    accountId = String(body.accountId || "").trim();
+    const tradeId = String(body.tradeId || "").trim();
+    if (!accountId) throw new Error("account_id_required");
+    if (!tradeId) throw new Error("trade_id_required");
+
+    const { data: account, error: accountError } = await admin.from("trader_accounts")
+      .select("id,owner_user_id,account_kind,mode,status")
+      .eq("id", accountId)
+      .eq("owner_user_id", userData.user.id)
+      .eq("account_kind", "real")
+      .eq("status", "active")
+      .maybeSingle();
+    if (accountError) throw accountError;
+    if (!account) throw new Error("real_account_required");
+
+    const { data: control, error: controlError } = await admin.from("trader_execution_controls")
+      .select("global_live_enabled,kill_switch")
+      .eq("account_id", accountId)
+      .single();
+    if (controlError || !control) throw new Error("execution_controls_missing");
+    if (account.mode !== "live" || control.global_live_enabled !== true || control.kill_switch !== false) {
+      throw new Error("live_trading_not_enabled");
+    }
+
+    let trade = await ownedTrade(admin, accountId, tradeId);
+    if (trade.status !== "Active") throw new Error("trade_not_active");
+    if (trade.execution_mode !== "live") throw new Error("trade_not_live");
+    let state = obj(trade.client_state);
+    let dca = dcaShape(trade, body);
+
+    if (state.exitStrategyV2 !== true || dca.changed) return forwardCore(req, url, body);
+
+    lockId = crypto.randomUUID();
+    const { data: locked, error: lockError } = await admin.rpc("trader_begin_exit_command", {
+      p_account_id: accountId,
+      p_lock_id: lockId,
+      p_lease_seconds: 31,
+    });
+    if (lockError) throw lockError;
+    if (locked !== true) throw new Error("account_busy");
+
+    trade = await ownedTrade(admin, accountId, tradeId);
+    if (trade.status !== "Active") throw new Error("trade_not_active");
+    if (trade.execution_mode !== "live") throw new Error("trade_not_live");
+    state = obj(trade.client_state);
+    dca = dcaShape(trade, body);
+    if (state.exitStrategyV2 !== true || dca.changed) {
+      await admin.rpc("trader_release_exit_account", { p_account_id: accountId, p_worker_id: lockId });
+      lockId = "";
+      return forwardCore(req, url, body);
+    }
+
+    const provider = normalizeLaunchExchangeProvider(trade.exchange_provider, "binance");
+    await requireLiveExchangeConnection(admin, accountId, provider);
+
+    const stateStopEnabled = typeof state.stopEnabled === "boolean" ? state.stopEnabled : trade.stop_enabled === true;
+    const stopEnabled = body.stopEnabled === undefined ? stateStopEnabled : bool(body.stopEnabled, stateStopEnabled);
+    const stateStopPct = n(state.stopPct, n(trade.stop_pct));
+    const stopPct = Math.max(0, n(body.stopPct, stateStopPct));
+    if (stopEnabled && !(stopPct > 0)) throw new Error("invalid_stop_loss");
+
+    const now = new Date().toISOString();
+    const nextState: Json = {
+      ...state,
+      exitStrategyV2: true,
+      maxAveraging: dca.current.maxAveraging,
+      activeOrdersLimit: dca.current.activeOrdersLimit,
+      manualEditAt: now,
+      exchange: provider,
+      exchangeProvider: provider,
+      stopEnabled,
+      stopPct,
+    };
+    delete nextState.stopLossTriggeredAt;
+
+    const { data: updated, error: updateError } = await admin.from("trader_trades").update({
+      stop_enabled: false,
+      stop_pct: stopPct,
+      client_state: nextState,
+      updated_at: now,
+    }).eq("id", trade.id).eq("status", "Active").eq("execution_mode", "live").select("id").maybeSingle();
+    if (updateError) throw updateError;
+    if (!updated) throw new Error("trade_not_active");
+
+    await admin.from("trader_broker_events").insert({
+      account_id: accountId,
+      bot_id: trade.bot_id,
+      trade_id: trade.id,
+      order_id: null,
+      mode: "live",
+      event_type: "manual_trade_updated",
+      pair: trade.pair,
+      client_order_id: null,
+      exchange_order_id: null,
+      payload: {
+        exchange: provider,
+        maxAveraging: dca.current.maxAveraging,
+        activeOrdersLimit: dca.current.activeOrdersLimit,
+        stopEnabled,
+        stopPct,
+        exitStrategyV2: true,
+        dcaReconciled: false,
+        noOrderSent: true,
+      },
+    });
+
+    return json({
+      ok: true,
+      action: "update_trade",
+      result: {
+        exchange: provider,
+        maxAveraging: dca.current.maxAveraging,
+        activeOrdersLimit: dca.current.activeOrdersLimit,
+        stopEnabled,
+        stopPct,
+        exitStrategyV2: true,
+        dcaReconciled: false,
+      },
+    });
+  } catch (error) {
+    const message = clean(error);
+    console.error("trader-live-trade-control-dispatch", message);
+    const publicErrors = [
+      "real_account_required",
+      "execution_controls_missing",
+      "live_trading_not_enabled",
+      "trade_not_found",
+      "trade_not_active",
+      "trade_not_live",
+      "account_id_required",
+      "trade_id_required",
+      "invalid_stop_loss",
+      "account_busy",
+      "binance_not_connected",
+      "binance_trade_permission_required",
+      "binance_connection_not_safe",
+      "exchange_connection_required",
+      "exchange_trade_permission_required",
+      "exchange_withdraw_permission_forbidden",
+      "exchange_live_execution_not_enabled",
+    ];
+    const safe = publicErrors.includes(message) || message.startsWith("binance_") || message.startsWith("bybit_") ||
+        message.startsWith("okx_") || message.startsWith("kucoin_") || message.startsWith("gateway_")
+      ? message
+      : "live_trade_control_failed";
+    return json({ error: safe }, safe === "real_account_required" ? 403 : 400);
+  } finally {
+    if (accountId && lockId) {
+      await admin.rpc("trader_release_exit_account", { p_account_id: accountId, p_worker_id: lockId }).catch(() => undefined);
+    }
+  }
+});
