@@ -6,6 +6,7 @@ type Db = ReturnType<typeof createClient>;
 
 type TradeRow = {
   id: string;
+  client_id: string | null;
   public_trade_no: number | string | null;
   bot_id: string | null;
   pair: string;
@@ -20,6 +21,12 @@ type TradeRow = {
   closed_at: string | null;
   execution_mode: string | null;
   exchange_provider: string | null;
+  averaging_filled: number | string | null;
+  max_averaging: number | string | null;
+  active_orders_limit: number | string | null;
+  take_profit_pct: number | string | null;
+  stop_enabled: boolean | null;
+  stop_pct: number | string | null;
 };
 
 function cors(req: Request) {
@@ -49,7 +56,7 @@ async function historyRows(db: Db, accountId: string) {
   const pageSize = 1000;
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await db.from("trader_trades")
-      .select("id,public_trade_no,bot_id,pair,status,entry_price,average_price,total_invested,realized_pnl,exit_price,close_reason,opened_at,closed_at,execution_mode,exchange_provider")
+      .select("id,client_id,public_trade_no,bot_id,pair,status,entry_price,average_price,total_invested,realized_pnl,exit_price,close_reason,opened_at,closed_at,execution_mode,exchange_provider,averaging_filled,max_averaging,active_orders_limit,take_profit_pct,stop_enabled,stop_pct")
       .eq("account_id", accountId)
       .in("status", ["Closed", "Cancelled"])
       .order("closed_at", { ascending: false, nullsFirst: false })
@@ -109,6 +116,7 @@ Deno.serve(async (req: Request) => {
       const closedAt = row.closed_at ? Date.parse(row.closed_at) : NaN;
       return {
         tradeId: row.id,
+        clientId: row.client_id,
         publicTradeNo: row.public_trade_no == null ? null : Number(row.public_trade_no),
         botId: row.bot_id,
         botName: row.bot_id ? botNames.get(row.bot_id) ?? "DCA Bot" : "—",
@@ -126,6 +134,12 @@ Deno.serve(async (req: Request) => {
         openedAt: row.opened_at,
         closedAt: row.closed_at,
         durationMs: Number.isFinite(openedAt) && Number.isFinite(closedAt) ? Math.max(0, closedAt - openedAt) : null,
+        averagingFilled: Math.max(0, Math.round(n(row.averaging_filled))),
+        maxAveraging: Math.max(0, Math.round(n(row.max_averaging))),
+        activeOrdersLimit: Math.max(0, Math.round(n(row.active_orders_limit))),
+        takeProfitPct: Math.max(0, n(row.take_profit_pct)),
+        stopEnabled: row.stop_enabled === true,
+        stopPct: Math.max(0, n(row.stop_pct)),
       };
     });
 
