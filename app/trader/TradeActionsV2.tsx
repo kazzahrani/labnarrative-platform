@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, MouseEvent, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
 import styles from "./trade-actions-v2.module.css";
 
@@ -31,18 +31,9 @@ type ExactTrade = {
   takeProfitTargets?: TpTarget[];
   stopEnabled?: boolean;
   stopPct?: number;
-  stopLossTimeoutSeconds?: number;
 };
-type CoreV2Position = {
-  trade_id?: string;
-  client_id?: string | null;
-};
-type CoreV2PositionsResponse = {
-  ok?: boolean;
-  ready?: boolean;
-  positions?: CoreV2Position[];
-  error?: string;
-};
+type CoreV2Position = { trade_id?: string; client_id?: string | null };
+type CoreV2PositionsResponse = { ok?: boolean; ready?: boolean; positions?: CoreV2Position[]; error?: string };
 
 async function invokeFunction(functionName: string, body: Record<string, unknown>) {
   const { data, error } = await browserSupabase.functions.invoke(functionName, { body });
@@ -59,6 +50,7 @@ async function invokeFunction(functionName: string, body: Record<string, unknown
   }
   const result = (data ?? {}) as { ok?: boolean; error?: string };
   if (result.error || result.ok !== true) throw new Error(result.error || "trader_trade_control_failed");
+  return data;
 }
 
 async function invokeTrade(accountMode: Props["accountMode"], body: Record<string, unknown>) {
@@ -87,57 +79,32 @@ async function resolveCoreV2TradeId(legacyTradeId: string) {
     throw new Error(message);
   }
   const result = (data ?? {}) as CoreV2PositionsResponse;
-  if (result.error || result.ok !== true || result.ready !== true || !Array.isArray(result.positions)) {
-    throw new Error(result.error || "core_v2_positions_not_ready");
-  }
-  const match = result.positions.find((position) =>
-    String(position.client_id || "") === legacyTradeId || String(position.trade_id || "") === legacyTradeId
-  );
+  if (result.error || result.ok !== true || result.ready !== true || !Array.isArray(result.positions)) throw new Error(result.error || "core_v2_positions_not_ready");
+  const match = result.positions.find((position) => String(position.client_id || "") === legacyTradeId || String(position.trade_id || "") === legacyTradeId);
   const canonicalTradeId = String(match?.trade_id || "");
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(canonicalTradeId)) {
-    throw new Error("core_v2_position_id_unavailable");
-  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(canonicalTradeId)) throw new Error("core_v2_position_id_unavailable");
   return canonicalTradeId;
 }
 
 function errorText(message: string) {
-  if (message.includes("core_v2_position_id_unavailable")) return "This live position could not be matched to its Core V2 position ID. No change was made.";
+  if (message.includes("core_v2_position_id_unavailable")) return "This live position could not be matched to Core V2. No change was made.";
   if (message.includes("core_v2_positions_not_ready")) return "Core V2 positions are not ready yet. No change was made.";
+  if (message.includes("core_v2_execute_disabled")) return "Core V2 position editing is temporarily locked.";
   if (message.includes("insufficient_available_balance")) return "Not enough available account balance for that amount.";
-  if (message.includes("insufficient_usdt:")) return "Not enough free USDT on Binance for that amount.";
+  if (message.includes("insufficient_usdt:")) return "Not enough free USDT on the connected exchange for that amount.";
   if (message.includes("live_order_limit_exceeded:")) return `This exceeds the Real Account per-order live limit ($${message.split(":")[1]}).`;
   if (message.includes("live_capital_limit_exceeded:")) return `This exceeds the Real Account total live-capital limit ($${message.split(":")[1]}).`;
   if (message.includes("live_trading_not_enabled")) return "Real live execution is currently locked.";
-  if (message.includes("trade_not_active")) return "This trade is no longer active.";
-  if (message.includes("trade_price_unavailable")) return "A current trade price is not available yet.";
-  if (message.includes("live_exit_below_exchange_minimum")) return "The remaining Binance position is below the exchange minimum order size.";
-  if (message.includes("invalid_take_profit_targets")) return "Each TP needs a profit % above 0 and a sell allocation above 0.";
-  if (message.includes("take_profit_allocation_must_equal_100")) return "TP sell allocations must total exactly 100%.";
-  if (message.includes("too_many_take_profit_targets")) return "A trade can have up to 8 TP targets.";
-  if (message.includes("binance_")) return `Binance rejected the action: ${message}`;
+  if (message.includes("position_not_active") || message.includes("trade_not_active")) return "This position is no longer active.";
+  if (message.includes("dca_order_below_exchange_minimum")) return "One of the requested DCA orders is below the exchange minimum.";
+  if (message.includes("dca_cancel_pending")) return "A DCA cancellation is still pending at the exchange. Try again in a moment.";
+  if (message.includes("dca_reconciliation_unavailable")) return "The current DCA orders could not be reconciled safely. No position settings were changed.";
+  if (message.includes("account_busy")) return "The trading account is busy with another execution. Try again in a moment.";
+  if (message.includes("invalid_stop_loss")) return "Stop-loss distance must be above 0 when Stop loss is On.";
+  if (message.includes("exchange_connection_required")) return "The position's exchange connection is not ready for live trading.";
+  if (message.includes("exchange_trade_permission_required")) return "Trading permission is required on the connected exchange.";
+  if (message.includes("binance_") || message.includes("bybit_") || message.includes("okx_") || message.includes("kucoin_")) return `The exchange rejected the action: ${message}`;
   return message;
-}
-
-function cleanTargets(targets: TpTarget[]) {
-  return targets.map((target) => ({
-    profitPct: Math.round(Math.max(0, Number(target.profitPct) || 0) * 10000) / 10000,
-    allocationPct: Math.round(Math.max(0, Number(target.allocationPct) || 0) * 10000) / 10000,
-  }));
-}
-
-function targetSignature(targets: TpTarget[]) {
-  return JSON.stringify(cleanTargets(targets));
-}
-
-function equalAllocations(targets: TpTarget[]) {
-  if (!targets.length) return targets;
-  const base = Math.floor((100 / targets.length) * 100) / 100;
-  let used = 0;
-  return targets.map((target, index) => {
-    const allocationPct = index === targets.length - 1 ? Math.round((100 - used) * 100) / 100 : base;
-    used += allocationPct;
-    return { ...target, allocationPct };
-  });
 }
 
 export default function TradeActionsV2({ accountId, accountMode, trade, onChanged }: Props) {
@@ -148,21 +115,13 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
   const [maxAveraging, setMaxAveraging] = useState(trade.maxAveraging);
   const [activeOrdersLimit, setActiveOrdersLimit] = useState(trade.activeOrdersLimit);
   const [takeProfitPct, setTakeProfitPct] = useState(trade.takeProfitPct);
-  const [tpTargets, setTpTargets] = useState<TpTarget[]>([]);
-  const [originalTpTargets, setOriginalTpTargets] = useState<TpTarget[]>([]);
   const [stopEnabled, setStopEnabled] = useState(trade.stopEnabled);
   const [stopPct, setStopPct] = useState(trade.stopPct || 8);
-  const [stopLossTimeoutSeconds, setStopLossTimeoutSeconds] = useState(0);
 
   if (trade.status !== "Active") return null;
 
   const completedDca = Math.max(0, Math.round(Number(trade.averagingFilled) || 0));
   const remainingDcaSlots = Math.max(0, maxAveraging - completedDca);
-  const tpAllocation = tpTargets.reduce((sum, target) => sum + (Number(target.allocationPct) || 0), 0);
-  const tpRowsValid = tpTargets.every((target) => Number(target.profitPct) > 0 && Number(target.allocationPct) > 0);
-  const tpAllocationValid = tpTargets.length === 0 || Math.abs(tpAllocation - 100) <= 0.011;
-  const tpValid = accountMode !== "live" || (tpRowsValid && tpAllocationValid && tpTargets.length <= 8);
-  const tpChanged = accountMode === "live" && targetSignature(tpTargets) !== targetSignature(originalTpTargets);
 
   const changeMaxAveraging = (raw: number) => {
     const next = Math.max(completedDca, Math.min(100, Math.round(Number(raw) || 0)));
@@ -176,47 +135,33 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
     setMaxAveraging((current) => Math.max(current, completedDca + next));
   };
 
-  const updateTp = (index: number, key: keyof TpTarget, value: number) => {
-    setTpTargets((current) => current.map((target, targetIndex) => targetIndex === index
-      ? { ...target, [key]: Math.max(0, Number(value) || 0) }
-      : target));
-  };
-
-  const addTp = () => {
-    setTpTargets((current) => {
-      if (current.length >= 8) return current;
-      const lastProfit = current.length ? Number(current[current.length - 1].profitPct) || 0 : 0;
-      return [...current, { profitPct: Math.round((lastProfit + 0.5) * 100) / 100, allocationPct: 0 }];
-    });
-  };
-
-  const removeTp = (index: number) => setTpTargets((current) => current.filter((_, targetIndex) => targetIndex !== index));
-
-  const openEdit = async (event: React.MouseEvent) => {
+  const openEdit = async (event: MouseEvent) => {
     event.stopPropagation();
+    if (busy) return;
     setError("");
-    if (accountMode === "live") {
-      if (busy) return;
-      setBusy(true);
-      try {
-        const canonicalTradeId = await resolveCoreV2TradeId(trade.id);
-        window.dispatchEvent(new CustomEvent("labnarrative:edit-exit-plan", { detail: { tradeId: canonicalTradeId } }));
-      } catch (caught) {
-        window.alert(errorText(caught instanceof Error ? caught.message : "Unable to open Core V2 exit plan."));
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-
     setMaxAveraging(trade.maxAveraging);
     setActiveOrdersLimit(Math.min(trade.activeOrdersLimit, Math.max(0, trade.maxAveraging - completedDca)));
     setTakeProfitPct(trade.takeProfitPct);
-    setTpTargets([]);
-    setOriginalTpTargets([]);
     setStopEnabled(trade.stopEnabled);
     setStopPct(trade.stopPct || 8);
-    setStopLossTimeoutSeconds(0);
+
+    if (accountMode === "live") {
+      setBusy(true);
+      try {
+        const exact = await loadExactTrade(accountId, trade.id);
+        const exactTargets = Array.isArray(exact.takeProfitTargets) ? exact.takeProfitTargets : [];
+        const scalarTp = Number(exact.takeProfitPct);
+        const fallbackTarget = Number(exactTargets[0]?.profitPct);
+        if (Number.isFinite(scalarTp) && scalarTp >= 0) setTakeProfitPct(scalarTp);
+        else if (Number.isFinite(fallbackTarget) && fallbackTarget > 0) setTakeProfitPct(fallbackTarget);
+        if (typeof exact.stopEnabled === "boolean") setStopEnabled(exact.stopEnabled);
+        if (Number(exact.stopPct) > 0) setStopPct(Number(exact.stopPct));
+      } catch {
+        // The positions read model already carries the same visible fields; keep those as a safe fallback.
+      } finally {
+        setBusy(false);
+      }
+    }
     setMode("edit");
   };
 
@@ -234,23 +179,32 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
 
   const submitEdit = async (event: FormEvent) => {
     event.preventDefault(); event.stopPropagation();
-    if (accountMode === "live") {
-      setError("Live TP/SL edits are handled by Core V2. Close this dialog and use Edit trade again.");
-      return;
-    }
-    if (busy || !tpValid) return;
+    if (busy || (stopEnabled && !(stopPct > 0))) return;
     setBusy(true); setError("");
     try {
-      await invokeTrade(accountMode, {
-        action: "update_trade",
-        accountId,
-        tradeId: trade.id,
-        maxAveraging,
-        activeOrdersLimit,
-        takeProfitPct,
-        stopEnabled,
-        stopPct,
-      });
+      if (accountMode === "live") {
+        const positionId = await resolveCoreV2TradeId(trade.id);
+        await invokeFunction("trader-v2-position-edit-submit", {
+          positionId,
+          idempotencyKey: `v1-position-edit:${positionId}:${crypto.randomUUID()}`,
+          maxAveraging,
+          activeOrdersLimit,
+          takeProfitPct: Math.max(0, Number(takeProfitPct) || 0),
+          stopEnabled,
+          stopPct: Math.max(0, Number(stopPct) || 0),
+        });
+      } else {
+        await invokeTrade(accountMode, {
+          action: "update_trade",
+          accountId,
+          tradeId: trade.id,
+          maxAveraging,
+          activeOrdersLimit,
+          takeProfitPct,
+          stopEnabled,
+          stopPct,
+        });
+      }
       setMode(null);
       await onChanged();
     } catch (caught) {
@@ -259,10 +213,10 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
     } finally { setBusy(false); }
   };
 
-  const close = async (event: React.MouseEvent) => {
+  const close = async (event: MouseEvent) => {
     event.stopPropagation();
     const question = accountMode === "live"
-      ? `Close ${trade.pair} now? This sends a real MARKET SELL to Binance for the remaining position.`
+      ? `Close ${trade.pair} now? This sends a real MARKET SELL on the position's connected exchange for the remaining position.`
       : `Close ${trade.pair} at the current worker price?`;
     if (busy || !window.confirm(question)) return;
     setBusy(true); setError("");
@@ -284,40 +238,21 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
         <div className={styles.head}><div><small>{mode === "add" ? "ADD FUNDS" : "EDIT TRADE"}</small><h3>{trade.pair}</h3></div><button disabled={busy} onClick={() => setMode(null)}>×</button></div>
         {mode === "add" ? <form onSubmit={submitAdd} className={styles.form}>
           <label><span>Amount</span><div className={styles.unit}><input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(Number(event.target.value))}/><b>USDT</b></div></label>
-          <p>{accountMode === "live" ? "This sends a real Binance Spot MARKET buy and recalculates the trade average from the actual fill." : "The paper/shadow engine will add this amount at the latest worker price and recalculate the average entry."}</p>
+          <p>{accountMode === "live" ? "This sends a real Spot MARKET buy on the position's connected exchange and recalculates the trade average from the actual fill." : "The paper/shadow engine will add this amount at the latest worker price and recalculate the average entry."}</p>
           {error && <div className={styles.error}>{error}</div>}
-          <div className={styles.footer}><button type="button" onClick={() => setMode(null)}>Cancel</button><button className={styles.primary} disabled={busy}>{busy ? "Adding…" : accountMode === "live" ? "Buy on Binance" : "Add funds"}</button></div>
+          <div className={styles.footer}><button type="button" onClick={() => setMode(null)}>Cancel</button><button className={styles.primary} disabled={busy}>{busy ? "Adding…" : "Add funds"}</button></div>
         </form> : <form onSubmit={submitEdit} className={styles.form}>
           <div className={styles.grid}>
             <label><span>Max DCA orders</span><input type="number" min={completedDca} max="100" value={maxAveraging} onChange={(event) => changeMaxAveraging(Number(event.target.value))}/></label>
             <label><span>Active DCA orders</span><input type="number" min="0" max={100 - completedDca} value={activeOrdersLimit} onChange={(event) => changeActiveOrders(Number(event.target.value))}/></label>
-            {accountMode !== "live" && <label><span>Take profit</span><div className={styles.unit}><input type="number" min="0" step="0.1" value={takeProfitPct} onChange={(event) => setTakeProfitPct(Math.max(0,Number(event.target.value)))}/><b>%</b></div></label>}
+            <label><span>Take profit</span><div className={styles.unit}><input type="number" min="0" step="0.1" value={takeProfitPct} onChange={(event) => setTakeProfitPct(Math.max(0, Number(event.target.value)))}/><b>%</b></div></label>
             <label><span>Stop loss</span><select value={stopEnabled ? "On" : "Off"} onChange={(event) => setStopEnabled(event.target.value === "On")}><option>Off</option><option>On</option></select></label>
-            {stopEnabled && <label><span>Stop loss distance</span><div className={styles.unit}><input type="number" min="0.1" step="0.1" value={stopPct} onChange={(event) => setStopPct(Math.max(.1,Number(event.target.value)))}/><b>%</b></div></label>}
+            {stopEnabled && <label><span>Stop loss distance</span><div className={styles.unit}><input type="number" min="0.1" step="0.1" value={stopPct} onChange={(event) => setStopPct(Math.max(.1, Number(event.target.value)))}/><b>%</b></div></label>}
           </div>
           <p className={styles.dcaHint}>Completed DCA: <b>{completedDca}</b> · Remaining slots: <b>{remainingDcaSlots}</b> · Active now: <b>{activeOrdersLimit}</b>. Increasing Active DCA automatically increases Max DCA when needed.</p>
-
-          {accountMode === "live" && <div className={styles.tpSection}>
-            <div className={styles.tpHeader}>
-              <div><strong>Take profits</strong><small>Profit is measured from the trade's current average. Sell % applies to the remaining position.</small></div>
-              <div className={styles.tpHeaderActions}><button type="button" disabled={busy || tpTargets.length === 0} onClick={() => setTpTargets((current) => equalAllocations(current))}>Equal split</button><button type="button" disabled={busy || tpTargets.length >= 8} onClick={addTp}>+ Add TP</button></div>
-            </div>
-            {tpTargets.length === 0 ? <div className={styles.tpEmpty}>No TP targets — take profit is disabled for this trade.</div> : <div className={styles.tpList}>
-              {tpTargets.map((target, index) => <div className={styles.tpRow} key={index}>
-                <b>T{index + 1}</b>
-                <label><span>Profit %</span><div className={styles.unit}><input type="number" min="0.01" step="0.01" value={target.profitPct} onChange={(event) => updateTp(index,"profitPct",Number(event.target.value))}/><b>%</b></div></label>
-                <label><span>Sell %</span><div className={styles.unit}><input type="number" min="0.01" max="100" step="0.01" value={target.allocationPct} onChange={(event) => updateTp(index,"allocationPct",Number(event.target.value))}/><b>%</b></div></label>
-                <button type="button" className={styles.removeTp} disabled={busy} onClick={() => removeTp(index)}>Remove</button>
-              </div>)}
-            </div>}
-            <div className={`${styles.tpTotal} ${tpAllocationValid && tpRowsValid ? styles.tpOk : styles.tpBad}`}><span>Total sell allocation</span><b>{tpAllocation.toFixed(2)}%</b></div>
-            {tpChanged && <small className={styles.tpNote}>Saving a changed TP plan replaces future targets for the remaining position. Any TP fills already executed remain in the permanent trade ledger and will not be repeated.</small>}
-          </div>}
-
-          {accountMode === "live" && stopLossTimeoutSeconds > 0 && <p>Stop-loss timeout remains {stopLossTimeoutSeconds}s.</p>}
-          <p>{accountMode === "live" ? "Live TP/SL changes are submitted through the Core V2 guarded exit-plan control." : "Saving reconciles the active paper/shadow DCA and exit settings. Completed DCA fills are preserved."}</p>
+          <p>{accountMode === "live" ? "Saving reconciles the active Core V2 DCA and exit settings. Completed DCA fills are preserved." : "Saving reconciles the active paper/shadow DCA and exit settings. Completed DCA fills are preserved."}</p>
           {error && <div className={styles.error}>{error}</div>}
-          <div className={styles.footer}><button type="button" onClick={() => setMode(null)}>Cancel</button><button className={styles.primary} disabled={busy || !tpValid}>{busy ? "Saving…" : "Save trade"}</button></div>
+          <div className={styles.footer}><button type="button" onClick={() => setMode(null)}>Cancel</button><button className={styles.primary} disabled={busy || (stopEnabled && !(stopPct > 0))}>{busy ? "Saving…" : "Save trade"}</button></div>
         </form>}
       </section>
     </div>}
