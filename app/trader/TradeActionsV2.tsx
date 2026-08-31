@@ -33,6 +33,16 @@ type ExactTrade = {
   stopPct?: number;
   stopLossTimeoutSeconds?: number;
 };
+type CoreV2Position = {
+  trade_id?: string;
+  client_id?: string | null;
+};
+type CoreV2PositionsResponse = {
+  ok?: boolean;
+  ready?: boolean;
+  positions?: CoreV2Position[];
+  error?: string;
+};
 
 async function invokeFunction(functionName: string, body: Record<string, unknown>) {
   const { data, error } = await browserSupabase.functions.invoke(functionName, { body });
@@ -63,7 +73,36 @@ async function loadExactTrade(accountId: string, tradeId: string) {
   return result.trade;
 }
 
+async function resolveCoreV2TradeId(legacyTradeId: string) {
+  const { data, error } = await browserSupabase.functions.invoke("trader-v2-positions-read", { body: {} });
+  if (error) {
+    let message = error.message || "core_v2_position_lookup_failed";
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const payload = await context.clone().json() as { error?: string };
+        if (payload.error) message = payload.error;
+      } catch {}
+    }
+    throw new Error(message);
+  }
+  const result = (data ?? {}) as CoreV2PositionsResponse;
+  if (result.error || result.ok !== true || result.ready !== true || !Array.isArray(result.positions)) {
+    throw new Error(result.error || "core_v2_positions_not_ready");
+  }
+  const match = result.positions.find((position) =>
+    String(position.client_id || "") === legacyTradeId || String(position.trade_id || "") === legacyTradeId
+  );
+  const canonicalTradeId = String(match?.trade_id || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(canonicalTradeId)) {
+    throw new Error("core_v2_position_id_unavailable");
+  }
+  return canonicalTradeId;
+}
+
 function errorText(message: string) {
+  if (message.includes("core_v2_position_id_unavailable")) return "This live position could not be matched to its Core V2 position ID. No change was made.";
+  if (message.includes("core_v2_positions_not_ready")) return "Core V2 positions are not ready yet. No change was made.";
   if (message.includes("insufficient_available_balance")) return "Not enough available account balance for that amount.";
   if (message.includes("insufficient_usdt:")) return "Not enough free USDT on Binance for that amount.";
   if (message.includes("live_order_limit_exceeded:")) return `This exceeds the Real Account per-order live limit ($${message.split(":")[1]}).`;
@@ -155,6 +194,21 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
 
   const openEdit = async (event: React.MouseEvent) => {
     event.stopPropagation();
+    setError("");
+    if (accountMode === "live") {
+      if (busy) return;
+      setBusy(true);
+      try {
+        const canonicalTradeId = await resolveCoreV2TradeId(trade.id);
+        window.dispatchEvent(new CustomEvent("labnarrative:edit-exit-plan", { detail: { tradeId: canonicalTradeId } }));
+      } catch (caught) {
+        window.alert(errorText(caught instanceof Error ? caught.message : "Unable to open Core V2 exit plan."));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     setMaxAveraging(trade.maxAveraging);
     setActiveOrdersLimit(Math.min(trade.activeOrdersLimit, Math.max(0, trade.maxAveraging - completedDca)));
     setTakeProfitPct(trade.takeProfitPct);
@@ -163,26 +217,7 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
     setStopEnabled(trade.stopEnabled);
     setStopPct(trade.stopPct || 8);
     setStopLossTimeoutSeconds(0);
-    setError("");
     setMode("edit");
-    if (accountMode !== "live") return;
-    setBusy(true);
-    try {
-      const exact = await loadExactTrade(accountId, trade.id);
-      setTakeProfitPct(Number(exact.takeProfitPct ?? trade.takeProfitPct));
-      const exactTargets = Array.isArray(exact.takeProfitTargets)
-        ? cleanTargets(exact.takeProfitTargets)
-        : Number(exact.takeProfitPct ?? 0) > 0
-          ? [{ profitPct: Number(exact.takeProfitPct), allocationPct: 100 }]
-          : [];
-      setTpTargets(exactTargets);
-      setOriginalTpTargets(exactTargets);
-      setStopEnabled(Boolean(exact.stopEnabled));
-      setStopPct(Number(exact.stopPct ?? trade.stopPct ?? 8));
-      setStopLossTimeoutSeconds(Number(exact.stopLossTimeoutSeconds ?? 0));
-    } catch (caught) {
-      setError(errorText(caught instanceof Error ? caught.message : "Unable to load live trade settings."));
-    } finally { setBusy(false); }
   };
 
   const submitAdd = async (event: FormEvent) => {
@@ -199,6 +234,10 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
 
   const submitEdit = async (event: FormEvent) => {
     event.preventDefault(); event.stopPropagation();
+    if (accountMode === "live") {
+      setError("Live TP/SL edits are handled by Core V2. Close this dialog and use Edit trade again.");
+      return;
+    }
     if (busy || !tpValid) return;
     setBusy(true); setError("");
     try {
@@ -212,14 +251,6 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
         stopEnabled,
         stopPct,
       });
-      if (accountMode === "live" && tpChanged) {
-        await invokeFunction("trader-live-tp-control", {
-          action: "update_take_profit",
-          accountId,
-          tradeId: trade.id,
-          targets: cleanTargets(tpTargets),
-        });
-      }
       setMode(null);
       await onChanged();
     } catch (caught) {
@@ -284,7 +315,7 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
           </div>}
 
           {accountMode === "live" && stopLossTimeoutSeconds > 0 && <p>Stop-loss timeout remains {stopLossTimeoutSeconds}s.</p>}
-          <p>{accountMode === "live" ? "Saving reconciles active DCA orders on Binance and updates this trade's TP/SL plan. No market order is sent just for editing settings." : "Saving reconciles the active paper/shadow DCA and exit settings. Completed DCA fills are preserved."}</p>
+          <p>{accountMode === "live" ? "Live TP/SL changes are submitted through the Core V2 guarded exit-plan control." : "Saving reconciles the active paper/shadow DCA and exit settings. Completed DCA fills are preserved."}</p>
           {error && <div className={styles.error}>{error}</div>}
           <div className={styles.footer}><button type="button" onClick={() => setMode(null)}>Cancel</button><button className={styles.primary} disabled={busy || !tpValid}>{busy ? "Saving…" : "Save trade"}</button></div>
         </form>}
