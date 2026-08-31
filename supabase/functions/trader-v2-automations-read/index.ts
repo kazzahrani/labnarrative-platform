@@ -31,11 +31,15 @@ type BotRow = {
   averaging_enabled: boolean | null;
   order_type: string | null;
   tradingview_enabled: boolean | null;
+  conditions: unknown;
   client_state: Json | null;
+  is_archived: boolean | null;
   updated_at: string | null;
   created_at: string;
 };
-type TradeRow = { bot_id: string | null };
+type TradeMetricRow = { bot_id: string | null; status: string; realized_pnl: number | string | null };
+type PositionMetricRow = { bot_id: string | null; unrealized_pnl: number | string | null; remaining_cost_basis: number | string | null };
+type BotMetrics = { executions: number; closed: number; realizedPnl: number; active: number; unrealizedPnl: number; activeCapital: number };
 const SUPPORTED_PROVIDERS = new Set(["binance", "bybit", "okx", "kucoin"]);
 
 function cors(req: Request) {
@@ -78,7 +82,32 @@ function marketLabel(bot: BotRow) {
   if (pairs.length > 1) return `${pairs.length} pairs`;
   return pairs[0] || bot.pair || "Configured market";
 }
+function conditionLabel(bot: BotRow) {
+  if (botType(bot) === "Strategy Execution") return "";
+  if (!Array.isArray(bot.conditions) || bot.conditions.length === 0) return "Immediately";
+  return bot.conditions.slice(0, 6).map((raw) => String(obj(raw).kind || "Rule")).join(" + ");
+}
+function maxCapital(bot: BotRow) {
+  if (botType(bot) === "Strategy Execution") return null;
+  const base = Math.max(0, n(bot.base_order));
+  let perTrade = base;
+  if (bot.averaging_enabled === true) {
+    const safety = Math.max(0, n(bot.safety_order));
+    const scale = Math.max(0.000001, n(bot.volume_scale, 1));
+    const count = Math.max(0, Math.round(n(bot.max_safety_orders)));
+    for (let index = 0; index < count; index += 1) perTrade += safety * Math.pow(scale, index);
+  }
+  const capacity = Math.max(1, maxActive(bot) ?? 1);
+  return perTrade * capacity;
+}
 function errorMessage(error: unknown) { return error instanceof Error ? error.message : String(error || "unknown_error"); }
+function metricFor(map: Map<string, BotMetrics>, botId: string) {
+  const existing = map.get(botId);
+  if (existing) return existing;
+  const created = { executions: 0, closed: 0, realizedPnl: 0, active: 0, unrealizedPnl: 0, activeCapital: 0 };
+  map.set(botId, created);
+  return created;
+}
 
 async function realAccount(db: Db, userId: string) {
   const { data, error } = await db.from("trader_accounts")
@@ -91,6 +120,21 @@ async function realAccount(db: Db, userId: string) {
   if (error) throw error;
   if (!data?.id) throw new Error("real_account_required");
   return { id: String(data.id), name: String(data.name || "Real Account") };
+}
+async function tradeMetricsRows(db: Db, accountId: string) {
+  const rows: TradeMetricRow[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await db.from("trader_trades")
+      .select("bot_id,status,realized_pnl")
+      .eq("account_id", accountId)
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = (data ?? []) as TradeMetricRow[];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
 }
 
 Deno.serve(async (req: Request) => {
@@ -106,29 +150,51 @@ Deno.serve(async (req: Request) => {
 
   try {
     const account = await realAccount(db, userData.user.id);
-    const [botsResult, tradesResult] = await Promise.all([
+    const [botsResult, trades, positionsResult] = await Promise.all([
       db.from("trader_bots")
-        .select("id,client_id,public_bot_no,name,status,exchange_provider,execution_mode,pair,pairs,all_pairs,base_order,safety_order,max_safety_orders,limit_safety_orders,max_active_trades,deviation,step_scale,volume_scale,take_profit_pct,stop_enabled,stop_pct,trailing_pct,max_hold_enabled,max_hold_hours,averaging_enabled,order_type,tradingview_enabled,client_state,updated_at,created_at")
+        .select("id,client_id,public_bot_no,name,status,exchange_provider,execution_mode,pair,pairs,all_pairs,base_order,safety_order,max_safety_orders,limit_safety_orders,max_active_trades,deviation,step_scale,volume_scale,take_profit_pct,stop_enabled,stop_pct,trailing_pct,max_hold_enabled,max_hold_hours,averaging_enabled,order_type,tradingview_enabled,conditions,client_state,is_archived,updated_at,created_at")
         .eq("account_id", account.id)
-        .eq("is_archived", false)
-        .order("public_bot_no", { ascending: true, nullsFirst: false }),
-      db.from("trader_trades")
-        .select("bot_id")
-        .eq("account_id", account.id)
-        .eq("status", "Active"),
+        .order("public_bot_no", { ascending: false, nullsFirst: false }),
+      tradeMetricsRows(db, account.id),
+      db.from("trader_v2_positions_latest")
+        .select("bot_id,unrealized_pnl,remaining_cost_basis")
+        .eq("account_id", account.id),
     ]);
     if (botsResult.error) throw botsResult.error;
-    if (tradesResult.error) throw tradesResult.error;
+    if (positionsResult.error) throw positionsResult.error;
 
-    const activeByBot = new Map<string, number>();
-    for (const trade of (tradesResult.data ?? []) as TradeRow[]) {
+    const metrics = new Map<string, BotMetrics>();
+    let closedPositions = 0;
+    let realizedPnl = 0;
+    for (const trade of trades) {
       if (!trade.bot_id) continue;
-      activeByBot.set(trade.bot_id, (activeByBot.get(trade.bot_id) || 0) + 1);
+      const metric = metricFor(metrics, trade.bot_id);
+      metric.executions += 1;
+      if (String(trade.status) === "Closed") {
+        const pnl = n(trade.realized_pnl);
+        metric.closed += 1;
+        metric.realizedPnl += pnl;
+        closedPositions += 1;
+        realizedPnl += pnl;
+      }
+    }
+    let activePositions = 0;
+    let unrealizedPnl = 0;
+    for (const position of (positionsResult.data ?? []) as PositionMetricRow[]) {
+      if (!position.bot_id) continue;
+      const metric = metricFor(metrics, position.bot_id);
+      const pnl = n(position.unrealized_pnl);
+      metric.active += 1;
+      metric.unrealizedPnl += pnl;
+      metric.activeCapital += Math.max(0, n(position.remaining_cost_basis));
+      activePositions += 1;
+      unrealizedPnl += pnl;
     }
 
     const automations = ((botsResult.data ?? []) as BotRow[]).map((bot) => {
       const type = botType(bot);
       const provider = String(bot.exchange_provider || "unknown").toLowerCase();
+      const metric = metricFor(metrics, bot.id);
       return {
         id: bot.id,
         clientId: bot.client_id,
@@ -140,8 +206,17 @@ Deno.serve(async (req: Request) => {
         executionMode: bot.execution_mode || "",
         pair: bot.pair || "BTC/USDT",
         market: marketLabel(bot),
-        activePositions: activeByBot.get(bot.id) || 0,
+        conditionLabel: conditionLabel(bot),
+        isArchived: bot.is_archived === true,
+        executions: metric.executions,
+        closedPositions: metric.closed,
+        activePositions: metric.active,
         maxActivePositions: maxActive(bot),
+        maxCapital: maxCapital(bot),
+        realizedPnl: metric.realizedPnl,
+        unrealizedPnl: metric.unrealizedPnl,
+        pnl: metric.realizedPnl + metric.unrealizedPnl,
+        activeCapital: metric.activeCapital,
         baseOrder: nullableNumber(bot.base_order),
         safetyOrder: nullableNumber(bot.safety_order),
         maxSafetyOrders: Math.max(0, Math.round(n(bot.max_safety_orders, 0))),
@@ -157,16 +232,17 @@ Deno.serve(async (req: Request) => {
         trailingPct: nullableNumber(bot.trailing_pct),
         maxHoldEnabled: bot.max_hold_enabled === true,
         maxHoldHours: nullableNumber(bot.max_hold_hours),
-        canManage: type === "DCA" && SUPPORTED_PROVIDERS.has(provider),
+        canManage: bot.is_archived !== true && type === "DCA" && SUPPORTED_PROVIDERS.has(provider),
         updatedAt: bot.updated_at || bot.created_at,
       };
     });
 
-    const running = automations.filter((bot) => bot.status.toLowerCase() === "running").length;
-    const strategies = automations.filter((bot) => bot.type === "Strategy Execution").length;
-    const activePositions = automations.reduce((sum, bot) => sum + bot.activePositions, 0);
+    const activeAutomations = automations.filter((bot) => !bot.isArchived);
+    const archived = automations.length - activeAutomations.length;
+    const running = activeAutomations.filter((bot) => bot.status.toLowerCase() === "running").length;
+    const strategies = activeAutomations.filter((bot) => bot.type === "Strategy Execution").length;
     const providerCounts: Record<string, number> = {};
-    for (const bot of automations) providerCounts[bot.provider] = (providerCounts[bot.provider] || 0) + 1;
+    for (const bot of activeAutomations) providerCounts[bot.provider] = (providerCounts[bot.provider] || 0) + 1;
 
     return json(req, {
       ok: true,
@@ -174,12 +250,17 @@ Deno.serve(async (req: Request) => {
       account: { id: account.id, name: account.name },
       supportedProviders: ["binance", "bybit", "okx", "kucoin"],
       summary: {
-        total: automations.length,
+        total: activeAutomations.length,
+        archived,
         running,
-        stopped: automations.length - running,
-        dca: automations.length - strategies,
+        stopped: activeAutomations.length - running,
+        dca: activeAutomations.length - strategies,
         strategies,
         activePositions,
+        closedPositions,
+        realizedPnl,
+        unrealizedPnl,
+        automationPnl: realizedPnl + unrealizedPnl,
         providerCounts,
       },
       automations,
