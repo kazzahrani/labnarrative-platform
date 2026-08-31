@@ -21,6 +21,11 @@ if (!positions.includes(marker)) {
   );
 
   positions = positions.replace(
+    '  trade_id: string;\n  public_trade_no:',
+    '  trade_id: string;\n  client_id: string | null;\n  public_trade_no:',
+  );
+
+  positions = positions.replace(
     'type PositionsResponse = {\n  ok?: boolean;',
     'type PositionsResponse = {\n  ok?: boolean;\n  accountId?: string;',
   );
@@ -57,7 +62,7 @@ if (!positions.includes(marker)) {
 
   const returnAnchor = '    <main className={`${base.main} ${styles.main}`}><header className={`${base.topbar} ${styles.topbar}`}><div><div className={base.eyebrow}>Core V2</div><h1 className={base.title}>Positions</h1></div><div className={base.topActions}>{positionsData && <div className={base.status}><span className={base.dot} />{positions.length} open · {ageLabel(positionsData.ageMs)}{latencyMs != null ? ` · ${latencyMs} ms` : ""}</div>}<button className={base.ghostButton} onClick={() => browserSupabase.auth.signOut()}>Sign out</button></div></header>{content}</main>\n  </div>;';
   if (!positions.includes(returnAnchor)) throw new Error("Positions chart could not find final page return anchor");
-  const replacement = '    <main className={`${base.main} ${styles.main}`}><header className={`${base.topbar} ${styles.topbar}`}><div><div className={base.eyebrow}>Core V2</div><h1 className={base.title}>Positions</h1></div><div className={base.topActions}>{positionsData && <div className={base.status}><span className={base.dot} />{positions.length} open · {ageLabel(positionsData.ageMs)}{latencyMs != null ? ` · ${latencyMs} ms` : ""}</div>}<button className={base.ghostButton} onClick={() => browserSupabase.auth.signOut()}>Sign out</button></div></header>{content}</main>\n    {selectedPosition && positionsData?.accountId && <DcaTradeChartV2Workstation accountId={positionsData.accountId} tradeId={selectedPosition.trade_id} pair={selectedPosition.pair} status={selectedPosition.status === "Closed" ? "Closed" : "Active"} entryPrice={finite(selectedPosition.average_price)} averagePrice={finite(selectedPosition.average_price)} createdAt={selectedPosition.opened_at || selectedPosition.updated_at || new Date().toISOString()} lastPrice={finite(selectedPosition.last_price)} takeProfitPrice={(() => { const target = (selectedPosition.take_profit_targets ?? []).map((item) => finite(item.profitPct)).find((value) => value > 0); return target && selectedPosition.average_price > 0 ? selectedPosition.average_price * (1 + target / 100) : null; })()} stopLossPrice={selectedPosition.stop_enabled && selectedPosition.stop_pct > 0 && selectedPosition.average_price > 0 ? selectedPosition.average_price * (1 - selectedPosition.stop_pct / 100) : null} onClose={() => setSelectedPosition(null)} />}\n  </div>;';
+  const replacement = '    <main className={`${base.main} ${styles.main}`}><header className={`${base.topbar} ${styles.topbar}`}><div><div className={base.eyebrow}>Core V2</div><h1 className={base.title}>Positions</h1></div><div className={base.topActions}>{positionsData && <div className={base.status}><span className={base.dot} />{positions.length} open · {ageLabel(positionsData.ageMs)}{latencyMs != null ? ` · ${latencyMs} ms` : ""}</div>}<button className={base.ghostButton} onClick={() => browserSupabase.auth.signOut()}>Sign out</button></div></header>{content}</main>\n    {selectedPosition && positionsData?.accountId && <DcaTradeChartV2Workstation accountId={positionsData.accountId} tradeId={selectedPosition.client_id || selectedPosition.trade_id} pair={selectedPosition.pair} status={selectedPosition.status === "Closed" ? "Closed" : "Active"} entryPrice={finite(selectedPosition.average_price)} averagePrice={finite(selectedPosition.average_price)} createdAt={selectedPosition.opened_at || selectedPosition.updated_at || new Date().toISOString()} lastPrice={finite(selectedPosition.last_price)} takeProfitPrice={(() => { const target = (selectedPosition.take_profit_targets ?? []).map((item) => finite(item.profitPct)).find((value) => value > 0); return target && selectedPosition.average_price > 0 ? selectedPosition.average_price * (1 + target / 100) : null; })()} stopLossPrice={selectedPosition.stop_enabled && selectedPosition.stop_pct > 0 && selectedPosition.average_price > 0 ? selectedPosition.average_price * (1 - selectedPosition.stop_pct / 100) : null} onClose={() => setSelectedPosition(null)} />}\n  </div>;';
   positions = positions.replace(returnAnchor, replacement);
 }
 
@@ -84,6 +89,11 @@ if (!chart.includes(chartMarker)) {
   chart = chart.replace(chooseAnchor, helpers + chooseAnchor);
 
   chart = chart.replace(
+    'async function loadSnapshot(accountId: string, tradeId: string) {\n  const { data, error } = await browserSupabase.functions.invoke("trader-chart-control", { body: { accountId, tradeId } });',
+    'async function loadSnapshot(accountId: string, tradeId: string) {\n  const host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";\n  const useProxy = host === "app.labnarrative.com" || host === "localhost" || host === "127.0.0.1" || host.endsWith(".vercel.app");\n  if (useProxy) {\n    const { data: sessionData, error: sessionError } = await browserSupabase.auth.getSession();\n    const token = sessionData.session?.access_token || "";\n    if (sessionError || !token) throw new Error("unauthorized");\n    const response = await fetch("/api/trader/function-proxy", { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ name: "trader-chart-control", body: { accountId, tradeId } }), cache: "no-store" });\n    const result = await response.json().catch(() => ({})) as ChartSnapshot;\n    if (!response.ok || result.error || result.ok !== true) throw new Error(result.error || `trade_chart_http_${response.status}`);\n    return result;\n  }\n  const { data, error } = await browserSupabase.functions.invoke("trader-chart-control", { body: { accountId, tradeId } });',
+  );
+
+  chart = chart.replace(
     '  const [enabled, setEnabled] = useState<IndicatorName[]>(["Volume", "RSI", "Stochastic"]);',
     '  const [enabled, setEnabled] = useState<IndicatorName[]>(["Volume"]);',
   );
@@ -103,10 +113,10 @@ if (!chart.includes(chartMarker)) {
   chart = chart.replace('Other toggles use standard defaults.', 'Only indicators used by this bot are shown. Volume is always included.');
 }
 
-for (const required of [marker, "DcaTradeChartV2Workstation", "selectedPosition", "onOpenChart"]) {
+for (const required of [marker, "DcaTradeChartV2Workstation", "selectedPosition", "onOpenChart", "client_id"]) {
   if (!positions.includes(required)) throw new Error(`Core V2 position chart output missing ${required}`);
 }
-for (const required of [chartMarker, "smallestConditionInterval", 'useState<IndicatorName[]>(["Volume"])', "chartIndicatorNames"]) {
+for (const required of [chartMarker, "smallestConditionInterval", 'useState<IndicatorName[]>(["Volume"])', "chartIndicatorNames", 'name: "trader-chart-control"']) {
   if (!chart.includes(required)) throw new Error(`Strategy chart output missing ${required}`);
 }
 
