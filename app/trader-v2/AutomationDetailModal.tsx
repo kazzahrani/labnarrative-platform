@@ -3,13 +3,16 @@
 import { FormEvent, useEffect } from "react";
 import styles from "./automation-detail-modal.module.css";
 
-type EntryCondition = {
+export type EntryCondition = {
   id?: string | number;
   kind?: string;
   length?: number;
   comparator?: string;
   signal?: number;
   timeframe?: string;
+  aux1?: number;
+  aux2?: number;
+  aux3?: number;
 };
 
 type AutomationLike = {
@@ -53,10 +56,13 @@ type AutomationLike = {
   stopLossTimeoutSeconds?: number | null;
 };
 
-type BotFormLike = {
+export type BotFormLike = {
   name: string;
   provider: string;
   pair: string;
+  pairs: string[];
+  allPairs: boolean;
+  conditions: EntryCondition[];
   baseOrder: number;
   safetyOrder: number;
   maxSafetyOrders: number;
@@ -66,8 +72,10 @@ type BotFormLike = {
   stepScale: number;
   volumeScale: number;
   takeProfit: number;
+  trailingPct: number;
   stopEnabled: boolean;
   stopPct: number;
+  stopLossTimeoutSeconds: number;
 };
 
 type Props = {
@@ -82,6 +90,10 @@ type Props = {
   onFormChange: (patch: Partial<BotFormLike>) => void;
   onSave: (event: FormEvent) => void;
 };
+
+const INDICATORS = ["RSI","Stochastic","MACD","Moving Average (MA)","Average Directional Index","Bollinger Bands %B","Money Flow Index","Commodity Channel Index","Ultimate Oscillator","Parabolic SAR","Heikin Ashi"];
+const COMPARATORS = ["Greater Than","Less Than","Crossing Up","Crossing Down"];
+const TIMEFRAMES = ["3 minutes","5 minutes","15 minutes","30 minutes","1 hour","2 hours","4 hours","8 hours","12 hours","1 day","3 days","1 week","1 month"];
 
 function providerLabel(value: string) {
   const p = String(value || "").toLowerCase();
@@ -107,6 +119,9 @@ function conditionText(condition: EntryCondition, index: number) {
   const timeframe = condition.timeframe ? ` · ${condition.timeframe}` : "";
   return `${kind}${length}${comparator ? ` ${comparator}` : ""}${signal}${timeframe}`.trim();
 }
+function normalizePairs(value: string) {
+  return Array.from(new Set(value.split(/[\s,]+/).map((pair) => pair.trim().toUpperCase()).filter((pair) => /^[A-Z0-9]{2,16}\/USDT$/.test(pair))));
+}
 
 export default function AutomationDetailModal({ automation, mode, form, busy, onClose, onEdit, onToggle, onArchive, onFormChange, onSave }: Props) {
   useEffect(() => {
@@ -129,7 +144,14 @@ export default function AutomationDetailModal({ automation, mode, form, busy, on
   const donut = `conic-gradient(#58dca3 0 ${winPct}%, #ff7582 ${winPct}% ${winPct + lossPct}%, #777 ${winPct + lossPct}% 100%)`;
   const capitalPerPosition = Math.max(0, automation.baseOrder ?? form.baseOrder);
   const marketUniverse = automation.allPairs ? `All ${providerLabel(automation.provider)} USDT Spot pairs` : automation.market;
-  const selectedUniverseLocked = automation.allPairs === true || (automation.pairs?.length ?? 0) > 1;
+
+  const updateRule = (index: number, patch: Partial<EntryCondition>) => {
+    onFormChange({ conditions: form.conditions.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, ...patch } : rule) });
+  };
+  const addRule = () => {
+    onFormChange({ conditions: [...form.conditions, { id: `condition-${Date.now()}`, kind: "RSI", length: 14, comparator: "Less Than", signal: 30, timeframe: "5 minutes", aux1: 0, aux2: 0, aux3: 0 }] });
+  };
+  const deleteRule = (index: number) => onFormChange({ conditions: form.conditions.filter((_, ruleIndex) => ruleIndex !== index) });
 
   return <div className={styles.backdrop} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className={styles.modal} role="dialog" aria-modal="true" aria-label={`${automation.name} automation`}>
@@ -170,16 +192,18 @@ export default function AutomationDetailModal({ automation, mode, form, busy, on
 
         <section className={styles.card}><h3>Strategy</h3><p>Name this automation and define how many positions it may manage at once.</p><div className={styles.formGrid}><label>Strategy name<input value={form.name} onChange={(event) => onFormChange({ name: event.target.value })}/></label><label>Maximum active positions<input type="number" min={1} max={20} value={form.maxActiveTrades} onChange={(event) => onFormChange({ maxActiveTrades: Number(event.target.value) })}/></label></div></section>
 
-        <section className={styles.card}><div className={styles.cardTitleRow}><div><h3>Market</h3><p>Choose where this strategy is allowed to operate.</p></div><span className={styles.marketBadge}>{automation.allPairs ? "All coins" : "Selected coins"}</span></div>{selectedUniverseLocked ? <div className={styles.marketNotice}>{marketUniverse}<small>This existing market universe is preserved by Core V2 while editing the strategy.</small></div> : <label>Pair<input value={form.pair} onChange={(event) => onFormChange({ pair: event.target.value.toUpperCase() })}/></label>}</section>
+        <section className={styles.card}><div className={styles.cardTitleRow}><div><h3>Market</h3><p>Choose where this strategy is allowed to operate.</p></div><div className={styles.marketToggle}><button type="button" className={form.allPairs ? styles.toggleActive : ""} onClick={() => onFormChange({ allPairs: true, pairs: [] })}>All coins</button><button type="button" className={!form.allPairs ? styles.toggleActive : ""} onClick={() => onFormChange({ allPairs: false, pairs: form.pairs.length ? form.pairs : [form.pair] })}>Selected coins</button></div></div>{form.allPairs ? <div className={styles.marketNotice}>All {providerLabel(form.provider)} USDT Spot pairs<small>The strategy may scan the complete connected USDT Spot universe.</small></div> : <label>Selected USDT pairs<input value={form.pairs.join(", ")} onChange={(event) => { const pairs = normalizePairs(event.target.value); onFormChange({ pairs, pair: pairs[0] || form.pair }); }} placeholder="BTC/USDT, ETH/USDT"/></label>}</section>
 
-        <section className={styles.card}><h3>Entry Rule</h3><p>Current rules are displayed exactly as the bot evaluates them. Rule authoring remains on the existing strategy editor until its Core V2 write path is migrated.</p><div className={styles.rules}>{conditions.length ? conditions.map((condition, index) => <div key={String(condition.id ?? index)}><span>{index + 1}</span><div><strong>{condition.kind || "Rule"}</strong><small>{conditionText(condition, index)}</small></div></div>) : <div className={styles.noRules}>Immediately — no indicator entry rule is configured.</div>}</div></section>
+        <section className={styles.card}><div className={styles.cardTitleRow}><div><h3>Entry Rule</h3><p>Multiple rules are combined with AND and evaluated on closed candles.</p></div><button type="button" className={styles.addRule} onClick={addRule}>＋ Add rule</button></div><div className={styles.ruleEditors}>{form.conditions.length ? form.conditions.map((condition, index) => <div className={styles.ruleEditor} key={String(condition.id ?? index)}><span>{index + 1}</span><div className={styles.ruleEditorGrid}><label>Indicator<select value={condition.kind || "RSI"} onChange={(event) => updateRule(index,{kind:event.target.value})}>{INDICATORS.map((item)=><option key={item}>{item}</option>)}</select></label><label>Length<input type="number" min={1} max={500} value={condition.length ?? 14} onChange={(event)=>updateRule(index,{length:Number(event.target.value)})}/></label><label>Condition<select value={condition.comparator || "Less Than"} onChange={(event)=>updateRule(index,{comparator:event.target.value})}>{COMPARATORS.map((item)=><option key={item}>{item}</option>)}</select></label><label>Signal<input type="number" step="0.01" value={condition.signal ?? 30} onChange={(event)=>updateRule(index,{signal:Number(event.target.value)})}/></label><label>Timeframe<select value={condition.timeframe || "5 minutes"} onChange={(event)=>updateRule(index,{timeframe:event.target.value})}>{TIMEFRAMES.map((item)=><option key={item}>{item}</option>)}</select></label></div><button type="button" className={styles.deleteRule} aria-label={`Delete rule ${index+1}`} onClick={()=>deleteRule(index)}>×</button></div>) : <div className={styles.noRules}>No entry rules: this automation starts immediately when capacity is available.</div>}</div></section>
+
+        <section className={styles.card}><div className={styles.cardTitleRow}><div><h3>TradingView Link</h3><p>One webhook for external entry, exit and position funding.</p></div><span className={styles.mutedAction}>Connect TradingView</span></div><small className={styles.note}>This remains unchanged unless TradingView control is configured separately.</small></section>
 
         <div className={styles.twoCol}>
           <section className={styles.card}><h3>Capital Plan</h3><div className={styles.formGrid}><label>Initial order<div className={styles.unit}><input type="number" min="0.01" step="0.01" value={form.baseOrder} onChange={(event) => onFormChange({ baseOrder: Number(event.target.value) })}/><b>USDT</b></div></label><label>DCA order size<div className={styles.unit}><input type="number" min="0.01" step="0.01" value={form.safetyOrder} onChange={(event) => onFormChange({ safetyOrder: Number(event.target.value) })}/><b>USDT</b></div></label><label>Maximum DCA orders<input type="number" min="0" max="50" value={form.maxSafetyOrders} onChange={(event) => onFormChange({ maxSafetyOrders: Number(event.target.value) })}/></label><label>Active DCA orders<input type="number" min="0" max={Math.max(0, form.maxSafetyOrders)} value={form.limitSafetyOrders} onChange={(event) => onFormChange({ limitSafetyOrders: Number(event.target.value) })}/></label><label>First DCA trigger<div className={styles.unit}><input type="number" min="0.000001" step="0.01" value={form.deviation} onChange={(event) => onFormChange({ deviation: Number(event.target.value) })}/><b>%</b></div></label><label>Price step multiplier<input type="number" min="0.000001" step="0.01" value={form.stepScale} onChange={(event) => onFormChange({ stepScale: Number(event.target.value) })}/></label><label>Order size multiplier<input type="number" min="0.000001" step="0.01" value={form.volumeScale} onChange={(event) => onFormChange({ volumeScale: Number(event.target.value) })}/></label></div></section>
-          <section className={styles.card}><h3>Exit Plan</h3><div className={styles.formGrid}><label>Target profit<div className={styles.unit}><input type="number" min="0" step="0.01" value={form.takeProfit} onChange={(event) => onFormChange({ takeProfit: Number(event.target.value) })}/><b>%</b></div></label><label>Sell allocation<input value="100%" disabled/></label><label>Stop loss<select value={form.stopEnabled ? "On" : "Off"} onChange={(event) => onFormChange({ stopEnabled: event.target.value === "On" })}><option>Off</option><option>On</option></select></label><label>Stop loss distance<div className={styles.unit}><input type="number" min="0" step="0.01" disabled={!form.stopEnabled} value={form.stopPct} onChange={(event) => onFormChange({ stopPct: Number(event.target.value) })}/><b>%</b></div></label></div><small className={styles.note}>Existing trailing-TP and stop-timeout settings are preserved when saving this Core V2 edit.</small></section>
+          <section className={styles.card}><h3>Exit Plan</h3><div className={styles.formGrid}><label>Target profit<div className={styles.unit}><input type="number" min="0" step="0.01" value={form.takeProfit} onChange={(event) => onFormChange({ takeProfit: Number(event.target.value) })}/><b>%</b></div></label><label>Sell allocation<input value="100%" disabled/></label><label>Trailing take profit<select value={form.trailingPct > 0 ? "On" : "Off"} onChange={(event)=>onFormChange({trailingPct:event.target.value==="On"?Math.max(.01,form.trailingPct||.2):0})}><option>Off</option><option>On</option></select></label><label>Trailing deviation<div className={styles.unit}><input type="number" min="0.01" step="0.01" disabled={form.trailingPct<=0} value={form.trailingPct || .2} onChange={(event)=>onFormChange({trailingPct:Number(event.target.value)})}/><b>%</b></div></label><label>Stop loss<select value={form.stopEnabled ? "On" : "Off"} onChange={(event) => onFormChange({ stopEnabled: event.target.value === "On" })}><option>Off</option><option>On</option></select></label><label>Stop loss distance<div className={styles.unit}><input type="number" min="0" step="0.01" disabled={!form.stopEnabled} value={form.stopPct} onChange={(event) => onFormChange({ stopPct: Number(event.target.value) })}/><b>%</b></div></label><label>Stop loss timeout<select value={form.stopLossTimeoutSeconds>0?"Timeout":"Immediate"} disabled={!form.stopEnabled} onChange={(event)=>onFormChange({stopLossTimeoutSeconds:event.target.value==="Timeout"?Math.max(1,form.stopLossTimeoutSeconds||300):0})}><option>Immediate</option><option>Timeout</option></select></label><label>Timeout duration<div className={styles.unit}><input type="number" min="1" step="1" disabled={!form.stopEnabled||form.stopLossTimeoutSeconds<=0} value={form.stopLossTimeoutSeconds || 300} onChange={(event)=>onFormChange({stopLossTimeoutSeconds:Number(event.target.value)})}/><b>sec</b></div></label></div></section>
         </div>
 
-        <section className={styles.strategyMap}><h3>Strategy Map</h3><p>See how capital and recovery change across the full DCA path.</p><div><article><span>Capital / position</span><strong>{money(form.baseOrder)}</strong></article><article><span>Maximum bot capital</span><strong>{automation.maxCapital == null ? "Dynamic" : money(automation.maxCapital)}</strong></article><article><span>DCA coverage</span><strong>{form.maxSafetyOrders > 0 ? `${form.maxSafetyOrders} orders` : "0 orders"}</strong></article><article><span>Recovery after full DCA</span><strong>+{form.takeProfit.toFixed(2)}%</strong></article></div></section>
+        <section className={styles.strategyMap}><h3>Strategy Map</h3><p>See how capital and recovery change across the full DCA path.</p><div><article><span>Capital / position</span><strong>{money(form.baseOrder)}</strong></article><article><span>Maximum bot capital</span><strong>{money((form.baseOrder + Array.from({length:Math.max(0,form.maxSafetyOrders)}).reduce((sum,_,i)=>sum+form.safetyOrder*Math.pow(Math.max(.000001,form.volumeScale),i),0))*Math.max(1,form.maxActiveTrades))}</strong></article><article><span>DCA coverage</span><strong>{form.maxSafetyOrders} orders</strong></article><article><span>Recovery target</span><strong>+{form.takeProfit.toFixed(2)}%</strong></article></div></section>
 
         <div className={styles.saveBar}><button type="button" onClick={onClose} disabled={busy}>Cancel</button><button className={styles.primary} disabled={busy}>{busy ? "Saving…" : "Save changes"}</button></div>
       </form>}
