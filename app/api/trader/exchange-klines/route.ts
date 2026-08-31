@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { traderGatewayPublicGet } from "../../../../lib/trader/gateway";
 
 type Provider = "binance" | "bybit" | "okx" | "kucoin";
 type Candle = { openTime:number; open:number; high:number; low:number; close:number; volume:number; closeTime:number; quoteVolume:number; trades:number };
@@ -6,7 +7,7 @@ type Json = Record<string,unknown>;
 
 const BASE = {
   binance:"https://data-api.binance.vision",
-  bybit:"https://api.bytick.com",
+  bybit:"https://api.bybit.com",
   okx:"https://www.okx.com",
   kucoin:"https://api.kucoin.com",
 } as const;
@@ -22,7 +23,7 @@ function arr(v:unknown):unknown[]{return Array.isArray(v)?v:[];}
 function text(v:unknown){return String(v??"");}
 function providerValue(v:string|null):Provider{return v==="bybit"||v==="okx"||v==="kucoin"?v:"binance";}
 function normalizeSymbol(provider:Provider,input:string){const raw=input.toUpperCase().replace(/[^A-Z0-9]/g,"");if(!/^[A-Z0-9]{5,20}$/.test(raw)||!raw.endsWith("USDT"))throw new Error("invalid_symbol");const base=raw.slice(0,-4);return provider==="okx"||provider==="kucoin"?`${base}-USDT`:raw;}
-async function get(url:string){const response=await fetch(url,{cache:"no-store",headers:{accept:"application/json"},redirect:"error",signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error(`market_data_${response.status}`);return await response.json();}
+async function get(url:string){if(url.startsWith(`${BASE.bybit}/`))return await traderGatewayPublicGet(url);const response=await fetch(url,{cache:"no-store",headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});if(!response.ok)throw new Error(`market_data_${response.status}`);return await response.json();}
 function dedupe(rows:Candle[],bars:number){const now=Date.now();return [...new Map(rows.filter(c=>c.openTime>0&&c.close>0&&c.closeTime<=now).map(c=>[c.openTime,c])).values()].sort((a,b)=>a.openTime-b.openTime).slice(-bars);}
 
 async function binance(symbol:string,interval:string,bars:number,endTime:number){
