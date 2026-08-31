@@ -12,6 +12,22 @@ sudo apt-get install -y ca-certificates curl nodejs iptables-persistent
 
 sudo mkdir -p "$INSTALL_ROOT"
 sudo curl -4 -fL --retry 5 --retry-delay 2 --connect-timeout 10 "$SERVER_URL" -o "$INSTALL_ROOT/server.mjs"
+
+# Bybit public/private traffic must use the same IPv4 curl transport already used
+# for OKX/KuCoin. Vercel and Supabase cannot reach Bybit directly from their current
+# egress, while Node/Undici on the Riyadh gateway can intermittently hang until the
+# 10s AbortSignal fires. GETs retain the existing safe single retry; order writes are
+# never retried by curlRequestIpv4.
+BYBIT_IPV4_BEFORE='if (origin === ORIGINS.kucoin || origin === ORIGINS.okx) {'
+BYBIT_IPV4_AFTER='if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit) {'
+if grep -Fq "$BYBIT_IPV4_BEFORE" "$INSTALL_ROOT/server.mjs"; then
+  sudo sed -i "s/if (origin === ORIGINS\.kucoin || origin === ORIGINS\.okx) {/if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit) {/" "$INSTALL_ROOT/server.mjs"
+fi
+if ! grep -Fq "$BYBIT_IPV4_AFTER" "$INSTALL_ROOT/server.mjs"; then
+  echo "Bybit IPv4 gateway transport patch could not be applied safely." >&2
+  exit 1
+fi
+
 sudo chown -R ubuntu:ubuntu "$INSTALL_ROOT"
 sudo chmod 0755 "$INSTALL_ROOT"
 sudo chmod 0644 "$INSTALL_ROOT/server.mjs"
@@ -42,6 +58,9 @@ RestartSec=3
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
 
 [Install]
 WantedBy=multi-user.target
