@@ -6,6 +6,7 @@ type View = "overview" | "portfolio" | "positions" | "automations" | "signal-mon
 
 export default async function HostRoute({ view }: { view: View }) {
   const host = (await headers()).get("host")?.split(":")[0].toLowerCase() ?? "";
-  if (host !== "app.labnarrative.com" && host !== "localhost") notFound();
+  const allowed = host === "app.labnarrative.com" || host === "localhost" || host.endsWith(".vercel.app");
+  if (!allowed) notFound();
   return <TraderApp view={view} />;
 }
