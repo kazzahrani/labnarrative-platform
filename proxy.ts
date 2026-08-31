@@ -168,11 +168,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.rewrite(careerUrl);
   }
 
-  // The canonical SaaS application hostname. The product is LabNarrative;
-  // /platform is only the internal shared-codebase route.
+  // Canonical LabNarrative Trading application hostname. Keep the exact proven
+  // Trader product shell and move Core V2 underneath it rather than replacing
+  // the interface with a second design.
   if (isSaasHost && request.nextUrl.pathname === "/") {
     const appUrl = request.nextUrl.clone();
-    appUrl.pathname = "/platform";
+    appUrl.pathname = "/trader";
     return NextResponse.rewrite(appUrl);
   }
 
