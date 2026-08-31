@@ -22,6 +22,7 @@ function clean(error: unknown) {
   return message.slice(0, 240);
 }
 function unique<T>(values: T[]) { return Array.from(new Set(values)); }
+function sleep(ms: number) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 async function verify(db: Db, value: string) {
   if (!value) return false;
   const { data, error } = await db.from("trader_worker_secrets").select("secret").eq("name", "paper_worker").maybeSingle();
@@ -39,6 +40,19 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
   }
   await Promise.all(Array.from({ length: Math.min(Math.max(1, limit), items.length || 1) }, () => runner()));
   return results;
+}
+
+async function fetchBalancesWithRetry(adapter: ExchangeExecutionAdapter) {
+  let lastError: unknown = new Error("balance_fetch_failed");
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await adapter.fetchBalances();
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await sleep(300);
+    }
+  }
+  throw lastError;
 }
 
 async function connectedProviders(db: Db, accountId: string) {
@@ -65,7 +79,7 @@ async function syncProvider(db: Db, accountId: string, provider: LaunchExchangeP
   const { data: run, error: runError } = await db.from("trader_v2_sync_runs").insert({ account_id: accountId, provider, sync_kind: "portfolio", status: "running" }).select("id").single();
   if (runError || !run) return { provider, supported: true, connected: true, ok: false, error: clean(runError || "sync_run_insert_failed") };
   try {
-    const raw = await adapter.fetchBalances();
+    const raw = await fetchBalancesWithRetry(adapter);
     const balances: Balance[] = raw.map((row) => {
       const free = Math.max(0, n(row.free));
       const locked = Math.max(0, n(row.locked));
@@ -249,8 +263,32 @@ Deno.serve(async (req: Request) => {
   if (error) return json({ error: clean(error) }, 500);
   const results = [];
   for (const row of accounts ?? []) {
-    try { results.push({ ok: true, ...(await refreshAccount(db, String(row.id))) }); }
-    catch (error) { results.push({ ok: false, accountId: String(row.id), error: clean(error) }); }
+    const accountId = String(row.id);
+    const lockId = crypto.randomUUID();
+    let releaseStatus = "failed";
+    try {
+      const { data: claimed, error: claimError } = await db.rpc("trader_v2_claim_portfolio_refresh", {
+        p_account_id: accountId,
+        p_lock_id: lockId,
+        p_lease_seconds: 90,
+      });
+      if (claimError) throw claimError;
+      if (claimed !== true) {
+        results.push({ ok: true, accountId, skipped: true, reason: "refresh_already_running" });
+        continue;
+      }
+      const result = await refreshAccount(db, accountId);
+      releaseStatus = result.providerStates.every((state) => state.ok) ? "succeeded" : "partial";
+      results.push({ ok: true, ...result });
+    } catch (error) {
+      results.push({ ok: false, accountId, error: clean(error) });
+    } finally {
+      await db.rpc("trader_v2_release_portfolio_refresh", {
+        p_account_id: accountId,
+        p_lock_id: lockId,
+        p_status: releaseStatus,
+      }).catch(() => undefined);
+    }
   }
   return json({ ok: true, shadow: true, results });
 });
