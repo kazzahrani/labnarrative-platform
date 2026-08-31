@@ -170,11 +170,18 @@ export function proxy(request: NextRequest) {
 
   // Canonical LabNarrative Trading application hostname. Route the root directly
   // to the clean Core V2 app so the legacy transformed Trader shell and its
-  // compatibility bootstrap are no longer part of the startup path.
+  // compatibility bootstrap are no longer part of the startup path. Keep this
+  // response non-cacheable so a previously prerendered legacy shell cannot survive
+  // a production cutover in the browser or CDN.
   if (isSaasHost && request.nextUrl.pathname === "/") {
     const appUrl = request.nextUrl.clone();
     appUrl.pathname = "/trader-v2";
-    return NextResponse.rewrite(appUrl);
+    const response = NextResponse.rewrite(appUrl);
+    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("X-LabNarrative-App-Shell", "core-v2");
+    return response;
   }
 
   // Legacy tender product surface retained while the new SaaS is introduced.
