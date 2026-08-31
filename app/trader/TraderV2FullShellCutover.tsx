@@ -13,6 +13,25 @@ type Account = Json & { id?: string; kind?: string; exchangeStatus?: string };
 type FunctionError = Error & { context?: Response };
 
 const REAL_AUTOMATION_WRITES = new Set(["create_bot", "update_bot", "set_bot_status", "close_bot"]);
+const CORE_V2_DIRECT_FUNCTIONS = new Set([
+  "trader-v2-account-bootstrap",
+  "trader-v2-analytics-read",
+  "trader-v2-automation-submit",
+  "trader-v2-automations-read",
+  "trader-v2-command-capabilities",
+  "trader-v2-connections-control",
+  "trader-v2-connections-read",
+  "trader-v2-exit-plan-preview",
+  "trader-v2-exit-plan-submit",
+  "trader-v2-history-read",
+  "trader-v2-portfolio-read",
+  "trader-v2-portfolio-refresh",
+  "trader-v2-positions-read",
+  "trader-v2-reconciliation-read",
+  "trader-v2-signal-monitor-read",
+  "trader-v2-transfer-reconcile",
+  "trader-v2-workspace-read",
+]);
 let installed = false;
 let cachedAccounts: Account[] = [];
 let defaultAccount: string = "real";
@@ -72,7 +91,11 @@ function installCoreV2Cutover() {
   const functions = browserSupabase.functions as unknown as { invoke: InvokeFn };
   const original = functions.invoke.bind(browserSupabase.functions) as InvokeFn;
   const invoke = (name: string, options: Record<string, unknown> = {}) =>
-    shouldUseAppProxy() ? invokeThroughAppProxy(name, options) : original(name, options);
+    CORE_V2_DIRECT_FUNCTIONS.has(name)
+      ? original(name, options)
+      : shouldUseAppProxy()
+        ? invokeThroughAppProxy(name, options)
+        : original(name, options);
 
   const invalidateV2 = () => { v2Cache = null; };
   const readV2 = () => {
