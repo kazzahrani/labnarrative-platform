@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
+import CoreV2ExitPlanControl from "./CoreV2ExitPlanControl";
 import TraderV2FullShell from "./TraderV2FullShell";
 
 type InvokeResult = { data: unknown; error: unknown };
@@ -109,7 +111,41 @@ function installCoreV2Cutover() {
   };
 }
 
+function RealPositionControl() {
+  const [signedIn, setSignedIn] = useState(false);
+  const [selectedKind, setSelectedKind] = useState<"real" | "paper">("real");
+
+  useEffect(() => {
+    let active = true;
+    const syncKind = () => {
+      if (!active) return;
+      setSelectedKind(sessionStorage.getItem("ln-trader-v2-account") === "paper" ? "paper" : "real");
+    };
+    void browserSupabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSignedIn(Boolean(data.session));
+      syncKind();
+    });
+    const { data: listener } = browserSupabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setSignedIn(Boolean(session));
+      syncKind();
+    });
+    const timer = window.setInterval(syncKind, 500);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  return signedIn && selectedKind === "real" ? <CoreV2ExitPlanControl /> : null;
+}
+
 export default function TraderV2FullShellCutover() {
   installCoreV2Cutover();
-  return <TraderV2FullShell />;
+  return <>
+    <TraderV2FullShell />
+    <RealPositionControl />
+  </>;
 }
