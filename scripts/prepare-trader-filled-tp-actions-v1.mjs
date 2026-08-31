@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 const file=path.join(process.cwd(),"app/trader/TradeActionsV2.tsx"),cssFile=path.join(process.cwd(),"app/trader/trade-actions-v2.module.css");
 let s=fs.readFileSync(file,"utf8");
+if(s.includes('trader-v2-position-edit-submit')){console.log("Filled TP editor legacy transform skipped: V1 modal now uses Core V2 full position edit");process.exit(0)}
 if(s.includes('labnarrative:edit-exit-plan')){console.log("Filled TP editor legacy transform skipped: Core V2 exit-plan bridge active");process.exit(0)}
 const r=(a,b,n)=>{if(!s.includes(a))throw new Error("Filled TP editor: missing "+n);s=s.replace(a,b)};
 r('type ExactTrade = {\n  takeProfitPct?: number;\n  takeProfitTargets?: TpTarget[];','type ExactTrade = {\n  takeProfitPct?: number;\n  takeProfitTargets?: TpTarget[];\n  takeProfitFilled?: number[];',"type");
