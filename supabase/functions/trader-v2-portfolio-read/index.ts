@@ -35,19 +35,32 @@ Deno.serve(async (req: Request) => {
   const db = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: userData, error: userError } = await db.auth.getUser(token);
   if (userError || !userData.user) return json(req, { error: "unauthorized" }, 401);
+
+  let includeHistory = false;
+  try {
+    const body = await req.clone().json() as { includeHistory?: boolean };
+    includeHistory = body?.includeHistory === true;
+  } catch {}
+
   try {
     const accountId = await realAccount(db, userData.user.id);
-    const [{ data: latest, error: latestError }, { data: history, error: historyError }, { data: syncRuns, error: syncError }] = await Promise.all([
-      db.from("trader_v2_portfolio_latest").select("*").eq("account_id", accountId).maybeSingle(),
-      db.from("trader_v2_portfolio_snapshots").select("bucket_at,captured_at,total_usd,cash_usd,holdings_usd").eq("account_id", accountId).order("bucket_at", { ascending: false }).limit(1440),
-      db.from("trader_v2_sync_runs").select("provider,status,started_at,completed_at,duration_ms,asset_count,error_code").eq("account_id", accountId).eq("sync_kind", "portfolio").order("started_at", { ascending: false }).limit(24),
-    ]);
+    const { data: latest, error: latestError } = await db.from("trader_v2_portfolio_accounting_latest").select("*").eq("account_id", accountId).maybeSingle();
     if (latestError) throw latestError;
-    if (historyError) throw historyError;
-    if (syncError) throw syncError;
     if (!latest) return json(req, { ok: true, shadow: true, ready: false, accountId, message: "v2_snapshot_pending" });
+
+    let history: unknown[] = [];
+    if (includeHistory) {
+      const { data, error } = await db.from("trader_v2_portfolio_snapshots")
+        .select("bucket_at,captured_at,total_usd,cash_usd,holdings_usd")
+        .eq("account_id", accountId)
+        .order("bucket_at", { ascending: false })
+        .limit(1440);
+      if (error) throw error;
+      history = (data ?? []).reverse();
+    }
+
     const ageMs = Math.max(0, Date.now() - Date.parse(String(latest.captured_at)));
-    return json(req, { ok: true, shadow: true, ready: true, accountId, ageMs, portfolio: latest, history: (history ?? []).reverse(), syncRuns: syncRuns ?? [] });
+    return json(req, { ok: true, shadow: true, ready: true, accountId, ageMs, portfolio: latest, history });
   } catch (error) {
     const message = clean(error);
     return json(req, { error: message === "real_account_required" ? message : "trader_v2_portfolio_read_failed" }, message === "real_account_required" ? 403 : 500);
