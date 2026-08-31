@@ -53,6 +53,7 @@ const ALLOWED_FUNCTIONS = new Set([
   "trader-v2-history-read",
   "trader-v2-portfolio-read",
   "trader-v2-portfolio-refresh",
+  "trader-v2-position-edit-submit",
   "trader-v2-positions-read",
   "trader-v2-reconciliation-read",
   "trader-v2-signal-monitor-read",
@@ -61,7 +62,7 @@ const ALLOWED_FUNCTIONS = new Set([
 ]);
 
 function permittedHost(host: string) {
-  if (host === "app.labnarrative.com" || host === "localhost" || host === "127.0.0.1") return true;
+  if (host === "app.labnarrative.com" || host === "platform.labnarrative.com" || host === "localhost" || host === "127.0.0.1") return true;
   return process.env.VERCEL_ENV !== "production" && host.endsWith(".vercel.app");
 }
 
