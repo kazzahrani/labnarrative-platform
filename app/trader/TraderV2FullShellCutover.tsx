@@ -10,6 +10,7 @@ type InvokeFn = (name: string, options?: Record<string, unknown>) => Promise<Inv
 type Json = Record<string, unknown>;
 
 type Account = Json & { id?: string; kind?: string; exchangeStatus?: string };
+type FunctionError = Error & { context?: Response };
 
 const REAL_AUTOMATION_WRITES = new Set(["create_bot", "update_bot", "set_bot_status", "close_bot"]);
 let installed = false;
@@ -22,18 +23,62 @@ function asJson(value: unknown): Json {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Json : {};
 }
 
+function shouldUseAppProxy() {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname.toLowerCase();
+  return host === "app.labnarrative.com"
+    || host === "localhost"
+    || host === "127.0.0.1"
+    || host.endsWith(".vercel.app");
+}
+
+async function invokeThroughAppProxy(name: string, options: Record<string, unknown> = {}): Promise<InvokeResult> {
+  const { data: sessionData, error: sessionError } = await browserSupabase.auth.getSession();
+  const token = sessionData.session?.access_token || "";
+  if (sessionError || !token) return { data: null, error: sessionError || new Error("unauthorized") };
+
+  try {
+    const response = await fetch("/api/trader/function-proxy", {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ name, body: options.body ?? {} }),
+      cache: "no-store",
+    });
+    const context = response.clone();
+    const text = await response.text();
+    let data: unknown = null;
+    try { data = text ? JSON.parse(text) : null; }
+    catch { data = text || null; }
+
+    if (!response.ok) {
+      const payload = asJson(data);
+      const error = new Error(String(payload.error || `function_http_${response.status}`)) as FunctionError;
+      error.context = context;
+      return { data: null, error };
+    }
+    return { data, error: null };
+  } catch (caught) {
+    return { data: null, error: caught instanceof Error ? caught : new Error("function_proxy_failed") };
+  }
+}
+
 function installCoreV2Cutover() {
   if (installed) return;
   installed = true;
 
   const functions = browserSupabase.functions as unknown as { invoke: InvokeFn };
   const original = functions.invoke.bind(browserSupabase.functions) as InvokeFn;
+  const invoke = (name: string, options: Record<string, unknown> = {}) =>
+    shouldUseAppProxy() ? invokeThroughAppProxy(name, options) : original(name, options);
 
   const invalidateV2 = () => { v2Cache = null; };
   const readV2 = () => {
     const now = Date.now();
     if (v2Cache && now < v2Cache.expiresAt) return v2Cache.promise;
-    const promise = original("trader-v2-workspace-read", { body: {} });
+    const promise = invoke("trader-v2-workspace-read", { body: {} });
     v2Cache = { expiresAt: now + 1500, promise };
     void promise.then((result) => { if (result.error) v2Cache = null; });
     return promise;
@@ -54,7 +99,7 @@ function installCoreV2Cutover() {
     const action = String(body.action || "");
 
     if (name === "trader-account-control" && (action === "bootstrap" || action === "list")) {
-      const accountResult = await original("trader-v2-account-bootstrap", { body: { action } });
+      const accountResult = await invoke("trader-v2-account-bootstrap", { body: { action } });
       if (accountResult.error) return accountResult;
       const accountData = asJson(accountResult.data);
       if (accountData.ok !== true || !Array.isArray(accountData.accounts)) return accountResult;
@@ -70,7 +115,7 @@ function installCoreV2Cutover() {
     if (name === "trader-account-control" && REAL_AUTOMATION_WRITES.has(action)) {
       const accountId = String(body.accountId || "");
       if (realAccountIds.has(accountId)) {
-        const submitted = await original("trader-v2-automation-submit", {
+        const submitted = await invoke("trader-v2-automation-submit", {
           body: { ...body, idempotencyKey: `ui-${action}-${crypto.randomUUID()}` },
         });
         if (submitted.error) return submitted;
@@ -107,7 +152,7 @@ function installCoreV2Cutover() {
       return await readV2();
     }
 
-    return await original(name, options);
+    return await invoke(name, options);
   };
 }
 
