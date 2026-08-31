@@ -52,23 +52,17 @@ function installCoreV2Cutover() {
     const action = String(body.action || "");
 
     if (name === "trader-account-control" && (action === "bootstrap" || action === "list")) {
-      if (action === "bootstrap" || cachedAccounts.length === 0) {
-        const legacy = await original(name, options);
-        const legacyData = asJson(legacy.data);
-        if (!legacy.error && legacyData.ok === true && Array.isArray(legacyData.accounts)) {
-          cachedAccounts = (legacyData.accounts as Account[]).map((account) => ({ ...account }));
-          realAccountIds = new Set(cachedAccounts.filter((account) => account.kind === "real").map((account) => String(account.id || "")).filter(Boolean));
-          defaultAccount = String(legacyData.defaultAccount || "real");
-          const v2 = await readV2();
-          if (!v2.error) updateRealConnectionState(v2.data);
-          return { data: { ...legacyData, accounts: cachedAccounts }, error: null };
-        }
-        return legacy;
-      }
+      const accountResult = await original("trader-v2-account-bootstrap", { body: { action } });
+      if (accountResult.error) return accountResult;
+      const accountData = asJson(accountResult.data);
+      if (accountData.ok !== true || !Array.isArray(accountData.accounts)) return accountResult;
 
+      cachedAccounts = (accountData.accounts as Account[]).map((account) => ({ ...account }));
+      realAccountIds = new Set(cachedAccounts.filter((account) => account.kind === "real").map((account) => String(account.id || "")).filter(Boolean));
+      defaultAccount = String(accountData.defaultAccount || "real");
       const v2 = await readV2();
       if (!v2.error) updateRealConnectionState(v2.data);
-      return { data: { ok: true, accounts: cachedAccounts, defaultAccount }, error: null };
+      return { data: { ...accountData, accounts: cachedAccounts, defaultAccount }, error: null };
     }
 
     if (name === "trader-account-control" && REAL_AUTOMATION_WRITES.has(action)) {
