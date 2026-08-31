@@ -77,7 +77,6 @@ source = source.replace(
 '      setEditorMode(null); setEditingId(null); await load(true);',
 '      setEditorMode(null); setEditingId(null); setAutomationModalMode(null); setSelectedAutomationId(null); await load(true);'
 );
-
 source = source.replace("    {editor}\n", "    {editorMode === \"create\" ? editor : null}\n");
 source = source.replace(
 'return <tr key={automation.id} className={automation.canManage ? styles.clickableRow : undefined} onClick={() => openEdit(automation)}>',
@@ -92,4 +91,12 @@ if (!source.includes("<AutomationDetailModal")) {
 }
 
 fs.writeFileSync(file, source);
+
+const detailFile = "app/trader-v2/AutomationDetailModal.tsx";
+let detail = fs.readFileSync(detailFile, "utf8");
+detail = detail.replace(
+  "Array.from({length:Math.max(0,form.maxSafetyOrders)}).reduce((sum,_,i)=>sum+form.safetyOrder*Math.pow(Math.max(.000001,form.volumeScale),i),0)",
+  "Array.from({length:Math.max(0,form.maxSafetyOrders)},(_,index)=>index).reduce((sum,index)=>sum+form.safetyOrder*Math.pow(Math.max(.000001,form.volumeScale),index),0)"
+);
+fs.writeFileSync(detailFile, detail);
 console.log("Prepared Core V2 automation detail/edit modal.");
