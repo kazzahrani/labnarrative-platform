@@ -33,6 +33,7 @@ type BotRow = {
   exchange_provider: string | null;
   tradingview_enabled: boolean | null;
   client_state: Json | null;
+  is_archived: boolean | null;
 };
 
 function cors(req: Request) {
@@ -109,7 +110,7 @@ Deno.serve(async (req: Request) => {
   try {
     const account = await realAccount(db, userData.user.id);
     const [botsResult, eventsResult, queueResult, totalCount, processedCount, ignoredCount, failedCount, queueCount] = await Promise.all([
-      db.from("trader_bots").select("id,name,status,execution_mode,exchange_provider,tradingview_enabled,client_state").eq("account_id", account.id),
+      db.from("trader_bots").select("id,name,status,execution_mode,exchange_provider,tradingview_enabled,client_state,is_archived").eq("account_id", account.id),
       db.from("trader_tradingview_events")
         .select("id,bot_id,action,pair,amount,signal_id,status,received_at,processed_at,error,payload")
         .eq("account_id", account.id)
@@ -214,7 +215,7 @@ Deno.serve(async (req: Request) => {
 
     events.sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt));
     const latestReceivedAt = events[0]?.receivedAt || null;
-    const strategyBots = bots.filter((bot) => bot.tradingview_enabled === true || String(obj(bot.client_state).automationType || "") === "tradingview_strategy");
+    const strategyBots = bots.filter((bot) => bot.is_archived !== true && (bot.tradingview_enabled === true || String(obj(bot.client_state).automationType || "") === "tradingview_strategy"));
 
     return json(req, {
       ok: true,
