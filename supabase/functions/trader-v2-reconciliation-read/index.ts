@@ -114,6 +114,10 @@ Deno.serve(async (req: Request) => {
     const transferSyncAgeMs = Number.isFinite(transferCompletedMs)
       ? Math.max(0, Date.now() - transferCompletedMs)
       : Number.MAX_SAFE_INTEGER;
+    const transferSyncStatus = String(row.transfer_sync_status || "never");
+    const transferSyncLastError = row.transfer_sync_last_error ? String(row.transfer_sync_last_error) : null;
+    const transferCycleHealthy = transferSyncStatus === "succeeded"
+      || (transferSyncStatus === "running" && transferSyncAgeMs <= 180_000 && !transferSyncLastError);
 
     const syncState = obj(row.sync_state);
     const unsupportedProviders = strings(syncState.unsupportedProviders);
@@ -128,7 +132,7 @@ Deno.serve(async (req: Request) => {
     if (n(row.unpriced_asset_count) > 0) blockers.push("unpriced_assets");
     if (n(row.transfer_invariant_error_count) > 0 || n(row.max_transfer_invariant_error) > 0.00000001) blockers.push("transfer_invariant_error");
     if (equationErrorUsd > 0.01) blockers.push("portfolio_equation_error");
-    if (String(row.transfer_sync_status || "never") !== "succeeded") blockers.push("transfer_sync_not_healthy");
+    if (!transferCycleHealthy) blockers.push("transfer_sync_not_healthy");
     if (transferSyncAgeMs > 180_000) blockers.push("transfer_sync_stale");
     if (evidenceHours < 24) blockers.push("insufficient_shadow_history");
 
@@ -137,7 +141,7 @@ Deno.serve(async (req: Request) => {
       const succeeded = n(health.succeeded1h);
       if (failed > 0) warnings.push(`${health.provider || "unknown"}.${health.syncKind || "sync"}:recent_failures:${failed}/${failed + succeeded}`);
     }
-    if (n(row.in_transit_usd) > 0) warnings.push("internal_transfer_in_transit");
+    if (inTransitUsd > 0) warnings.push("internal_transfer_in_transit");
 
     const providers = arr(row.provider_totals).map((raw) => {
       const provider = obj(raw);
@@ -182,13 +186,14 @@ Deno.serve(async (req: Request) => {
         matchedCount: n(row.matched_transfer_count),
         invariantErrorCount: n(row.transfer_invariant_error_count),
         maxInvariantError: n(row.max_transfer_invariant_error),
-        syncStatus: String(row.transfer_sync_status || "never"),
+        syncStatus: transferSyncStatus,
+        syncHealthy: transferCycleHealthy,
         syncStartedAt: row.transfer_sync_started_at || null,
         syncCompletedAt: row.transfer_sync_completed_at || null,
         syncAgeMs: transferSyncAgeMs,
         lastImportedCount: n(row.transfer_sync_imported_count),
         lastMatchedCount: n(row.transfer_sync_matched_count),
-        lastError: row.transfer_sync_last_error || null,
+        lastError: transferSyncLastError,
       },
       evidence: {
         snapshotCount: n(row.snapshot_count),
