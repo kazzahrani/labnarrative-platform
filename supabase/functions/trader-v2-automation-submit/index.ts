@@ -3,6 +3,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 type Json = Record<string, unknown>;
 type Db = ReturnType<typeof createClient>;
+const SUPPORTED_PROVIDERS = new Set(["binance", "bybit", "okx", "kucoin"]);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACTIONS: Record<string, string> = {
   create_bot: "automation.create",
   update_bot: "automation.update",
@@ -13,7 +15,7 @@ function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
   const allowed = origin === "https://platform.labnarrative.com" || origin === "https://app.labnarrative.com" || /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
   return {
-    "Access-Control-Allow-Origin": allowed ? origin : "https://platform.labnarrative.com",
+    "Access-Control-Allow-Origin": allowed ? origin : "https://app.labnarrative.com",
     "Vary": "Origin",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -31,6 +33,11 @@ function cleanPair(value: unknown) {
   const base = pair.replace(/[^A-Z0-9]/g, "").replace(/USDT$/, "");
   return `${base || "BTC"}/USDT`;
 }
+function providerValue(value: unknown, fallback = "binance") {
+  const provider = String(value ?? fallback).trim().toLowerCase();
+  if (!SUPPORTED_PROVIDERS.has(provider)) throw new Error("unsupported_provider");
+  return provider;
+}
 function canonical(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -41,7 +48,7 @@ async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-function botPayload(body: Json, current?: Json) {
+function botPayload(body: Json, current?: Json, provider = "binance") {
   const baseOrder = Math.max(0, n(body.baseOrder, n(current?.base_order)));
   const safetyOrder = Math.max(0, n(body.safetyOrder, n(current?.safety_order)));
   if (!(baseOrder > 0) || !(safetyOrder > 0)) throw new Error("invalid_order_amount");
@@ -52,6 +59,7 @@ function botPayload(body: Json, current?: Json) {
   const name = String(body.name ?? current?.name ?? "").trim();
   if (!name) throw new Error("bot_name_required");
   return {
+    provider,
     name,
     pair: cleanPair(body.pair ?? current?.pair),
     baseOrder,
@@ -75,6 +83,16 @@ async function realAccount(db: Db, userId: string, requestedId: string) {
   if (!data) throw new Error("trader_account_not_owned");
   return data as Json;
 }
+async function providerConnected(db: Db, accountId: string, provider: string) {
+  if (provider === "binance") {
+    const { data, error } = await db.from("trader_binance_connections").select("status").eq("account_id", accountId).maybeSingle();
+    if (error) throw error;
+    return String(data?.status || "").toLowerCase() === "connected";
+  }
+  const { data, error } = await db.from("trader_exchange_connections").select("status").eq("account_id", accountId).eq("provider", provider).maybeSingle();
+  if (error) throw error;
+  return String(data?.status || "").toLowerCase() === "connected";
+}
 async function nudgeWorker(db: Db, url: string) {
   const { data } = await db.from("trader_worker_secrets").select("secret").eq("name", "paper_worker").maybeSingle();
   const secret = String(data?.secret || "");
@@ -87,6 +105,23 @@ async function nudgeWorker(db: Db, url: string) {
       signal: AbortSignal.timeout(9000),
     });
   } catch { /* durable queue remains for scheduled worker */ }
+}
+async function readCommand(db: Db, commandId: string, userId: string) {
+  const { data, error } = await db.from("trader_v2_commands")
+    .select("id,command_type,status,result,error_code,requested_at,started_at,finished_at")
+    .eq("id", commandId).eq("owner_user_id", userId).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("command_not_found");
+  return data as Json;
+}
+async function waitForCommand(db: Db, commandId: string, userId: string) {
+  let command = await readCommand(db, commandId, userId);
+  const done = new Set(["succeeded", "failed", "rejected", "cancelled"]);
+  for (let i = 0; i < 10 && !done.has(String(command.status || "")); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    command = await readCommand(db, commandId, userId);
+  }
+  return command;
 }
 
 Deno.serve(async (req: Request) => {
@@ -112,28 +147,43 @@ Deno.serve(async (req: Request) => {
 
     let target: Json | null = null;
     let targetId: string | null = null;
-    if (commandType !== "automation.create") {
+    let provider = "binance";
+    if (commandType === "automation.create") {
+      provider = providerValue(body.provider, "binance");
+      if (!await providerConnected(db, accountId, provider)) return json(req, { error: "exchange_connection_required" }, 409);
+    } else {
+      const automationId = String(body.automationId || "").trim();
       const clientId = String(body.botId || "").trim();
-      if (!clientId) return json(req, { error: "bot_id_required" }, 400);
-      const { data, error } = await db.from("trader_bots").select("*").eq("account_id", accountId).eq("client_id", clientId).maybeSingle();
+      if (!automationId && !clientId) return json(req, { error: "automation_id_required" }, 400);
+      let query = db.from("trader_bots").select("*").eq("account_id", accountId);
+      if (automationId) {
+        if (!UUID_PATTERN.test(automationId)) return json(req, { error: "invalid_automation_id" }, 400);
+        query = query.eq("id", automationId);
+      } else query = query.eq("client_id", clientId);
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       if (!data) return json(req, { error: "bot_not_found" }, 404);
       target = data as Json;
       targetId = String(target.id);
       if (target.is_archived === true) return json(req, { error: "bot_closed" }, 409);
+      provider = providerValue(target.exchange_provider, "binance");
+      if (commandType === "automation.update" && body.provider !== undefined && providerValue(body.provider, provider) !== provider) {
+        return json(req, { error: "automation_provider_locked" }, 409);
+      }
     }
 
     let payload: Json;
-    if (commandType === "automation.create" || commandType === "automation.update") payload = botPayload(body, target ?? undefined);
-    else if (commandType === "automation.set_status") payload = { status: String(body.status || "Running") === "Stopped" ? "Stopped" : "Running" };
-    else payload = {};
+    if (commandType === "automation.create" || commandType === "automation.update") payload = botPayload(body, target ?? undefined, provider);
+    else if (commandType === "automation.set_status") payload = { provider, status: String(body.status || "Running") === "Stopped" ? "Stopped" : "Running" };
+    else payload = { provider };
 
     const requestFingerprint = await sha256(canonical({ commandType, accountId, targetId, payload }));
     const validation = {
       requested: payload,
       targetClientId: target?.client_id ?? null,
+      targetAutomationId: targetId,
       accountMode: account.mode,
-      provider: "binance",
+      provider,
       noOrderSentOnApply: true,
       validatedAt: new Date().toISOString(),
     };
@@ -153,11 +203,7 @@ Deno.serve(async (req: Request) => {
     if (!commandId) throw new Error("command_enqueue_failed");
 
     if (["queued", "running"].includes(String(queued.command_status || ""))) await nudgeWorker(db, url);
-    const { data: command, error: commandError } = await db.from("trader_v2_commands")
-      .select("id,command_type,status,result,error_code,requested_at,started_at,finished_at")
-      .eq("id", commandId).eq("owner_user_id", userData.user.id).maybeSingle();
-    if (commandError) throw commandError;
-    if (!command) throw new Error("command_not_found");
+    const command = await waitForCommand(db, commandId, userData.user.id);
     if (command.status === "failed" || command.status === "rejected") return json(req, { error: command.error_code || "automation_command_failed", command }, 409);
 
     return json(req, {
@@ -172,9 +218,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error || "automation_command_failed");
     const safe = [
-      "trader_account_not_owned","invalid_order_amount","bot_name_required","bot_not_found","bot_closed","bot_id_required",
-      "bot_pair_locked_by_active_trade","bot_has_active_trades","bot_has_open_orders","exchange_connection_required","idempotency_key_reuse",
+      "trader_account_not_owned","invalid_order_amount","bot_name_required","bot_not_found","bot_closed","bot_id_required","automation_id_required","invalid_automation_id",
+      "bot_pair_locked_by_active_trade","bot_has_active_trades","bot_has_open_orders","exchange_connection_required","idempotency_key_reuse","unsupported_provider","automation_provider_locked","core_v2_execute_disabled",
     ].find((code) => message.includes(code));
-    return json(req, { error: safe || "automation_command_failed" }, safe === "trader_account_not_owned" ? 403 : 400);
+    return json(req, { error: safe || "automation_command_failed" }, safe === "trader_account_not_owned" ? 403 : safe === "bot_not_found" ? 404 : safe === "exchange_connection_required" || safe === "automation_provider_locked" || safe === "core_v2_execute_disabled" ? 409 : 400);
   }
 });
