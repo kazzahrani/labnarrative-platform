@@ -168,12 +168,12 @@ export function proxy(request: NextRequest) {
     return NextResponse.rewrite(careerUrl);
   }
 
-  // Canonical LabNarrative Trading application hostname. Keep the exact proven
-  // Trader product shell and move Core V2 underneath it rather than replacing
-  // the interface with a second design.
+  // Canonical LabNarrative Trading application hostname. Route the root directly
+  // to the clean Core V2 app so the legacy transformed Trader shell and its
+  // compatibility bootstrap are no longer part of the startup path.
   if (isSaasHost && request.nextUrl.pathname === "/") {
     const appUrl = request.nextUrl.clone();
-    appUrl.pathname = "/trader";
+    appUrl.pathname = "/trader-v2";
     return NextResponse.rewrite(appUrl);
   }
 
