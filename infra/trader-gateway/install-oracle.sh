@@ -61,9 +61,6 @@ ProtectHome=true
 
 [Install]
 WantedBy=multi-user.target
-
-[Install]
-WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
