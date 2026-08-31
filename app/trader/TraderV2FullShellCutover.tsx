@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
-import CoreV2ExitPlanControl from "./CoreV2ExitPlanControl";
 import TraderV2FullShell from "./TraderV2FullShell";
 
 type InvokeResult = { data: unknown; error: unknown };
@@ -121,6 +119,13 @@ function installCoreV2Cutover() {
     const body = asJson(options.body);
     const action = String(body.action || "");
 
+    // The V1-style live trade editor executes through Core V2. Route this one
+    // through the same-origin server bridge so a successful exchange/database
+    // edit is not reported as a browser-to-Edge transport failure afterward.
+    if (name === "trader-v2-position-edit-submit") {
+      return await invokeThroughAppProxy(name, options);
+    }
+
     if (name === "trader-account-control" && (action === "bootstrap" || action === "list")) {
       const accountResult = await invoke("trader-v2-account-bootstrap", { body: { action } });
       if (accountResult.error) return accountResult;
@@ -179,41 +184,7 @@ function installCoreV2Cutover() {
   };
 }
 
-function RealPositionControl() {
-  const [signedIn, setSignedIn] = useState(false);
-  const [selectedKind, setSelectedKind] = useState<"real" | "paper">("real");
-
-  useEffect(() => {
-    let active = true;
-    const syncKind = () => {
-      if (!active) return;
-      setSelectedKind(sessionStorage.getItem("ln-trader-v2-account") === "paper" ? "paper" : "real");
-    };
-    void browserSupabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSignedIn(Boolean(data.session));
-      syncKind();
-    });
-    const { data: listener } = browserSupabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-      setSignedIn(Boolean(session));
-      syncKind();
-    });
-    const timer = window.setInterval(syncKind, 500);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  return signedIn && selectedKind === "real" ? <CoreV2ExitPlanControl /> : null;
-}
-
 export default function TraderV2FullShellCutover() {
   installCoreV2Cutover();
-  return <>
-    <TraderV2FullShell />
-    <RealPositionControl />
-  </>;
+  return <TraderV2FullShell />;
 }
