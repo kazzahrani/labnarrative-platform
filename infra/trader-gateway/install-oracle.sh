@@ -27,6 +27,88 @@ if ! grep -Fq "$BYBIT_IPV4_AFTER" "$INSTALL_ROOT/server.mjs"; then
   exit 1
 fi
 
+# Binance signed reads also use the hardened IPv4 curl path. Only GET is included;
+# Binance POST/DELETE order writes stay on the existing single-attempt transport.
+# curlRequestIpv4 retries safe GETs once but never retries write methods.
+BINANCE_READ_BEFORE='if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit) {'
+BINANCE_READ_AFTER='if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit || (origin === ORIGINS.binance && method === "GET")) {'
+if grep -Fq "$BINANCE_READ_BEFORE" "$INSTALL_ROOT/server.mjs"; then
+  sudo sed -i 's/if (origin === ORIGINS\.kucoin || origin === ORIGINS\.okx || origin === ORIGINS\.bybit) {/if (origin === ORIGINS.kucoin || origin === ORIGINS.okx || origin === ORIGINS.bybit || (origin === ORIGINS.binance \&\& method === "GET")) {/' "$INSTALL_ROOT/server.mjs"
+fi
+if ! grep -Fq "$BINANCE_READ_AFTER" "$INSTALL_ROOT/server.mjs"; then
+  echo "Binance GET IPv4 gateway transport patch could not be applied safely." >&2
+  exit 1
+fi
+
+# Add only authenticated GET routes required to reconcile deposit/withdrawal history.
+# No wallet-transfer or withdrawal write route is allowed. The generic relay remains
+# ECDSA-signed and all existing origin/header/rate-limit protections stay in force.
+sudo env SERVER_FILE="$INSTALL_ROOT/server.mjs" node <<'NODE'
+const fs = require("node:fs");
+const file = process.env.SERVER_FILE;
+let source = fs.readFileSync(file, "utf8");
+
+const groups = [
+  {
+    anchor: '    "GET /sapi/v1/account/apiRestrictions",',
+    routes: [
+      '    "GET /sapi/v1/capital/deposit/hisrec",',
+      '    "GET /sapi/v1/capital/withdraw/history",',
+    ],
+  },
+  {
+    anchor: '    "GET /v5/execution/list",',
+    routes: [
+      '    "GET /v5/asset/deposit/query-record",',
+      '    "GET /v5/asset/withdraw/query-record",',
+    ],
+  },
+  {
+    anchor: '    "GET /api/v5/trade/fills",',
+    routes: [
+      '    "GET /api/v5/asset/deposit-history",',
+      '    "GET /api/v5/asset/withdrawal-history",',
+    ],
+  },
+  {
+    anchor: '    "GET /api/v1/hf/fills",',
+    routes: [
+      '    "GET /api/v1/deposits",',
+      '    "GET /api/v1/withdrawals",',
+    ],
+  },
+];
+
+for (const group of groups) {
+  const missing = group.routes.filter((route) => !source.includes(route));
+  if (!missing.length) continue;
+  if (!source.includes(group.anchor)) throw new Error(`Transfer history route anchor missing: ${group.anchor}`);
+  source = source.replace(group.anchor, `${group.anchor}\n${missing.join("\n")}`);
+}
+
+const required = groups.flatMap((group) => group.routes);
+if (!required.every((route) => source.includes(route))) throw new Error("Transfer history GET allowlist patch incomplete");
+if (source.includes('POST /sapi/v1/capital/withdraw/apply') || source.includes('POST /v5/asset/withdraw/create')) {
+  throw new Error("Unexpected withdrawal write route detected");
+}
+fs.writeFileSync(file, source);
+NODE
+
+for route in \
+  'GET /sapi/v1/capital/deposit/hisrec' \
+  'GET /sapi/v1/capital/withdraw/history' \
+  'GET /v5/asset/deposit/query-record' \
+  'GET /v5/asset/withdraw/query-record' \
+  'GET /api/v5/asset/deposit-history' \
+  'GET /api/v5/asset/withdrawal-history' \
+  'GET /api/v1/deposits' \
+  'GET /api/v1/withdrawals'; do
+  if ! grep -Fq "$route" "$INSTALL_ROOT/server.mjs"; then
+    echo "Transfer history route patch missing: $route" >&2
+    exit 1
+  fi
+done
+
 # Install one deliberately narrow unauthenticated market-data route for chart candles.
 # It cannot reach private/account/order APIs: GET only, Bybit Spot only, USDT only,
 # known kline intervals only, max 1,000 rows. The generic relay remains ECDSA-signed.
