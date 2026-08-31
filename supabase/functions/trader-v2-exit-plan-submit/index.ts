@@ -22,12 +22,19 @@ function json(req: Request, body: unknown, status = 200) {
 }
 function obj(value: unknown): Json { return value && typeof value === "object" && !Array.isArray(value) ? value as Json : {}; }
 function n(value: unknown, fallback = 0) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; }
-function clean(error: unknown) { return error instanceof Error ? error.message : String(error || "unknown_error"); }
+function clean(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = String((error as { message?: unknown }).message || "").trim();
+    if (message) return message;
+  }
+  return String(error || "unknown_error");
+}
 function statusCode(code: string) {
   if (code === "unauthorized") return 401;
   if (code === "real_account_required") return 403;
   if (code === "position_not_found") return 404;
-  if (code === "position_not_active" || code === "live_trading_not_enabled" || code === "idempotency_key_reuse") return 409;
+  if (code === "position_not_active" || code === "live_trading_not_enabled" || code === "idempotency_key_reuse" || code === "core_v2_execute_disabled") return 409;
   return 400;
 }
 function canonical(value: unknown): string {
@@ -157,7 +164,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const code = clean(error);
     const known = new Set([
-      "real_account_required","live_trading_not_enabled","position_not_found","position_not_active","exit_strategy_v2_required",
+      "real_account_required","live_trading_not_enabled","core_v2_execute_disabled","position_not_found","position_not_active","exit_strategy_v2_required",
       "invalid_idempotency_key","invalid_stop_loss","invalid_take_profit_targets","take_profit_allocation_must_equal_100","idempotency_key_reuse",
       "binance_not_connected","binance_trade_permission_required","binance_connection_not_safe","exchange_connection_required",
       "exchange_trade_permission_required","exchange_withdraw_permission_forbidden",
