@@ -27,8 +27,19 @@ async function verify(db: Db, value: string) {
   return !error && data?.secret === value;
 }
 function retryDelay(attempt: number) { return Math.min(20, Math.max(1, Math.pow(2, Math.min(4, Math.max(0, attempt - 1))))); }
+async function retryOrFail(db: Db, command: Command, workerId: string, error: unknown) {
+  const code = clean(error);
+  const attempt = Math.max(1, Math.round(n(command.attempt_count, 1)));
+  if (code === "account_busy" && attempt < 8) {
+    const delay = retryDelay(attempt);
+    await db.rpc("trader_v2_requeue_command", { p_command_id: command.id, p_worker_id: workerId, p_error_code: code, p_delay_seconds: delay });
+    return { id: command.id, ok: false, retrying: true, error: code, delaySeconds: delay };
+  }
+  await db.rpc("trader_v2_fail_command", { p_command_id: command.id, p_worker_id: workerId, p_error_code: code });
+  return { id: command.id, ok: false, retrying: false, error: code };
+}
 
-async function processCommand(db: Db, command: Command, workerId: string) {
+async function processExitPlanCommand(db: Db, command: Command, workerId: string) {
   const validation = obj(command.validation);
   const requested = obj(validation.requested);
   let exitLockHeld = false;
@@ -81,18 +92,37 @@ async function processCommand(db: Db, command: Command, workerId: string) {
     if (applyError) throw applyError;
     return { id: command.id, ok: true, result };
   } catch (error) {
-    const code = clean(error);
-    const attempt = Math.max(1, Math.round(n(command.attempt_count, 1)));
-    if (code === "account_busy" && attempt < 8) {
-      const delay = retryDelay(attempt);
-      await db.rpc("trader_v2_requeue_command", { p_command_id: command.id, p_worker_id: workerId, p_error_code: code, p_delay_seconds: delay });
-      return { id: command.id, ok: false, retrying: true, error: code, delaySeconds: delay };
-    }
-    await db.rpc("trader_v2_fail_command", { p_command_id: command.id, p_worker_id: workerId, p_error_code: code });
-    return { id: command.id, ok: false, retrying: false, error: code };
+    return await retryOrFail(db, command, workerId, error);
   } finally {
     if (exitLockHeld) {
       await db.rpc("trader_release_exit_account", { p_account_id: command.account_id, p_worker_id: workerId }).catch(() => undefined);
+    }
+  }
+}
+
+async function processAutomationCommand(db: Db, command: Command, workerId: string) {
+  let accountLockHeld = false;
+  try {
+    if (!["automation.create", "automation.update", "automation.set_status", "automation.archive"].includes(command.command_type)) throw new Error("unsupported_worker_command");
+    const { data: locked, error: lockError } = await db.rpc("trader_begin_command", {
+      p_account_id: command.account_id,
+      p_lock_id: workerId,
+      p_lease_seconds: 15,
+    });
+    if (lockError) throw lockError;
+    if (locked !== true) throw new Error("account_busy");
+    accountLockHeld = true;
+    const { data: result, error: applyError } = await db.rpc("trader_v2_apply_automation_command", {
+      p_command_id: command.id,
+      p_worker_id: workerId,
+    });
+    if (applyError) throw applyError;
+    return { id: command.id, ok: true, result };
+  } catch (error) {
+    return await retryOrFail(db, command, workerId, error);
+  } finally {
+    if (accountLockHeld) {
+      await db.rpc("trader_release_account", { p_account_id: command.account_id, p_worker_id: workerId }).catch(() => undefined);
     }
   }
 }
@@ -105,10 +135,17 @@ Deno.serve(async (req: Request) => {
   if (!await verify(db, req.headers.get("x-trader-worker-secret") || "")) return json({ error: "unauthorized" }, 401);
 
   const workerId = crypto.randomUUID();
-  const { data, error } = await db.rpc("trader_v2_claim_exit_plan_commands", { p_worker_id: workerId, p_limit: 4, p_lease_seconds: 45 });
-  if (error) return json({ error: clean(error) }, 500);
-  const commands = (data || []) as Command[];
+  const [exitClaim, automationClaim] = await Promise.all([
+    db.rpc("trader_v2_claim_exit_plan_commands", { p_worker_id: workerId, p_limit: 4, p_lease_seconds: 45 }),
+    db.rpc("trader_v2_claim_automation_commands", { p_worker_id: workerId, p_limit: 8, p_lease_seconds: 45 }),
+  ]);
+  if (exitClaim.error) return json({ error: clean(exitClaim.error) }, 500);
+  if (automationClaim.error) return json({ error: clean(automationClaim.error) }, 500);
+
+  const exitCommands = (exitClaim.data || []) as Command[];
+  const automationCommands = (automationClaim.data || []) as Command[];
   const results = [];
-  for (const command of commands) results.push(await processCommand(db, command, workerId));
-  return json({ ok: true, workerId, claimed: commands.length, results });
+  for (const command of exitCommands) results.push(await processExitPlanCommand(db, command, workerId));
+  for (const command of automationCommands) results.push(await processAutomationCommand(db, command, workerId));
+  return json({ ok: true, workerId, claimed: exitCommands.length + automationCommands.length, exitClaimed: exitCommands.length, automationClaimed: automationCommands.length, results });
 });
