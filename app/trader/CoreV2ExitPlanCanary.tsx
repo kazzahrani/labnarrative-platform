@@ -74,9 +74,10 @@ export default function CoreV2ExitPlanCanary() {
         : null;
   const canWrite = Boolean(selected && !lockedReason);
   const allocation = targets.reduce((sum, target) => sum + n(target.allocationPct), 0);
-  const targetsValid = targets.length > 0 && targets.length <= 8 &&
+  const allocationValid = targets.length === 0 || Math.abs(allocation - 100) <= 0.011;
+  const targetsValid = targets.length <= 8 &&
     targets.every((target) => n(target.profitPct) > 0 && n(target.allocationPct) > 0) &&
-    Math.abs(allocation - 100) <= 0.011;
+    allocationValid;
   const formValid = (!stopEnabled || stopPct > 0) && targetsValid;
 
   const load = async () => {
@@ -199,17 +200,17 @@ export default function CoreV2ExitPlanCanary() {
             </div>
 
             <div className={styles.tpSection}>
-              <div className={styles.tpHead}><div><strong>Take-profit targets</strong><small>Allocations must total 100%.</small></div><button type="button" onClick={addTarget} disabled={!canWrite || saving || targets.length >= 8}>＋ Add target</button></div>
+              <div className={styles.tpHead}><div><strong>Take-profit targets</strong><small>Allocations total 100% when TP targets are enabled.</small></div><button type="button" onClick={addTarget} disabled={!canWrite || saving || targets.length >= 8}>＋ Add target</button></div>
               <div className={styles.tpTable}>
                 <div className={styles.tpHeader}><span>Target</span><span>Profit</span><span>Allocation</span><span/></div>
                 {targets.map((target, index) => <div className={styles.tpRow} key={index}>
                   <strong>TP {index + 1}</strong>
                   <div className={styles.unit}><input type="number" min="0.01" step="0.01" value={target.profitPct} onChange={(event) => updateTarget(index, "profitPct", n(event.target.value))} disabled={!canWrite || saving}/><b>%</b></div>
                   <div className={styles.unit}><input type="number" min="0.01" max="100" step="0.01" value={target.allocationPct} onChange={(event) => updateTarget(index, "allocationPct", n(event.target.value))} disabled={!canWrite || saving}/><b>%</b></div>
-                  <button type="button" onClick={() => removeTarget(index)} disabled={!canWrite || saving || targets.length <= 1}>×</button>
+                  <button type="button" onClick={() => removeTarget(index)} disabled={!canWrite || saving}>×</button>
                 </div>)}
               </div>
-              <div className={Math.abs(allocation - 100) <= 0.011 ? styles.allocationOk : styles.allocationBad}>Allocation total: <b>{allocation.toFixed(2)}%</b></div>
+              <div className={allocationValid ? styles.allocationOk : styles.allocationBad}>Allocation total: <b>{targets.length ? `${allocation.toFixed(2)}%` : "TP off"}</b></div>
             </div>
 
             {!canWrite && <div className={styles.lockBox}><strong>Editing locked</strong><p>{lockText(lockedReason)}</p><small>No command is submitted while this state is locked.</small></div>}
