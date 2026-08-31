@@ -39,11 +39,11 @@ export type CoreV2ExitPlanResponse = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
- * Client-side rollout switch only. The database per-account command gate is the authoritative safety barrier.
- * This defaults OFF when the environment variable is absent.
+ * Core V2 exit-plan writes are now a normal Real Account client capability.
+ * The authoritative permission remains the per-account database command gate,
+ * followed by server ownership/state validation and the user confirmation UI.
  */
-export const CORE_V2_EXIT_PLAN_CLIENT_ENABLED =
-  process.env.NEXT_PUBLIC_TRADER_CORE_V2_EXIT_PLAN_WRITE === "1";
+export const CORE_V2_EXIT_PLAN_CLIENT_ENABLED = true;
 
 function makeIdempotencyKey(positionId: string) {
   const nonce = globalThis.crypto?.randomUUID?.();
