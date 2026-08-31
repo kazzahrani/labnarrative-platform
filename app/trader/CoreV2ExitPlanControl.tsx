@@ -87,6 +87,16 @@ export default function CoreV2ExitPlanControl() {
     }
   };
 
+  useEffect(() => {
+    const openForPosition = (event: Event) => {
+      const detail = (event as CustomEvent<{ tradeId?: string }>).detail;
+      if (detail?.tradeId) setSelectedId(detail.tradeId);
+      setOpen(true);
+    };
+    window.addEventListener("labnarrative:edit-exit-plan", openForPosition);
+    return () => window.removeEventListener("labnarrative:edit-exit-plan", openForPosition);
+  }, []);
+
   useEffect(() => { if (open) void load(); }, [open]);
 
   useEffect(() => {
