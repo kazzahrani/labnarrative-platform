@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
-import styles from "./trader-app.module.css";
+import base from "./trader-app.module.css";
+import styles from "./automations-app.module.css";
 
 type Automation = {
   id: string;
@@ -16,8 +17,17 @@ type Automation = {
   executionMode: string;
   pair: string;
   market: string;
+  conditionLabel: string;
+  isArchived: boolean;
+  executions: number;
+  closedPositions: number;
   activePositions: number;
   maxActivePositions: number | null;
+  maxCapital: number | null;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  pnl: number;
+  activeCapital: number;
   baseOrder: number | null;
   safetyOrder: number | null;
   maxSafetyOrders: number;
@@ -43,11 +53,16 @@ type AutomationsResponse = {
   supportedProviders?: string[];
   summary?: {
     total: number;
+    archived: number;
     running: number;
     stopped: number;
     dca: number;
     strategies: number;
     activePositions: number;
+    closedPositions: number;
+    realizedPnl: number;
+    unrealizedPnl: number;
+    automationPnl: number;
     providerCounts: Record<string, number>;
   };
   automations?: Automation[];
@@ -70,13 +85,15 @@ type BotForm = {
   stopEnabled: boolean;
   stopPct: number;
 };
-
 type CommandResponse = {
   ok?: boolean;
   pending?: boolean;
   command?: { id?: string; status?: string; type?: string };
   error?: string;
 };
+
+type ViewTab = "active" | "archived";
+type FilterValue = "all" | "dca" | "strategy";
 
 const NAV = [
   ["/", "Overview"],
@@ -106,36 +123,24 @@ const DEFAULT_BOT: BotForm = {
   stopPct: 8,
 };
 
-function number(value: unknown, digits = 2) {
-  const parsed = Number(value ?? 0);
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(Number.isFinite(parsed) ? parsed : 0);
+function finite(value: unknown, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 function money(value: unknown) {
-  const parsed = Number(value ?? 0);
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(Number.isFinite(parsed) ? parsed : 0);
-}
-function dateLabel(value: string | null | undefined) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+  const parsed = finite(value);
+  const abs = Math.abs(parsed);
+  const formatted = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(abs);
+  return parsed < 0 ? `-${formatted}` : formatted;
 }
 function readError(error: unknown, fallback: string) { return error instanceof Error ? error.message || fallback : fallback; }
 function activeLabel(automation: Automation) {
-  return automation.maxActivePositions == null ? `${automation.activePositions} / unlimited` : `${automation.activePositions} / ${automation.maxActivePositions}`;
+  return automation.maxActivePositions == null ? `${automation.activePositions} / ∞` : `${automation.activePositions} / ${automation.maxActivePositions}`;
 }
-function dcaLabel(automation: Automation) {
-  if (automation.type === "Strategy Execution") return "TradingView managed";
-  if (!automation.averagingEnabled || automation.maxSafetyOrders <= 0) return "Off";
-  return `${automation.maxSafetyOrders} max · ${automation.activeDcaLimit} active`;
-}
-function exitLabel(automation: Automation) {
-  if (automation.type === "Strategy Execution") return "TradingView managed";
-  const parts: string[] = [];
-  if (automation.takeProfitPct != null) parts.push(`TP ${number(automation.takeProfitPct)}%`);
-  if (automation.stopEnabled && automation.stopPct != null) parts.push(`SL ${number(automation.stopPct)}%`);
-  if (automation.trailingPct != null && automation.trailingPct > 0) parts.push(`Trail ${number(automation.trailingPct)}%`);
-  return parts.join(" · ") || "—";
+function automationSubtitle(automation: Automation) {
+  const mode = automation.executionMode ? ` · ${automation.executionMode}` : "";
+  if (automation.type === "Strategy Execution") return `Strategy Execution${mode}`;
+  return `DCA · ${automation.conditionLabel || "Immediately"}${mode}`;
 }
 function formFromAutomation(automation: Automation): BotForm {
   return {
@@ -154,6 +159,14 @@ function formFromAutomation(automation: Automation): BotForm {
     stopEnabled: automation.stopEnabled,
     stopPct: automation.stopPct ?? 8,
   };
+}
+function providerLabel(provider: string) {
+  const normalized = String(provider || "").toLowerCase();
+  if (normalized === "okx") return "OKX";
+  if (normalized === "kucoin") return "KuCoin";
+  if (normalized === "bybit") return "Bybit";
+  if (normalized === "binance") return "Binance";
+  return provider || "—";
 }
 
 async function invokeAutomations() {
@@ -230,15 +243,15 @@ function AuthCard() {
     } catch (caught) { setError(readError(caught, "Unable to verify code.")); }
     finally { setBusy(false); }
   };
-  return <main className={styles.auth}><section className={styles.authCard}>
-    <div className={styles.brand}><span className={styles.mark} /><span className={styles.brandText}><strong>LabNarrative</strong><span>Trading</span></span></div>
+  return <main className={base.auth}><section className={base.authCard}>
+    <div className={base.brand}><span className={base.mark} /><span className={base.brandText}><strong>LabNarrative</strong><span>Trading</span></span></div>
     <h1>{sent ? "Verify your email" : "Sign in"}</h1>
-    <p>{sent ? `Enter the verification code sent to ${email.trim().toLowerCase()}.` : "Access the new fast multi-exchange Trader workspace."}</p>
-    <form className={styles.form} onSubmit={sent ? verify : send}>
+    <p>{sent ? `Enter the verification code sent to ${email.trim().toLowerCase()}.` : "Access the fast Core V2 trading workspace."}</p>
+    <form className={base.form} onSubmit={sent ? verify : send}>
       {!sent ? <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label> : <label>Verification code<input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" /></label>}
-      {error && <div className={styles.error}>{error}</div>}
-      <button className={styles.primaryButton} disabled={busy}>{busy ? "Please wait…" : sent ? "Continue" : "Send verification code"}</button>
-      {sent && <button type="button" className={styles.ghostButton} onClick={() => { setSent(false); setCode(""); setError(""); }}>Use another email</button>}
+      {error && <div className={base.error}>{error}</div>}
+      <button className={base.primaryButton} disabled={busy}>{busy ? "Please wait…" : sent ? "Continue" : "Send verification code"}</button>
+      {sent && <button type="button" className={base.ghostButton} onClick={() => { setSent(false); setCode(""); setError(""); }}>Use another email</button>}
     </form>
   </section></main>;
 }
@@ -255,6 +268,8 @@ export default function AutomationsApp() {
   const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [botForm, setBotForm] = useState<BotForm>({ ...DEFAULT_BOT });
+  const [tab, setTab] = useState<ViewTab>("active");
+  const [filter, setFilter] = useState<FilterValue>("all");
   const nav = useMemo(() => NAV, []);
 
   useEffect(() => {
@@ -284,14 +299,20 @@ export default function AutomationsApp() {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [signedIn, busy]);
 
-  if (!authReady) return <div className={styles.loading}>Loading secure session…</div>;
+  if (!authReady) return <div className={base.loading}>Loading secure session…</div>;
   if (!signedIn) return <AuthCard />;
 
   const summary = data?.summary;
   const automations = data?.automations ?? [];
-  const providers = Object.entries(summary?.providerCounts ?? {}).sort((a, b) => b[1] - a[1]);
   const supportedProviders = data?.supportedProviders?.length ? data.supportedProviders : DEFAULT_PROVIDERS;
   const editing = editingId ? automations.find((automation) => automation.id === editingId) ?? null : null;
+  const visibleAutomations = automations.filter((automation) => {
+    if (tab === "active" && automation.isArchived) return false;
+    if (tab === "archived" && !automation.isArchived) return false;
+    if (filter === "dca" && automation.type !== "DCA") return false;
+    if (filter === "strategy" && automation.type !== "Strategy Execution") return false;
+    return true;
+  });
 
   const openCreate = () => {
     setBotForm({ ...DEFAULT_BOT, provider: supportedProviders[0] || "binance" });
@@ -306,12 +327,12 @@ export default function AutomationsApp() {
   const saveBot = async (event: FormEvent) => {
     event.preventDefault();
     if (!data?.account?.id || busy) return;
-    if (!botForm.name.trim() || !(botForm.baseOrder > 0) || !(botForm.safetyOrder > 0)) return setError("Add a bot name and valid base/safety order amounts.");
+    if (!botForm.name.trim() || !(botForm.baseOrder > 0) || !(botForm.safetyOrder > 0)) return setError("Add an automation name and valid base/safety order amounts.");
     const isCreate = editorMode === "create";
     if (!isCreate && !editing) return;
     const prompt = isCreate
-      ? `Create and start ${botForm.name.trim()} on ${botForm.provider.toUpperCase()}? A running Real DCA bot may open live positions when its entry conditions are met.`
-      : `Apply these settings to ${editing?.name}? Existing active positions keep their current trade levels; future entries use the updated bot settings.`;
+      ? `Create and start ${botForm.name.trim()} on ${botForm.provider.toUpperCase()}? A running Real DCA automation may open live positions when its entry conditions are met.`
+      : `Apply these settings to ${editing?.name}? Existing active positions keep their current trade levels; future entries use the updated automation settings.`;
     if (!window.confirm(prompt)) return;
     setBusy(true); setError(""); setNotice("");
     try {
@@ -327,7 +348,7 @@ export default function AutomationsApp() {
         stepScale: botForm.stepScale, volumeScale: botForm.volumeScale,
         takeProfit: botForm.takeProfit, stopEnabled: botForm.stopEnabled, stopPct: botForm.stopPct,
       });
-      setNotice(result.pending ? "Automation command queued and will finish automatically." : isCreate ? "DCA bot created through Core V2." : "Automation settings updated through Core V2.");
+      setNotice(result.pending ? "Automation command queued and will finish automatically." : isCreate ? "DCA automation created through Core V2." : "Automation settings updated through Core V2.");
       setEditorMode(null); setEditingId(null); await load(true);
     } catch (caught) { setError(commandError(readError(caught, "Unable to save automation."))); }
     finally { setBusy(false); }
@@ -337,7 +358,7 @@ export default function AutomationsApp() {
     if (!data?.account?.id || !automation.canManage || busy) return;
     const running = automation.status.toLowerCase() === "running";
     const next = running ? "Stopped" : "Running";
-    if (!window.confirm(`${next === "Running" ? "Resume" : "Pause"} ${automation.name}?${next === "Running" ? " A running Real bot may open new live positions." : " Existing positions remain managed by their normal position/exit workers."}`)) return;
+    if (!window.confirm(`${next === "Running" ? "Resume" : "Pause"} ${automation.name}?${next === "Running" ? " A running Real automation may open new live positions." : " Existing positions remain managed by their normal position/exit workers."}`)) return;
     setBusy(true); setError(""); setNotice("");
     try {
       const result = await invokeAutomationAction({ action: "set_bot_status", accountId: data.account.id, automationId: automation.id, status: next });
@@ -349,21 +370,21 @@ export default function AutomationsApp() {
 
   const archiveAutomation = async (automation: Automation) => {
     if (!data?.account?.id || !automation.canManage || busy) return;
-    if (!window.confirm(`Archive ${automation.name}? Its history will remain available. Bots with active positions or open orders cannot be archived.`)) return;
+    if (!window.confirm(`Close ${automation.name}? Its history will remain available under Archived. Automations with active positions or open orders cannot be closed.`)) return;
     setBusy(true); setError(""); setNotice("");
     try {
       const result = await invokeAutomationAction({ action: "close_bot", accountId: data.account.id, automationId: automation.id });
-      setNotice(result.pending ? "Archive command queued." : `${automation.name} archived through Core V2.`);
+      setNotice(result.pending ? "Close command queued." : `${automation.name} moved to Archived through Core V2.`);
       await load(true);
-    } catch (caught) { setError(commandError(readError(caught, "Unable to archive automation."))); }
+    } catch (caught) { setError(commandError(readError(caught, "Unable to close automation."))); }
     finally { setBusy(false); }
   };
 
-  const editor = editorMode && <section className={styles.panel}>
-    <div className={styles.panelHeader}><h2>{editorMode === "create" ? "New DCA bot" : `Edit ${editing?.name || "DCA bot"}`}</h2><button className={styles.ghostButton} onClick={closeEditor} disabled={busy}>Close</button></div>
-    <form className={styles.automationForm} onSubmit={saveBot}>
+  const editor = editorMode && <section className={`${base.panel} ${styles.editorPanel}`}>
+    <div className={base.panelHeader}><h2>{editorMode === "create" ? "New Automation · DCA" : `Edit ${editing?.name || "DCA automation"}`}</h2><button className={base.ghostButton} onClick={closeEditor} disabled={busy}>Close</button></div>
+    <form className={base.automationForm} onSubmit={saveBot}>
       <label>Name<input value={botForm.name} onChange={(event) => setBotForm((current) => ({ ...current, name: event.target.value }))} /></label>
-      <label>Exchange<select value={botForm.provider} disabled={editorMode === "edit"} onChange={(event) => setBotForm((current) => ({ ...current, provider: event.target.value }))}>{supportedProviders.map((provider) => <option value={provider} key={provider}>{provider.toUpperCase()}</option>)}</select></label>
+      <label>Exchange<select value={botForm.provider} disabled={editorMode === "edit"} onChange={(event) => setBotForm((current) => ({ ...current, provider: event.target.value }))}>{supportedProviders.map((provider) => <option value={provider} key={provider}>{providerLabel(provider)}</option>)}</select></label>
       <label>Pair<input value={botForm.pair} onChange={(event) => setBotForm((current) => ({ ...current, pair: event.target.value.toUpperCase() }))} placeholder="BTC/USDT" /></label>
       <label>Base order (USDT)<input type="number" min="0.01" step="0.01" value={botForm.baseOrder} onChange={(event) => setBotForm((current) => ({ ...current, baseOrder: Number(event.target.value) }))} /></label>
       <label>Safety order (USDT)<input type="number" min="0.01" step="0.01" value={botForm.safetyOrder} onChange={(event) => setBotForm((current) => ({ ...current, safetyOrder: Number(event.target.value) }))} /></label>
@@ -376,25 +397,50 @@ export default function AutomationsApp() {
       <label>Take profit (%)<input type="number" min="0" step="0.01" value={botForm.takeProfit} onChange={(event) => setBotForm((current) => ({ ...current, takeProfit: Number(event.target.value) }))} /></label>
       <label>Stop loss<select value={botForm.stopEnabled ? "On" : "Off"} onChange={(event) => setBotForm((current) => ({ ...current, stopEnabled: event.target.value === "On" }))}><option>Off</option><option>On</option></select></label>
       <label>Stop distance (%)<input type="number" min="0" step="0.01" disabled={!botForm.stopEnabled} value={botForm.stopPct} onChange={(event) => setBotForm((current) => ({ ...current, stopPct: Number(event.target.value) }))} /></label>
-      <div className={styles.automationFormActions}><span>{editorMode === "edit" ? `Exchange is locked to ${botForm.provider.toUpperCase()} for an existing bot.` : "New bots start in Running status, matching the current Trader behavior."}</span><button className={styles.primaryButton} disabled={busy}>{busy ? "Saving…" : editorMode === "create" ? "Create DCA bot" : "Save changes"}</button></div>
+      <div className={base.automationFormActions}><span>{editorMode === "edit" ? `Exchange is locked to ${providerLabel(botForm.provider)} for an existing automation.` : "New Automation currently creates the production DCA automation type. Strategy Execution remains read-only here."}</span><button className={base.primaryButton} disabled={busy}>{busy ? "Saving…" : editorMode === "create" ? "Create automation" : "Save changes"}</button></div>
     </form>
   </section>;
 
-  const content = loading ? <div className={styles.loading}>Reading automation configuration…</div> : error && !data ? <div className={styles.error}>{error}</div> : !summary ? <div className={styles.error}>Automation data is unavailable.</div> : <>
-    {error && <div className={styles.error}>{error}</div>}{notice && <div className={styles.notice}>{notice}</div>}
-    <section className={styles.hero}><div className={styles.heroLabel}>Real-account automations</div><div className={styles.heroValue}>{summary.total}</div><div className={styles.heroMeta}><span>{summary.dca} DCA</span><span>{summary.strategies} strategy execution</span><span>{summary.activePositions} active positions</span>{latencyMs != null && <span>Read {latencyMs} ms</span>}</div></section>
-    <div className={styles.cards}><section className={styles.card}><div className={styles.cardLabel}>Running</div><div className={styles.cardValue}>{summary.running}</div></section><section className={styles.card}><div className={styles.cardLabel}>Stopped</div><div className={styles.cardValue}>{summary.stopped}</div></section><section className={styles.card}><div className={styles.cardLabel}>Active positions</div><div className={styles.cardValue}>{summary.activePositions}</div></section></div>
+  const content = loading ? <div className={base.loading}>Reading automation configuration…</div> : error && !data ? <div className={base.error}>{error}</div> : !summary ? <div className={base.error}>Automation data is unavailable.</div> : <>
+    {error && <div className={base.error}>{error}</div>}{notice && <div className={base.notice}>{notice}</div>}
+    <div className={styles.statGrid}>
+      <section className={styles.statCard}><span>Automation PnL</span><strong className={summary.automationPnl >= 0 ? styles.positive : styles.negative}>{money(summary.automationPnl)}</strong><small>Across active and closed bot positions</small></section>
+      <section className={styles.statCard}><span>Active automations</span><strong>{summary.total}</strong><small>{summary.running} running</small></section>
+      <section className={styles.statCard}><span>Active positions</span><strong>{summary.activePositions}</strong><small>{money(summary.unrealizedPnl)} unrealized</small></section>
+      <section className={styles.statCard}><span>Closed positions</span><strong>{summary.closedPositions}</strong><small>{money(summary.realizedPnl)} realized</small></section>
+    </div>
     {editor}
-    <section className={styles.panel}><div className={styles.panelHeader}><h2>Exchange distribution</h2><span>Non-archived automations only</span></div><div className={styles.providerGrid}>{providers.map(([provider, count]) => <article className={styles.provider} key={provider}><div className={styles.providerTop}><span className={styles.providerName}>{provider}</span><span className={styles.health}>{count}</span></div><div className={styles.providerValue}>{count} automation{count === 1 ? "" : "s"}</div><div className={styles.providerMeta}>Real-account configuration</div></article>)}</div></section>
-    <section className={styles.panel}><div className={styles.panelHeader}><h2>Automation configuration</h2><span>Core V2 management · refreshes every 15s</span></div>{automations.length === 0 ? <div className={styles.empty}>No active automation configurations found.</div> : <div className={styles.tableWrap}><table className={`${styles.table} ${styles.positionsTable}`}><thead><tr><th>Automation</th><th>Type</th><th>Exchange</th><th>Market</th><th>Status</th><th>Positions</th><th>Base order</th><th>DCA</th><th>Exit plan</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{automations.map((automation) => {
-      const running = automation.status.toLowerCase() === "running";
-      return <tr key={automation.id}><td className={styles.botCell}><strong>{automation.name}</strong>{automation.number != null ? ` · #${automation.number}` : ""}</td><td>{automation.type}</td><td><span className={styles.exchange}>{automation.provider}</span></td><td>{automation.market}</td><td><span className={running ? styles.badgeGood : styles.badgeNeutral}>{automation.status}</span></td><td>{activeLabel(automation)}</td><td>{automation.type === "Strategy Execution" || automation.baseOrder == null ? "—" : money(automation.baseOrder)}</td><td>{dcaLabel(automation)}</td><td>{exitLabel(automation)}</td><td>{dateLabel(automation.updatedAt)}</td><td><div className={styles.rowActions}>{automation.canManage ? <><button onClick={() => openEdit(automation)} disabled={busy}>Edit</button><button onClick={() => void toggleAutomation(automation)} disabled={busy}>{running ? "Pause" : "Resume"}</button><button onClick={() => void archiveAutomation(automation)} disabled={busy || automation.activePositions > 0}>Archive</button></> : <span>Read only</span>}</div></td></tr>;
-    })}</tbody></table></div>}</section>
-    {summary.strategies > 0 && <section className={styles.panel}><div className={styles.panelHeader}><h2>Strategy Execution</h2><span>TradingView-controlled automations remain read-only in this phase</span></div><div className={styles.empty}>Strategy Execution state is already read from Core V2. Its TradingView setup and write controls will migrate separately so DCA management does not change strategy execution behavior.</div></section>}
+    <div className={styles.toolbar}>
+      <div className={styles.tabs}>
+        <button type="button" className={tab === "active" ? styles.tabActive : ""} onClick={() => setTab("active")}>Running / paused <b>{summary.total}</b></button>
+        <button type="button" className={tab === "archived" ? styles.tabActive : ""} onClick={() => setTab("archived")}>Archived <b>{summary.archived}</b></button>
+        <label className={styles.filterPill}><span>Filter</span><select value={filter} onChange={(event) => setFilter(event.target.value as FilterValue)}><option value="all">All</option><option value="dca">DCA</option><option value="strategy">Strategy</option></select></label>
+      </div>
+      <span className={styles.toolbarHint}>Open a DCA automation to inspect or edit its strategy and capital plan.{latencyMs != null ? ` · ${latencyMs} ms read` : ""}</span>
+    </div>
+    <section className={styles.tableShell}>
+      {visibleAutomations.length === 0 ? <div className={styles.empty}>No automations match this view.</div> : <div className={styles.tableWrap}><table className={styles.automationTable}>
+        <thead><tr><th>Automation</th><th>Market</th><th>Exchange</th><th>Executions</th><th>Positions</th><th>Max capital</th><th>PnL</th><th>Status</th><th /></tr></thead>
+        <tbody>{visibleAutomations.map((automation) => {
+          const running = automation.status.toLowerCase() === "running";
+          return <tr key={automation.id} className={automation.canManage ? styles.clickableRow : undefined} onClick={() => openEdit(automation)}>
+            <td><strong>{automation.name}</strong><small>{automationSubtitle(automation)}</small></td>
+            <td>{automation.market}</td>
+            <td><span className={styles.exchangePill}>{providerLabel(automation.provider)}</span></td>
+            <td>{automation.executions}</td>
+            <td>{activeLabel(automation)}</td>
+            <td>{automation.maxCapital == null ? "Dynamic" : money(automation.maxCapital)}</td>
+            <td className={automation.pnl >= 0 ? styles.positive : styles.negative}>{money(automation.pnl)}</td>
+            <td><span className={running ? styles.statusRunning : styles.statusStopped}>{automation.isArchived ? "ARCHIVED" : running ? "RUNNING" : "STOPPED"}</span></td>
+            <td><div className={styles.rowActions} onClick={(event) => event.stopPropagation()}>{automation.isArchived ? <span className={styles.readOnly}>Archived</span> : automation.canManage ? <><button type="button" disabled={busy} onClick={() => void toggleAutomation(automation)}>{running ? "Pause" : "Resume"}</button><button type="button" disabled={busy || automation.activePositions > 0} onClick={() => void archiveAutomation(automation)}>Close</button></> : <span className={styles.readOnly}>Read only</span>}</div></td>
+          </tr>;
+        })}</tbody>
+      </table></div>}
+    </section>
   </>;
 
-  return <div className={styles.page}>
-    <aside className={styles.sidebar}><Link href="/" className={styles.brand}><span className={styles.mark} /><span className={styles.brandText}><strong>LabNarrative</strong><span>Trading</span></span></Link><nav className={styles.nav}>{nav.map(([href, label]) => <Link href={href} key={href} className={href === "/automations" ? styles.active : undefined}>{label}</Link>)}</nav></aside>
-    <main className={styles.main}><header className={styles.topbar}><div><div className={styles.eyebrow}>Core V2</div><h1 className={styles.title}>Automations</h1></div><div className={styles.topActions}>{summary && <div className={styles.status}><span className={summary.running > 0 ? styles.dot : `${styles.dot} ${styles.dotWarn}`} />{summary.running > 0 ? `${summary.running} running` : "All stopped"}</div>}<button className={styles.primaryButton} onClick={openCreate} disabled={busy}>New DCA bot</button><button className={styles.ghostButton} onClick={() => browserSupabase.auth.signOut()}>Sign out</button></div></header>{content}</main>
+  return <div className={base.page}>
+    <aside className={base.sidebar}><Link href="/" className={base.brand}><span className={base.mark} /><span className={base.brandText}><strong>LabNarrative</strong><span>Trading</span></span></Link><nav className={base.nav}>{nav.map(([href, label]) => <Link href={href} key={href} className={href === "/automations" ? base.active : undefined}>{label}</Link>)}</nav><div className={styles.workspace}><i /><div><strong>Real workspace</strong><span>Live</span></div></div></aside>
+    <main className={`${base.main} ${styles.main}`}><header className={`${base.topbar} ${styles.topbar}`}><div><div className={base.eyebrow}>AUTOMATIONS</div><h1 className={base.title}>Automations</h1></div><div className={styles.headingActions}><button className={styles.newButton} type="button" onClick={openCreate} disabled={busy}>＋ New Automation</button><button className={styles.signOut} type="button" onClick={() => browserSupabase.auth.signOut()}>Sign out</button></div></header>{content}</main>
   </div>;
 }
