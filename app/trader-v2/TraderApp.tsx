@@ -26,12 +26,44 @@ type Portfolio = {
   in_transit_items: unknown[];
   sync_state?: { unsupportedProviders?: string[]; unpricedAssets?: string[] };
 };
-type ReadResponse = { ok?: boolean; ready?: boolean; ageMs?: number; portfolio?: Portfolio; error?: string; message?: string };
+type PortfolioReadResponse = { ok?: boolean; ready?: boolean; ageMs?: number; portfolio?: Portfolio; error?: string; message?: string };
+type TakeProfitTarget = { profitPct?: number; allocationPct?: number };
+type Position = {
+  trade_id: string;
+  public_trade_no: number | null;
+  bot_id: string | null;
+  bot_name: string | null;
+  pair: string;
+  provider: string;
+  execution_mode: string | null;
+  status: string;
+  average_price: number;
+  quantity: number;
+  remaining_cost_basis: number;
+  last_price: number;
+  market_value: number;
+  unrealized_pnl: number;
+  unrealized_pct: number;
+  realized_pnl: number;
+  completed_dca_orders: number;
+  max_dca_orders: number;
+  active_dca_limit: number;
+  active_dca_orders: number;
+  stop_enabled: boolean;
+  stop_pct: number;
+  take_profit_targets: TakeProfitTarget[] | null;
+  take_profit_filled: unknown[] | null;
+  exit_strategy_v2: boolean;
+  opened_at: string | null;
+  updated_at: string | null;
+};
+type PositionsSummary = { count: number; costBasis: number; marketValue: number; unrealizedPnl: number; providerCounts: Record<string, number> };
+type PositionsReadResponse = { ok?: boolean; ready?: boolean; ageMs?: number; summary?: PositionsSummary; positions?: Position[]; error?: string };
 
 const NAV: Array<{ view: View; href: string; label: string; migrated: boolean }> = [
   { view: "overview", href: "/", label: "Overview", migrated: true },
   { view: "portfolio", href: "/portfolio", label: "Portfolio", migrated: true },
-  { view: "positions", href: "/positions", label: "Positions", migrated: false },
+  { view: "positions", href: "/positions", label: "Positions", migrated: true },
   { view: "automations", href: "/automations", label: "Automations", migrated: false },
   { view: "signal-monitor", href: "/signal-monitor", label: "Signal Monitor", migrated: false },
   { view: "analytics", href: "/analytics", label: "Analytics", migrated: false },
@@ -40,12 +72,16 @@ const NAV: Array<{ view: View; href: string; label: string; migrated: boolean }>
 ];
 
 function money(value: unknown) {
-  const number = Number(value ?? 0);
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(Number.isFinite(number) ? number : 0);
+  const parsed = Number(value ?? 0);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(Number.isFinite(parsed) ? parsed : 0);
 }
 function number(value: unknown, digits = 8) {
   const parsed = Number(value ?? 0);
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(Number.isFinite(parsed) ? parsed : 0);
+}
+function pct(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return `${Number.isFinite(parsed) && parsed > 0 ? "+" : ""}${number(parsed, 2)}%`;
 }
 function ageLabel(ms: number | undefined) {
   if (ms == null) return "—";
@@ -56,23 +92,26 @@ function ageLabel(ms: number | undefined) {
 function titleFor(view: View) {
   return NAV.find((item) => item.view === view)?.label ?? "Trader";
 }
-
-async function invokeRead() {
+function readError(error: unknown, fallback: string) {
+  if (!(error instanceof Error)) return fallback;
+  return error.message || fallback;
+}
+async function invokeFunction<T>(name: string, body: Record<string, unknown> = {}) {
   const started = performance.now();
-  const { data, error } = await browserSupabase.functions.invoke("trader-v2-portfolio-read", { body: { includeHistory: false } });
+  const { data, error } = await browserSupabase.functions.invoke(name, { body });
   if (error) {
-    let message = error.message || "trader_v2_portfolio_read_failed";
+    let message = error.message || `${name}_failed`;
     const context = (error as { context?: Response }).context;
     if (context) {
       try {
-        const body = await context.clone().json() as { error?: string };
-        if (body.error) message = body.error;
+        const responseBody = await context.clone().json() as { error?: string };
+        if (responseBody.error) message = responseBody.error;
       } catch {}
     }
     throw new Error(message);
   }
-  const payload = (data ?? {}) as ReadResponse;
-  if (payload.error || payload.ok !== true) throw new Error(payload.error || "trader_v2_portfolio_read_failed");
+  const payload = (data ?? {}) as T & { ok?: boolean; error?: string };
+  if (payload.error || payload.ok !== true) throw new Error(payload.error || `${name}_failed`);
   return { payload, latencyMs: Math.round(performance.now() - started) };
 }
 
@@ -92,7 +131,7 @@ function AuthCard() {
       const { error: authError } = await browserSupabase.auth.signInWithOtp({ email: value, options: { shouldCreateUser: false } });
       if (authError) throw authError;
       setSent(true);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to send verification code."); }
+    } catch (caught) { setError(readError(caught, "Unable to send verification code.")); }
     finally { setBusy(false); }
   };
   const verify = async (event: FormEvent) => {
@@ -101,7 +140,7 @@ function AuthCard() {
     try {
       const { error: verifyError } = await browserSupabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: "email" });
       if (verifyError) throw verifyError;
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to verify code."); }
+    } catch (caught) { setError(readError(caught, "Unable to verify code.")); }
     finally { setBusy(false); }
   };
 
@@ -146,14 +185,52 @@ function PortfolioView({ portfolio }: { portfolio: Portfolio }) {
   </>;
 }
 
+function PositionsView({ response, latencyMs }: { response: PositionsReadResponse; latencyMs: number | null }) {
+  const positions = response.positions ?? [];
+  const summary = response.summary ?? { count: positions.length, costBasis: 0, marketValue: 0, unrealizedPnl: 0, providerCounts: {} };
+  return <>
+    <section className={styles.hero}>
+      <div className={styles.heroLabel}>Open position value</div>
+      <div className={styles.heroValue}>{money(summary.marketValue)}</div>
+      <div className={styles.heroMeta}><span>{summary.count} open position{summary.count === 1 ? "" : "s"}</span><span>Cost basis {money(summary.costBasis)}</span><span>Updated {ageLabel(response.ageMs)}</span>{latencyMs != null && <span>Read {latencyMs} ms</span>}</div>
+    </section>
+    <div className={styles.cards}>
+      <section className={styles.card}><div className={styles.cardLabel}>Open positions</div><div className={styles.cardValue}>{summary.count}</div></section>
+      <section className={styles.card}><div className={styles.cardLabel}>Market value</div><div className={styles.cardValue}>{money(summary.marketValue)}</div></section>
+      <section className={styles.card}><div className={styles.cardLabel}>Unrealized P&amp;L</div><div className={`${styles.cardValue} ${summary.unrealizedPnl >= 0 ? styles.positive : styles.negative}`}>{money(summary.unrealizedPnl)}</div></section>
+    </div>
+    <section className={styles.panel}>
+      <div className={styles.panelHeader}><h2>Active positions</h2><span>Normalized Core V2 state · read only</span></div>
+      {positions.length === 0 ? <div className={styles.empty}>No active positions.</div> : <div className={styles.tableWrap}><table className={`${styles.table} ${styles.positionsTable}`}><thead><tr><th>#</th><th>Pair</th><th>Exchange</th><th>Bot</th><th>Entry</th><th>Last</th><th>Value</th><th>P&amp;L</th><th>SL</th><th>TP</th><th>DCA</th></tr></thead><tbody>{positions.map((position) => {
+        const targets = Array.isArray(position.take_profit_targets) ? position.take_profit_targets : [];
+        const targetLabel = targets.length > 0 ? targets.map((target) => `${number(target.profitPct, 2)}%`).join(" / ") : "Off";
+        return <tr key={position.trade_id}>
+          <td>{position.public_trade_no ?? "—"}</td>
+          <td><strong>{position.pair}</strong></td>
+          <td><span className={styles.exchange}>{position.provider}</span></td>
+          <td className={styles.botCell}>{position.bot_name || "—"}</td>
+          <td>{money(position.average_price)}</td>
+          <td>{money(position.last_price)}</td>
+          <td>{money(position.market_value)}</td>
+          <td><span className={Number(position.unrealized_pnl) >= 0 ? styles.positive : styles.negative}>{money(position.unrealized_pnl)}<small>{pct(position.unrealized_pct)}</small></span></td>
+          <td>{position.stop_enabled ? `${number(position.stop_pct, 2)}%` : <span className={styles.muted}>Off</span>}</td>
+          <td>{targetLabel}</td>
+          <td>{position.completed_dca_orders}/{position.max_dca_orders}{position.active_dca_orders > 0 ? ` · ${position.active_dca_orders} active` : ""}</td>
+        </tr>;
+      })}</tbody></table></div>}
+    </section>
+  </>;
+}
+
 export default function TraderApp({ view }: { view: View }) {
   const [authReady, setAuthReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [data, setData] = useState<ReadResponse | null>(null);
+  const [portfolioData, setPortfolioData] = useState<PortfolioReadResponse | null>(null);
+  const [positionsData, setPositionsData] = useState<PositionsReadResponse | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const migrated = view === "overview" || view === "portfolio";
+  const migrated = view === "overview" || view === "portfolio" || view === "positions";
 
   useEffect(() => {
     browserSupabase.auth.getSession().then(({ data: session }) => { setSignedIn(Boolean(session.session)); setAuthReady(true); });
@@ -164,20 +241,27 @@ export default function TraderApp({ view }: { view: View }) {
   useEffect(() => {
     if (!signedIn || !migrated) { setLoading(false); return; }
     let cancelled = false;
+    setLoading(true);
     const load = async () => {
       try {
-        const result = await invokeRead();
-        if (cancelled) return;
-        setData(result.payload); setLatencyMs(result.latencyMs); setError("");
-      } catch (caught) { if (!cancelled) setError(caught instanceof Error ? caught.message : "Unable to load portfolio."); }
+        if (view === "positions") {
+          const result = await invokeFunction<PositionsReadResponse>("trader-v2-positions-read");
+          if (cancelled) return;
+          setPositionsData(result.payload); setLatencyMs(result.latencyMs); setError("");
+        } else {
+          const result = await invokeFunction<PortfolioReadResponse>("trader-v2-portfolio-read", { includeHistory: false });
+          if (cancelled) return;
+          setPortfolioData(result.payload); setLatencyMs(result.latencyMs); setError("");
+        }
+      } catch (caught) { if (!cancelled) setError(readError(caught, view === "positions" ? "Unable to load positions." : "Unable to load portfolio.")); }
       finally { if (!cancelled) setLoading(false); }
     };
     void load();
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 15_000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [signedIn, migrated]);
+  }, [signedIn, migrated, view]);
 
-  const portfolio = data?.portfolio;
+  const portfolio = portfolioData?.portfolio;
   const nav = useMemo(() => NAV, []);
   if (!authReady) return <div className={styles.loading}>Loading secure session…</div>;
   if (!signedIn) return <AuthCard />;
@@ -189,8 +273,8 @@ export default function TraderApp({ view }: { view: View }) {
       <div className={styles.legacy}><a href="https://platform.labnarrative.com/trader">Open current Trader</a></div>
     </aside>
     <main className={styles.main}>
-      <header className={styles.topbar}><div><div className={styles.eyebrow}>Core V2</div><h1 className={styles.title}>{titleFor(view)}</h1></div><div className={styles.topActions}>{migrated && portfolio && <div className={styles.status}><span className={portfolio.stale_provider_count === 0 ? styles.dot : `${styles.dot} ${styles.dotWarn}`} />{portfolio.stale_provider_count === 0 ? "All exchanges fresh" : `${portfolio.stale_provider_count} stale`}</div>}<button className={styles.ghostButton} onClick={() => browserSupabase.auth.signOut()}>Sign out</button></div></header>
-      {!migrated ? <section className={styles.bridge}><div className={styles.eyebrow}>Migration in progress</div><h2>{titleFor(view)} is still running on Core V1</h2><p>This route is reserved in the new app architecture. We are moving sections one at a time so the existing live trading system stays operational while Core V2 is validated.</p><a href="https://platform.labnarrative.com/trader">Open current {titleFor(view)}</a></section> : loading ? <div className={styles.loading}>Reading portfolio snapshot…</div> : error ? <div className={styles.error}>{error}</div> : data?.ready === false ? <section className={styles.bridge}><h2>Portfolio snapshot pending</h2><p>Connect an exchange first, then Core V2 will build the fast read model automatically.</p><Link href="/connections">Go to Connections</Link></section> : portfolio ? (view === "portfolio" ? <PortfolioView portfolio={portfolio} /> : <Overview portfolio={portfolio} ageMs={data?.ageMs} latencyMs={latencyMs} />) : <div className={styles.error}>Portfolio data is unavailable.</div>}
+      <header className={styles.topbar}><div><div className={styles.eyebrow}>Core V2</div><h1 className={styles.title}>{titleFor(view)}</h1></div><div className={styles.topActions}>{(view === "overview" || view === "portfolio") && portfolio && <div className={styles.status}><span className={portfolio.stale_provider_count === 0 ? styles.dot : `${styles.dot} ${styles.dotWarn}`} />{portfolio.stale_provider_count === 0 ? "All exchanges fresh" : `${portfolio.stale_provider_count} stale`}</div>}{view === "positions" && positionsData && <div className={styles.status}><span className={styles.dot} />{positionsData.summary?.count ?? 0} active</div>}<button className={styles.ghostButton} onClick={() => browserSupabase.auth.signOut()}>Sign out</button></div></header>
+      {!migrated ? <section className={styles.bridge}><div className={styles.eyebrow}>Migration in progress</div><h2>{titleFor(view)} is still running on Core V1</h2><p>This route is reserved in the new app architecture. We are moving sections one at a time so the existing live trading system stays operational while Core V2 is validated.</p><a href="https://platform.labnarrative.com/trader">Open current {titleFor(view)}</a></section> : loading ? <div className={styles.loading}>{view === "positions" ? "Reading normalized positions…" : "Reading portfolio snapshot…"}</div> : error ? <div className={styles.error}>{error}</div> : view === "positions" ? (positionsData?.ready === false ? <section className={styles.bridge}><h2>Positions model pending</h2><p>Core V2 is waiting for the normalized position model.</p></section> : positionsData ? <PositionsView response={positionsData} latencyMs={latencyMs} /> : <div className={styles.error}>Position data is unavailable.</div>) : portfolioData?.ready === false ? <section className={styles.bridge}><h2>Portfolio snapshot pending</h2><p>Connect an exchange first, then Core V2 will build the fast read model automatically.</p><Link href="/connections">Go to Connections</Link></section> : portfolio ? (view === "portfolio" ? <PortfolioView portfolio={portfolio} /> : <Overview portfolio={portfolio} ageMs={portfolioData?.ageMs} latencyMs={latencyMs} />) : <div className={styles.error}>Portfolio data is unavailable.</div>}
     </main>
   </div>;
 }
