@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { traderGatewayPublicGet } from "../../../../lib/trader/gateway";
+import { traderGatewayPublicBatchGet, traderGatewayPublicGet } from "../../../../lib/trader/gateway";
 
 type Provider = "binance" | "bybit" | "okx" | "kucoin";
 type Candle = { openTime:number; open:number; high:number; low:number; close:number; volume:number; closeTime:number; quoteVolume:number; trades:number };
@@ -36,16 +36,36 @@ async function binance(symbol:string,interval:string,bars:number,endTime:number)
   return dedupe(pages.flat(),bars);
 }
 
+function bybitRows(rootValue:unknown,ms:number){
+  const root=obj(rootValue);if(n(root.retCode)!==0)throw new Error(`bybit_${text(root.retCode)}:${text(root.retMsg)}`);
+  return arr(obj(root.result).list).map(r=>arr(r)).map(r=>({openTime:n(r[0]),open:n(r[1]),high:n(r[2]),low:n(r[3]),close:n(r[4]),volume:n(r[5]),closeTime:n(r[0])+ms-1,quoteVolume:n(r[6]),trades:0}));
+}
+
 async function bybit(symbol:string,interval:string,bars:number,endTime:number){
   const ms=INTERVAL_MS[interval];const apiInterval=BYBIT_INTERVAL[interval];if(!apiInterval)throw new Error("unsupported_interval");
-  const pages:Candle[][]=[];let cursor=endTime;
-  for(let page=0;page<Math.ceil(bars/1000)+1;page++){
-    const already=pages.reduce((s,p)=>s+p.length,0);if(already>=bars)break;const limit=Math.min(1000,bars-already);
-    const root=obj(await get(`${BASE.bybit}/v5/market/kline?category=spot&symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(apiInterval)}&limit=${limit}&end=${cursor}`));if(n(root.retCode)!==0)throw new Error(`bybit_${text(root.retCode)}:${text(root.retMsg)}`);
-    const rows=arr(obj(root.result).list).map(r=>arr(r)).map(r=>({openTime:n(r[0]),open:n(r[1]),high:n(r[2]),low:n(r[3]),close:n(r[4]),volume:n(r[5]),closeTime:n(r[0])+ms-1,quoteVolume:n(r[6]),trades:0})).reverse();
-    if(!rows.length)break;pages.unshift(rows);const first=rows[0]?.openTime;if(!first||rows.length<limit)break;cursor=first-1;
+
+  // Monthly candles are not fixed-width, so preserve cursor pagination there.
+  if(interval==="1M"){
+    const pages:Candle[][]=[];let cursor=endTime;
+    for(let page=0;page<Math.ceil(bars/1000)+1;page++){
+      const already=pages.reduce((s,p)=>s+p.length,0);if(already>=bars)break;const limit=Math.min(1000,bars-already);
+      const rows=bybitRows(await get(`${BASE.bybit}/v5/market/kline?category=spot&symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(apiInterval)}&limit=${limit}&end=${cursor}`),ms).reverse();
+      if(!rows.length)break;pages.unshift(rows);const first=rows[0]?.openTime;if(!first||rows.length<limit)break;cursor=first-1;
+    }
+    return dedupe(pages.flat(),bars);
   }
-  return dedupe(pages.flat(),bars);
+
+  // Bybit caps a kline response at 1,000 rows. Build non-overlapping fixed-width
+  // windows and relay them in one signed Supabase batch so Oracle/Bybit waits happen
+  // concurrently instead of serially. This keeps the full chart history intact.
+  const urls:string[]=[];let offsetBars=0;
+  while(offsetBars<bars){
+    const limit=Math.min(1000,bars-offsetBars);const pageEnd=endTime-offsetBars*ms;
+    urls.push(`${BASE.bybit}/v5/market/kline?category=spot&symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(apiInterval)}&limit=${limit}&end=${pageEnd}`);
+    offsetBars+=limit;
+  }
+  const roots=urls.length===1?[await get(urls[0])]:await traderGatewayPublicBatchGet(urls);
+  return dedupe(roots.flatMap(root=>bybitRows(root,ms)),bars);
 }
 
 async function okx(symbol:string,interval:string,bars:number,endTime:number){
