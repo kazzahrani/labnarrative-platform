@@ -119,13 +119,6 @@ function installCoreV2Cutover() {
     const body = asJson(options.body);
     const action = String(body.action || "");
 
-    // The V1-style live trade editor executes through Core V2. Route this one
-    // through the same-origin server bridge so a successful exchange/database
-    // edit is not reported as a browser-to-Edge transport failure afterward.
-    if (name === "trader-v2-position-edit-submit") {
-      return await invokeThroughAppProxy(name, options);
-    }
-
     if (name === "trader-account-control" && (action === "bootstrap" || action === "list")) {
       const accountResult = await invoke("trader-v2-account-bootstrap", { body: { action } });
       if (accountResult.error) return accountResult;
@@ -149,9 +142,7 @@ function installCoreV2Cutover() {
         if (submitted.error) return submitted;
         const submitData = asJson(submitted.data);
         if (submitData.ok !== true) return submitted;
-        if (submitData.pending === true) {
-          return { data: { ok: false, error: "automation_command_pending" }, error: null };
-        }
+        if (submitData.pending === true) return { data: { ok: false, error: "automation_command_pending" }, error: null };
 
         invalidateV2();
         const refreshed = await readV2();
@@ -176,10 +167,7 @@ function installCoreV2Cutover() {
       if (realAccountIds.has(accountId)) return await readV2();
     }
 
-    if (name === "trader-binance-control" && action === "balances") {
-      return await readV2();
-    }
-
+    if (name === "trader-binance-control" && action === "balances") return await readV2();
     return await invoke(name, options);
   };
 }
