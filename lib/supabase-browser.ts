@@ -19,6 +19,11 @@ function createBrowserClient(): SupabaseClient {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
+      // Avoid navigator.locks deadlocks that can leave getSession() and every
+      // authenticated function invocation pending forever in the Trader shell.
+      // Supabase still owns session persistence/refresh; this only removes the
+      // browser cross-tab lock as a startup dependency.
+      lock: async (_name, _acquireTimeout, fn) => await fn(),
     },
   });
 }
