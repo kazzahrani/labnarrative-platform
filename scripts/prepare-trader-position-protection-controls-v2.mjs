@@ -4,5 +4,6 @@ await import("./prepare-trader-position-protection-controls-v1.mjs");
 const file=path.join(process.cwd(),"app/trader/TradeActionsV2.tsx");
 let source=fs.readFileSync(file,"utf8");
 source=source.replaceAll("\\`","`").replaceAll("\\${","${");
+source=source.replace('accountMode: "paper" | "live";','accountMode: "paper" | "shadow" | "live";');
 fs.writeFileSync(file,source);
 console.log("Normalized generated SL/TP action templates.");
