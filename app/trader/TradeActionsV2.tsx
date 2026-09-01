@@ -25,15 +25,6 @@ type Props = {
 };
 
 type Mode = "add" | "edit" | null;
-type TpTarget = { profitPct: number; allocationPct: number };
-type ExactTrade = {
-  takeProfitPct?: number;
-  takeProfitTargets?: TpTarget[];
-  stopEnabled?: boolean;
-  stopPct?: number;
-};
-type CoreV2Position = { trade_id?: string; client_id?: string | null };
-type CoreV2PositionsResponse = { ok?: boolean; ready?: boolean; positions?: CoreV2Position[]; error?: string };
 
 async function invokeFunction(functionName: string, body: Record<string, unknown>) {
   const { data, error } = await browserSupabase.functions.invoke(functionName, { body });
@@ -57,39 +48,42 @@ async function invokeTrade(accountMode: Props["accountMode"], body: Record<strin
   return invokeFunction(accountMode === "live" ? "trader-live-trade-control" : "trader-trade-control", body);
 }
 
-async function loadExactTrade(accountId: string, tradeId: string) {
-  const { data, error } = await browserSupabase.functions.invoke("trader-chart-control", { body: { accountId, tradeId } });
-  if (error) throw error;
-  const result = (data ?? {}) as { ok?: boolean; trade?: ExactTrade; error?: string };
-  if (result.error || result.ok !== true || !result.trade) throw new Error(result.error || "trade_snapshot_failed");
-  return result.trade;
-}
+async function invokeLivePositionEdit(body: Record<string, unknown>) {
+  const { data: sessionData, error: sessionError } = await browserSupabase.auth.getSession();
+  const token = sessionData.session?.access_token || "";
+  if (sessionError || !token) throw new Error("unauthorized");
 
-async function resolveCoreV2TradeId(legacyTradeId: string) {
-  const { data, error } = await browserSupabase.functions.invoke("trader-v2-positions-read", { body: {} });
-  if (error) {
-    let message = error.message || "core_v2_position_lookup_failed";
-    const context = (error as { context?: Response }).context;
-    if (context) {
-      try {
-        const payload = await context.clone().json() as { error?: string };
-        if (payload.error) message = payload.error;
-      } catch {}
-    }
-    throw new Error(message);
+  let response: Response;
+  try {
+    response = await fetch("/api/trader/position-edit", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("position_edit_transport_failed");
   }
-  const result = (data ?? {}) as CoreV2PositionsResponse;
-  if (result.error || result.ok !== true || result.ready !== true || !Array.isArray(result.positions)) throw new Error(result.error || "core_v2_positions_not_ready");
-  const match = result.positions.find((position) => String(position.client_id || "") === legacyTradeId || String(position.trade_id || "") === legacyTradeId);
-  const canonicalTradeId = String(match?.trade_id || "");
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(canonicalTradeId)) throw new Error("core_v2_position_id_unavailable");
-  return canonicalTradeId;
+
+  const text = await response.text();
+  let payload: { ok?: boolean; error?: string } = {};
+  try { payload = text ? JSON.parse(text) as { ok?: boolean; error?: string } : {}; }
+  catch { throw new Error("position_edit_invalid_response"); }
+
+  if (!response.ok || payload.ok !== true) throw new Error(payload.error || `position_edit_http_${response.status}`);
+  return payload;
 }
 
 function errorText(message: string) {
   if (message.includes("core_v2_position_id_unavailable")) return "This live position could not be matched to Core V2. No change was made.";
   if (message.includes("core_v2_positions_not_ready")) return "Core V2 positions are not ready yet. No change was made.";
   if (message.includes("core_v2_execute_disabled")) return "Core V2 position editing is temporarily locked.";
+  if (message.includes("position_edit_timeout")) return "The exchange did not finish the edit in time. Refresh the position before trying again.";
+  if (message.includes("position_edit_transport_failed") || message.includes("position_edit_invalid_response")) return "The edit could not be confirmed. Refresh the position before trying again.";
+  if (message.includes("unauthorized")) return "Your session expired. Sign in again and retry.";
   if (message.includes("insufficient_available_balance")) return "Not enough available account balance for that amount.";
   if (message.includes("insufficient_usdt:")) return "Not enough free USDT on the connected exchange for that amount.";
   if (message.includes("live_order_limit_exceeded:")) return `This exceeds the Real Account per-order live limit ($${message.split(":")[1]}).`;
@@ -135,7 +129,7 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
     setMaxAveraging((current) => Math.max(current, completedDca + next));
   };
 
-  const openEdit = async (event: MouseEvent) => {
+  const openEdit = (event: MouseEvent) => {
     event.stopPropagation();
     if (busy) return;
     setError("");
@@ -144,24 +138,6 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
     setTakeProfitPct(trade.takeProfitPct);
     setStopEnabled(trade.stopEnabled);
     setStopPct(trade.stopPct || 8);
-
-    if (accountMode === "live") {
-      setBusy(true);
-      try {
-        const exact = await loadExactTrade(accountId, trade.id);
-        const exactTargets = Array.isArray(exact.takeProfitTargets) ? exact.takeProfitTargets : [];
-        const scalarTp = Number(exact.takeProfitPct);
-        const fallbackTarget = Number(exactTargets[0]?.profitPct);
-        if (Number.isFinite(scalarTp) && scalarTp >= 0) setTakeProfitPct(scalarTp);
-        else if (Number.isFinite(fallbackTarget) && fallbackTarget > 0) setTakeProfitPct(fallbackTarget);
-        if (typeof exact.stopEnabled === "boolean") setStopEnabled(exact.stopEnabled);
-        if (Number(exact.stopPct) > 0) setStopPct(Number(exact.stopPct));
-      } catch {
-        // The positions read model already carries the same visible fields; keep those as a safe fallback.
-      } finally {
-        setBusy(false);
-      }
-    }
     setMode("edit");
   };
 
@@ -183,10 +159,8 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
     setBusy(true); setError("");
     try {
       if (accountMode === "live") {
-        const positionId = await resolveCoreV2TradeId(trade.id);
-        await invokeFunction("trader-v2-position-edit-submit", {
-          positionId,
-          idempotencyKey: `v1-position-edit:${positionId}:${crypto.randomUUID()}`,
+        await invokeLivePositionEdit({
+          tradeId: trade.id,
           maxAveraging,
           activeOrdersLimit,
           takeProfitPct: Math.max(0, Number(takeProfitPct) || 0),
@@ -205,8 +179,8 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
           stopPct,
         });
       }
-      setMode(null);
       await onChanged();
+      setMode(null);
     } catch (caught) {
       setError(errorText(caught instanceof Error ? caught.message : "Unable to edit trade."));
       await onChanged();
@@ -250,7 +224,7 @@ export default function TradeActionsV2({ accountId, accountMode, trade, onChange
             {stopEnabled && <label><span>Stop loss distance</span><div className={styles.unit}><input type="number" min="0.1" step="0.1" value={stopPct} onChange={(event) => setStopPct(Math.max(.1, Number(event.target.value)))}/><b>%</b></div></label>}
           </div>
           <p className={styles.dcaHint}>Completed DCA: <b>{completedDca}</b> · Remaining slots: <b>{remainingDcaSlots}</b> · Active now: <b>{activeOrdersLimit}</b>. Increasing Active DCA automatically increases Max DCA when needed.</p>
-          <p>{accountMode === "live" ? "Saving reconciles the active Core V2 DCA and exit settings. Completed DCA fills are preserved." : "Saving reconciles the active paper/shadow DCA and exit settings. Completed DCA fills are preserved."}</p>
+          <p>{accountMode === "live" ? "Saving applies these settings through Core V2. Completed DCA fills are preserved." : "Saving reconciles the active paper/shadow DCA and exit settings. Completed DCA fills are preserved."}</p>
           {error && <div className={styles.error}>{error}</div>}
           <div className={styles.footer}><button type="button" onClick={() => setMode(null)}>Cancel</button><button className={styles.primary} disabled={busy || (stopEnabled && !(stopPct > 0))}>{busy ? "Saving…" : "Save trade"}</button></div>
         </form>}
