@@ -115,7 +115,7 @@ export default function TradeActionsV2(props:TradeActionsProps){
           <p style={ui.note}>Saved immediately to Core V2. No exchange order is sent when you change this setting; the existing exit worker enforces it when price reaches the level.</p>
           {error&&<div style={ui.error}>{error}</div>}
         </div>
-        <footer style={ui.foot}><button type="button" style={ui.cancel} disabled={busy} onClick={close}>Cancel</button><button type="submit" style={{...ui.save,opacity:busy?.65:1}} disabled={busy}>{busy?"Saving…":"Save"}</button></footer>
+        <footer style={ui.foot}><button type="button" style={ui.cancel} disabled={busy} onClick={close}>Cancel</button><button type="submit" style={{...ui.save,opacity:busy ? .65 : 1}} disabled={busy}>{busy?"Saving…":"Save"}</button></footer>
       </form>
     </div>}
   </>;
