@@ -161,20 +161,23 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // The previous app.labnarrative.com product surface has been retired. Keep the
+  // hostname reserved for the clean rebuild without falling through to another app.
+  if (isSaasHost) {
+    return new NextResponse("Not Found", {
+      status: 404,
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+        "X-Robots-Tag": "noindex, nofollow, noarchive",
+      },
+    });
+  }
+
   // Personal Career Agent application on its dedicated LabNarrative hostname.
   if (isCareerHost && request.nextUrl.pathname === "/") {
     const careerUrl = request.nextUrl.clone();
     careerUrl.pathname = "/api/career/page";
     return NextResponse.rewrite(careerUrl);
-  }
-
-  // Canonical LabNarrative Trading application hostname. Route the root directly
-  // to the clean Core V2 app so the legacy transformed Trader shell and its
-  // compatibility bootstrap are no longer part of the startup path.
-  if (isSaasHost && request.nextUrl.pathname === "/") {
-    const appUrl = request.nextUrl.clone();
-    appUrl.pathname = "/trader-v2";
-    return NextResponse.rewrite(appUrl);
   }
 
   // Legacy tender product surface retained while the new SaaS is introduced.
@@ -185,7 +188,6 @@ export function proxy(request: NextRequest) {
   }
 
   // labnarrative.com currently remains the flagship revenue-intelligence experience.
-  // The SaaS application is available independently at app.labnarrative.com.
   if (
     !host ||
     host === rootDomain ||
