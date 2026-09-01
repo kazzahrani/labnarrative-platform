@@ -49,3 +49,4 @@ fs.writeFileSync(dcaCssPath,dcaCss);
 fs.writeFileSync(actionsCssPath,actionsCss);
 fs.writeFileSync(metaCssPath,metaCss);
 console.log(`Prepared fast aligned Positions rows with authoritative PnL outcomes (${changes} shell changes).`);
+await import("./prepare-trader-position-protection-controls-v1.mjs");
