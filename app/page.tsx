@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Build, simulate, automate and analyse crypto strategies in one focused trading workspace.",
 };
 
-const APP_URL = "https://platform.labnarrative.com/trader";
+const APP_URL = "https://app.labnarrative.com";
 
 const capabilities = [
   ["01", "Automate", "Build DCA strategies and strategy-execution automations with explicit entry, averaging and exit logic."],
@@ -97,7 +97,7 @@ export default function HomePage() {
 
       <div className={styles.heroFrame}>
         <div className={styles.window}>
-          <div className={styles.windowBar}><i/><i/><i/><span>platform.labnarrative.com/trader</span></div>
+          <div className={styles.windowBar}><i/><i/><i/><span>app.labnarrative.com</span></div>
           <div className={styles.productShell}>
             <aside className={styles.previewSidebar}>
               <div className={styles.previewBrand}><img src="/labnarrative-mark.svg" alt=""/><div><strong>LabNarrative</strong><small>Trading</small></div></div>
