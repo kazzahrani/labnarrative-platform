@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Earn on annual LabNarrative Trading subscriptions, monthly referrals, and a three-level referral network.",
 };
 
-const APP_URL = "https://platform.labnarrative.com/trader";
+const APP_URL = "https://app.labnarrative.com";
 const APPLY_URL = "mailto:hello@labnarrative.com?subject=LabNarrative%20Founding%20Affiliate%20Program&body=Channel%20or%20community%20URL%3A%0AAudience%20size%3A%0AMain%20platform%3A%0AAnything%20you%27d%20like%20us%20to%20know%3A";
 
 const steps = [
