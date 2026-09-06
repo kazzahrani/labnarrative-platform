@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="LabNarrative">
-  <rect width="128" height="128" rx="28" fill="#f7f7f7"/>
-  <path d="M44 34C69.4 34 90 54.6 90 80V84C90 87.3 87.3 90 84 90H44C40.7 90 38 87.3 38 84V40C38 36.7 40.7 34 44 34Z" fill="#000"/>
+  <rect width="128" height="128" rx="28" fill="#fff"/>
+  <rect x="39" y="29" width="19" height="69" rx="6" fill="#000"/>
+  <rect x="69" y="29" width="19" height="44" rx="6" fill="#000"/>
+  <rect x="69" y="78" width="19" height="20" rx="6" fill="#000"/>
 </svg>
