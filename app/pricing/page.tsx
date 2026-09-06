@@ -129,7 +129,7 @@ export default function PricingPage() {
       </section>
 
       <section className={styles.planSection} aria-label="Pricing plans">
-        <div className={styles.planGrid}>
+        <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
           {plans.map((plan) => (
             <article className={`${styles.planCard} ${plan.featured ? styles.featured : ""}`} key={plan.name}>
               {plan.badge && <span className={styles.popular}>{plan.badge}</span>}
