@@ -4,7 +4,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Pricing — LabNarrative",
   description:
-    "Simple pricing for LabNarrative crypto trading automation. Start free and scale automation capacity when you need it.",
+    "Simple pricing for LabNarrative crypto trading automation. Start with a 30-day Paper trial, keep a free Paper plan, and upgrade when you are ready for Live crypto Spot.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -13,36 +13,35 @@ const PRICING_URL = `${APP_URL}/pricing`;
 const plans = [
   {
     name: "Free",
-    eyebrow: "A real way to test the platform",
+    eyebrow: "Paper testing that stays free",
     price: "$0",
     suffix: "/mo",
-    billing: "No credit card required",
-    copy: "Start with the core trading workspace and enough automation capacity to test LabNarrative properly.",
+    billing: "After the 30-day trial · Paper only",
+    copy: "Keep one DCA bot and one TradingView Strategy Execution running in Paper for as long as you need.",
     features: [
-      "1 exchange account",
-      "2 active DCA bots",
-      "1 Strategy Execution",
-      "Unlimited manual trades",
+      "0 Live exchange accounts",
+      "1 active Paper DCA bot",
+      "1 Paper Strategy Execution",
+      "Unlimited manual Paper trades",
       "Paper Account",
       "TradingView execution",
       "Full position controls",
       "Analytics + bot drilldown",
     ],
-    cta: "Open LabNarrative →",
+    cta: "Start Paper trial →",
     featured: false,
   },
   {
     name: "Trader",
-    eyebrow: "For individual traders getting serious",
-    oldPrice: "$19",
+    eyebrow: "Take proven strategies Live",
     price: "$15",
     suffix: "/mo",
-    billing: "$180 billed annually · Save 21%",
-    copy: "More room for individual traders running several exchange connections, bots, and strategy executions.",
+    billing: "$180/year prepaid option",
+    copy: "For individual traders ready to connect one Live exchange account and run a focused automation setup.",
     features: [
-      "5 exchange accounts",
-      "25 active DCA bots",
-      "25 Strategy Executions",
+      "1 Live exchange account",
+      "10 active DCA bots",
+      "10 Strategy Executions",
       "Unlimited manual trades",
       "Paper Account",
       "TradingView execution",
@@ -54,16 +53,15 @@ const plans = [
   },
   {
     name: "Pro",
-    eyebrow: "High-capacity automation and multi-account use",
-    oldPrice: "$39",
+    eyebrow: "More accounts and automation capacity",
     price: "$29",
     suffix: "/mo",
-    billing: "$348 billed annually · Save 26%",
-    copy: "Higher automation capacity for traders running larger bot portfolios across multiple exchange accounts.",
+    billing: "$348/year prepaid option",
+    copy: "For serious traders running a larger strategy portfolio across several exchange accounts.",
     features: [
-      "20 exchange accounts",
-      "100 active DCA bots",
-      "100 Strategy Executions",
+      "5 Live exchange accounts",
+      "50 active DCA bots",
+      "50 Strategy Executions",
       "Unlimited manual trades",
       "Paper Account",
       "TradingView execution",
@@ -76,15 +74,14 @@ const plans = [
   {
     name: "Max",
     eyebrow: "Maximum launch capacity",
-    oldPrice: "$89",
     price: "$49",
     suffix: "/mo",
-    billing: "$588 billed annually · Save 45%",
-    copy: "Maximum launch capacity at the biggest annual discount for high-volume automation and multi-account use.",
+    billing: "$588/year prepaid option",
+    copy: "For advanced multi-account setups that need substantially more automation capacity.",
     features: [
-      "50 exchange accounts",
-      "500 active DCA bots",
-      "500 Strategy Executions",
+      "10 Live exchange accounts",
+      "200 active DCA bots",
+      "200 Strategy Executions",
       "Unlimited manual trades",
       "Paper Account",
       "TradingView execution",
@@ -93,7 +90,7 @@ const plans = [
     ],
     cta: "Choose Max →",
     featured: true,
-    badge: "Best launch value",
+    badge: "Maximum capacity",
   },
 ];
 
@@ -121,11 +118,11 @@ export default function PricingPage() {
 
       <section className={styles.hero}>
         <p className={styles.eyebrow}>LabNarrative Trading</p>
-        <h1>Simple pricing.<br /><em>Generous limits.</em></h1>
+        <h1>Start in Paper.<br /><em>Pay when you go Live.</em></h1>
         <p className={styles.lead}>
-          Start free, then upgrade only when you need more scale. Core trading features stay available across plans.
+          Every new account starts with 30 days of expanded Paper capacity. Forward-test first, then upgrade only when you need Live exchange connections or more scale.
         </p>
-        <div className={styles.notePill}><strong>Annual pricing shown</strong><span>Trader $19 · Pro $39 · Max $89 when billed monthly</span></div>
+        <div className={styles.notePill}><strong>30-day Paper trial</strong><span>10 DCA bots · 10 Strategy Executions · 0 Live exchange connections · no payment required</span></div>
       </section>
 
       <section className={styles.planSection} aria-label="Pricing plans">
@@ -136,7 +133,6 @@ export default function PricingPage() {
               <p className={styles.planEyebrow}>{plan.eyebrow}</p>
               <h2>{plan.name}</h2>
               <div className={styles.priceLine}>
-                {plan.oldPrice && <del>{plan.oldPrice}</del>}
                 <strong>{plan.price}</strong>
                 <span>{plan.suffix}</span>
               </div>
@@ -147,27 +143,27 @@ export default function PricingPage() {
             </article>
           ))}
         </div>
-        <p className={styles.limitNote}>Annual prices are shown as their monthly equivalent. Monthly subscriptions remain available at $19 for Trader, $39 for Pro, and $89 for Max.</p>
+        <p className={styles.limitNote}>Monthly prices shown. Annual prepaid access is also available at $180 for Trader, $348 for Pro and $588 for Max. Paid checkout is handled with cryptocurrency through NOWPayments.</p>
       </section>
 
       <section className={styles.section}>
         <div className={styles.sectionIntro}>
-          <p className={styles.label}>All plans</p>
-          <h2>Core trading features are not paywalled.</h2>
-          <p>Paid plans increase scale instead of removing the tools needed to test the platform properly.</p>
+          <p className={styles.label}>Paper first</p>
+          <h2>Test generously before risking real capital.</h2>
+          <p>The trial is intentionally large enough to compare strategies. After 30 days, your account automatically continues on the Free Paper plan unless you choose to upgrade.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>Start free</h3><p>The Free plan includes paper trading, live exchange capacity, DCA automation, Strategy Execution, position controls, and analytics.</p></article>
-          <article><span>02</span><h3>Upgrade for scale</h3><p>Trader, Pro, and Max increase exchange-account, DCA-bot, and Strategy Execution limits.</p></article>
-          <article><span>03</span><h3>No profit tiers</h3><p>No plan claims to unlock more profitable strategies or guaranteed trading outcomes.</p></article>
+          <article><span>01</span><h3>30 days expanded</h3><p>New accounts can run up to 10 Paper DCA bots and 10 Paper Strategy Executions with no Live exchange connection.</p></article>
+          <article><span>02</span><h3>Free stays useful</h3><p>After the trial, keep 1 Paper DCA bot and 1 Paper Strategy Execution free for ongoing forward testing.</p></article>
+          <article><span>03</span><h3>Upgrade for Live</h3><p>Trader, Pro and Max unlock Live crypto Spot exchange connections and progressively more automation capacity.</p></article>
         </div>
       </section>
 
       <section className={styles.finalCta}>
-        <p className={styles.eyebrow}>Start free</p>
-        <h2>Open LabNarrative and choose the capacity you need.</h2>
-        <p>The Free plan starts without a credit card. Upgrade from inside the trading app whenever you need more scale.</p>
-        <a className={styles.primary} href={APP_URL}>Open LabNarrative →</a>
+        <p className={styles.eyebrow}>Start with Paper</p>
+        <h2>Give your strategy 30 days to prove itself.</h2>
+        <p>No payment is required to start. If you later upgrade, paid access is prepaid through NOWPayments in cryptocurrency.</p>
+        <a className={styles.primary} href={APP_URL}>Start Paper trial →</a>
       </section>
 
       <footer className={styles.footer}>
