@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import styles from "../trading-public-pages.module.css";
+import switchStyles from "./PricingPlans.module.css";
 
 const APP_URL = "https://app.labnarrative.com";
 const PRICING_URL = `${APP_URL}/pricing`;
@@ -97,9 +98,9 @@ export default function PricingPlans() {
 
   return (
     <>
-      <div className={styles.pricingToggle} aria-label="Billing interval">
-        <button className={interval === "month" ? styles.active : ""} onClick={() => setInterval("month")} type="button">Monthly</button>
-        <button className={interval === "year" ? styles.active : ""} onClick={() => setInterval("year")} type="button">Yearly</button>
+      <div className={switchStyles.toggle} aria-label="Billing interval">
+        <button className={interval === "month" ? switchStyles.active : ""} onClick={() => setInterval("month")} type="button">Monthly</button>
+        <button className={interval === "year" ? switchStyles.active : ""} onClick={() => setInterval("year")} type="button">Yearly</button>
       </div>
 
       <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
