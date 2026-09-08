@@ -1,0 +1,4 @@
+.toggle{display:flex;align-items:center;justify-content:center;width:max-content;margin:0 auto 24px;padding:4px;border:1px solid #d7d7d2;border-radius:999px;background:#fff;box-shadow:0 8px 24px rgba(24,24,24,.05)}
+.toggle button{min-width:108px;border:0;border-radius:999px;background:transparent;color:#777771;padding:10px 16px;font-family:Tahoma,Arial,sans-serif;font-size:11px;font-weight:800;cursor:pointer;transition:background .18s ease,color .18s ease,box-shadow .18s ease}
+.toggle button.active{background:#202020;color:#fff;box-shadow:0 6px 14px rgba(0,0,0,.14)}
+@media(max-width:640px){.toggle{width:100%;max-width:300px}.toggle button{flex:1;min-width:0}}
