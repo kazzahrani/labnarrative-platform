@@ -133,7 +133,7 @@ export default function PricingPlans() {
       <p className={styles.limitNote}>
         {interval === "year"
           ? "Yearly prices are shown as the monthly equivalent and billed upfront: $180 for Trader, $348 for Pro and $588 for Max."
-          : "Monthly access is $20 for Trader, $50 for Pro and $90 for Max."} Paid checkout is handled with cryptocurrency through NOWPayments.
+          : "Monthly access is $20 for Trader, $50 for Pro and $90 for Max."} Card / Apple Pay is the primary checkout through NOWPayments fiat on-ramp, with crypto payment also available. Availability depends on provider coverage and verification.
       </p>
     </>
   );
