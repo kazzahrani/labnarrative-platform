@@ -61,7 +61,7 @@ export default function PricingPage() {
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start with Paper</p>
         <h2>Give your strategy 30 days to prove itself.</h2>
-        <p>No payment is required to start. If you later upgrade, paid access is prepaid through NOWPayments in cryptocurrency.</p>
+        <p>No payment is required to start. If you later upgrade, Card / Apple Pay is the primary checkout through NOWPayments, with crypto payment also available.</p>
         <a className={styles.primary} href={APP_URL}>Start Paper trial →</a>
       </section>
 
