@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import PricingPlans from "./PricingPlans";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
@@ -8,91 +9,6 @@ export const metadata: Metadata = {
 };
 
 const APP_URL = "https://app.labnarrative.com";
-const PRICING_URL = `${APP_URL}/pricing`;
-
-const plans = [
-  {
-    name: "Free",
-    eyebrow: "Paper testing that stays free",
-    price: "$0",
-    suffix: "/mo",
-    billing: "After the 30-day trial · Paper only",
-    copy: "Keep one DCA bot and one TradingView Strategy Execution running in Paper for as long as you need.",
-    features: [
-      "0 Live exchange accounts",
-      "1 active Paper DCA bot",
-      "1 Paper Strategy Execution",
-      "Unlimited manual Paper trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
-      "Analytics + bot drilldown",
-    ],
-    cta: "Start Paper trial →",
-    featured: false,
-  },
-  {
-    name: "Trader",
-    eyebrow: "Take proven strategies Live",
-    price: "$15",
-    suffix: "/mo",
-    billing: "$180/year prepaid option",
-    copy: "For individual traders ready to connect one Live exchange account and run a focused automation setup.",
-    features: [
-      "1 Live exchange account",
-      "10 active DCA bots",
-      "10 Strategy Executions",
-      "Unlimited manual trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
-      "Analytics + bot drilldown",
-    ],
-    cta: "Choose Trader →",
-    featured: false,
-  },
-  {
-    name: "Pro",
-    eyebrow: "More accounts and automation capacity",
-    price: "$29",
-    suffix: "/mo",
-    billing: "$348/year prepaid option",
-    copy: "For serious traders running a larger strategy portfolio across several exchange accounts.",
-    features: [
-      "5 Live exchange accounts",
-      "50 active DCA bots",
-      "50 Strategy Executions",
-      "Unlimited manual trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
-      "Analytics + bot drilldown",
-    ],
-    cta: "Choose Pro →",
-    featured: false,
-  },
-  {
-    name: "Max",
-    eyebrow: "Maximum launch capacity",
-    price: "$49",
-    suffix: "/mo",
-    billing: "$588/year prepaid option",
-    copy: "For advanced multi-account setups that need substantially more automation capacity.",
-    features: [
-      "10 Live exchange accounts",
-      "200 active DCA bots",
-      "200 Strategy Executions",
-      "Unlimited manual trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
-      "Analytics + bot drilldown",
-    ],
-    cta: "Choose Max →",
-    featured: true,
-    badge: "Maximum capacity",
-  },
-];
 
 function Brand() {
   return <span className={styles.brand}><img src="/labnarrative-mark.svg" alt="" />LabNarrative</span>;
@@ -126,24 +42,7 @@ export default function PricingPage() {
       </section>
 
       <section className={styles.planSection} aria-label="Pricing plans">
-        <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
-          {plans.map((plan) => (
-            <article className={`${styles.planCard} ${plan.featured ? styles.featured : ""}`} key={plan.name}>
-              {plan.badge && <span className={styles.popular}>{plan.badge}</span>}
-              <p className={styles.planEyebrow}>{plan.eyebrow}</p>
-              <h2>{plan.name}</h2>
-              <div className={styles.priceLine}>
-                <strong>{plan.price}</strong>
-                <span>{plan.suffix}</span>
-              </div>
-              <p className={styles.billing}>{plan.billing}</p>
-              <p className={styles.planCopy}>{plan.copy}</p>
-              <a className={styles.planCta} href={plan.name === "Free" ? APP_URL : PRICING_URL}>{plan.cta}</a>
-              <ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
-            </article>
-          ))}
-        </div>
-        <p className={styles.limitNote}>Monthly prices shown. Annual prepaid access is also available at $180 for Trader, $348 for Pro and $588 for Max. Paid checkout is handled with cryptocurrency through NOWPayments.</p>
+        <PricingPlans />
       </section>
 
       <section className={styles.section}>
