@@ -1,18 +1,59 @@
 import type { Metadata } from "next";
 import styles from "./trading-home.module.css";
 
+const title = "Crypto Trading Automation Platform & DCA Bots | LabNarrative";
+const description = "Build and paper-test crypto DCA bots, automate TradingView strategies, manage Spot positions, and analyse performance before moving live.";
+
 export const metadata: Metadata = {
-  title: "LabNarrative — Crypto Trading Automation",
-  description:
-    "Build, simulate, automate and analyse crypto strategies in one focused trading workspace.",
+  title,
+  description,
+  alternates: { canonical: "/" },
+  openGraph: { title, description, url: "/" },
+  twitter: { title, description },
 };
 
 const APP_URL = "https://app.labnarrative.com";
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://labnarrative.com/#organization",
+      name: "LabNarrative",
+      url: "https://labnarrative.com",
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://labnarrative.com/#website",
+      name: "LabNarrative",
+      url: "https://labnarrative.com",
+      publisher: { "@id": "https://labnarrative.com/#organization" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://labnarrative.com/#trading-app",
+      name: "LabNarrative Trading",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Web",
+      url: "https://labnarrative.com",
+      description,
+      publisher: { "@id": "https://labnarrative.com/#organization" },
+      featureList: [
+        "Crypto DCA bots",
+        "Crypto paper trading",
+        "TradingView strategy execution",
+        "Crypto Spot position management",
+        "Trading performance analytics",
+      ],
+    },
+  ],
+};
+
 const capabilities = [
-  ["01", "Automate", "Build DCA strategies and strategy-execution automations with explicit entry, averaging and exit logic."],
+  ["01", "Automate", "Build crypto DCA bots and TradingView strategy-execution automations with explicit entry, averaging and exit logic."],
   ["02", "Monitor", "Follow market conditions and strategy signals without losing sight of why a setup is or is not ready."],
-  ["03", "Manage", "Keep paper and live positions, capital deployment and trade controls in the same workspace."],
+  ["03", "Manage", "Keep paper and live Spot positions, capital deployment and trade controls in the same workspace."],
   ["04", "Understand", "Use portfolio and bot analytics to see what is actually driving performance over time."],
 ];
 
@@ -80,6 +121,8 @@ function SignalPreview() {
 
 export default function HomePage() {
   return <main className={styles.page}>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+
     <header className={styles.header}>
       <a href="/" aria-label="Home"><Brand /></a>
       <nav className={styles.nav} aria-label="Primary navigation">
@@ -89,9 +132,9 @@ export default function HomePage() {
     </header>
 
     <section className={styles.hero}>
-      <p className={styles.eyebrow}>Crypto trading automation</p>
-      <h1>Automate your strategy.<br/><em>Understand every trade.</em></h1>
-      <p className={styles.lead}>LabNarrative brings automation, signal monitoring, positions, portfolio intelligence and performance analytics into one focused crypto trading workspace.</p>
+      <p className={styles.eyebrow}>Crypto trading automation platform</p>
+      <h1>Crypto trading automation.<br/><em>Understand every trade.</em></h1>
+      <p className={styles.lead}>Build and paper-test crypto DCA bots, automate TradingView strategies, manage Spot positions and analyse performance in one focused trading workspace.</p>
       <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start with Paper Trading →</a><a className={styles.secondary} href="#platform">Explore the platform</a></div>
       <p className={styles.heroNote}>Start in simulation. Connect real capital when you are ready.</p>
 
@@ -120,6 +163,15 @@ export default function HomePage() {
     <section className={styles.section} id="product">
       <div className={styles.sectionHead}><p className={styles.label}>One workspace</p><h2>The whole trading process, without losing sight of the strategy.</h2></div>
       <div className={styles.capabilities}>{capabilities.map(([number,title,copy])=><article className={styles.capability} key={title}><span>{number}</span><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div>
+    </section>
+
+    <section className={styles.section}>
+      <div className={styles.sectionHead}><p className={styles.label}>Explore workflows</p><h2>Start with the automation workflow you need.</h2></div>
+      <div className={styles.capabilities}>
+        <article className={styles.capability}><span>01</span><div><h3><a href="/dca-bot">Crypto DCA bots →</a></h3><p>Build rule-based DCA automation with visible entry, averaging and exit controls, then forward-test it in Paper.</p></div></article>
+        <article className={styles.capability}><span>02</span><div><h3><a href="/crypto-paper-trading">Crypto paper trading →</a></h3><p>Test DCA bots and TradingView Strategy Executions with simulated capital before deciding whether to go live.</p></div></article>
+        <article className={styles.capability}><span>03</span><div><h3><a href="/tradingview-automation">TradingView automation →</a></h3><p>Connect TradingView strategy signals to a controlled crypto Spot workflow and keep execution visible.</p></div></article>
+      </div>
     </section>
 
     <section className={styles.showcase} id="platform">

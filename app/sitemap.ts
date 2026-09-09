@@ -11,6 +11,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
+      url: "https://labnarrative.com/dca-bot",
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
+      url: "https://labnarrative.com/crypto-paper-trading",
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
+      url: "https://labnarrative.com/tradingview-automation",
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
       url: "https://labnarrative.com/pricing",
       lastModified,
       changeFrequency: "weekly",
