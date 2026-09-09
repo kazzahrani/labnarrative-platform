@@ -60,13 +60,42 @@ import "./crypto-public-contrast-fix.css";
 // Public crypto homepage/affiliate branding and Trader-aligned product preview polish.
 import "./crypto-home-polish.css";
 
+const SITE_TITLE = "Crypto Trading Automation & DCA Bots | LabNarrative";
+const SITE_DESCRIPTION =
+  "Build, paper-test, and automate crypto Spot strategies with DCA bots, signal monitoring, position management, and performance analytics in LabNarrative.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://labnarrative.com"),
   title: {
-    default: "LabNarrative — Crypto Trading Automation",
-    template: "%s | LabNarrative",
+    default: SITE_TITLE,
+    // Public pages already include the LabNarrative name. Keep their explicit titles intact instead of appending it twice.
+    template: "%s",
   },
-  description:
-    "Build, test, and automate crypto trading strategies with a paper-first, exchange-connected workflow.",
+  description: SITE_DESCRIPTION,
+  applicationName: "LabNarrative",
+  publisher: "LabNarrative",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    siteName: "LabNarrative",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

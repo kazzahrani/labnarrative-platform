@@ -1,5 +1,12 @@
 import type { NextConfig } from "next";
 
+const noIndexHeaders = [
+  {
+    key: "X-Robots-Tag",
+    value: "noindex, nofollow, noarchive",
+  },
+];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
@@ -15,6 +22,36 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/platform/tenders/boq-extract": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
     "/api/tenders/boq-analyze": ["./node_modules/pdfjs-dist/**/*", "./node_modules/pdf-parse/**/*"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/",
+        has: [{ type: "host", value: "labnarrative.com" }],
+        headers: [{ key: "Link", value: '<https://labnarrative.com/>; rel="canonical"' }],
+      },
+      {
+        source: "/pricing",
+        has: [{ type: "host", value: "labnarrative.com" }],
+        headers: [{ key: "Link", value: '<https://labnarrative.com/pricing>; rel="canonical"' }],
+      },
+      {
+        source: "/affiliate",
+        has: [{ type: "host", value: "labnarrative.com" }],
+        headers: [{ key: "Link", value: '<https://labnarrative.com/affiliate>; rel="canonical"' }],
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "app.labnarrative.com" }],
+        headers: noIndexHeaders,
+      },
+      { source: "/admin/:path*", headers: noIndexHeaders },
+      { source: "/api/:path*", headers: noIndexHeaders },
+      { source: "/client/:path*", headers: noIndexHeaders },
+      { source: "/workspace/:path*", headers: noIndexHeaders },
+      { source: "/login", headers: noIndexHeaders },
+      { source: "/activate", headers: noIndexHeaders },
+    ];
   },
   async rewrites() {
     return {
