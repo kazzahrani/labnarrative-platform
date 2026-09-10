@@ -18,7 +18,7 @@ type Tab = "overview"|"configuration"|"trades";
 const COLORS=["#55d99a","#df7b84","#e8b862","#7ea7ff","#b98cff","#61c8d6"];
 function n(v:unknown,f=0){const x=Number(v);return Number.isFinite(x)?x:f}
 function money(v:number|null|undefined,d=2){if(v==null||!Number.isFinite(v))return"—";const s=v>0?"+":v<0?"−":"";return`${s}$${Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}`}
-function pct(v:number|null|undefined,d=2){if(v==null||!Number.isFinite(v))return"—";const s=v>0?"+":v<0?"−":"";return`${s}${Math.abs(v).toFixed(d)}%`}
+function pct(v:number|null|undefined,d=2,signed=true){if(v==null||!Number.isFinite(v))return"—";const s=signed?(v>0?"+":v<0?"−":""):"";return`${s}${Math.abs(v).toFixed(d)}%`}
 function duration(v:number|null){if(v==null||!Number.isFinite(v))return"—";if(v<60)return`${Math.round(v)}m`;if(v<1440)return`${(v/60).toFixed(v<600?1:0)}h`;return`${(v/1440).toFixed(1)}d`}
 function when(v:string|null|undefined){return v?new Date(v).toLocaleString([], {month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—"}
 function reason(v:string|null){const x=String(v||"").toLowerCase().replaceAll("_"," ");if(x.includes("take profit")||x==="tp")return"Take Profit";if(x.includes("stop"))return"Stop Loss";if(x.includes("manual"))return"Manual";if(x.includes("cancel"))return"Cancelled";return String(v||"Other")}
