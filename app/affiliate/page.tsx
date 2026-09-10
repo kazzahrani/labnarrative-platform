@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AffiliateCalculator from "./AffiliateCalculator";
+import affiliateStyles from "./affiliate.module.css";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
@@ -74,7 +75,7 @@ export default function AffiliatePage() {
             <small>Launch affiliate commission</small>
             <strong>40%</strong>
             <p>Earn 40% of qualifying subscription revenue. Annual subscriptions credit your commission from the full annual payment when it clears; monthly subscriptions pay commission as successful monthly payments are received.</p>
-            <div className={styles.commissionStats}>
+            <div className={affiliateStyles.commissionStats}>
               <div><span>Illustrative average</span><b>≈ $140</b><small>per paid customer</small></div>
               <div><span>Up to</span><b>$235.20</b><small>Max annual referral</small></div>
             </div>
@@ -116,7 +117,7 @@ export default function AffiliatePage() {
           <h3>Creating for traders?</h3>
           <p>Open the Affiliate Program inside LabNarrative to generate your referral link and track performance. Creators who want a closer launch partnership can also contact us directly.</p>
           <a className={styles.applyCta} href={AFFILIATE_URL}>Open Affiliate Program →</a>
-          <a className={styles.creatorContact} href={APPLY_URL}>Contact us about a creator partnership</a>
+          <a className={affiliateStyles.creatorContact} href={APPLY_URL}>Contact us about a creator partnership</a>
         </aside>
       </section>
 
