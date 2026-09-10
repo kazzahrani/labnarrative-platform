@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "../trading-public-pages.module.css";
+import styles from "./affiliate.module.css";
 
 const AVERAGE_COMMISSION = 140;
 const MAX_COMMISSION = 235.2;
