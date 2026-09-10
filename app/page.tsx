@@ -126,7 +126,7 @@ export default function HomePage() {
     <header className={styles.header}>
       <a href="/" aria-label="Home"><Brand /></a>
       <nav className={styles.nav} aria-label="Primary navigation">
-        <a href="#product">Product</a><a href="/arena">Bot Arena</a><a href="#platform">Platform</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a>
+        <a href="#product">Product</a><a href="#platform">Platform</a><a href="#workflow">How it works</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a>
       </nav>
       <div className={styles.headerActions}><a className={styles.signIn} href={APP_URL}>Sign in</a><a className={styles.launch} href={APP_URL}>Launch app →</a></div>
     </header>
@@ -207,6 +207,6 @@ export default function HomePage() {
 
     <section className={styles.final}><p className={styles.label}>Start with simulation</p><h2>Build the strategy before you risk the capital.</h2><p>Open the LabNarrative workspace, create a DCA automation and test the complete trading flow with paper money first.</p><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a></section>
 
-    <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/arena">Bot Arena</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
+    <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
   </main>;
 }
