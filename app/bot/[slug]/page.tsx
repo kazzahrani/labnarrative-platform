@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import PublicBotAnalytics from "./PublicBotAnalytics";
+import PublicBotAnalyticsProxy from "./PublicBotAnalyticsProxy";
 
 export const dynamic = "force-dynamic";
 
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 
 export default async function SharedBotPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return <PublicBotAnalytics slug={slug} />;
+  return <PublicBotAnalyticsProxy slug={slug} />;
 }
