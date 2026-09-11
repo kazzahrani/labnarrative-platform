@@ -18,9 +18,9 @@ const plans = [
     annualTotal: 0,
     copy: "Paper-test a DCA bot and TradingView Strategy Execution without connecting real capital.",
     features: [
-      "0 Live exchange accounts",
+      "0 Live exchange connections",
       "1 active Paper DCA bot after the trial",
-      "1 Paper Strategy Execution after the trial",
+      "1 Paper Strategy bot after the trial",
       "30-day expanded Paper trial",
       "Unlimited manual Paper trades",
       "Positions + Signal Monitor",
@@ -30,25 +30,45 @@ const plans = [
     featured: false,
   },
   {
-    name: "Live",
-    eyebrow: "Everything needed for Spot automation",
+    name: "Pro",
+    eyebrow: "Focused Live automation",
     monthlyPrice: 9.99,
     annualMonthlyPrice: 7.99,
     annualTotal: 95.88,
-    copy: "A single affordable plan for traders who want DCA bots, TradingView automation and Live crypto Spot execution without a $50–$70+ subscription.",
+    copy: "For individual traders who want a focused Live Spot automation setup at a simple price.",
     features: [
-      "5 Live exchange connections",
-      "50 active DCA bots",
-      "50 TradingView Strategy Executions",
+      "1 Live exchange connection",
+      "10 active DCA bots",
+      "10 Strategy bots",
       "Binance, Bybit, KuCoin, OKX + Kraken",
       "Paper trading included",
       "Positions + Signal Monitor",
       "Analytics + bot drilldown",
       "Unlimited manual trades",
     ],
-    cta: "Go Live for $9.99 →",
+    cta: "Choose Pro →",
     featured: true,
-    badge: "Simple pricing",
+    badge: "Most popular",
+  },
+  {
+    name: "Max",
+    eyebrow: "More connections and capacity",
+    monthlyPrice: 19.99,
+    annualMonthlyPrice: 15.99,
+    annualTotal: 191.88,
+    copy: "For traders running a larger automation setup across several Live exchange connections.",
+    features: [
+      "5 Live exchange connections",
+      "50 active DCA bots",
+      "50 Strategy bots",
+      "Binance, Bybit, KuCoin, OKX + Kraken",
+      "Paper trading included",
+      "Positions + Signal Monitor",
+      "Analytics + bot drilldown",
+      "Unlimited manual trades",
+    ],
+    cta: "Choose Max →",
+    featured: false,
   },
 ] as const;
 
@@ -62,7 +82,7 @@ export default function PricingPlans() {
         <button className={interval === "year" ? switchStyles.active : ""} onClick={() => setInterval("year")} type="button">Yearly</button>
       </div>
 
-      <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", maxWidth: 900, marginInline: "auto" }}>
+      <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", maxWidth: 1180, marginInline: "auto" }}>
         {plans.map((plan) => {
           const free = plan.name === "Free";
           const price = free ? 0 : interval === "year" ? plan.annualMonthlyPrice : plan.monthlyPrice;
@@ -91,8 +111,8 @@ export default function PricingPlans() {
       </div>
       <p className={styles.limitNote}>
         {interval === "year"
-          ? "Live is $7.99/month equivalent, billed $95.88 upfront for one year."
-          : "Live is $9.99 for one month of access."} Card / Apple Pay is the primary checkout through NOWPayments fiat on-ramp, with crypto payment also available. Availability depends on provider coverage and verification.
+          ? "Pro is $7.99/month equivalent ($95.88/year) and Max is $15.99/month equivalent ($191.88/year)."
+          : "Pro is $9.99/month and Max is $19.99/month."} Card / Apple Pay is the primary checkout through NOWPayments fiat on-ramp, with crypto payment also available. Availability depends on provider coverage and verification.
       </p>
     </>
   );
