@@ -96,12 +96,12 @@ export function summarizeSharedBot(payload: SharedBotPayload | null): SharedBotS
     .sort((a, b) => Date.parse(a) - Date.parse(b))[0] || null;
   const startedAt = bot?.createdAt || firstTrade || null;
   const pairCount = pairs.length;
-  const marketLabel = bot?.allPairs
-    ? "All USDT Spot pairs"
-    : pairCount === 1
-      ? pairs[0]
-      : pairCount > 1
-        ? `${pairCount} USDT Spot pairs`
+  const marketLabel = pairCount === 1
+    ? pairs[0]
+    : pairCount > 1
+      ? `${pairCount} USDT Spot pairs`
+      : bot?.allPairs
+        ? "All USDT Spot pairs"
         : "USDT Spot";
 
   return {
