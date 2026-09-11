@@ -3,9 +3,9 @@ import PricingPlans from "./PricingPlans";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Pricing — LabNarrative",
+  title: "Crypto Trading Bot Pricing — $9.99/Month | LabNarrative",
   description:
-    "Simple pricing for LabNarrative crypto trading automation. Start with a 30-day Paper trial, keep a free Paper plan, and upgrade when you are ready for Live crypto Spot.",
+    "Free crypto Paper trading plus one simple Live Spot automation plan at $9.99/month or $7.99/month billed annually. DCA bots, TradingView automation, Signal Monitor and analytics included.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -33,12 +33,12 @@ export default function PricingPage() {
       </header>
 
       <section className={styles.hero}>
-        <p className={styles.eyebrow}>LabNarrative Trading</p>
-        <h1>Start in Paper.<br /><em>Pay when you go Live.</em></h1>
+        <p className={styles.eyebrow}>Simple pricing</p>
+        <h1>Free in Paper.<br /><em>$9.99 when you go Live.</em></h1>
         <p className={styles.lead}>
-          Every new account starts with 30 days of expanded Paper capacity. Forward-test first, then upgrade only when you need Live exchange connections or more scale.
+          No $30, $50 or $70 plan ladder. Paper-test for free, then use the full focused Spot automation workflow for $9.99/month — or $7.99/month when billed annually.
         </p>
-        <div className={styles.notePill}><strong>30-day Paper trial</strong><span>10 DCA bots · 10 Strategy Executions · 0 Live exchange connections · no payment required</span></div>
+        <div className={styles.notePill}><strong>$9.99 monthly · $7.99 annual equivalent</strong><span>DCA bots · TradingView automation · Positions · Signal Monitor · Analytics · 5 supported exchanges</span></div>
       </section>
 
       <section className={styles.planSection} aria-label="Pricing plans">
@@ -47,22 +47,31 @@ export default function PricingPage() {
 
       <section className={styles.section}>
         <div className={styles.sectionIntro}>
-          <p className={styles.label}>Paper first</p>
-          <h2>Test generously before risking real capital.</h2>
-          <p>The trial is intentionally large enough to compare strategies. After 30 days, your account automatically continues on the Free Paper plan unless you choose to upgrade.</p>
+          <p className={styles.label}>One focused paid plan</p>
+          <h2>Pay for the automation you use, not a giant feature bundle.</h2>
+          <p>LabNarrative focuses on crypto Spot automation: DCA bots and TradingView Strategy Executions, with Paper testing, positions, signal visibility and analytics in the same workspace.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>30 days expanded</h3><p>New accounts can run up to 10 Paper DCA bots and 10 Paper Strategy Executions with no Live exchange connection.</p></article>
-          <article><span>02</span><h3>Free stays useful</h3><p>After the trial, keep 1 Paper DCA bot and 1 Paper Strategy Execution free for ongoing forward testing.</p></article>
-          <article><span>03</span><h3>Upgrade for Live</h3><p>Trader, Pro and Max unlock Live crypto Spot exchange connections and progressively more automation capacity.</p></article>
+          <article><span>01</span><h3>Paper stays free</h3><p>New accounts begin with 30 days of expanded Paper capacity. After that, keep one Paper DCA bot and one Paper Strategy Execution free.</p></article>
+          <article><span>02</span><h3>Five major exchanges</h3><p>Connect Binance, Bybit, KuCoin, OKX and Kraken for supported Live Spot automation.</p></article>
+          <article><span>03</span><h3>One Live price</h3><p>$9.99 monthly, or $95.88 prepaid for one year — equivalent to $7.99/month.</p></article>
         </div>
       </section>
 
+      <section className={styles.section}>
+        <div className={styles.sectionIntro}>
+          <p className={styles.label}>Already paying another platform?</p>
+          <h2>Compare your current setup before you switch.</h2>
+          <p>If you use 3Commas, Bitsgap, Coinrule or Cryptohopper mainly for compatible Spot DCA or TradingView automation, send us your setup. We’ll help recreate the supported configuration in LabNarrative so you can compare it first.</p>
+        </div>
+        <a className={styles.primary} href="mailto:hello@labnarrative.com?subject=Help%20me%20switch%20to%20LabNarrative">Get migration help →</a>
+      </section>
+
       <section className={styles.finalCta}>
-        <p className={styles.eyebrow}>Start with Paper</p>
-        <h2>Give your strategy 30 days to prove itself.</h2>
-        <p>No payment is required to start. If you later upgrade, Card / Apple Pay is the primary checkout through NOWPayments, with crypto payment also available.</p>
-        <a className={styles.primary} href={APP_URL}>Start Paper trial →</a>
+        <p className={styles.eyebrow}>Start free</p>
+        <h2>Test in Paper. Go Live for $9.99.</h2>
+        <p>No payment is required to start. When you are ready for Live Spot automation, upgrade inside the app.</p>
+        <a className={styles.primary} href={APP_URL}>Start with Paper →</a>
       </section>
 
       <footer className={styles.footer}>
