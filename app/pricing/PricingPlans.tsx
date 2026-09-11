@@ -16,80 +16,39 @@ const plans = [
     monthlyPrice: 0,
     annualMonthlyPrice: 0,
     annualTotal: 0,
-    copy: "Keep one DCA bot and one TradingView Strategy Execution running in Paper for as long as you need.",
+    copy: "Paper-test a DCA bot and TradingView Strategy Execution without connecting real capital.",
     features: [
       "0 Live exchange accounts",
-      "1 active Paper DCA bot",
-      "1 Paper Strategy Execution",
+      "1 active Paper DCA bot after the trial",
+      "1 Paper Strategy Execution after the trial",
+      "30-day expanded Paper trial",
       "Unlimited manual Paper trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
+      "Positions + Signal Monitor",
       "Analytics + bot drilldown",
     ],
-    cta: "Start Paper trial →",
+    cta: "Start free with Paper →",
     featured: false,
   },
   {
-    name: "Trader",
-    eyebrow: "Take proven strategies Live",
-    monthlyPrice: 20,
-    annualMonthlyPrice: 15,
-    annualTotal: 180,
-    copy: "For individual traders ready to connect one Live exchange account and run a focused automation setup.",
+    name: "Live",
+    eyebrow: "Everything needed for Spot automation",
+    monthlyPrice: 9.99,
+    annualMonthlyPrice: 7.99,
+    annualTotal: 95.88,
+    copy: "A single affordable plan for traders who want DCA bots, TradingView automation and Live crypto Spot execution without a $50–$70+ subscription.",
     features: [
-      "1 Live exchange account",
-      "10 active DCA bots",
-      "10 Strategy Executions",
-      "Unlimited manual trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
-      "Analytics + bot drilldown",
-    ],
-    cta: "Choose Trader →",
-    featured: false,
-  },
-  {
-    name: "Pro",
-    eyebrow: "More accounts and automation capacity",
-    monthlyPrice: 50,
-    annualMonthlyPrice: 29,
-    annualTotal: 348,
-    copy: "For serious traders running a larger strategy portfolio across several exchange accounts.",
-    features: [
-      "5 Live exchange accounts",
+      "5 Live exchange connections",
       "50 active DCA bots",
-      "50 Strategy Executions",
-      "Unlimited manual trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
+      "50 TradingView Strategy Executions",
+      "Binance, Bybit, KuCoin, OKX + Kraken",
+      "Paper trading included",
+      "Positions + Signal Monitor",
       "Analytics + bot drilldown",
-    ],
-    cta: "Choose Pro →",
-    featured: false,
-  },
-  {
-    name: "Max",
-    eyebrow: "Maximum launch capacity",
-    monthlyPrice: 90,
-    annualMonthlyPrice: 49,
-    annualTotal: 588,
-    copy: "For advanced multi-account setups that need substantially more automation capacity.",
-    features: [
-      "10 Live exchange accounts",
-      "200 active DCA bots",
-      "200 Strategy Executions",
       "Unlimited manual trades",
-      "Paper Account",
-      "TradingView execution",
-      "Full position controls",
-      "Analytics + bot drilldown",
     ],
-    cta: "Choose Max →",
+    cta: "Go Live for $9.99 →",
     featured: true,
-    badge: "Maximum capacity",
+    badge: "Simple pricing",
   },
 ] as const;
 
@@ -103,14 +62,14 @@ export default function PricingPlans() {
         <button className={interval === "year" ? switchStyles.active : ""} onClick={() => setInterval("year")} type="button">Yearly</button>
       </div>
 
-      <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+      <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", maxWidth: 900, marginInline: "auto" }}>
         {plans.map((plan) => {
           const free = plan.name === "Free";
           const price = free ? 0 : interval === "year" ? plan.annualMonthlyPrice : plan.monthlyPrice;
           const billing = free
-            ? "After the 30-day trial · Paper only"
+            ? "Paper only · free after the 30-day trial"
             : interval === "year"
-              ? `$${plan.annualTotal}/year prepaid`
+              ? `$${plan.annualTotal.toFixed(2)}/year prepaid`
               : "Prepaid monthly access";
 
           return (
@@ -132,8 +91,8 @@ export default function PricingPlans() {
       </div>
       <p className={styles.limitNote}>
         {interval === "year"
-          ? "Yearly prices are shown as the monthly equivalent and billed upfront: $180 for Trader, $348 for Pro and $588 for Max."
-          : "Monthly access is $20 for Trader, $50 for Pro and $90 for Max."} Card / Apple Pay is the primary checkout through NOWPayments fiat on-ramp, with crypto payment also available. Availability depends on provider coverage and verification.
+          ? "Live is $7.99/month equivalent, billed $95.88 upfront for one year."
+          : "Live is $9.99 for one month of access."} Card / Apple Pay is the primary checkout through NOWPayments fiat on-ramp, with crypto payment also available. Availability depends on provider coverage and verification.
       </p>
     </>
   );
