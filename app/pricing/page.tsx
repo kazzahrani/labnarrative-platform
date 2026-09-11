@@ -3,9 +3,9 @@ import PricingPlans from "./PricingPlans";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Crypto Trading Bot Pricing — $9.99/Month | LabNarrative",
+  title: "Crypto Trading Bot Pricing — Pro $9.99, Max $19.99 | LabNarrative",
   description:
-    "Free crypto Paper trading plus one simple Live Spot automation plan at $9.99/month or $7.99/month billed annually. DCA bots, TradingView automation, Signal Monitor and analytics included.",
+    "Free crypto Paper trading, Pro at $9.99/month with 1 Live exchange and 10 bots, or Max at $19.99/month with 5 Live exchanges and 50 bots.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -34,11 +34,11 @@ export default function PricingPage() {
 
       <section className={styles.hero}>
         <p className={styles.eyebrow}>Simple pricing</p>
-        <h1>Free in Paper.<br /><em>$9.99 when you go Live.</em></h1>
+        <h1>Free in Paper.<br /><em>Pro $9.99. Max $19.99.</em></h1>
         <p className={styles.lead}>
-          No $30, $50 or $70 plan ladder. Paper-test for free, then use the full focused Spot automation workflow for $9.99/month — or $7.99/month when billed annually.
+          Start with Paper for free. Choose Pro for a focused Live setup, or Max when you need more exchange connections and automation capacity.
         </p>
-        <div className={styles.notePill}><strong>$9.99 monthly · $7.99 annual equivalent</strong><span>DCA bots · TradingView automation · Positions · Signal Monitor · Analytics · 5 supported exchanges</span></div>
+        <div className={styles.notePill}><strong>Pro $9.99 · Max $19.99</strong><span>DCA bots · TradingView automation · Positions · Signal Monitor · Analytics · 5 supported exchanges</span></div>
       </section>
 
       <section className={styles.planSection} aria-label="Pricing plans">
@@ -47,14 +47,14 @@ export default function PricingPage() {
 
       <section className={styles.section}>
         <div className={styles.sectionIntro}>
-          <p className={styles.label}>One focused paid plan</p>
-          <h2>Pay for the automation you use, not a giant feature bundle.</h2>
-          <p>LabNarrative focuses on crypto Spot automation: DCA bots and TradingView Strategy Executions, with Paper testing, positions, signal visibility and analytics in the same workspace.</p>
+          <p className={styles.label}>Two focused Live plans</p>
+          <h2>Start small. Scale only when you need to.</h2>
+          <p>Both paid plans include the same core crypto Spot automation workflow. The difference is simply how many Live exchange connections, DCA bots and Strategy bots you can run.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>Paper stays free</h3><p>New accounts begin with 30 days of expanded Paper capacity. After that, keep one Paper DCA bot and one Paper Strategy Execution free.</p></article>
-          <article><span>02</span><h3>Five major exchanges</h3><p>Connect Binance, Bybit, KuCoin, OKX and Kraken for supported Live Spot automation.</p></article>
-          <article><span>03</span><h3>One Live price</h3><p>$9.99 monthly, or $95.88 prepaid for one year — equivalent to $7.99/month.</p></article>
+          <article><span>01</span><h3>Paper stays free</h3><p>New accounts begin with 30 days of expanded Paper capacity. After that, keep one Paper DCA bot and one Paper Strategy bot free.</p></article>
+          <article><span>02</span><h3>Pro — $9.99</h3><p>1 Live exchange connection, 10 active DCA bots and 10 Strategy bots.</p></article>
+          <article><span>03</span><h3>Max — $19.99</h3><p>5 Live exchange connections, 50 active DCA bots and 50 Strategy bots.</p></article>
         </div>
       </section>
 
@@ -69,8 +69,8 @@ export default function PricingPage() {
 
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
-        <h2>Test in Paper. Go Live for $9.99.</h2>
-        <p>No payment is required to start. When you are ready for Live Spot automation, upgrade inside the app.</p>
+        <h2>Test in Paper. Upgrade only when you go Live.</h2>
+        <p>No payment is required to start. When you are ready, choose Pro at $9.99/month or Max at $19.99/month inside the app.</p>
         <a className={styles.primary} href={APP_URL}>Start with Paper →</a>
       </section>
 
