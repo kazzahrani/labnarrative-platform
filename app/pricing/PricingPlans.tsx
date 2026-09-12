@@ -12,19 +12,19 @@ type BillingInterval = "month" | "year";
 const plans = [
   {
     name: "Free",
-    eyebrow: "Paper testing that stays free",
+    eyebrow: "Paper trading that stays free",
     monthlyPrice: 0,
     annualMonthlyPrice: 0,
     annualTotal: 0,
-    copy: "Paper-test a DCA bot and TradingView Strategy Execution without connecting real capital.",
+    copy: "Run Paper DCA and TradingView Strategy Execution permanently without connecting real capital.",
     features: [
-      "0 Live exchange connections after the trial",
-      "1 active Paper DCA bot after the trial",
-      "1 Paper Strategy bot after the trial",
-      "7-day Pro trial: 1 exchange + 10 DCA + 10 Strategy bots",
+      "0 Live exchange connections",
+      "10 active Paper DCA bots",
+      "10 Paper Strategy bots",
       "Unlimited manual Paper trades",
       "Positions + Signal Monitor",
       "Analytics + bot drilldown",
+      "Free forever",
     ],
     cta: "Start free with Paper →",
     featured: false,
@@ -37,6 +37,7 @@ const plans = [
     annualTotal: 95.88,
     copy: "For individual traders who want a focused Live Spot automation setup at a simple price.",
     features: [
+      "Free for the first 7 days on new accounts",
       "1 Live exchange connection",
       "10 active DCA bots",
       "10 Strategy bots",
@@ -87,7 +88,7 @@ export default function PricingPlans() {
           const free = plan.name === "Free";
           const price = free ? 0 : interval === "year" ? plan.annualMonthlyPrice : plan.monthlyPrice;
           const billing = free
-            ? "Paper only · free after the 7-day trial"
+            ? "Paper only · free forever"
             : interval === "year"
               ? `$${plan.annualTotal.toFixed(2)}/year prepaid`
               : "Prepaid monthly access";
@@ -112,7 +113,7 @@ export default function PricingPlans() {
       <p className={styles.limitNote}>
         {interval === "year"
           ? "Pro is $7.99/month equivalent ($95.88/year) and Max is $15.99/month equivalent ($191.88/year)."
-          : "Pro is $9.99/month and Max is $19.99/month."} Card / Apple Pay is the primary checkout through NOWPayments fiat on-ramp, with crypto payment also available. Availability depends on provider coverage and verification.
+          : "Pro is $9.99/month and Max is $19.99/month."} Crypto payment is currently available. Monthly and annual purchases are prepaid and do not renew automatically.
       </p>
     </>
   );
