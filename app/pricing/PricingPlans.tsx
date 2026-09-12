@@ -18,10 +18,10 @@ const plans = [
     annualTotal: 0,
     copy: "Paper-test a DCA bot and TradingView Strategy Execution without connecting real capital.",
     features: [
-      "0 Live exchange connections",
+      "0 Live exchange connections after the trial",
       "1 active Paper DCA bot after the trial",
       "1 Paper Strategy bot after the trial",
-      "30-day expanded Paper trial",
+      "7-day Pro trial: 1 exchange + 10 DCA + 10 Strategy bots",
       "Unlimited manual Paper trades",
       "Positions + Signal Monitor",
       "Analytics + bot drilldown",
@@ -87,7 +87,7 @@ export default function PricingPlans() {
           const free = plan.name === "Free";
           const price = free ? 0 : interval === "year" ? plan.annualMonthlyPrice : plan.monthlyPrice;
           const billing = free
-            ? "Paper only · free after the 30-day trial"
+            ? "Paper only · free after the 7-day trial"
             : interval === "year"
               ? `$${plan.annualTotal.toFixed(2)}/year prepaid`
               : "Prepaid monthly access";
