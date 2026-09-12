@@ -5,7 +5,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Crypto Trading Bot Pricing — Pro $9.99, Max $19.99 | LabNarrative",
   description:
-    "Free crypto Paper trading, Pro at $9.99/month with 1 Live exchange and 10 bots, or Max at $19.99/month with 5 Live exchanges and 50 bots.",
+    "Free crypto Paper trading with 10 DCA bots and 10 Strategy bots, Pro at $9.99/month with 1 Live exchange, or Max at $19.99/month with 5 Live exchanges.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -36,7 +36,7 @@ export default function PricingPage() {
         <p className={styles.eyebrow}>Simple pricing</p>
         <h1>Free in Paper.<br /><em>Pro $9.99. Max $19.99.</em></h1>
         <p className={styles.lead}>
-          Start with Paper for free. Choose Pro for a focused Live setup, or Max when you need more exchange connections and automation capacity.
+          Free permanently includes 10 Paper DCA bots and 10 Paper Strategy bots. New accounts also get Pro free for the first 7 days.
         </p>
         <div className={styles.notePill}><strong>Pro $9.99 · Max $19.99</strong><span>DCA bots · TradingView automation · Positions · Signal Monitor · Analytics · 5 supported exchanges</span></div>
       </section>
@@ -52,8 +52,8 @@ export default function PricingPage() {
           <p>Both paid plans include the same core crypto Spot automation workflow. The difference is simply how many Live exchange connections, DCA bots and Strategy bots you can run.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>Paper stays free</h3><p>New accounts begin with 7 days of Pro capacity: 1 Live exchange connection, 10 DCA bots and 10 Strategy bots. After that, keep one Paper DCA bot and one Paper Strategy bot free.</p></article>
-          <article><span>02</span><h3>Pro — $9.99</h3><p>1 Live exchange connection, 10 active DCA bots and 10 Strategy bots.</p></article>
+          <article><span>01</span><h3>Free stays free</h3><p>Run up to 10 Paper DCA bots and 10 Paper Strategy bots permanently, with no Live exchange connection required.</p></article>
+          <article><span>02</span><h3>Pro — $9.99</h3><p>New accounts get Pro free for 7 days. Pro includes 1 Live exchange connection, 10 active DCA bots and 10 Strategy bots.</p></article>
           <article><span>03</span><h3>Max — $19.99</h3><p>5 Live exchange connections, 50 active DCA bots and 50 Strategy bots.</p></article>
         </div>
       </section>
@@ -69,9 +69,9 @@ export default function PricingPage() {
 
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
-        <h2>Test in Paper. Upgrade only when you go Live.</h2>
-        <p>No payment is required to start. New accounts include a 7-day Pro trial, then you can stay on Free Paper or choose Pro at $9.99/month or Max at $19.99/month inside the app.</p>
-        <a className={styles.primary} href={APP_URL}>Start with Paper →</a>
+        <h2>Start with Pro for 7 days. Keep Paper free forever.</h2>
+        <p>No payment is required to start. After the 7-day Pro trial, keep up to 10 Paper DCA bots and 10 Paper Strategy bots free, or continue Live with Pro or Max.</p>
+        <a className={styles.primary} href={APP_URL}>Start free →</a>
       </section>
 
       <footer className={styles.footer}>
