@@ -52,7 +52,7 @@ export default function PricingPage() {
           <p>Both paid plans include the same core crypto Spot automation workflow. The difference is simply how many Live exchange connections, DCA bots and Strategy bots you can run.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>Paper stays free</h3><p>New accounts begin with 30 days of expanded Paper capacity. After that, keep one Paper DCA bot and one Paper Strategy bot free.</p></article>
+          <article><span>01</span><h3>Paper stays free</h3><p>New accounts begin with 7 days of Pro capacity: 1 Live exchange connection, 10 DCA bots and 10 Strategy bots. After that, keep one Paper DCA bot and one Paper Strategy bot free.</p></article>
           <article><span>02</span><h3>Pro — $9.99</h3><p>1 Live exchange connection, 10 active DCA bots and 10 Strategy bots.</p></article>
           <article><span>03</span><h3>Max — $19.99</h3><p>5 Live exchange connections, 50 active DCA bots and 50 Strategy bots.</p></article>
         </div>
@@ -70,7 +70,7 @@ export default function PricingPage() {
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
         <h2>Test in Paper. Upgrade only when you go Live.</h2>
-        <p>No payment is required to start. When you are ready, choose Pro at $9.99/month or Max at $19.99/month inside the app.</p>
+        <p>No payment is required to start. New accounts include a 7-day Pro trial, then you can stay on Free Paper or choose Pro at $9.99/month or Max at $19.99/month inside the app.</p>
         <a className={styles.primary} href={APP_URL}>Start with Paper →</a>
       </section>
 
