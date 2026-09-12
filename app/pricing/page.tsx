@@ -5,7 +5,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Crypto Trading Bot Pricing — Pro $9.99, Max $19.99 | LabNarrative",
   description:
-    "Free crypto Paper trading with 10 DCA bots and 10 Strategy bots, Pro at $9.99/month with 1 Live exchange, or Max at $19.99/month with 5 Live exchanges.",
+    "Free crypto Paper trading with 10 DCA bots and 10 Strategy bots, Pro at $9.99/month with 5 Live exchange connections and 20 bots of each type, or Max at $19.99/month with all supported exchanges and 100 bots of each type.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -36,9 +36,9 @@ export default function PricingPage() {
         <p className={styles.eyebrow}>Simple pricing</p>
         <h1>Free in Paper.<br /><em>Pro $9.99. Max $19.99.</em></h1>
         <p className={styles.lead}>
-          Free permanently includes 10 Paper DCA bots and 10 Paper Strategy bots. New accounts also get Pro free for the first 7 days.
+          Free permanently includes 10 Paper DCA bots and 10 Paper Strategy bots. New accounts also get the full Pro plan free for the first 7 days.
         </p>
-        <div className={styles.notePill}><strong>Pro $9.99 · Max $19.99</strong><span>DCA bots · TradingView automation · Positions · Signal Monitor · Analytics · 5 supported exchanges</span></div>
+        <div className={styles.notePill}><strong>Pro $9.99 · Max $19.99</strong><span>DCA bots · TradingView automation · Positions · Signal Monitor · Analytics · supported exchanges</span></div>
       </section>
 
       <section className={styles.planSection} aria-label="Pricing plans">
@@ -49,12 +49,12 @@ export default function PricingPage() {
         <div className={styles.sectionIntro}>
           <p className={styles.label}>Two focused Live plans</p>
           <h2>Start small. Scale only when you need to.</h2>
-          <p>Both paid plans include the same core crypto Spot automation workflow. The difference is simply how many Live exchange connections, DCA bots and Strategy bots you can run.</p>
+          <p>Both paid plans include the same core crypto Spot automation workflow. The difference is how many Live exchange connections, DCA bots and Strategy bots you can run.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>Free stays free</h3><p>Run up to 10 Paper DCA bots and 10 Paper Strategy bots permanently, with no Live exchange connection required.</p></article>
-          <article><span>02</span><h3>Pro — $9.99</h3><p>New accounts get Pro free for 7 days. Pro includes 1 Live exchange connection, 10 active DCA bots and 10 Strategy bots.</p></article>
-          <article><span>03</span><h3>Max — $19.99</h3><p>5 Live exchange connections, 50 active DCA bots and 50 Strategy bots.</p></article>
+          <article><span>01</span><h3>Free stays free</h3><p>Run up to 10 Paper DCA bots and 10 Paper Strategy bots permanently, with 0 Live exchange connections.</p></article>
+          <article><span>02</span><h3>Pro — $9.99</h3><p>New accounts get the full Pro plan free for 7 days. Pro includes 5 Live exchange connections, 20 active DCA bots and 20 Strategy bots.</p></article>
+          <article><span>03</span><h3>Max — $19.99</h3><p>Use all supported exchanges in the platform, with up to 100 active DCA bots and 100 Strategy bots.</p></article>
         </div>
       </section>
 
