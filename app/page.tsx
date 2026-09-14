@@ -121,8 +121,7 @@ function SignalPreview() {
   return <div className={styles.screenInner}>
     <div className={styles.screenTop}><strong>Signal Monitor</strong><small>MARKET CONDITIONS</small></div>
     <div className={styles.signalFilters}><span className={styles.on}>All signals</span><span>Ready</span><span>Waiting</span></div>
-    <div className={styles.signalList}>{signals.map(([pair,rule,count])=><div className={styles.signalCard} key={pair}><div><strong>{pair}</strong><small>{rule}</small></div><div className={styles.signalDots}>{[0,1,2].map((dot)=><i className={dot < count ? styles.ok : ""} key={dot}/>)}</div><span className={styles.signalState}>{count === 3 ? "READY" : "WATCHING"}</span></div>)}</div>
-  </div>;
+    <div className={styles.signalList}>{signals.map(([pair,rule,count])=><div className={styles.signalCard} key={pair}><div><strong>{pair}</strong><small>{rule}</small></div><div className={styles.signalDots}>{[0,1,2].map((dot)=><i className={dot < count ? styles.ok : ""} key={dot}/>)}</div><span className={styles.signalState}>{count === 3 ? "READY" : "WATCHING"}</span></div>)}</div>;
 }
 
 export default function HomePage() {
@@ -140,7 +139,7 @@ export default function HomePage() {
     <section className={styles.hero}>
       <p className={styles.eyebrow}>Spot crypto automation · $9.99/month</p>
       <h1>Powerful crypto automation.<br/><em>Without the expensive subscription.</em></h1>
-      <p className={styles.lead}>Run Spot DCA bots and TradingView strategy automation on Binance, Bybit, KuCoin, OKX and Kraken. Paper-test for free, then move Live for $9.99/month.</p>
+      <p className={styles.lead}>LabNarrative is a crypto trading automation platform for Spot DCA bots, TradingView automation, Paper Trading and Live execution. Connect Binance, Bybit, KuCoin, OKX or Kraken, test in Paper for free, then go Live for $9.99/month.</p>
       <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a><a className={styles.secondary} href="/pricing">See $9.99 pricing</a></div>
       <p className={styles.heroNote}>$9.99 monthly · $7.99/month billed annually · focused on the Spot automation most traders actually use.</p>
 
