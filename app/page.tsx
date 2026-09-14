@@ -43,7 +43,7 @@ const structuredData = {
       url: "https://labnarrative.com",
       description,
       publisher: { "@id": "https://labnarrative.com/#organization" },
-      offers: { "@type": "Offer", price: "9.99", priceCurrency: "USD" },
+      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "29.99", offerCount: "3" },
       featureList: [
         "Crypto Spot DCA bots",
         "Crypto paper trading",
@@ -139,11 +139,11 @@ export default function HomePage() {
     </header>
 
     <section className={styles.hero}>
-      <p className={styles.eyebrow}>Spot crypto automation · $9.99/month</p>
+      <p className={styles.eyebrow}>Spot crypto automation · Free, Pro & Max</p>
       <h1>Powerful crypto automation.<br/><em>Without the expensive subscription.</em></h1>
-      <p className={styles.lead}>LabNarrative is a crypto trading automation platform for Spot DCA bots, TradingView automation, Paper Trading and Live execution. Connect Binance, Bybit, KuCoin, OKX or Kraken, test in Paper for free, then go Live for $9.99/month.</p>
-      <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a><a className={styles.secondary} href="/pricing">See $9.99 pricing</a></div>
-      <p className={styles.heroNote}>$9.99 monthly · $7.99/month billed annually · focused on the Spot automation most traders actually use.</p>
+      <p className={styles.lead}>LabNarrative is a crypto trading automation platform for Spot DCA bots, TradingView automation, Paper Trading and Live execution. Connect Binance, Bybit, KuCoin, OKX or Kraken, test in Paper for free, then choose Pro or Max when you are ready to go Live.</p>
+      <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a><a className={styles.secondary} href="/pricing">See pricing</a></div>
+      <p className={styles.heroNote}>Pro $14.99 monthly / $9.99 per month billed yearly · Max $29.99 monthly / $19.99 per month billed yearly.</p>
 
       <div className={styles.heroFrame}>
         <div className={styles.window}>
@@ -207,14 +207,14 @@ export default function HomePage() {
 
     <section className={styles.story}>
       <div><p className={styles.label}>Why LabNarrative</p><h2>Why pay $50–$70+ for the automation you actually use?</h2><p>LabNarrative was built from the trader side of the screen after years of paying for broader crypto-bot platforms. The goal is deliberately focused: give Spot traders the DCA, TradingView automation, Paper testing, position management, signal visibility and analytics they need at a much lower subscription price.</p></div>
-      <div className={styles.principles}><div className={styles.principle}><strong>One simple Live plan</strong><span>$9.99 monthly or $7.99/month billed annually.</span></div><div className={styles.principle}><strong>Five major exchanges</strong><span>Binance, Bybit, KuCoin, OKX and Kraken.</span></div><div className={styles.principle}><strong>Focused on Spot</strong><span>No need to pay for a larger feature set when your workflow is DCA or TradingView Spot automation.</span></div></div>
+      <div className={styles.principles}><div className={styles.principle}><strong>Two focused Live plans</strong><span>Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly.</span></div><div className={styles.principle}><strong>Five major exchanges</strong><span>Binance, Bybit, KuCoin, OKX and Kraken.</span></div><div className={styles.principle}><strong>Focused on Spot</strong><span>No need to pay for a larger feature set when your workflow is DCA or TradingView Spot automation.</span></div></div>
     </section>
 
     <section className={styles.affiliate}><div><p className={styles.label}>Switching from another bot platform?</p><h2>Bring the setup you already use.</h2><p>Already using 3Commas, Bitsgap, Coinrule or Cryptohopper? If your workflow is Spot DCA or TradingView automation, send us your current setup. We’ll help recreate the compatible configuration in LabNarrative so you can compare before switching.</p></div><a href="mailto:hello@labnarrative.com?subject=Help%20me%20switch%20to%20LabNarrative">Get migration help →</a></section>
 
     <section className={styles.affiliate}><div><p className={styles.label}>Creators & communities</p><h2>Share a more affordable automation workflow.</h2><p>The Founding Affiliate Program is open for crypto educators, TradingView strategy publishers and trading communities.</p></div><a href="/affiliate">Explore affiliates →</a></section>
 
-    <section className={styles.final}><p className={styles.label}>Free Paper · $9.99 Live</p><h2>Test first. Pay less when you go Live.</h2><p>Start with Paper trading for free. When you are ready for real Spot automation, one Live plan gives you the core platform for $9.99/month.</p><div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a><a className={styles.secondary} href="/pricing">View pricing</a></div></section>
+    <section className={styles.final}><p className={styles.label}>Free Paper · Pro & Max Live</p><h2>Test first. Pay less when you go Live.</h2><p>Start with Paper trading for free. Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly.</p><div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a><a className={styles.secondary} href="/pricing">View pricing</a></div></section>
 
     <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_LAUNCH_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
   </main>;
