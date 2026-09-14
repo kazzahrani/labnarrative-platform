@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SeoLandingPage from "../SeoLandingPage";
 
 const title = "Cryptohopper Alternative for Spot DCA Bots | LabNarrative";
-const description = "Looking for a focused Cryptohopper alternative for crypto Spot DCA and TradingView automation? Test compatible workflows in Paper, then go live for $9.99/month.";
+const description = "Looking for a focused Cryptohopper alternative for crypto Spot DCA and TradingView automation? Test compatible workflows in Paper, then choose Pro or Max when ready.";
 
 export const metadata: Metadata = {
   title,
@@ -29,7 +29,7 @@ const structuredData = {
       operatingSystem: "Web",
       url: "https://labnarrative.com/cryptohopper-alternative",
       description: "Crypto Spot automation software for DCA bots, TradingView strategy execution, Paper testing, position management and analytics.",
-      offers: { "@type": "Offer", price: "9.99", priceCurrency: "USD" },
+      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "29.99", offerCount: "3" },
     },
   ],
 };
@@ -42,8 +42,8 @@ export default function CryptohopperAlternativePage() {
       title="A focused Cryptohopper alternative."
       emphasis="For Spot DCA and TradingView automation."
       lead="If your automation needs are mainly crypto Spot DCA or TradingView-driven execution, LabNarrative gives you a focused workflow you can test with Paper capital before deciding whether to connect a live exchange."
-      noteStrong="$9.99/month Live"
-      note="Validate the compatible workflow in Paper before switching real execution."
+      noteStrong="Pro from $9.99/mo yearly"
+      note="Pro is $14.99 monthly or $9.99/mo billed yearly; Max is $29.99 monthly or $19.99/mo billed yearly."
       introLabel="Focused alternative"
       introTitle="Keep the supported workflow simple and observable."
       introCopy="LabNarrative does not try to reproduce every Cryptohopper feature. It focuses on Spot DCA bots, TradingView strategy execution, Paper testing, position controls and analytics. That makes it relevant for traders whose current automation is concentrated in those workflows and who want to compare a simpler setup before moving real capital."
