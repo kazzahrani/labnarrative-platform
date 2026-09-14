@@ -60,9 +60,9 @@ import "./crypto-public-contrast-fix.css";
 // Public crypto homepage/affiliate branding and Trader-aligned product preview polish.
 import "./crypto-home-polish.css";
 
-const SITE_TITLE = "Crypto Trading Automation & DCA Bots | LabNarrative";
+const SITE_TITLE = "LabNarrative: Crypto Trading Bots & Automation Platform";
 const SITE_DESCRIPTION =
-  "Build, paper-test, and automate crypto Spot strategies with DCA bots, signal monitoring, position management, and performance analytics in LabNarrative.";
+  "Build, paper-test and run Spot DCA bots and TradingView automations across Binance, Bybit, OKX, KuCoin and Kraken. Start free with Paper Trading.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://labnarrative.com"),
@@ -72,8 +72,10 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description: SITE_DESCRIPTION,
-  applicationName: "LabNarrative",
+  applicationName: "LabNarrative Trading",
   publisher: "LabNarrative",
+  authors: [{ name: "LabNarrative" }],
+  creator: "LabNarrative",
   robots: {
     index: true,
     follow: true,
