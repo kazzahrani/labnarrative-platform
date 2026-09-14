@@ -32,9 +32,9 @@ const plans = [
   {
     name: "Pro",
     eyebrow: "Focused Live automation",
-    monthlyPrice: 9.99,
-    annualMonthlyPrice: 7.99,
-    annualTotal: 95.88,
+    monthlyPrice: 14.99,
+    annualMonthlyPrice: 9.99,
+    annualTotal: 119.88,
     copy: "For individual traders who want a focused Live Spot automation setup at a simple price.",
     features: [
       "Full Pro plan free for the first 7 days on new accounts",
@@ -54,9 +54,9 @@ const plans = [
   {
     name: "Max",
     eyebrow: "Maximum exchange and automation capacity",
-    monthlyPrice: 19.99,
-    annualMonthlyPrice: 15.99,
-    annualTotal: 191.88,
+    monthlyPrice: 29.99,
+    annualMonthlyPrice: 19.99,
+    annualTotal: 239.88,
     copy: "For traders running a larger automation setup across every exchange supported by LabNarrative.",
     features: [
       "All supported exchanges",
@@ -112,8 +112,8 @@ export default function PricingPlans() {
       </div>
       <p className={styles.limitNote}>
         {interval === "year"
-          ? "Pro is $7.99/month equivalent ($95.88/year) and Max is $15.99/month equivalent ($191.88/year)."
-          : "Pro is $9.99/month and Max is $19.99/month."} Crypto payment is currently available. Monthly and annual purchases are prepaid and do not renew automatically.
+          ? "Pro is $9.99/month equivalent ($119.88/year) and Max is $19.99/month equivalent ($239.88/year)."
+          : "Pro is $14.99/month and Max is $29.99/month."} Crypto payment is currently available. Monthly and annual purchases are prepaid and do not renew automatically.
       </p>
     </>
   );
