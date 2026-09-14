@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 const APP_URL = "https://app.labnarrative.com";
+const APP_LAUNCH_URL = `${APP_URL}/auth/complete`;
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -134,7 +135,7 @@ export default function HomePage() {
       <nav className={styles.nav} aria-label="Primary navigation">
         <a href="#product">Product</a><a href="#platform">Platform</a><a href="#workflow">How it works</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a>
       </nav>
-      <div className={styles.headerActions}><a className={styles.signIn} href={APP_URL}>Sign in</a><a className={styles.launch} href={APP_URL}>Launch app →</a></div>
+      <div className={styles.headerActions}><a className={styles.signIn} href={APP_URL}>Sign in</a><a className={styles.launch} href={APP_LAUNCH_URL}>Launch app →</a></div>
     </header>
 
     <section className={styles.hero}>
@@ -215,6 +216,6 @@ export default function HomePage() {
 
     <section className={styles.final}><p className={styles.label}>Free Paper · $9.99 Live</p><h2>Test first. Pay less when you go Live.</h2><p>Start with Paper trading for free. When you are ready for real Spot automation, one Live plan gives you the core platform for $9.99/month.</p><div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a><a className={styles.secondary} href="/pricing">View pricing</a></div></section>
 
-    <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
+    <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_LAUNCH_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
   </main>;
 }
