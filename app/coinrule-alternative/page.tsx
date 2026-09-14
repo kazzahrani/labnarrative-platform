@@ -29,7 +29,7 @@ const structuredData = {
       operatingSystem: "Web",
       url: "https://labnarrative.com/coinrule-alternative",
       description: "Crypto Spot automation software for DCA bots, TradingView strategy execution, Paper testing, position management and analytics.",
-      offers: { "@type": "Offer", price: "9.99", priceCurrency: "USD" },
+      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "29.99", offerCount: "3" },
     },
   ],
 };
@@ -42,8 +42,8 @@ export default function CoinruleAlternativePage() {
       title="A focused Coinrule alternative."
       emphasis="For Spot automation you can test first."
       lead="If you use Coinrule mainly to automate crypto Spot entries and exits, LabNarrative offers a narrower workflow built around Spot DCA, TradingView execution, Paper testing, positions and analytics. Recreate the compatible setup in Paper before deciding whether to switch."
-      noteStrong="$9.99/month Live"
-      note="Start by comparing the compatible workflow with simulated capital."
+      noteStrong="Pro from $9.99/mo yearly"
+      note="Pro is $14.99 monthly or $9.99/mo billed yearly; Max is $29.99 monthly or $19.99/mo billed yearly."
       introLabel="Who this is for"
       introTitle="Choose the smaller workflow if that is all you need."
       introCopy="LabNarrative is not presented as a replacement for every Coinrule feature or every rule type. It focuses on the parts many Spot traders need most: DCA automation, TradingView-driven execution, Paper testing, position controls and performance analytics. If your current automation fits those boundaries, you can test a compatible recreation before moving anything live."
