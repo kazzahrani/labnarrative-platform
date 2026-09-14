@@ -3,9 +3,9 @@ import PricingPlans from "./PricingPlans";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Crypto Trading Bot Pricing — Pro $9.99, Max $19.99 | LabNarrative",
+  title: "Crypto Trading Bot Pricing — Free, Pro & Max | LabNarrative",
   description:
-    "Free crypto Paper trading with 10 DCA bots and 10 Strategy bots, Pro at $9.99/month with 5 Live exchange connections and 20 bots of each type, or Max at $19.99/month with all supported exchanges and 100 bots of each type.",
+    "Free crypto Paper trading. Pro is $14.99/month or $9.99/month billed yearly. Max is $29.99/month or $19.99/month billed yearly.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -34,11 +34,11 @@ export default function PricingPage() {
 
       <section className={styles.hero}>
         <p className={styles.eyebrow}>Simple pricing</p>
-        <h1>Free in Paper.<br /><em>Pro $9.99. Max $19.99.</em></h1>
+        <h1>Free in Paper.<br /><em>Pro from $9.99. Max from $19.99.</em></h1>
         <p className={styles.lead}>
-          Free permanently includes 10 Paper DCA bots and 10 Paper Strategy bots. New accounts also get the full Pro plan free for the first 7 days.
+          Free permanently includes 10 Paper DCA bots and 10 Paper Strategy bots. Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly. New accounts also get the full Pro plan free for the first 7 days.
         </p>
-        <div className={styles.notePill}><strong>Pro $9.99 · Max $19.99</strong><span>DCA bots · TradingView automation · Positions · Signal Monitor · Analytics · supported exchanges</span></div>
+        <div className={styles.notePill}><strong>Pro $14.99 monthly · Max $29.99 monthly</strong><span>Save with yearly billing: Pro $9.99/mo · Max $19.99/mo</span></div>
       </section>
 
       <section className={styles.planSection} aria-label="Pricing plans">
@@ -53,8 +53,8 @@ export default function PricingPage() {
         </div>
         <div className={styles.principleGrid}>
           <article><span>01</span><h3>Free stays free</h3><p>Run up to 10 Paper DCA bots and 10 Paper Strategy bots permanently, with 0 Live exchange connections.</p></article>
-          <article><span>02</span><h3>Pro — $9.99</h3><p>New accounts get the full Pro plan free for 7 days. Pro includes 5 Live exchange connections, 20 active DCA bots and 20 Strategy bots.</p></article>
-          <article><span>03</span><h3>Max — $19.99</h3><p>Use all supported exchanges in the platform, with up to 100 active DCA bots and 100 Strategy bots.</p></article>
+          <article><span>02</span><h3>Pro — $14.99 monthly</h3><p>Or $9.99/month billed yearly ($119.88/year). New accounts get the full Pro plan free for 7 days. Pro includes 5 Live exchange connections, 20 active DCA bots and 20 Strategy bots.</p></article>
+          <article><span>03</span><h3>Max — $29.99 monthly</h3><p>Or $19.99/month billed yearly ($239.88/year). Use all supported exchanges in the platform, with up to 100 active DCA bots and 100 Strategy bots.</p></article>
         </div>
       </section>
 
