@@ -14,10 +14,7 @@ export const learnCategories = [
   "DCA Bots",
   "Paper Trading",
   "TradingView",
-  "Trading Strategies",
-  "Analytics",
   "Comparisons",
-  "Product",
 ] as const;
 
 export const learnGuides: LearnGuide[] = [
