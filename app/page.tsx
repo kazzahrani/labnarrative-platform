@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import styles from "./trading-home.module.css";
 
-const title = "Affordable Crypto Trading Bots & TradingView Automation | LabNarrative";
-const description = "Run Spot DCA bots and TradingView strategy automation across Binance, Bybit, KuCoin, OKX and Kraken. Paper-test free, then go Live for $9.99/month.";
+const title = "LabNarrative: Crypto Trading Bots & Automation Platform";
+const description = "Build, paper-test and run Spot DCA bots and TradingView automations across Binance, Bybit, OKX, KuCoin and Kraken. Start free with Paper Trading.";
 
 export const metadata: Metadata = {
   title,
@@ -21,12 +21,14 @@ const structuredData = {
       "@type": "Organization",
       "@id": "https://labnarrative.com/#organization",
       name: "LabNarrative",
+      alternateName: "LabNarrative Trading",
       url: "https://labnarrative.com",
     },
     {
       "@type": "WebSite",
       "@id": "https://labnarrative.com/#website",
       name: "LabNarrative",
+      alternateName: "LabNarrative Trading",
       url: "https://labnarrative.com",
       publisher: { "@id": "https://labnarrative.com/#organization" },
     },
@@ -34,6 +36,7 @@ const structuredData = {
       "@type": "SoftwareApplication",
       "@id": "https://labnarrative.com/#trading-app",
       name: "LabNarrative Trading",
+      alternateName: "LabNarrative",
       applicationCategory: "FinanceApplication",
       operatingSystem: "Web",
       url: "https://labnarrative.com",
