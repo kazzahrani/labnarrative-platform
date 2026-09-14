@@ -26,6 +26,15 @@ type ArticleLayoutProps = {
   relatedGuides: RelatedGuide[];
   structuredData: Record<string, unknown>;
   children: ReactNode;
+  sidebarKicker?: string;
+  sidebarTitle?: string;
+  sidebarCopy?: string;
+  sidebarCtaLabel?: string;
+  sidebarNote?: string;
+  finalKicker?: string;
+  finalTitle?: string;
+  finalCopy?: string;
+  finalCtaLabel?: string;
 };
 
 function Brand() {
@@ -48,6 +57,15 @@ export default function ArticleLayout({
   relatedGuides,
   structuredData,
   children,
+  sidebarKicker = "Test the workflow",
+  sidebarTitle = "Use Paper before real capital.",
+  sidebarCopy = "Recreate a supported setup with simulated capital and watch how the automation behaves over time.",
+  sidebarCtaLabel = "Open free Paper Trading →",
+  sidebarNote = "No live exchange connection required to start.",
+  finalKicker = "Learn → test → automate",
+  finalTitle = "Reading explains the workflow. Paper Trading shows how it behaves.",
+  finalCopy = "Build the supported setup with simulated capital, review its positions and history, and decide what belongs in your Live workflow only after you have observed it.",
+  finalCtaLabel = "Start free with Paper →",
 }: ArticleLayoutProps) {
   return (
     <main className={styles.page}>
@@ -122,11 +140,11 @@ export default function ArticleLayout({
               </nav>
 
               <div className={styles.sidebarCta}>
-                <span>Test the workflow</span>
-                <h2>Use Paper before real capital.</h2>
-                <p>Recreate a supported setup with simulated capital and watch how the automation behaves over time.</p>
-                <a href={APP_URL}>Open free Paper Trading →</a>
-                <small>No live exchange connection required to start.</small>
+                <span>{sidebarKicker}</span>
+                <h2>{sidebarTitle}</h2>
+                <p>{sidebarCopy}</p>
+                <a href={APP_URL}>{sidebarCtaLabel}</a>
+                <small>{sidebarNote}</small>
               </div>
             </aside>
           </div>
@@ -154,11 +172,11 @@ export default function ArticleLayout({
 
         <section className={styles.finalCta}>
           <div>
-            <span>Learn → test → automate</span>
-            <h2>Reading explains the workflow. Paper Trading shows how it behaves.</h2>
-            <p>Build the supported setup with simulated capital, review its positions and history, and decide what belongs in your Live workflow only after you have observed it.</p>
+            <span>{finalKicker}</span>
+            <h2>{finalTitle}</h2>
+            <p>{finalCopy}</p>
           </div>
-          <a href={APP_URL}>Start free with Paper →</a>
+          <a href={APP_URL}>{finalCtaLabel}</a>
         </section>
       </div>
 
