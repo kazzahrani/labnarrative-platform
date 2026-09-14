@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SeoLandingPage from "../SeoLandingPage";
 
 const title = "3Commas Alternative for Spot DCA Bots | LabNarrative";
-const description = "Looking for a focused 3Commas alternative for crypto Spot DCA and TradingView automation? Test compatible workflows in Paper, then go live for $9.99/month.";
+const description = "Looking for a focused 3Commas alternative for crypto Spot DCA and TradingView automation? Test compatible workflows in Paper, then choose Pro or Max when ready.";
 
 export const metadata: Metadata = {
   title,
@@ -29,7 +29,7 @@ const structuredData = {
       operatingSystem: "Web",
       url: "https://labnarrative.com/3commas-alternative",
       description: "Crypto Spot automation software for DCA bots, TradingView strategy execution, Paper testing, position management and analytics.",
-      offers: { "@type": "Offer", price: "9.99", priceCurrency: "USD" },
+      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "29.99", offerCount: "3" },
     },
   ],
 };
@@ -42,8 +42,8 @@ export default function ThreeCommasAlternativePage() {
       title="A focused 3Commas alternative."
       emphasis="For Spot DCA and TradingView workflows."
       lead="If your current workflow is mainly crypto Spot DCA or TradingView-driven automation, LabNarrative gives you a simpler path: recreate the compatible setup, test it in Paper, inspect the positions and analytics, then decide whether to move Live."
-      noteStrong="$9.99/month Live"
-      note="Paper-test the compatible workflow before switching real execution."
+      noteStrong="Pro from $9.99/mo yearly"
+      note="Pro is $14.99 monthly or $9.99/mo billed yearly; Max is $29.99 monthly or $19.99/mo billed yearly."
       introLabel="Who this is for"
       introTitle="Switch the workflow, not everything at once."
       introCopy="LabNarrative is not positioned as a clone of every 3Commas feature. It is deliberately focused on Spot automation: DCA bots, TradingView strategy execution, Paper testing, position controls and performance analytics. If those are the parts of your current setup you actually use, you can test a compatible recreation before deciding whether the narrower workflow fits you better."
