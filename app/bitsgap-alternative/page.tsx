@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import SeoLandingPage from "../SeoLandingPage";
 
 const title = "Bitsgap Alternative for Spot DCA Bots | LabNarrative";
-const description = "Looking for a focused Bitsgap alternative for crypto Spot DCA and TradingView automation? Test compatible workflows in Paper, then go live for $9.99/month.";
+const description = "Looking for a focused Bitsgap alternative for crypto Spot DCA and TradingView automation? Test compatible workflows in Paper, then choose Pro or Max when ready.";
 
 export const metadata: Metadata = {
   title,
@@ -29,7 +29,7 @@ const structuredData = {
       operatingSystem: "Web",
       url: "https://labnarrative.com/bitsgap-alternative",
       description: "Crypto Spot automation software for DCA bots, TradingView strategy execution, Paper testing, position management and analytics.",
-      offers: { "@type": "Offer", price: "9.99", priceCurrency: "USD" },
+      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "29.99", offerCount: "3" },
     },
   ],
 };
@@ -41,33 +41,33 @@ export default function BitsgapAlternativePage() {
       eyebrow="Bitsgap alternative"
       title="A focused Bitsgap alternative."
       emphasis="For Spot automation you can test first."
-      lead="If your workflow centers on crypto Spot DCA or TradingView-driven automation, LabNarrative lets you recreate the compatible setup, run it with Paper capital, and inspect positions and analytics before deciding whether to move Live."
-      noteStrong="$9.99/month Live"
-      note="Paper-test the compatible workflow before connecting real capital."
-      introLabel="Focused alternative"
-      introTitle="Use the automation you need without copying an entire platform."
-      introCopy="LabNarrative focuses on a narrower Spot trading workflow: DCA bots, TradingView strategy execution, Paper testing, position management and analytics. It is not intended to reproduce every Bitsgap feature. The goal is to give traders who mainly need those supported workflows a simpler product they can test before moving real execution."
+      lead="If your Bitsgap usage is centered on crypto Spot automation, LabNarrative gives you a focused workflow for DCA bots, TradingView execution, Paper testing, positions and analytics. Recreate the compatible setup in Paper before deciding whether to move Live."
+      noteStrong="Pro from $9.99/mo yearly"
+      note="Pro is $14.99 monthly or $9.99/mo billed yearly; Max is $29.99 monthly or $19.99/mo billed yearly."
+      introLabel="Who this is for"
+      introTitle="Pay for the automation workflow you actually use."
+      introCopy="LabNarrative is not designed to reproduce every Bitsgap feature. It focuses on Spot DCA automation, TradingView strategy execution, Paper testing, position controls and analytics. If that is the part of your current workflow you rely on, you can compare a compatible recreation before moving real capital."
       featureCards={[
-        { number: "01", title: "Spot DCA automation", copy: "Build supported DCA workflows with visible entry, averaging and exit rules and monitor the resulting position rather than treating the bot as a black box." },
-        { number: "02", title: "Paper validation", copy: "Run the recreated setup with simulated capital first so you can observe how the automation behaves over time before enabling Live execution." },
-        { number: "03", title: "Position and performance visibility", copy: "Review deployed capital, average entry, DCA progression, exits and bot analytics from the same trading workspace." },
+        { number: "01", title: "Recreate supported Spot logic", copy: "Bring the compatible entry, averaging and exit settings from your current workflow and rebuild them inside LabNarrative." },
+        { number: "02", title: "Paper-test the migration", copy: "Run the recreated automation with simulated capital to inspect entries, DCA behavior, exits and positions before enabling Live execution." },
+        { number: "03", title: "See the full outcome", copy: "Keep automation activity, positions, capital deployment and analytics together so you can compare more than a single headline return." },
       ]}
       workflowLabel="Migration path"
-      workflowTitle="Test the supported workflow before replacing anything."
-      workflowCopy="Instead of switching platforms first and evaluating later, recreate the compatible Spot workflow in LabNarrative Paper Trading. That gives you a practical comparison of the automation, visibility and cost before you decide whether a Live migration makes sense."
+      workflowTitle="Test the narrower workflow before switching."
+      workflowCopy="Instead of cancelling one platform and hoping the replacement behaves the same, recreate the supported Spot workflow in LabNarrative Paper Trading first. Let it run, inspect the execution and compare the experience before deciding whether the switch makes sense."
       workflowCards={[
-        { number: "01", title: "Bring your setup", copy: "Start from the DCA rules, screenshots or TradingView logic you currently use as the reference for the migration." },
-        { number: "02", title: "Run the recreation in Paper", copy: "Observe entries, DCA steps, exits and analytics with simulated capital while your existing setup remains untouched." },
-        { number: "03", title: "Move only if it fits", copy: "Connect a supported exchange for Live Spot automation only after the recreated workflow behaves the way you expect." },
+        { number: "01", title: "Use your current setup as the reference", copy: "Start with the settings, screenshots or TradingView rules you already use rather than rebuilding from memory." },
+        { number: "02", title: "Run it in Paper", copy: "Forward-test the compatible recreation with simulated capital while your existing live workflow remains untouched." },
+        { number: "03", title: "Move only if it fits", copy: "Compare the supported workflow, visibility and pricing. Connect a live exchange only after you are comfortable with the result." },
       ]}
       relatedLinks={[
-        { href: "/dca-bot", title: "Crypto DCA Bots", copy: "Explore LabNarrative's Spot DCA automation workflow." },
-        { href: "/crypto-paper-trading", title: "Crypto Paper Trading", copy: "Test bots and strategy executions with simulated capital before going Live." },
-        { href: "/tradingview-automation", title: "TradingView Automation", copy: "Use TradingView strategy signals with controlled crypto Spot execution." },
+        { href: "/dca-bot", title: "Crypto DCA Bots", copy: "Build explicit Spot DCA entry, averaging and exit rules." },
+        { href: "/tradingview-automation", title: "TradingView Automation", copy: "Connect TradingView strategy signals to controlled Spot execution." },
+        { href: "/crypto-paper-trading", title: "Crypto Paper Trading", copy: "Test compatible automations before connecting real funds." },
       ]}
-      finalEyebrow="Paper first"
-      finalTitle="Compare the Spot workflow before you switch."
-      finalCopy="Bring the compatible automation you already use, recreate it in Paper, and decide from actual behavior rather than a feature list."
+      finalEyebrow="Compare before switching"
+      finalTitle="Test your compatible Spot workflow first."
+      finalCopy="Use LabNarrative Paper Trading to recreate the supported automation and compare how it behaves before moving Live."
       structuredData={structuredData}
     />
   );
