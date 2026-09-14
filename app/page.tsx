@@ -121,7 +121,8 @@ function SignalPreview() {
   return <div className={styles.screenInner}>
     <div className={styles.screenTop}><strong>Signal Monitor</strong><small>MARKET CONDITIONS</small></div>
     <div className={styles.signalFilters}><span className={styles.on}>All signals</span><span>Ready</span><span>Waiting</span></div>
-    <div className={styles.signalList}>{signals.map(([pair,rule,count])=><div className={styles.signalCard} key={pair}><div><strong>{pair}</strong><small>{rule}</small></div><div className={styles.signalDots}>{[0,1,2].map((dot)=><i className={dot < count ? styles.ok : ""} key={dot}/>)}</div><span className={styles.signalState}>{count === 3 ? "READY" : "WATCHING"}</span></div>)}</div>;
+    <div className={styles.signalList}>{signals.map(([pair,rule,count])=><div className={styles.signalCard} key={pair}><div><strong>{pair}</strong><small>{rule}</small></div><div className={styles.signalDots}>{[0,1,2].map((dot)=><i className={dot < count ? styles.ok : ""} key={dot}/>)}</div><span className={styles.signalState}>{count === 3 ? "READY" : "WATCHING"}</span></div>)}</div>
+  </div>;
 }
 
 export default function HomePage() {
