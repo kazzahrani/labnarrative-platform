@@ -33,7 +33,7 @@ export const learnGuides: LearnGuide[] = [
     href: "/dca-bot",
     title: "Crypto DCA Bots: Entries, Averaging and Exit Rules Explained",
     excerpt:
-      "Understand the core mechanics of a Spot DCA bot, from the first entry through safety orders, average price and controlled exits.",
+      "Understand how Spot DCA entries, averaging orders, capital limits and exit rules interact before you put the automation Live.",
     category: "DCA Bots",
     readTime: "9 min read",
     kicker: "DCA fundamentals",
@@ -41,9 +41,9 @@ export const learnGuides: LearnGuide[] = [
   },
   {
     href: "/tradingview-automation",
-    title: "TradingView Automation for Crypto Spot Trading",
+    title: "TradingView Webhook Automation for Crypto Spot Trading",
     excerpt:
-      "See how TradingView strategy signals can move from alerts into a controlled Spot execution workflow while keeping every signal visible.",
+      "Follow the complete path from TradingView alert to webhook, automation action and resulting Spot position—and learn what to test first.",
     category: "TradingView",
     readTime: "10 min read",
     kicker: "Webhook workflow",
@@ -53,7 +53,7 @@ export const learnGuides: LearnGuide[] = [
     href: "/3commas-alternative",
     title: "Looking for a 3Commas Alternative? Start With the Workflow",
     excerpt:
-      "Compare Spot DCA, TradingView automation, Paper testing and execution visibility when evaluating a move away from 3Commas.",
+      "Compare the Spot DCA and TradingView workflow you actually use, then recreate supported settings in Paper before switching.",
     category: "Comparisons",
     readTime: "7 min read",
     kicker: "Platform comparison",
@@ -61,9 +61,9 @@ export const learnGuides: LearnGuide[] = [
   },
   {
     href: "/bitsgap-alternative",
-    title: "Bitsgap Alternative for Focused Spot Automation",
+    title: "Considering a Bitsgap Alternative? Compare the Spot Workflow First",
     excerpt:
-      "A practical comparison for traders who mainly need Spot automation, Paper testing and clear execution visibility rather than a broad feature suite.",
+      "See when a focused Spot DCA and TradingView workflow may fit—and where unsupported grid-style behavior means it will not be a direct replacement.",
     category: "Comparisons",
     readTime: "6 min read",
     kicker: "Platform comparison",
@@ -71,9 +71,9 @@ export const learnGuides: LearnGuide[] = [
   },
   {
     href: "/cryptohopper-alternative",
-    title: "Cryptohopper Alternative for DCA and TradingView Workflows",
+    title: "Considering a Cryptohopper Alternative? Compare the Automation You Actually Use",
     excerpt:
-      "See where a focused DCA and TradingView automation workflow differs when you do not need a larger bot marketplace or strategy ecosystem.",
+      "Identify the DCA or TradingView rules you really depend on, then test whether the supported LabNarrative workflow reproduces them clearly.",
     category: "Comparisons",
     readTime: "6 min read",
     kicker: "Platform comparison",
@@ -81,9 +81,9 @@ export const learnGuides: LearnGuide[] = [
   },
   {
     href: "/coinrule-alternative",
-    title: "Coinrule Alternative for Spot Traders Who Want to Test First",
+    title: "Considering a Coinrule Alternative? Map the Rules Before You Move",
     excerpt:
-      "Compare rule-driven automation approaches and how Paper Trading can fit into the workflow before a supported setup moves Live.",
+      "Translate the intent of your current Spot automation rules, recreate the supported logic in Paper, and compare behavior before moving Live.",
     category: "Comparisons",
     readTime: "6 min read",
     kicker: "Platform comparison",
