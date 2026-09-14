@@ -6,7 +6,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Referral & Affiliate Program — LabNarrative",
   description:
-    "Earn 40% on qualifying LabNarrative Trading subscription revenue, with about $140 illustrative average commission per paid customer and up to $235.20 on a Max annual referral.",
+    "Earn 40% on qualifying LabNarrative Trading subscription revenue, including up to $95.95 on a Max annual referral under the current pricing.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -65,7 +65,7 @@ export default function AffiliatePage() {
           <div>
             <p className={styles.eyebrow}>Referral & Affiliate Program</p>
             <h1>Earn 40% from every customer you refer.<br /><em>Keep earning while they stay subscribed.</em></h1>
-            <p className={styles.affiliateLead}>Recommend LabNarrative Trading to traders who will actually use it. Earn 40% of qualifying subscription revenue on both monthly and annual plans, with an illustrative average of about $140 per paid customer and up to $235.20 from a Max annual referral.</p>
+            <p className={styles.affiliateLead}>Recommend LabNarrative Trading to traders who will actually use it. Earn 40% of qualifying subscription revenue on both monthly and annual plans. Under the current pricing, that is about $6 on a Pro monthly payment, $47.95 on Pro annual, $12 on Max monthly, and up to $95.95 on Max annual.</p>
             <div className={styles.heroActions}>
               <a className={styles.primary} href={AFFILIATE_URL}>Get your affiliate link →</a>
               <a className={styles.secondary} href={APP_URL}>Test LabNarrative first</a>
@@ -76,8 +76,8 @@ export default function AffiliatePage() {
             <strong>40%</strong>
             <p>Earn 40% of qualifying subscription revenue. Annual subscriptions credit your commission from the full annual payment when it clears; monthly subscriptions pay commission as successful monthly payments are received.</p>
             <div className={affiliateStyles.commissionStats}>
-              <div><span>Illustrative average</span><b>≈ $140</b><small>per paid customer</small></div>
-              <div><span>Up to</span><b>$235.20</b><small>Max annual referral</small></div>
+              <div><span>Pro annual</span><b>$47.95</b><small>40% of $119.88</small></div>
+              <div><span>Max annual</span><b>$95.95</b><small>40% of $239.88</small></div>
             </div>
           </aside>
         </div>
