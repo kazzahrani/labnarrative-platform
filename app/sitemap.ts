@@ -47,6 +47,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: "https://labnarrative.com/coinrule-alternative",
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
       url: "https://labnarrative.com/pricing",
       lastModified,
       changeFrequency: "weekly",
