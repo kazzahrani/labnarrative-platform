@@ -69,6 +69,7 @@ export default function SeoLandingPage({
   structuredData,
 }: SeoLandingPageProps) {
   const nav = [
+    ["/learn", "Learn"],
     ["/dca-bot", "DCA Bots"],
     ["/crypto-paper-trading", "Paper Trading"],
     ["/tradingview-automation", "TradingView"],
@@ -166,6 +167,7 @@ export default function SeoLandingPage({
       <footer className={styles.footer}>
         <a href="/"><Brand /></a>
         <div className={styles.footerLinks}>
+          <a href="/learn">Learn</a>
           <a href="/dca-bot">DCA Bots</a>
           <a href="/crypto-paper-trading">Paper Trading</a>
           <a href="/tradingview-automation">TradingView</a>
