@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import SeoLandingPage from "../SeoLandingPage";
 
-const title = "TradingView Automation for Crypto Spot | LabNarrative";
-const description = "Automate TradingView-driven crypto Spot strategies with controlled strategy executions, Paper testing, position management and performance analytics.";
+const title = "TradingView Webhook Automation for Crypto Spot | LabNarrative";
+const description = "Send TradingView webhook strategy alerts into Paper or Live crypto Spot execution. Test signals, positions and controls before connecting real capital.";
 
 export const metadata: Metadata = {
   title,
@@ -17,7 +17,7 @@ const structuredData = {
   "@graph": [
     {
       "@type": "WebPage",
-      name: "TradingView Automation for Crypto Spot",
+      name: "TradingView Webhook Automation for Crypto Spot",
       url: "https://labnarrative.com/tradingview-automation",
       description,
       isPartOf: { "@type": "WebSite", name: "LabNarrative", url: "https://labnarrative.com" },
@@ -28,8 +28,8 @@ const structuredData = {
       applicationCategory: "FinanceApplication",
       operatingSystem: "Web",
       url: "https://labnarrative.com/tradingview-automation",
-      description: "Crypto Spot trading software for TradingView strategy execution, paper testing, position controls and performance analysis.",
-      featureList: ["TradingView strategy execution", "Paper trading", "Crypto Spot automation", "Position management", "Performance analytics"],
+      description: "Crypto Spot trading software for TradingView webhook strategy execution, Paper testing, position controls and performance analysis.",
+      featureList: ["TradingView webhook automation", "TradingView strategy execution", "Paper trading", "Crypto Spot automation", "Position management", "Performance analytics"],
     },
   ],
 };
@@ -38,36 +38,36 @@ export default function TradingViewAutomationPage() {
   return (
     <SeoLandingPage
       currentPath="/tradingview-automation"
-      eyebrow="TradingView automation"
-      title="Automate TradingView strategies."
-      emphasis="Keep execution visible."
-      lead="Connect TradingView strategy signals to a controlled crypto Spot execution workflow, test Strategy Executions in Paper, and follow the resulting positions and performance inside LabNarrative."
-      noteStrong="Signal → execution → position"
-      note="Keep the trading workflow visible from strategy signal to outcome."
-      introLabel="Strategy execution"
-      introTitle="A signal is only the start of an automated trade."
-      introCopy="TradingView can define when a strategy condition is met; an execution platform still has to turn that signal into a controlled trading workflow. LabNarrative keeps the strategy execution connected to position controls, paper testing and analytics so the signal does not disappear into a black box after it fires. The objective is reliable rule execution and visibility, not market prediction."
+      eyebrow="TradingView webhook automation"
+      title="Automate TradingView webhooks."
+      emphasis="Keep crypto Spot execution visible."
+      lead="Send TradingView strategy webhook alerts into a controlled crypto Spot workflow, test the same signal path in Paper, and follow the resulting execution, position and performance inside LabNarrative."
+      noteStrong="Webhook → execution → position"
+      note="Test the signal path in Paper before enabling real exchange execution."
+      introLabel="Webhook execution"
+      introTitle="A TradingView webhook is only the start of the trade."
+      introCopy="TradingView can send an alert when your strategy condition is met, but an execution platform still has to validate that signal, turn it into a controlled order workflow and show you what happened afterward. LabNarrative connects webhook-driven Strategy Executions to Paper testing, position controls and analytics so the alert does not disappear into a black box after it fires."
       featureCards={[
-        { number: "01", title: "Strategy-driven execution", copy: "Use TradingView Strategy Executions to connect an external strategy signal with the crypto trading workflow instead of manually reproducing every entry decision." },
-        { number: "02", title: "Paper before Live", copy: "Run the strategy execution with paper capital first so you can observe how signals become positions before enabling a live Spot exchange connection." },
-        { number: "03", title: "Position-level visibility", copy: "Follow the resulting position, invested capital, average entry, targets, stop controls and PnL rather than treating the incoming signal as the end of the process." },
+        { number: "01", title: "Webhook-to-execution workflow", copy: "Route TradingView strategy alerts into a LabNarrative Strategy Execution instead of manually reproducing each entry decision." },
+        { number: "02", title: "Paper before Live", copy: "Send the same strategy workflow into Paper first so you can verify how webhook signals become positions before connecting real capital." },
+        { number: "03", title: "Execution and position visibility", copy: "Follow the resulting trade, invested capital, average entry, targets, stop controls and PnL rather than treating the webhook alert as the end of the process." },
       ]}
-      workflowLabel="Signal workflow"
-      workflowTitle="Connect the strategy signal to the rest of the trade."
-      workflowCopy="The strongest automation workflow is not simply alert-to-order. It lets you test the signal path, see how positions are managed, and review outcomes over time. LabNarrative combines Strategy Executions with the same position and analytics layers used by its other trading automations so you can examine the full process in one workspace."
+      workflowLabel="TradingView webhook workflow"
+      workflowTitle="Connect the alert to the rest of the trade."
+      workflowCopy="Useful TradingView automation is more than alert-to-order. You need to confirm that the webhook reaches the intended automation, that the strategy action is interpreted correctly, and that the resulting position behaves as expected. LabNarrative keeps that path visible from signal through outcome."
       workflowCards={[
-        { number: "01", title: "Define the strategy", copy: "Create the strategy logic in TradingView and decide what event should trigger the LabNarrative Strategy Execution workflow." },
-        { number: "02", title: "Test the execution", copy: "Run the workflow in Paper and verify that strategy signals produce the intended trading behavior before using real capital." },
-        { number: "03", title: "Monitor the outcome", copy: "Review positions, execution history and analytics to understand what happened after each signal and refine the strategy from evidence." },
+        { number: "01", title: "Define the TradingView strategy", copy: "Create the strategy logic and alert in TradingView, then point the webhook workflow to the LabNarrative Strategy Execution you want to test." },
+        { number: "02", title: "Run the webhook in Paper", copy: "Trigger the workflow with simulated capital and verify that incoming strategy alerts produce the intended crypto Spot behavior." },
+        { number: "03", title: "Review before Live", copy: "Inspect execution history, positions and analytics. Enable a supported live exchange only after the webhook workflow behaves the way you intended." },
       ]}
       relatedLinks={[
         { href: "/dca-bot", title: "Crypto DCA Bots", copy: "Build DCA automation with explicit entry, averaging and exit rules." },
-        { href: "/crypto-paper-trading", title: "Crypto Paper Trading", copy: "Forward-test automated strategies with simulated capital before connecting real funds." },
-        { href: "/pricing", title: "Plans & Pricing", copy: "Compare Paper and live automation capacity across LabNarrative plans." },
+        { href: "/crypto-paper-trading", title: "Crypto Paper Trading", copy: "Forward-test TradingView webhook automation with simulated capital before moving live." },
+        { href: "/3commas-alternative", title: "3Commas Alternative", copy: "Compare a focused Spot and TradingView automation workflow before switching platforms." },
       ]}
-      finalEyebrow="Test the signal path"
-      finalTitle="Make sure the strategy executes the way you intended."
-      finalCopy="Start a TradingView Strategy Execution in Paper, inspect the resulting positions and move live only when you are comfortable with the workflow."
+      finalEyebrow="Test the webhook path"
+      finalTitle="Make sure every TradingView alert executes the way you intended."
+      finalCopy="Start a TradingView Strategy Execution in Paper, inspect the resulting positions and move live only when you are comfortable with the complete webhook workflow."
       structuredData={structuredData}
     />
   );
