@@ -6,7 +6,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Referral & Affiliate Program — LabNarrative",
   description:
-    "Earn 40% on qualifying LabNarrative Trading subscription revenue, including up to $95.95 on a Max annual referral under the current pricing.",
+    "Turn a trading audience into recurring affiliate revenue with LabNarrative. Your audience can start free with Paper Trading, and affiliates earn 40% of qualifying subscription revenue when referred users upgrade.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -16,7 +16,7 @@ const APPLY_URL = "mailto:hello@labnarrative.com?subject=LabNarrative%20Affiliat
 const steps = [
   ["01", "Use LabNarrative", "Test the trading platform yourself first. The strongest referrals come from people who understand the product and can explain where it genuinely fits."],
   ["02", "Get your affiliate link", "Sign in to the Affiliate Program dashboard to create your tracked referral link and follow clicks, sign-ups, conversions, commissions, and payouts."],
-  ["03", "Share honestly", "Publish tutorials, comparisons, strategy walkthroughs, reviews, or community content in your own voice. Positive coverage is never required."],
+  ["03", "Send people to something useful", "Your audience does not need to buy first. Let traders start with free Paper Trading, then upgrade when they are ready for Pro or Max."],
   ["04", "Earn 40%", "Receive 40% of qualifying subscription revenue. Annual plans credit 40% of the full annual payment when it clears; monthly plans credit 40% of each successful monthly payment."],
 ];
 
@@ -64,17 +64,17 @@ export default function AffiliatePage() {
         <div className={styles.affiliateHeroInner}>
           <div>
             <p className={styles.eyebrow}>Referral & Affiliate Program</p>
-            <h1>Earn 40% from every customer you refer.<br /><em>Keep earning while they stay subscribed.</em></h1>
-            <p className={styles.affiliateLead}>Recommend LabNarrative Trading to traders who will actually use it. Earn 40% of qualifying subscription revenue on both monthly and annual plans. Under the current pricing, that is about $6 on a Pro monthly payment, $47.95 on Pro annual, $12 on Max monthly, and up to $95.95 on Max annual.</p>
+            <h1>Turn your trading audience into recurring revenue.<br /><em>Your followers can start free. You earn when they upgrade.</em></h1>
+            <p className={styles.affiliateLead}>Share LabNarrative with traders through tutorials, bot setups, strategy content, communities, or reviews. They can begin with free Paper Trading before paying anything. When referred users upgrade to Pro or Max, you earn 40% of qualifying subscription revenue.</p>
             <div className={styles.heroActions}>
               <a className={styles.primary} href={AFFILIATE_URL}>Get your affiliate link →</a>
-              <a className={styles.secondary} href={APP_URL}>Test LabNarrative first</a>
+              <a className={styles.secondary} href="#affiliate-calculator-title">Estimate earnings</a>
             </div>
           </div>
           <aside className={styles.commissionPanel}>
             <small>Launch affiliate commission</small>
             <strong>40%</strong>
-            <p>Earn 40% of qualifying subscription revenue. Annual subscriptions credit your commission from the full annual payment when it clears; monthly subscriptions pay commission as successful monthly payments are received.</p>
+            <p>Your audience can enter through free Paper Trading instead of buying on the first click. You earn when referred traders convert to qualifying paid plans.</p>
             <div className={affiliateStyles.commissionStats}>
               <div><span>Pro annual</span><b>$47.95</b><small>40% of $119.88</small></div>
               <div><span>Max annual</span><b>$95.95</b><small>40% of $239.88</small></div>
@@ -88,7 +88,7 @@ export default function AffiliatePage() {
       <section className={styles.section} id="program">
         <div className={styles.sectionIntro}>
           <p className={styles.label}>How the program works</p>
-          <h2>A simple 40% model that is easy to explain and easy to track.</h2>
+          <h2>Let your audience try first. Earn when the right users decide to upgrade.</h2>
         </div>
         <div className={styles.programGrid}>
           {steps.map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
