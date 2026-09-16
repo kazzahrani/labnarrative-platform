@@ -74,7 +74,7 @@ const plans = [
 ] as const;
 
 export default function PricingPlans() {
-  const [interval, setInterval] = useState<BillingInterval>("month");
+  const [interval, setInterval] = useState<BillingInterval>("year");
 
   return (
     <>
