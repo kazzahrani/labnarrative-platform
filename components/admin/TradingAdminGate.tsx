@@ -12,7 +12,6 @@ async function isTradingAdmin() {
 export default function TradingAdminGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"checking" | "signed_out" | "ready">("checking");
   const [email, setEmail] = useState("khaled@labnarrative.com");
-  const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -51,53 +50,26 @@ export default function TradingAdminGate({ children }: { children: ReactNode }) 
     };
   }, []);
 
-  const sendCode = async () => {
+  const sendMagicLink = async () => {
     if (busy || !email.trim()) return;
     setBusy(true);
     setMessage("");
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false },
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: `${window.location.origin}/admin/trading-outreach`,
+      },
     });
 
     if (error) {
       setMessage(error.message);
     } else {
       setSent(true);
-      setMessage("Verification code sent. Enter the code from your email.");
+      setMessage("Sign-in link sent. Open the email and click Sign in.");
     }
 
-    setBusy(false);
-  };
-
-  const verifyCode = async () => {
-    if (busy || !email.trim() || !code.trim()) return;
-    setBusy(true);
-    setMessage("");
-
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: code.trim(),
-      type: "email",
-    });
-
-    if (error) {
-      setMessage(error.message);
-      setBusy(false);
-      return;
-    }
-
-    const allowed = await isTradingAdmin();
-    if (!allowed) {
-      await supabase.auth.signOut({ scope: "local" });
-      setMessage("This account is not authorized for Trading Outreach.");
-      setState("signed_out");
-      setBusy(false);
-      return;
-    }
-
-    setState("ready");
     setBusy(false);
   };
 
@@ -138,7 +110,7 @@ export default function TradingAdminGate({ children }: { children: ReactNode }) 
           {state === "checking" ? "Checking your session…" : "Sign in to Trading Outreach."}
         </h1>
         <p style={{ margin: "0 0 22px", color: "#8b9197", lineHeight: 1.6, fontSize: 13 }}>
-          This page now authenticates directly against the LabNarrative Trading backend.
+          Use the secure email sign-in link to access the LabNarrative Trading backend.
         </p>
 
         {state === "signed_out" ? (
@@ -166,7 +138,7 @@ export default function TradingAdminGate({ children }: { children: ReactNode }) 
             {!sent ? (
               <button
                 type="button"
-                onClick={() => void sendCode()}
+                onClick={() => void sendMagicLink()}
                 disabled={busy}
                 style={{
                   width: "100%",
@@ -180,46 +152,38 @@ export default function TradingAdminGate({ children }: { children: ReactNode }) 
                   opacity: busy ? .6 : 1,
                 }}
               >
-                {busy ? "Sending…" : "Send verification code"}
+                {busy ? "Sending…" : "Send sign-in link"}
               </button>
             ) : (
-              <div style={{ display: "grid", gap: 9 }}>
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span style={{ color: "#8b9197", fontSize: 11, fontWeight: 700 }}>Verification code</span>
-                  <input
-                    value={code}
-                    onChange={(event) => setCode(event.target.value)}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      border: "1px solid #32363a",
-                      borderRadius: 9,
-                      padding: "11px 12px",
-                      color: "#f2f3f4",
-                      background: "#0f1113",
-                      font: "inherit",
-                    }}
-                  />
-                </label>
+              <div style={{
+                border: "1px solid #2c4a40",
+                background: "#13211c",
+                borderRadius: 10,
+                padding: 14,
+              }}>
+                <strong style={{ display: "block", color: "#68d7b0", fontSize: 13 }}>
+                  Check your email
+                </strong>
+                <p style={{ margin: "6px 0 12px", color: "#a0aaa5", fontSize: 12, lineHeight: 1.55 }}>
+                  We sent a secure one-time sign-in link to <b>{email}</b>. Click <b>Sign in</b> in that email; you will return directly to Trading Outreach.
+                </p>
                 <button
                   type="button"
-                  onClick={() => void verifyCode()}
-                  disabled={busy || !code.trim()}
+                  onClick={() => void sendMagicLink()}
+                  disabled={busy}
                   style={{
                     width: "100%",
-                    border: "1px solid #2fc891",
-                    background: "#2fc891",
-                    color: "#071510",
-                    borderRadius: 9,
-                    padding: "10px 12px",
-                    fontWeight: 850,
+                    border: "1px solid #34403c",
+                    background: "#171b19",
+                    color: "#d9dfdc",
+                    borderRadius: 8,
+                    padding: "9px 11px",
+                    fontWeight: 800,
                     cursor: busy ? "default" : "pointer",
                     opacity: busy ? .6 : 1,
                   }}
                 >
-                  {busy ? "Verifying…" : "Verify & continue"}
+                  {busy ? "Sending…" : "Resend sign-in link"}
                 </button>
               </div>
             )}
