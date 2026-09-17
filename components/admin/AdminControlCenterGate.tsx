@@ -17,6 +17,11 @@ function requestedReturnTo() {
   return safeReturnTo(new URLSearchParams(window.location.search).get("return_to"));
 }
 
+async function isInternalAdmin() {
+  const { data, error } = await supabase.rpc("is_internal_admin");
+  return !error && data === true;
+}
+
 export default function AdminControlCenterGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"checking" | "signed_out" | "ready">("checking");
   const [email, setEmail] = useState("hello@labnarrative.com");
@@ -31,27 +36,21 @@ export default function AdminControlCenterGate({ children }: { children: ReactNo
     const validate = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
-      const session = data.session;
-      if (!session) {
+      if (!data.session) {
         setState("signed_out");
         return;
       }
 
-      const { data: roleRow, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+      const allowed = await isInternalAdmin();
       if (!active) return;
-
-      if (!roleError && roleRow?.role === "admin") {
+      if (allowed) {
         setState("ready");
         return;
       }
 
       // A client/customer session may coexist on the same domain, but it must
-      // never be treated as an administrator session. Clear only the local
-      // default admin-storage session and show the admin recovery flow.
+      // never be treated as an administrator session. Clear only this local
+      // session and show the administrator recovery flow.
       await supabase.auth.signOut({ scope: "local" });
       if (active) setState("signed_out");
     };
@@ -104,6 +103,16 @@ export default function AdminControlCenterGate({ children }: { children: ReactNo
       setBusy(false);
       return;
     }
+
+    const allowed = await isInternalAdmin();
+    if (!allowed) {
+      await supabase.auth.signOut({ scope: "local" });
+      setMessage("This account is not authorized for the LabNarrative Control Center.");
+      setState("signed_out");
+      setBusy(false);
+      return;
+    }
+
     window.sessionStorage.removeItem("labnarrative-admin-recovery-attempted");
     const returnTo = requestedReturnTo();
     if (returnTo !== "/admin") {
