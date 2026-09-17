@@ -161,18 +161,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Keep the Trading internal control center on the same origin as the Trading app
-  // so its authenticated session is shared naturally.
-  if (
-    isSaasHost &&
-    (request.nextUrl.pathname === "/internal" || request.nextUrl.pathname.startsWith("/internal/"))
-  ) {
-    const response = NextResponse.next();
-    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
-    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-    return response;
-  }
-
   // The previous app.labnarrative.com product surface has been retired. Keep the
   // hostname reserved for the clean rebuild without falling through to another app.
   if (isSaasHost) {
