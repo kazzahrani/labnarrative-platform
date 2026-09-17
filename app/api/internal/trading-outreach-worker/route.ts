@@ -60,6 +60,21 @@ function serverClient(authorization?: string) {
   });
 }
 
+async function providerSecret(
+  client: ReturnType<typeof serverClient>,
+  workerToken: string | null,
+) {
+  const envKey = String(process.env.RESEND_API_KEY || "").trim();
+  if (envKey) return { key: envKey, error: null as string | null };
+
+  const result = workerToken
+    ? await client.rpc("internal_outreach_provider_secret", { p_token: workerToken })
+    : await client.rpc("internal_admin_outreach_provider_secret");
+
+  if (result.error) return { key: "", error: result.error.message || "Unable to read provider secret." };
+  return { key: String(result.data || "").trim(), error: null as string | null };
+}
+
 async function complete(
   client: ReturnType<typeof serverClient>,
   workerToken: string | null,
@@ -84,11 +99,6 @@ async function complete(
 }
 
 export async function POST(request: NextRequest) {
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    return json({ error: "RESEND_API_KEY is not configured for the production app." }, 503);
-  }
-
   const payload = (await request.json().catch(() => ({}))) as {
     workerToken?: string;
     limit?: number;
@@ -108,6 +118,16 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Server configuration error." }, 500);
   }
+
+  const secret = await providerSecret(client, workerToken);
+  if (secret.error) {
+    const unauthorized = /unauthorized|required/i.test(secret.error);
+    return json({ error: secret.error }, unauthorized ? 401 : 500);
+  }
+  if (!secret.key) {
+    return json({ error: "Resend delivery is not connected yet." }, 503);
+  }
+  const resendKey = secret.key;
 
   const claim = workerToken
     ? await client.rpc("internal_claim_outreach_batch", {
@@ -151,7 +171,6 @@ export async function POST(request: NextRequest) {
           html: htmlFromText(row.body),
           headers: {
             "List-Unsubscribe": `<mailto:${row.reply_to_email}?subject=unsubscribe>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
           tags: [
             { name: "app", value: "labnarrative_trading" },
