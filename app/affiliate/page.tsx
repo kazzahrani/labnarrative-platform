@@ -6,7 +6,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Referral & Affiliate Program — LabNarrative",
   description:
-    "Earn 40% affiliate commission with LabNarrative plus one free month of Max for every new paying customer you refer. Max months stack with no cap.",
+    "Earn 40% affiliate commission with LabNarrative plus free Max access. Every 10 new paying customers you refer earns one full year of Max.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -17,7 +17,7 @@ const steps = [
   ["01", "Get your affiliate link", "Sign in to the Affiliate Program dashboard and copy your tracked referral link."],
   ["02", "Share LabNarrative", "Send traders to free Paper Trading, a useful guide, a bot setup, or the platform itself."],
   ["03", "They become a paying customer", "A referred trader becomes a paid referral after their first qualifying subscription payment clears."],
-  ["04", "Earn cash + Max", "You earn 40% cash commission and 1 free month of Max for every new paying customer. Every Max month stacks."],
+  ["04", "Earn cash + Max", "You earn 40% cash commission and free Max access. Each customer adds 1 Max month, and every 10th customer adds a 2-month bonus — so 10 customers = 1 full year."],
 ];
 
 const audiences = [
@@ -29,11 +29,11 @@ const audiences = [
 
 const terms = [
   "Affiliates earn 40% of qualifying subscription revenue.",
-  "Every new paying customer you refer earns you 1 free month of LabNarrative Max after their first qualifying payment clears.",
-  "Max months stack with no cap: 1 customer = 1 month, 12 customers = 12 months, 100 customers = 100 months.",
-  "Each referred customer can award the Max-month reward once. Later eligible subscription payments still earn 40% cash commission but do not add another Max month.",
+  "Every new paying customer you refer adds 1 free month of LabNarrative Max after their first qualifying payment clears.",
+  "Every 10th valid paying customer adds a 2-month milestone bonus: 10 customers = 12 Max months (1 year), 20 customers = 24 months, and 100 customers = 120 months.",
+  "Each referred customer can create the Max reward once. Later eligible subscription payments still earn 40% cash commission but do not create another referral reward.",
   "Referral attribution lasts 30 days. If a visitor uses more than one LabNarrative affiliate link, the most recent valid referral receives attribution.",
-  "Refunded, disputed, charged-back, fraudulent, or reversed payments reverse the related commission and any Max-month reward created by that payment.",
+  "Refunded, disputed, charged-back, fraudulent, or reversed payments reverse the related commission and recalculate the related Max reward entitlement.",
   "No self-referrals, circular referral activity, spam, impersonation, misleading performance claims, or promises of guaranteed trading profits.",
   "Partners must clearly disclose the affiliate relationship wherever required by law or platform rules.",
 ];
@@ -65,7 +65,7 @@ export default function AffiliatePage() {
           <div>
             <p className={styles.eyebrow}>Referral & Affiliate Program</p>
             <h1>Earn 40% commission.<br /><em>Use Max for free.</em></h1>
-            <p className={styles.affiliateLead}>Every new paying customer you refer earns you <strong>40% cash commission + 1 free month of LabNarrative Max.</strong> Max months stack with no cap.</p>
+            <p className={styles.affiliateLead}>Earn <strong>40% cash commission</strong> from qualifying subscription payments, plus free LabNarrative Max access. <strong>10 new paying customers = 1 full year of Max free.</strong></p>
             <div className={styles.heroActions}>
               <a className={styles.primary} href={AFFILIATE_URL}>Get your affiliate link →</a>
               <a className={styles.secondary} href="#affiliate-calculator-title">Estimate earnings</a>
@@ -74,10 +74,10 @@ export default function AffiliatePage() {
           <aside className={styles.commissionPanel}>
             <small>Simple affiliate offer</small>
             <strong>40%</strong>
-            <p>Cash commission on qualifying subscription revenue, plus one free Max month for every new paying customer.</p>
+            <p>Cash commission on qualifying subscription revenue, plus free Max access that stacks as you refer paying customers.</p>
             <div className={affiliateStyles.commissionStats}>
               <div><span>1 customer</span><b>1 month</b><small>of Max free</small></div>
-              <div><span>12 customers</span><b>12 months</b><small>of Max free</small></div>
+              <div><span>10 customers</span><b>1 year</b><small>of Max free</small></div>
             </div>
           </aside>
         </div>
@@ -88,7 +88,7 @@ export default function AffiliatePage() {
       <section className={styles.section} id="program">
         <div className={styles.sectionIntro}>
           <p className={styles.label}>How it works</p>
-          <h2>One customer. One Max month. Plus your 40% commission.</h2>
+          <h2>Each customer adds Max time. Every 10 customers completes a full free year.</h2>
         </div>
         <div className={styles.programGrid}>
           {steps.map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
