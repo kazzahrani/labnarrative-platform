@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import AffiliateCalculator from "./AffiliateCalculator";
 import affiliateStyles from "./affiliate.module.css";
 import styles from "../trading-public-pages.module.css";
 
@@ -65,7 +64,6 @@ export default function AffiliatePage() {
 
     <section className={styles.section}><div className={styles.sectionIntro}><p className={styles.label}>Layer 3 · Results</p><h2>Turn the audience into customers.</h2></div><div className={styles.programGrid}><article><span>01</span><h3>40% cash commission</h3><p>Earn 40% of each qualifying subscription payment attributed to your affiliate link.</p></article><article><span>02</span><h3>+1 Max month per customer</h3><p>Every new paying customer creates a Max reward. Later eligible payments from the same customer continue to earn cash commission.</p></article><article><span>10</span><h3>10 customers = 1 Max year</h3><p>Every 10th valid paying customer adds the 2-month milestone bonus, making each block of 10 worth 12 Max months.</p></article></div></section>
 
-    <AffiliateCalculator />
 
     <section className={styles.section} id="program"><div className={styles.sectionIntro}><p className={styles.label}>How it works</p><h2>Content earns Max. Reach earns more. Customers earn cash.</h2></div><div className={styles.programGrid}>{steps.map(([number,title,copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
 
