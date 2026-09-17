@@ -15,7 +15,6 @@ function createTradingBrowserClient(): SupabaseClient {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
-      storageKey: "labnarrative-trading-admin-auth",
     },
   });
 }
