@@ -50,9 +50,8 @@ function htmlFromText(value: string) {
 }
 
 function serverClient(authorization?: string) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("Supabase public configuration is missing.");
+  const url = "https://tksxauosaswshylbaayf.supabase.co";
+  const key = "sb_publishable_tqhr6-YB7dXxdcogjPVAiw_RVlSYbZt";
 
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
