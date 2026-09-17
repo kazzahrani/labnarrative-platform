@@ -42,7 +42,7 @@ const terms = [
   "A completed approved content package earns 1 month of LabNarrative Max according to the platform requirements shown above.",
   "Performance bonuses use the highest verified milestone reached for eligible content and are not added repeatedly for lower milestones. If the same content later reaches a higher tier, only the additional difference is awarded.",
   "Performance bonuses currently apply to YouTube long-form videos, YouTube Shorts, TikTok, Instagram Reels, Reddit, X / Twitter, and LinkedIn as listed above.",
-  "Content must be public, original, genuinely useful, substantially about LabNarrative, and remain available for at least 90 days unless the host platform removes it.",
+  "Content must be public, original, genuinely useful, and substantially about LabNarrative.",
   "Honest reviews, tutorials, strategy tests, comparisons, bot experiments, and educational content may qualify. Content does not need to be uniformly positive.",
   "Community posts must follow the rules of each community. Reddit reposting/cross-posting is optional and only qualifies where permitted; spam or repetitive low-value promotion does not qualify.",
   "Affiliates earn 40% of qualifying subscription revenue. Every new paying customer adds Max access, and each 10-customer milestone receives the 2-month bonus needed to make 10 paying customers = 1 full year of Max.",
