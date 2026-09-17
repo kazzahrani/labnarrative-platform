@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   description: "Create useful LabNarrative content to earn free Max, unlock performance bonuses as your content grows, and earn 40% cash commission from qualifying referrals.",
 };
 
-const APP_URL = "https://labnarrative.com/trader";
-const AFFILIATE_URL = "https://labnarrative.com/trader/affiliate";
-const SUBMIT_URL = "https://labnarrative.com/trader/affiliate#submit-content";
+const APP_URL = "https://app.labnarrative.com";
+const AFFILIATE_URL = "https://app.labnarrative.com/affiliate";
+const SUBMIT_URL = "https://app.labnarrative.com/affiliate#submit-content";
 
 const creatorRewards = [
   ["YouTube", "1 long-form video (5+ min) or 2 standard videos (<5 min)", "1 month Max"],
