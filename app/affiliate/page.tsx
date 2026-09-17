@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   description: "Create useful LabNarrative content to earn free Max, unlock performance bonuses as your content grows, and earn 40% cash commission from qualifying referrals.",
 };
 
-const APP_URL = "https://app.labnarrative.com";
-const AFFILIATE_URL = "https://app.labnarrative.com/affiliate";
-const APPLY_URL = "mailto:hello@labnarrative.com?subject=LabNarrative%20Creator%20Submission&body=Your%20LabNarrative%20account%20email%3A%0APlatform%3A%0AContent%20URL(s)%3A%0AViews%20or%20impressions%20(if%20claiming%20a%20performance%20bonus)%3A";
+const APP_URL = "https://labnarrative.com/trader";
+const AFFILIATE_URL = "https://labnarrative.com/trader/affiliate";
+const SUBMIT_URL = "https://labnarrative.com/trader/affiliate#submit-content";
 
 const creatorRewards = [
   ["YouTube", "1 long-form video (5+ min) or 2 standard videos (<5 min)", "1 month Max"],
@@ -40,11 +40,11 @@ const steps = [
 const terms = [
   "Creator rewards and affiliate commissions can be earned together.",
   "A completed approved content package earns 1 month of LabNarrative Max according to the platform requirements shown above.",
-  "Performance bonuses use the highest verified milestone reached for that content and are not cumulative across lower milestones.",
+  "Performance bonuses use the highest verified milestone reached for that content and are not cumulative across lower milestones. Creators can submit the same approved content again after it reaches a higher milestone; only the increase is added.",
   "Content must be public, original, genuinely useful, substantially about LabNarrative, and remain available for at least 90 days unless the host platform removes it.",
   "Honest reviews, tutorials, strategy tests, comparisons, bot experiments, and educational content may qualify. Content does not need to be uniformly positive.",
   "Community posts must follow the rules of each community. Reposting or cross-posting only qualifies where permitted; spam or repetitive low-value promotion does not qualify.",
-  "Affiliates earn 40% of qualifying subscription revenue. Every new paying customer also adds 1 Max month, with the existing referral milestone bonuses continuing to apply.",
+  "Affiliates earn 40% of qualifying subscription revenue. Every new paying customer also contributes Max access: 10 paying customers = 1 year total Max, 20 = 2 years total, and 100 = 10 years total.",
   "Referral attribution lasts 30 days. If a visitor uses more than one LabNarrative affiliate link, the most recent valid referral receives attribution.",
   "Refunded, disputed, charged-back, fraudulent, reversed, botted, purchased, or manipulated activity can reverse or invalidate related rewards.",
   "No self-referrals, impersonation, misleading performance claims, or promises of guaranteed trading profits. Affiliate relationships must be disclosed wherever required.",
@@ -66,7 +66,7 @@ export default function AffiliatePage() {
 
     <section className={styles.section} id="program"><div className={styles.sectionIntro}><p className={styles.label}>How it works</p><h2>Content earns Max. Reach earns more. Customers earn cash.</h2></div><div className={styles.programGrid}>{steps.map(([number,title,copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div></section>
 
-    <section className={styles.terms} id="terms"><div><div className={styles.sectionIntro}><p className={styles.label}>Program rules</p><h2>Useful, honest content — not spam.</h2></div><ul className={styles.termList}>{terms.map(term => <li key={term}>{term}</li>)}</ul></div><aside className={styles.applyBox}><h3>Ready to participate?</h3><p>Open your dashboard for your affiliate link and referral earnings. When you complete a creator package or hit a performance milestone, submit the public content URLs for review.</p><a className={styles.applyCta} href={AFFILIATE_URL}>Open dashboard →</a><a className={affiliateStyles.creatorContact} href={APPLY_URL}>Submit creator content →</a></aside></section>
+    <section className={styles.terms} id="terms"><div><div className={styles.sectionIntro}><p className={styles.label}>Program rules</p><h2>Useful, honest content — not spam.</h2></div><ul className={styles.termList}>{terms.map(term => <li key={term}>{term}</li>)}</ul></div><aside className={styles.applyBox}><h3>Ready to participate?</h3><p>Open your dashboard for your affiliate link and referral earnings. Submit completed creator packages and performance milestones directly inside your account for review.</p><a className={styles.applyCta} href={AFFILIATE_URL}>Open dashboard →</a><a className={affiliateStyles.creatorContact} href={SUBMIT_URL}>Submit creator content →</a></aside></section>
 
     <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Creators & Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Creator and affiliate participation does not permit spam, misleading claims, investment advice, or guaranteed-profit marketing.</small></footer>
   </main>;
