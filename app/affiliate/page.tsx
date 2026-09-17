@@ -25,7 +25,7 @@ const creatorRewards = [
 ];
 
 const performanceRewards = [
-  ["YouTube long-form", "1K / 5K / 10K / 50K / 100K views", "+1 / +2 / +3 / +6 / +12 months Max"],
+  ["YouTube videos (non-Shorts)", "1K / 5K / 10K / 50K / 100K views", "+1 / +2 / +3 / +6 / +12 months Max"],
   ["Shorts / Reels / TikTok", "10K / 50K / 100K / 500K / 1M views", "+1 / +2 / +3 / +6 / +12 months Max"],
   ["Reddit / X / LinkedIn", "10K / 50K / 100K verified views or impressions", "+1 / +3 / +6 months Max"],
 ];
