@@ -6,7 +6,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Referral & Affiliate Program — LabNarrative",
   description:
-    "Turn a trading audience into recurring affiliate revenue with LabNarrative. Your audience can start free with Paper Trading, and affiliates earn 40% of qualifying subscription revenue when referred users upgrade.",
+    "Earn 40% affiliate commission with LabNarrative plus one free month of Max for every new paying customer you refer. Max months stack with no cap.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -14,28 +14,28 @@ const AFFILIATE_URL = "https://app.labnarrative.com/affiliate";
 const APPLY_URL = "mailto:hello@labnarrative.com?subject=LabNarrative%20Affiliate%20Partnership&body=Channel%20or%20community%20URL%3A%0AAudience%20size%3A%0AMain%20platform%3A%0AAnything%20you%27d%20like%20us%20to%20know%3A";
 
 const steps = [
-  ["01", "Use LabNarrative", "Test the trading platform yourself first. The strongest referrals come from people who understand the product and can explain where it genuinely fits."],
-  ["02", "Get your affiliate link", "Sign in to the Affiliate Program dashboard to create your tracked referral link and follow clicks, sign-ups, conversions, commissions, and payouts."],
-  ["03", "Send people to something useful", "Your audience does not need to buy first. Let traders start with free Paper Trading, then upgrade when they are ready for Pro or Max."],
-  ["04", "Earn 40%", "Receive 40% of qualifying subscription revenue. Annual plans credit 40% of the full annual payment when it clears; monthly plans credit 40% of each successful monthly payment."],
+  ["01", "Get your affiliate link", "Sign in to the Affiliate Program dashboard and copy your tracked referral link."],
+  ["02", "Share LabNarrative", "Send traders to free Paper Trading, a useful guide, a bot setup, or the platform itself."],
+  ["03", "They become a paying customer", "A referred trader becomes a paid referral after their first qualifying subscription payment clears."],
+  ["04", "Earn cash + Max", "You earn 40% cash commission and 1 free month of Max for every new paying customer. Every Max month stacks."],
 ];
 
 const audiences = [
-  ["Every LabNarrative user", "The affiliate structure is open to users who want to recommend a trading platform they genuinely use."],
-  ["YouTube creators", "Crypto automation, DCA bots, exchange-connected trading, TradingView, portfolio strategy, or systematic trading."],
-  ["Trading communities", "Discord, Telegram, forums, academies, and private groups built around active crypto traders."],
-  ["Writers & educators", "Newsletters, blogs, courses, and educational channels explaining disciplined crypto trading workflows."],
+  ["Every LabNarrative user", "Recommend a trading platform you genuinely use and understand."],
+  ["YouTube & social creators", "YouTube, TikTok, Instagram, X, Facebook, Snapchat, and other trading-focused channels."],
+  ["Trading communities", "Discord, Telegram, Reddit, forums, academies, and private groups built around crypto traders."],
+  ["Writers & educators", "Newsletters, blogs, courses, and educational channels explaining systematic trading workflows."],
 ];
 
 const terms = [
-  "Launch affiliates earn 40% of qualifying subscription revenue.",
-  "Annual subscriptions: 40% of the full eligible annual payment is credited when the payment successfully clears.",
-  "Monthly subscriptions: 40% is credited on each successful eligible monthly subscription payment while the customer remains subscribed.",
-  "Referral attribution lasts 30 days from a valid affiliate visit. If a visitor uses more than one LabNarrative affiliate link, the most recent valid referral receives attribution.",
-  "Refunded, disputed, charged-back, fraudulent, or otherwise reversed subscription payments reverse the related affiliate commission.",
+  "Affiliates earn 40% of qualifying subscription revenue.",
+  "Every new paying customer you refer earns you 1 free month of LabNarrative Max after their first qualifying payment clears.",
+  "Max months stack with no cap: 1 customer = 1 month, 12 customers = 12 months, 100 customers = 100 months.",
+  "Each referred customer can award the Max-month reward once. Later eligible subscription payments still earn 40% cash commission but do not add another Max month.",
+  "Referral attribution lasts 30 days. If a visitor uses more than one LabNarrative affiliate link, the most recent valid referral receives attribution.",
+  "Refunded, disputed, charged-back, fraudulent, or reversed payments reverse the related commission and any Max-month reward created by that payment.",
   "No self-referrals, circular referral activity, spam, impersonation, misleading performance claims, or promises of guaranteed trading profits.",
   "Partners must clearly disclose the affiliate relationship wherever required by law or platform rules.",
-  "LabNarrative may pause or reverse commissions tied to fraud, abuse, refunds, or material violations of the program rules.",
 ];
 
 function Brand() {
@@ -64,20 +64,20 @@ export default function AffiliatePage() {
         <div className={styles.affiliateHeroInner}>
           <div>
             <p className={styles.eyebrow}>Referral & Affiliate Program</p>
-            <h1>Turn your trading audience into recurring revenue.<br /><em>Your followers can start free. You earn when they upgrade.</em></h1>
-            <p className={styles.affiliateLead}>Share LabNarrative with traders through tutorials, bot setups, strategy content, communities, or reviews. They can begin with free Paper Trading before paying anything. When referred users upgrade to Pro or Max, you earn 40% of qualifying subscription revenue.</p>
+            <h1>Earn 40% commission.<br /><em>Use Max for free.</em></h1>
+            <p className={styles.affiliateLead}>Every new paying customer you refer earns you <strong>40% cash commission + 1 free month of LabNarrative Max.</strong> Max months stack with no cap.</p>
             <div className={styles.heroActions}>
               <a className={styles.primary} href={AFFILIATE_URL}>Get your affiliate link →</a>
               <a className={styles.secondary} href="#affiliate-calculator-title">Estimate earnings</a>
             </div>
           </div>
           <aside className={styles.commissionPanel}>
-            <small>Launch affiliate commission</small>
+            <small>Simple affiliate offer</small>
             <strong>40%</strong>
-            <p>Your audience can enter through free Paper Trading instead of buying on the first click. You earn when referred traders convert to qualifying paid plans.</p>
+            <p>Cash commission on qualifying subscription revenue, plus one free Max month for every new paying customer.</p>
             <div className={affiliateStyles.commissionStats}>
-              <div><span>Pro annual</span><b>$47.95</b><small>40% of $119.88</small></div>
-              <div><span>Max annual</span><b>$95.95</b><small>40% of $239.88</small></div>
+              <div><span>1 customer</span><b>1 month</b><small>of Max free</small></div>
+              <div><span>12 customers</span><b>12 months</b><small>of Max free</small></div>
             </div>
           </aside>
         </div>
@@ -87,8 +87,8 @@ export default function AffiliatePage() {
 
       <section className={styles.section} id="program">
         <div className={styles.sectionIntro}>
-          <p className={styles.label}>How the program works</p>
-          <h2>Let your audience try first. Earn when the right users decide to upgrade.</h2>
+          <p className={styles.label}>How it works</p>
+          <h2>One customer. One Max month. Plus your 40% commission.</h2>
         </div>
         <div className={styles.programGrid}>
           {steps.map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
@@ -98,7 +98,7 @@ export default function AffiliatePage() {
       <section className={styles.fitSection} id="fit">
         <div className={styles.sectionIntro}>
           <p className={styles.label}>Who can participate</p>
-          <h2>Built for users, creators, educators, and communities with relevant trading audiences.</h2>
+          <h2>Users, creators, educators, and trading communities.</h2>
         </div>
         <div className={styles.partnerGrid}>
           {audiences.map(([title, copy]) => <article key={title}><h3>{title}</h3><p>{copy}</p></article>)}
@@ -109,13 +109,13 @@ export default function AffiliatePage() {
         <div>
           <div className={styles.sectionIntro}>
             <p className={styles.label}>Program rules</p>
-            <h2>The economics are clear before you share a link.</h2>
+            <h2>Simple and transparent.</h2>
           </div>
           <ul className={styles.termList}>{terms.map((term) => <li key={term}>{term}</li>)}</ul>
         </div>
         <aside className={styles.applyBox}>
-          <h3>Creating for traders?</h3>
-          <p>Open the Affiliate Program inside LabNarrative to generate your referral link and track performance. Creators who want a closer launch partnership can also contact us directly.</p>
+          <h3>Ready to refer traders?</h3>
+          <p>Open the Affiliate Program inside LabNarrative to get your link and track clicks, paying customers, cash commission, and free Max months.</p>
           <a className={styles.applyCta} href={AFFILIATE_URL}>Open Affiliate Program →</a>
           <a className={affiliateStyles.creatorContact} href={APPLY_URL}>Contact us about a creator partnership</a>
         </aside>
