@@ -3,7 +3,17 @@
 import { useMemo, useState } from "react";
 import styles from "./affiliate.module.css";
 
-type PlatformKey = "youtube" | "telegram" | "x" | "reddit" | "website";
+type PlatformKey =
+  | "youtube"
+  | "tiktok"
+  | "instagram"
+  | "x"
+  | "facebook"
+  | "snapchat"
+  | "telegram"
+  | "discord"
+  | "reddit"
+  | "website";
 
 type PlatformPreset = {
   label: string;
@@ -31,20 +41,33 @@ const PLATFORMS: Record<PlatformKey, PlatformPreset> = {
     clickRate: 0.02,
     freeRate: 0.28,
     paidRate: 0.08,
-    note: "Starter example: a small, relevant trading channel with a few thousand monthly views.",
+    note: "Starter example: a small, relevant trading channel where viewers can click from the description or pinned comment.",
   },
-  telegram: {
-    label: "Telegram",
-    metric: "monthly post views",
-    shortMetric: "post views",
-    starterReach: 2_500,
-    sliderMin: 250,
-    sliderMax: 20_000,
-    sliderStep: 250,
-    clickRate: 0.04,
-    freeRate: 0.32,
-    paidRate: 0.09,
-    note: "Starter example: a compact trading community where links are visible directly inside posts.",
+  tiktok: {
+    label: "TikTok",
+    metric: "monthly video views",
+    shortMetric: "views",
+    starterReach: 20_000,
+    sliderMin: 1_000,
+    sliderMax: 150_000,
+    sliderStep: 1_000,
+    clickRate: 0.005,
+    freeRate: 0.24,
+    paidRate: 0.06,
+    note: "Starter example: higher view volume but a lower outbound-click assumption because viewers usually need an extra step to reach a link.",
+  },
+  instagram: {
+    label: "Instagram",
+    metric: "monthly Reels / Story views",
+    shortMetric: "views",
+    starterReach: 8_000,
+    sliderMin: 500,
+    sliderMax: 75_000,
+    sliderStep: 500,
+    clickRate: 0.008,
+    freeRate: 0.25,
+    paidRate: 0.06,
+    note: "Starter example: a small trading creator using Stories, profile links, and Reels to move interested followers into a free tool.",
   },
   x: {
     label: "X",
@@ -57,7 +80,59 @@ const PLATFORMS: Record<PlatformKey, PlatformPreset> = {
     clickRate: 0.008,
     freeRate: 0.24,
     paidRate: 0.06,
-    note: "Starter example: a small account with regular posts, where impressions are easier to earn than link clicks.",
+    note: "Starter example: a small account with regular posts, where impressions are easier to earn than outbound link clicks.",
+  },
+  facebook: {
+    label: "Facebook",
+    metric: "monthly post / Reel views",
+    shortMetric: "views",
+    starterReach: 7_000,
+    sliderMin: 500,
+    sliderMax: 75_000,
+    sliderStep: 500,
+    clickRate: 0.007,
+    freeRate: 0.23,
+    paidRate: 0.06,
+    note: "Starter example: a small page or group sharing trading content, with modest outbound clicking from posts and Reels.",
+  },
+  snapchat: {
+    label: "Snapchat",
+    metric: "monthly Story / Spotlight views",
+    shortMetric: "views",
+    starterReach: 10_000,
+    sliderMin: 1_000,
+    sliderMax: 100_000,
+    sliderStep: 1_000,
+    clickRate: 0.004,
+    freeRate: 0.22,
+    paidRate: 0.05,
+    note: "Starter example: strong view volume but a deliberately cautious outbound-click assumption for Story and Spotlight audiences.",
+  },
+  telegram: {
+    label: "Telegram",
+    metric: "monthly post views",
+    shortMetric: "post views",
+    starterReach: 2_500,
+    sliderMin: 250,
+    sliderMax: 20_000,
+    sliderStep: 250,
+    clickRate: 0.04,
+    freeRate: 0.32,
+    paidRate: 0.09,
+    note: "Starter example: a compact trading community where links are visible directly inside posts and the audience is already topic-focused.",
+  },
+  discord: {
+    label: "Discord",
+    metric: "monthly announcement / resource views",
+    shortMetric: "views",
+    starterReach: 1_000,
+    sliderMin: 100,
+    sliderMax: 10_000,
+    sliderStep: 100,
+    clickRate: 0.05,
+    freeRate: 0.34,
+    paidRate: 0.09,
+    note: "Starter example: a small trading server where a resource or bot link is shared with an already engaged community.",
   },
   reddit: {
     label: "Reddit",
@@ -86,6 +161,9 @@ const PLATFORMS: Record<PlatformKey, PlatformPreset> = {
     note: "Starter example: a small niche site whose visitors are already reading trading or automation content.",
   },
 };
+
+const SOCIAL_PLATFORMS: PlatformKey[] = ["youtube", "tiktok", "instagram", "x", "facebook", "snapchat"];
+const COMMUNITY_PLATFORMS: PlatformKey[] = ["telegram", "discord", "reddit", "website"];
 
 const COMMISSION_RATE = 0.4;
 const PRO_MONTHLY_COMMISSION = 14.99 * COMMISSION_RATE;
@@ -145,13 +223,35 @@ export default function AffiliateCalculator() {
     setReach(PLATFORMS[key].starterReach);
   }
 
+  function platformButtons(keys: PlatformKey[], label: string) {
+    return (
+      <div className={styles.platformGroup}>
+        <span className={styles.platformGroupLabel}>{label}</span>
+        <div className={styles.platformPicker} role="tablist" aria-label={label}>
+          {keys.map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={platform === key}
+              className={platform === key ? styles.platformActive : ""}
+              onClick={() => choosePlatform(key)}
+            >
+              {PLATFORMS[key].label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className={styles.calculatorSection} aria-labelledby="affiliate-calculator-title">
       <div className={styles.calculatorCopy}>
         <p className={styles.label}>Starter creator earnings estimator</p>
         <h2 id="affiliate-calculator-title">What could a small audience become?</h2>
         <p>
-          Each platform starts with a different small-creator preset. The model uses conservative funnel assumptions and counts only the first qualifying payment from each newly converted customer — recurring monthly commissions can add more later.
+          Choose the channel you already use. Each platform starts with a different small-creator audience size and funnel assumption, then estimates only the first qualifying payment from each new customer — recurring monthly commissions can add more later.
         </p>
 
         <div className={styles.rpmHero}>
@@ -167,19 +267,9 @@ export default function AffiliateCalculator() {
       </div>
 
       <div className={styles.calculatorCard}>
-        <div className={styles.platformPicker} role="tablist" aria-label="Audience platform">
-          {(Object.keys(PLATFORMS) as PlatformKey[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={platform === key}
-              className={platform === key ? styles.platformActive : ""}
-              onClick={() => choosePlatform(key)}
-            >
-              {PLATFORMS[key].label}
-            </button>
-          ))}
+        <div className={styles.platformGroups}>
+          {platformButtons(SOCIAL_PLATFORMS, "Social creators")}
+          {platformButtons(COMMUNITY_PLATFORMS, "Communities & content")}
         </div>
 
         <div className={styles.audienceInputBlock}>
@@ -248,7 +338,7 @@ export default function AffiliateCalculator() {
         </details>
 
         <p className={styles.calculatorFootnote}>
-          Illustrative starter-creator scenario only — not an industry benchmark, historical LabNarrative affiliate performance, or guaranteed payout. Real results can be lower or higher depending on audience relevance, content, link placement, geography, plan choice, retention, refunds, and chargebacks. As the affiliate program grows, we will replace these presets with observed platform-specific data.
+          Illustrative starter-creator scenario only — not an industry benchmark, historical LabNarrative affiliate performance, or guaranteed payout. The platform presets are intentionally different to reflect different paths from attention to an outbound click, but real results can be lower or higher depending on audience relevance, content, link placement, geography, plan choice, retention, refunds, and chargebacks. As the affiliate program grows, we will replace these presets with observed platform-specific data.
         </p>
       </div>
     </section>
