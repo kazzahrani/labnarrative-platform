@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { browserSupabase as supabase } from "@/lib/supabase-browser";
+import { tradingBrowserSupabase as supabase } from "@/lib/trading-supabase-browser";
 import styles from "./trading-outreach.module.css";
 
 type Campaign = {
