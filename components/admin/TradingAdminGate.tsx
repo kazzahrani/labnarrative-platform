@@ -59,7 +59,7 @@ export default function TradingAdminGate({ children }: { children: ReactNode }) 
       email: email.trim(),
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/admin/trading-outreach`,
+        emailRedirectTo: "https://app.labnarrative.com/internal",
       },
     });
 
@@ -165,7 +165,7 @@ export default function TradingAdminGate({ children }: { children: ReactNode }) 
                   Check your email
                 </strong>
                 <p style={{ margin: "6px 0 12px", color: "#a0aaa5", fontSize: 12, lineHeight: 1.55 }}>
-                  We sent a secure one-time sign-in link to <b>{email}</b>. Click <b>Sign in</b> in that email; you will return directly to Trading Outreach.
+                  We sent a secure one-time sign-in link to <b>{email}</b>. Click <b>Sign in</b> in that email; you will return directly to the Trading internal workspace.
                 </p>
                 <button
                   type="button"
