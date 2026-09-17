@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AdminControlCenterGate from "@/components/admin/AdminControlCenterGate";
+import TradingAdminGate from "@/components/admin/TradingAdminGate";
 import TradingOutreachConsole from "./TradingOutreachConsole";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 
 export default function TradingOutreachPage() {
   return (
-    <AdminControlCenterGate>
+    <TradingAdminGate>
       <TradingOutreachConsole />
-    </AdminControlCenterGate>
+    </TradingAdminGate>
   );
 }
