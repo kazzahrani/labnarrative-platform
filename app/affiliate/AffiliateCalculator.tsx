@@ -87,7 +87,7 @@ export default function AffiliateCalculator() {
         <div className={styles.rpmHero}><div className={styles.rpmHeroTop}><span>Estimated {selected.label} Affiliate RPM</span><em>Starter preset</em></div><strong>{money(funnel.rpm, 2)} <small>/ 1,000 {selected.shortMetric}</small></strong><p>{selected.note}</p></div>
         <div className={styles.earningHighlights}>
           <div><span>Cash commission</span><strong>{COMMISSION_RATE * 100}%</strong><small>of qualifying subscription revenue</small></div>
-          <div><span>Free Max reward</span><strong>1 month</strong><small>for every new paying customer</small></div>
+          <div><span>Free Max reward</span><strong>1 year</strong><small>for every 10 new paying customers</small></div>
         </div>
       </div>
 
@@ -97,18 +97,18 @@ export default function AffiliateCalculator() {
         <input className={styles.affiliateSlider} type="range" min={selected.sliderMin} max={selected.sliderMax} step={selected.sliderStep} value={Math.min(Math.max(reach, selected.sliderMin), selected.sliderMax)} onChange={(event) => setReach(Number(event.target.value))} aria-label={`Estimated ${selected.metric}`} />
         <div className={styles.sliderTicks} aria-hidden="true"><span>{compact(selected.sliderMin)}</span><span>{compact(selected.starterReach)}</span><span>{compact(selected.sliderMax / 2)}</span><span>{compact(selected.sliderMax)}+</span></div>
 
-        <div className={styles.rpmResult}><span>Estimated cash commission from one month of audience activity</span><strong>≈ {money(funnel.commission)}</strong><small>at {compact(reach)} {selected.shortMetric} · plus 1 free Max month for every new paying customer</small></div>
+        <div className={styles.rpmResult}><span>Estimated cash commission from one month of audience activity</span><strong>≈ {money(funnel.commission)}</strong><small>at {compact(reach)} {selected.shortMetric} · plus free Max access: 10 new paying customers = 1 full year</small></div>
 
         <div className={styles.funnelNumbers}><div><span>Audience</span><strong>{compact(reach)}</strong><small>{selected.shortMetric}</small></div><b>→</b><div><span>Link visits</span><strong>≈ {expected(funnel.clicks)}</strong><small>{pct(selected.clickRate)} click rate</small></div><b>→</b><div><span>Try free</span><strong>≈ {expected(funnel.freeUsers)}</strong><small>{pct(selected.freeRate)} of visits</small></div><b>→</b><div><span>New paid</span><strong>≈ {expected(funnel.paidUsers)}</strong><small>{pct(selected.paidRate)} of free users</small></div></div>
 
         <div className={styles.resultGrid}>
           <div><span>Estimated affiliate RPM</span><strong>{money(funnel.rpm, 2)}</strong><small>cash per 1,000 {selected.shortMetric}</small></div>
           <div><span>First-payment cash commission</span><strong>{money(AVG_FIRST_PAYMENT_COMMISSION, 2)}</strong><small>modelled average per new paid customer</small></div>
-          <div><span>Free Max</span><strong>1 month / customer</strong><small>stacks with no cap</small></div>
+          <div><span>Free Max</span><strong>1 year / 10 customers</strong><small>1 month each + 2 bonus months at each 10-customer milestone</small></div>
         </div>
 
         <details className={styles.assumptionBox}><summary>See the assumptions behind this {selected.label} estimate</summary><div><span><b>{pct(selected.clickRate)}</b> audience → LabNarrative visit</span><span><b>{pct(selected.freeRate)}</b> visit → free Paper Trading user</span><span><b>{pct(selected.paidRate)}</b> free user → paid user</span><span><b>75 / 25</b> illustrative Pro / Max mix</span><span><b>75 / 25</b> illustrative monthly / annual mix</span></div></details>
-        <p className={styles.calculatorFootnote}>Illustrative starter-creator scenario only — not an industry benchmark, historical LabNarrative affiliate performance, or guaranteed payout. Real results can be lower or higher. Cash RPM does not include the value of free Max months.</p>
+        <p className={styles.calculatorFootnote}>Illustrative starter-creator scenario only — not an industry benchmark, historical LabNarrative affiliate performance, or guaranteed payout. Real results can be lower or higher. Cash RPM does not include the value of free Max access.</p>
       </div>
     </section>
   );
