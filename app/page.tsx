@@ -94,11 +94,9 @@ export default function HomePage() {
     </header>
 
     <section className={styles.hero}>
-      <p className={styles.eyebrow}>Spot crypto automation · Free, Pro & Max</p>
-      <h1>Powerful crypto automation.<br/><em>Without the expensive subscription.</em></h1>
-      <p className={styles.lead}>LabNarrative is a crypto trading automation platform for Spot DCA bots, TradingView automation, Paper Trading and Live execution. Connect Binance, Bybit, KuCoin, OKX or Kraken, test in Paper for free, then choose Pro or Max when you are ready to go Live.</p>
-      <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a><a className={styles.secondary} href="/pricing">See pricing</a></div>
-      <p className={styles.heroNote}>Pro $14.99 monthly / $9.99 per month billed yearly · Max $29.99 monthly / $19.99 per month billed yearly.</p>
+      <h1><span>Powerful crypto automation.</span><em>Without the expensive subscription.</em></h1>
+      <p className={styles.lead}>LabNarrative is a crypto trading automation platform for Spot DCA bots, TradingView automation, Paper Trading and Live execution.</p>
+      <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a></div>
 
       <div className={styles.heroFrame}>
         <div className={styles.window}>
