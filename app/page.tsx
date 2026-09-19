@@ -143,8 +143,8 @@ export default function HomePage() {
     </section>
 
     <section className={styles.story}>
-      <div><p className={styles.label}>Why LabNarrative</p><h2>Why pay $50–$70+ for the automation you actually use?</h2><p>LabNarrative was built from the trader side of the screen after years of paying for broader crypto-bot platforms. The goal is deliberately focused: give Spot traders the DCA, TradingView automation, Paper testing, position management, signal visibility and analytics they need at a much lower subscription price.</p></div>
-      <div className={styles.principles}><div className={styles.principle}><strong>Two focused Live plans</strong><span>Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly.</span></div><div className={styles.principle}><strong>Five major exchanges</strong><span>Binance, Bybit, KuCoin, OKX and Kraken.</span></div><div className={styles.principle}><strong>Focused on Spot</strong><span>No need to pay for a larger feature set when your workflow is DCA or TradingView Spot automation.</span></div></div>
+      <div><p className={styles.label}>Why LabNarrative</p><h2>Built for the trading automation you actually use.</h2><p>LabNarrative keeps the workflow focused: build and run DCA bots, execute TradingView strategies, test with Paper, manage positions and understand performance — without paying for a bloated platform full of features you do not need.</p></div>
+      <div className={styles.principles}><div className={styles.principle}><strong>Simple, affordable plans</strong><span>Start free, then upgrade only when you need more live automation capacity.</span></div><div className={styles.principle}><strong>Multi-exchange</strong><span>Connect supported exchanges from one workspace and manage automation in one place.</span></div><div className={styles.principle}><strong>Built around Spot automation</strong><span>DCA, TradingView execution, Paper testing, positions, signals and analytics — all in one focused workflow.</span></div></div>
     </section>
 
 
