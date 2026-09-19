@@ -147,7 +147,7 @@ export default function HomePage() {
     </section>
 
 
-    <section className={styles.final}><h2>Test first. Pay less when you go Live.</h2><p>Start with Paper trading for free. Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly.</p><div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a><a className={styles.secondary} href="/pricing">View pricing</a></div></section>
+    <section className={styles.final}><h2>Test first. Pay less when you go Live.</h2><div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a></div></section>
 
     <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/learn">Learn</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_LAUNCH_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
   </main>;
