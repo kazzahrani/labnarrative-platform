@@ -120,12 +120,20 @@ export default function HomePage() {
       </div>
     </section>
 
-    <section className={styles.section}>
-      <div className={styles.sectionHead}><p className={styles.label}>Explore workflows</p><h2>Start with the automation workflow you need.</h2></div>
-      <div className={styles.capabilities}>
-        <article className={styles.capability}><span>01</span><div><h3><a href="/dca-bot">Crypto DCA bots →</a></h3><p>Build rule-based Spot DCA automation with visible entry, averaging and exit controls, then forward-test it in Paper.</p></div></article>
-        <article className={styles.capability}><span>02</span><div><h3><a href="/crypto-paper-trading">Crypto paper trading →</a></h3><p>Test DCA bots and TradingView Strategy Executions with simulated capital before deciding whether to go Live.</p></div></article>
-        <article className={styles.capability}><span>03</span><div><h3><a href="/tradingview-automation">TradingView automation →</a></h3><p>Connect TradingView strategy signals to controlled crypto Spot execution and keep every signal visible.</p></div></article>
+    <section className={styles.productOverview}>
+      <div className={styles.productOverviewHead}>
+        <p className={styles.label}>LabNarrative Trading</p>
+        <h2>One workspace for the complete Spot automation workflow.</h2>
+      </div>
+      <div className={styles.productOverviewGrid}>
+        <article className={styles.productFeature}><h3>DCA Bots</h3><p>Rule-based entries, averaging, take profit, stop loss and multi-pair automation.</p></article>
+        <article className={styles.productFeature}><h3>TradingView Strategy Execution</h3><p>Route strategy signals into controlled Spot execution with clear action rules.</p></article>
+        <article className={styles.productFeature}><h3>Paper Trading</h3><p>Run the same workflows with simulated capital before putting real funds at risk.</p></article>
+        <article className={styles.productFeature}><h3>Live Spot Trading</h3><p>Move tested automations live while keeping execution and position controls visible.</p></article>
+        <article className={styles.productFeature}><h3>Multi-exchange Connections</h3><p>Connect supported exchanges from one workspace instead of managing separate tools.</p></article>
+        <article className={styles.productFeature}><h3>Signal Monitor</h3><p>See what each automation received, what executed and why a signal did not run.</p></article>
+        <article className={styles.productFeature}><h3>Positions & Trade Controls</h3><p>Track entries, DCA progress, exits, live PnL and manual Spot position controls.</p></article>
+        <article className={styles.productFeature}><h3>Portfolio & Analytics</h3><p>Review capital, allocation, bot performance, drawdown and execution history together.</p></article>
       </div>
     </section>
 
