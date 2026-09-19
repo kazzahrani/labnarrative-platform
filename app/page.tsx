@@ -122,7 +122,6 @@ export default function HomePage() {
 
     <section className={styles.productOverview}>
       <div className={styles.productOverviewHead}>
-        <p className={styles.label}>LabNarrative Trading</p>
         <h2>One workspace for the complete Spot automation workflow.</h2>
       </div>
       <div className={styles.productOverviewGrid}>
@@ -138,17 +137,17 @@ export default function HomePage() {
     </section>
 
     <section className={styles.workflow} id="workflow">
-      <p className={styles.label}>Paper → Live</p><h2>Build. Simulate. Connect. Automate. Analyse.</h2>
+      <h2>Build. Simulate. Connect. Automate. Analyse.</h2>
       <div className={styles.steps}>{steps.map(([number,title,copy])=><article className={styles.step} key={title}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div>
     </section>
 
     <section className={styles.story}>
-      <div><p className={styles.label}>Why LabNarrative</p><h2>Built for the trading automation you actually use.</h2><p>LabNarrative keeps the workflow focused: build and run DCA bots, execute TradingView strategies, test with Paper, manage positions and understand performance — without paying for a bloated platform full of features you do not need.</p></div>
+      <div><h2>Why pay $50–$70+ for features you don’t need?</h2><p>LabNarrative keeps the workflow focused: build and run DCA bots, execute TradingView strategies, test with Paper, manage positions and understand performance — without paying for a bloated platform full of features you do not need.</p></div>
       <div className={styles.principles}><div className={styles.principle}><strong>Simple, affordable plans</strong><span>Start free, then upgrade only when you need more live automation capacity.</span></div><div className={styles.principle}><strong>Multi-exchange</strong><span>Connect supported exchanges from one workspace and manage automation in one place.</span></div><div className={styles.principle}><strong>Built around Spot automation</strong><span>DCA, TradingView execution, Paper testing, positions, signals and analytics — all in one focused workflow.</span></div></div>
     </section>
 
 
-    <section className={styles.final}><p className={styles.label}>Free Paper · Pro & Max Live</p><h2>Test first. Pay less when you go Live.</h2><p>Start with Paper trading for free. Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly.</p><div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a><a className={styles.secondary} href="/pricing">View pricing</a></div></section>
+    <section className={styles.final}><h2>Test first. Pay less when you go Live.</h2><p>Start with Paper trading for free. Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly.</p><div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Open LabNarrative →</a><a className={styles.secondary} href="/pricing">View pricing</a></div></section>
 
     <footer className={styles.footer}><a href="/"><Brand /></a><div className={styles.footerLinks}><a href="/learn">Learn</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_LAUNCH_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div><small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small></footer>
   </main>;
