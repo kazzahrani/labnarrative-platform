@@ -32,15 +32,6 @@ export default function PricingPage() {
         </div>
       </header>
 
-      <section className={styles.hero}>
-        <p className={styles.eyebrow}>Simple pricing</p>
-        <h1>Free in Paper.<br /><em>Pro from $9.99. Max from $19.99.</em></h1>
-        <p className={styles.lead}>
-          Free permanently includes 10 Paper DCA bots and 10 Paper Strategy bots. Pro is $14.99 monthly or $9.99/month billed yearly; Max is $29.99 monthly or $19.99/month billed yearly. New accounts also get the full Pro plan free for the first 7 days.
-        </p>
-        <div className={styles.notePill}><strong>Pro $14.99 monthly · Max $29.99 monthly</strong><span>Save with yearly billing: Pro $9.99/mo · Max $19.99/mo</span></div>
-      </section>
-
       <section className={styles.planSection} aria-label="Pricing plans">
         <PricingPlans />
       </section>
@@ -56,15 +47,6 @@ export default function PricingPage() {
           <article><span>02</span><h3>Pro — $14.99 monthly</h3><p>Or $9.99/month billed yearly ($119.88/year). New accounts get the full Pro plan free for 7 days. Pro includes 5 Live exchange connections, 20 active DCA bots and 20 Strategy bots.</p></article>
           <article><span>03</span><h3>Max — $29.99 monthly</h3><p>Or $19.99/month billed yearly ($239.88/year). Use all supported exchanges in the platform, with up to 100 active DCA bots and 100 Strategy bots.</p></article>
         </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionIntro}>
-          <p className={styles.label}>Already paying another platform?</p>
-          <h2>Compare your current setup before you switch.</h2>
-          <p>If you use 3Commas, Bitsgap, Coinrule or Cryptohopper mainly for compatible Spot DCA or TradingView automation, send us your setup. We’ll help recreate the supported configuration in LabNarrative so you can compare it first.</p>
-        </div>
-        <a className={styles.primary} href="mailto:hello@labnarrative.com?subject=Help%20me%20switch%20to%20LabNarrative">Get migration help →</a>
       </section>
 
       <section className={styles.finalCta}>
