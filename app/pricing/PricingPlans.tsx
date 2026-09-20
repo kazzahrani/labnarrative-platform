@@ -54,6 +54,7 @@ const fixedPlans = [
     annualTotal: 239.88,
     copy: "For traders running a larger automation setup.",
     features: [
+      "7-day free trial with full Max limits",
       "100 Strategy bots",
       "100 active Single-pair DCA bots",
       "10 active Multi-pair DCA bots",
