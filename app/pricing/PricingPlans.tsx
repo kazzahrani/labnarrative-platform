@@ -157,7 +157,7 @@ export default function PricingPlans() {
                   <p className={styles.billing}>{billing}</p>
                   <p className={styles.planCopy}>{plan.copy}</p>
                   <a className={styles.planCta} href={free ? APP_URL : PRICING_URL}>{plan.cta}</a>
-                  <div className={switchStyles.planLimits}>{plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}</div>
+                  <div className={`${switchStyles.planLimits} ${plan.featured ? switchStyles.darkLimits : ""}`}>{plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}</div>
                 </article>
               );
             })}
