@@ -86,6 +86,9 @@ Deno.serve(async(req:Request)=>{
     const stateQ=await admin.rpc("performance_status_internal",{p_user_id:uid});
     if(stateQ.error)throw stateQ.error;
     const performanceState=(stateQ.data||{}) as any;
+    const canaryQ=await admin.rpc("performance_canary_allowed_internal",{p_user_id:uid});
+    if(canaryQ.error)throw canaryQ.error;
+    const canary=canaryQ.data===true;
 
     const settlementQ=await admin.rpc("performance_settlement_status_internal",{p_user_id:uid});
     if(settlementQ.error)throw settlementQ.error;
@@ -104,11 +107,11 @@ Deno.serve(async(req:Request)=>{
     };
 
     if(action==="status"){
-      return json({ok:true,enabled:performanceState?.config?.enabled===true,providers,paypalClientId:providers.paypal?paypalClientId:"",subscription:sub||null,...settlementState});
+      return json({ok:true,enabled:performanceState?.config?.enabled===true,canary,providers,paypalClientId:providers.paypal?paypalClientId:"",subscription:sub||null,...settlementState});
     }
 
     if(performanceState?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
-    if(!sub||sub.plan_key!=="performance")return json({ok:false,error:"performance_subscription_required"},409);
+    if(!canary&&(!sub||sub.plan_key!=="performance"))return json({ok:false,error:"performance_subscription_required"},409);
 
     if(action==="prepare_due"){
       const periodId=text(settlementState?.period?.id,100);
