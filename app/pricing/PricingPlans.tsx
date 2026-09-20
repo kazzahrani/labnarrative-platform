@@ -116,7 +116,7 @@ export default function PricingPlans() {
   return (
     <>
       <div className={switchStyles.toggle} aria-label="Pricing view">
-        <button className={view === "year" ? switchStyles.active : ""} onClick={() => setView("year")} type="button">Yearly <span className={switchStyles.yearlyDiscountBadge}>UP TO 50% OFF</span></button>
+        <button className={view === "year" ? switchStyles.active : ""} onClick={() => setView("year")} type="button">Yearly <span className={switchStyles.yearlyDiscountBadge}>save 50%</span></button>
         <button className={view === "month" ? switchStyles.active : ""} onClick={() => setView("month")} type="button">Monthly</button>
         <button className={performance ? switchStyles.active : ""} onClick={() => setView("performance")} type="button">Performance</button>
       </div>
