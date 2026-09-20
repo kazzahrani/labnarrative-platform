@@ -97,13 +97,14 @@ Deno.serve(async(req:Request)=>{
     if(subQ.error)throw subQ.error;
     const sub=subQ.data;
 
+    const paypalClientId=secret("PAYPAL_CLIENT_ID");
     const providers={
-      paypal:Boolean(secret("PAYPAL_CLIENT_ID")&&secret("PAYPAL_CLIENT_SECRET")),
+      paypal:Boolean(paypalClientId&&secret("PAYPAL_CLIENT_SECRET")),
       nowpayments:Boolean(nowApiKey()),
     };
 
     if(action==="status"){
-      return json({ok:true,enabled:performanceState?.config?.enabled===true,providers,subscription:sub||null,...settlementState});
+      return json({ok:true,enabled:performanceState?.config?.enabled===true,providers,paypalClientId:providers.paypal?paypalClientId:"",subscription:sub||null,...settlementState});
     }
 
     if(performanceState?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
