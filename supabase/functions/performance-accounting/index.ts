@@ -18,6 +18,7 @@ function clean(error:unknown){return error instanceof Error?error.message:String
 async function read(res:Response){const text=await res.text();try{return text?JSON.parse(text):{}}catch{return{message:text.slice(0,500)}}}
 function compact(pair:string){return pair.replace("/","")}
 function dashed(pair:string){return pair.replace("/","-")}
+function addMonth(iso:string){const d=new Date(iso);const day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1);const max=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,max));return d.toISOString()}
 
 async function pairPrice(provider:string,pair:string){
   if(provider==="binance"){
@@ -158,6 +159,73 @@ Deno.serve(async(req:Request)=>{
     if(action==="preview_eligibility"){
       const check=await eligibility(db,base,publishable,auth,uid,minimum);
       return json({ok:true,config:{minimumSpotBalanceUsd:minimum,monthlyChargeCapUsd:cap},eligibility:check});
+    }
+
+    if(action==="enroll"){
+      if(state?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
+      const planQ=await db.from("billing_plans").select("plan_key,is_active").eq("plan_key","performance").maybeSingle();
+      if(planQ.error)throw planQ.error;
+      if(!planQ.data?.is_active)return json({ok:false,error:"performance_plan_not_active"},409);
+
+      const existingQ=await db.from("user_subscriptions")
+        .select("plan_key,status,current_period_end")
+        .eq("user_id",uid).maybeSingle();
+      if(existingQ.error)throw existingQ.error;
+      const existing=existingQ.data;
+      if(existing?.plan_key==="performance"&&["active","paused","past_due"].includes(String(existing.status))){
+        return json({ok:true,alreadyEnrolled:true,subscription:existing});
+      }
+      const paidStillActive=Boolean(existing&&existing.plan_key!=="free"&&["active","trialing","past_due"].includes(String(existing.status))&&existing.current_period_end&&Date.parse(String(existing.current_period_end))>Date.now());
+      if(paidStillActive)return json({ok:false,error:"existing_paid_access_active",accessEndsAt:existing.current_period_end},409);
+
+      const check=await eligibility(db,base,publishable,auth,uid,minimum);
+      if(!check.eligible)return json({ok:false,error:check.incomplete?"performance_eligibility_incomplete":"performance_minimum_balance_required",eligibility:check},409);
+
+      const start=new Date().toISOString(),end=addMonth(start),marks=await liveMarks(db,uid);
+      const subRow={
+        user_id:uid,plan_key:"performance",billing_interval:"month",status:"active",provider:"performance",
+        provider_customer_id:null,provider_subscription_id:null,current_period_start:start,current_period_end:end,
+        cancel_at_period_end:false,canceled_at:null,updated_at:new Date().toISOString()
+      };
+      const subSave=await db.from("user_subscriptions").upsert(subRow,{onConflict:"user_id"});
+      if(subSave.error)throw subSave.error;
+
+      const periodQ=await db.rpc("performance_start_period_api_internal",{
+        p_user_id:uid,p_period_start:start,p_period_end:end,p_spot_balance_usd:check.totalUsd,
+        p_eligibility_snapshot:{providers:check.providers.map((p:any)=>({connectionId:p.connectionId,provider:p.provider,totalUsd:p.totalUsd})),checkedAt:check.checkedAt},
+        p_marks:marks,
+      });
+      if(periodQ.error)throw periodQ.error;
+      return json({ok:true,enrolled:true,period:periodQ.data,eligibility:check});
+    }
+
+    if(action==="resume"){
+      if(state?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
+      const settlementQ=await db.rpc("performance_settlement_status_internal",{p_user_id:uid});
+      if(settlementQ.error)throw settlementQ.error;
+      const settlementState=(settlementQ.data||{}) as any;
+      if(settlementState?.period?.status==="open")return json({ok:true,alreadyActive:true,period:settlementState.period});
+      if(settlementState?.period&&settlementState.period.status!=="paid")return json({ok:false,error:"performance_previous_period_unsettled",period:settlementState.period,settlement:settlementState.settlement},409);
+
+      const subQ=await db.from("user_subscriptions").select("plan_key,status").eq("user_id",uid).maybeSingle();
+      if(subQ.error)throw subQ.error;
+      if(!subQ.data||subQ.data.plan_key!=="performance")return json({ok:false,error:"performance_subscription_required"},409);
+
+      const check=await eligibility(db,base,publishable,auth,uid,minimum);
+      if(!check.eligible)return json({ok:false,error:check.incomplete?"performance_eligibility_incomplete":"performance_minimum_balance_required",eligibility:check},409);
+
+      const start=new Date().toISOString(),end=addMonth(start),marks=await liveMarks(db,uid);
+      const periodQ=await db.rpc("performance_start_period_api_internal",{
+        p_user_id:uid,p_period_start:start,p_period_end:end,p_spot_balance_usd:check.totalUsd,
+        p_eligibility_snapshot:{providers:check.providers.map((p:any)=>({connectionId:p.connectionId,provider:p.provider,totalUsd:p.totalUsd})),checkedAt:check.checkedAt},
+        p_marks:marks,
+      });
+      if(periodQ.error)throw periodQ.error;
+      const subSave=await db.from("user_subscriptions").update({
+        status:"active",current_period_start:start,current_period_end:end,cancel_at_period_end:false,canceled_at:null,updated_at:new Date().toISOString()
+      }).eq("user_id",uid).eq("plan_key","performance");
+      if(subSave.error)throw subSave.error;
+      return json({ok:true,resumed:true,period:periodQ.data,eligibility:check});
     }
 
     if(action==="start_period"){
