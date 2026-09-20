@@ -135,3 +135,112 @@
   background:transparent!important;
   color:#a8a8a3!important;
 }
+
+
+/* Match the app's Performance-card rhythm and row alignment. */
+.performanceAlignedCard{
+  display:grid!important;
+  grid-template-rows:92px 112px 84px minmax(0,1fr)!important;
+  align-content:stretch!important;
+}
+.performanceTop{
+  grid-row:1;
+  min-height:0;
+}
+.performanceTop h2{
+  margin:0!important;
+  font-size:31px;
+  letter-spacing:-.045em;
+}
+.performanceTop p{
+  margin:10px 0 0;
+  color:#8f8f8a;
+  font-size:11px;
+  line-height:1.55;
+}
+.performanceCard .performanceTop p{color:#9b9b96}
+.performanceAlignedCard .performancePrice,
+.performanceAlignedCard .disabledPerformancePrice{
+  grid-row:2;
+  align-self:start;
+  margin-top:4px!important;
+}
+.performancePrice{
+  display:grid!important;
+  gap:7px!important;
+}
+.performancePrice strong{
+  font-size:37px!important;
+  line-height:.98!important;
+  letter-spacing:-.045em!important;
+}
+.performancePrice span{
+  color:#b8b8b3!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+  font-weight:800!important;
+}
+.disabledPerformancePrice{
+  display:grid;
+  grid-template-columns:auto auto 1fr;
+  align-items:end;
+  column-gap:6px;
+}
+.disabledPerformancePrice strong{
+  color:#202020;
+  font-size:52px;
+  line-height:.9;
+  letter-spacing:-.06em;
+}
+.disabledPerformancePrice>span{
+  padding-bottom:5px;
+  color:#83837e;
+  font-size:12px;
+}
+.disabledPerformancePrice small{
+  grid-column:1 / -1;
+  margin-top:11px;
+  color:#8b8b87;
+  font-size:10px;
+}
+.performanceCta{
+  grid-row:3;
+  align-self:start;
+  width:100%;
+  margin:0!important;
+  min-height:46px;
+}
+.performanceAlignedCard .planLimits{
+  grid-row:4;
+  align-self:start;
+  margin-top:0!important;
+}
+.performanceAlignedCard .planLimits>div{
+  min-height:38px;
+}
+.performanceCard .planLimits>div:before{
+  color:#9a9a9a!important;
+}
+.performanceDisabledCard .planLimits>div:before{
+  color:#999!important;
+}
+.performanceDisabledCard .planLimits strong{
+  color:#555!important;
+}
+.performanceDisabledCard .planLimits span{
+  color:#888!important;
+}
+.performanceCard .performanceNote{display:none!important}
+@media(max-width:640px){
+  .performanceAlignedCard{
+    display:flex!important;
+  }
+  .performanceAlignedCard .performancePrice,
+  .performanceAlignedCard .disabledPerformancePrice,
+  .performanceAlignedCard .performanceCta,
+  .performanceAlignedCard .planLimits{
+    grid-row:auto;
+  }
+  .performanceCta{margin-top:20px!important}
+  .performanceAlignedCard .planLimits{margin-top:20px!important}
+}
