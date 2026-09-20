@@ -62,18 +62,24 @@ async function balancesFor(db:any,connection:any){
 async function eligibility(db:any,userId:string,minimum:number){
   const q=await db.from("exchange_connections").select("id,provider,label,status,is_testnet,account_type").eq("user_id",userId).eq("status","connected").eq("is_testnet",false).eq("account_type","spot");
   if(q.error)throw q.error;
-  let totalUsd=0;const providers:any[]=[],errors:any[]=[],unpriced:any[]=[];
-  for(const connection of q.data||[]){
+  const checks=await Promise.all((q.data||[]).map(async(connection:any)=>{
     try{
-      const balances=await balancesFor(db,connection);let providerTotal=0;
-      for(const row of balances){
-        if(!(row.total>0))continue;
-        try{const p=await assetPrice(connection.provider,row.asset),v=row.total*p;providerTotal+=v}
-        catch{unpriced.push({connectionId:connection.id,provider:connection.provider,asset:row.asset,total:row.total})}
-      }
-      totalUsd+=providerTotal;providers.push({connectionId:connection.id,provider:connection.provider,totalUsd:providerTotal});
-    }catch(error){errors.push({connectionId:connection.id,provider:connection.provider,error:error instanceof Error?error.message:String(error)})}
-  }
+      const balances=await balancesFor(db,connection);
+      const valued=await Promise.all(balances.filter((row:Balance)=>row.total>0).map(async(row:Balance)=>{
+        try{const p=await assetPrice(connection.provider,row.asset);return{ok:true,value:row.total*p,row}}
+        catch{return{ok:false,value:0,row}}
+      }));
+      const providerTotal=valued.reduce((sum:number,x:any)=>sum+n(x.value),0);
+      const unpriced=valued.filter((x:any)=>!x.ok).map((x:any)=>({connectionId:connection.id,provider:connection.provider,asset:x.row.asset,total:x.row.total}));
+      return{ok:true,provider:{connectionId:connection.id,provider:connection.provider,totalUsd:providerTotal},unpriced};
+    }catch(error){
+      return{ok:false,error:{connectionId:connection.id,provider:connection.provider,error:error instanceof Error?error.message:String(error)},unpriced:[]};
+    }
+  }));
+  const providers=checks.filter((x:any)=>x.ok).map((x:any)=>x.provider);
+  const errors=checks.filter((x:any)=>!x.ok).map((x:any)=>x.error);
+  const unpriced=checks.flatMap((x:any)=>x.unpriced||[]);
+  const totalUsd=providers.reduce((sum:number,x:any)=>sum+n(x.totalUsd),0);
   return{totalUsd,eligible:totalUsd+1e-8>=minimum,minimumSpotBalanceUsd:minimum,providers,errors,unpriced,incomplete:errors.length>0||(totalUsd<minimum&&unpriced.length>0),checkedAt:new Date().toISOString()};
 }
 async function marksForTrades(trades:any[]){
@@ -112,7 +118,12 @@ Deno.serve(async(req:Request)=>{
       const stateQ=await db.rpc("performance_status_internal",{p_user_id:userId});
       if(stateQ.error)throw stateQ.error;
       const state=(stateQ.data||{}) as any;
-      const minimum=n(state?.config?.minimumSpotBalanceUsd,2500);
+      const settingsQ=await db.rpc("performance_canary_settings_internal",{p_user_id:userId});
+      if(settingsQ.error)throw settingsQ.error;
+      const settings=(settingsQ.data||{}) as any;
+      const configuredMinimum=n(state?.config?.minimumSpotBalanceUsd,2500);
+      const overrideMinimum=n(settings?.minimumSpotBalanceOverrideUsd,0);
+      const minimum=overrideMinimum>0?overrideMinimum:configuredMinimum;
       const check=await eligibility(db,userId,minimum);
       const periodQ=await db.rpc("performance_settlement_status_internal",{p_user_id:userId});
       if(periodQ.error)throw periodQ.error;
@@ -122,7 +133,7 @@ Deno.serve(async(req:Request)=>{
       };
 
       if(action==="canary_status"){
-        return json({ok:true,canary:true,enabled:state?.config?.enabled===true,providers:providerState,eligibility:check,...(periodQ.data||{})});
+        return json({ok:true,canary:true,enabled:state?.config?.enabled===true,providers:providerState,configuredMinimumSpotBalanceUsd:configuredMinimum,effectiveMinimumSpotBalanceUsd:minimum,eligibility:check,...(periodQ.data||{})});
       }
 
       if(state?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
