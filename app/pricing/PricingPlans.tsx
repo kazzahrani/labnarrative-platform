@@ -65,46 +65,46 @@ const fixedPlans = [
   },
 ] as const;
 
-function DisabledPerformanceCard({ name, price, copy }: { name: string; price: string; copy: string }) {
+function DisabledPerformanceCard({ plan }: { plan: (typeof fixedPlans)[number] }) {
+  const price = plan.name === "Free" ? 0 : plan.annualMonthlyPrice;
   return (
-    <article className={`${styles.planCard} ${switchStyles.performanceDisabledCard}`}>
-      <p className={styles.planEyebrow}>FIXED-PRICE PLAN</p>
-      <h2>{name}</h2>
+    <article className={`${styles.planCard} ${plan.featured ? styles.featured : ""}`}>
+      {"badge" in plan && plan.badge ? <span className={styles.popular}>{plan.badge}</span> : null}
+      <p className={styles.planEyebrow}>{plan.eyebrow}</p>
+      <h2>{plan.name}</h2>
       <div className={styles.priceLine}>
-        <strong>{price}</strong>
+        <strong>{`${price}`}</strong>
         <span>/mo</span>
       </div>
-      <p className={styles.billing}>Performance billing is available with Max.</p>
-      <p className={styles.planCopy}>{copy}</p>
+      <p className={styles.billing}>{plan.name === "Free" ? "Free forever · Live exchanges included" : `Billed ${plan.annualTotal.toFixed(2)}/year`}</p>
+      <p className={styles.planCopy}>Performance billing is available with Max. Switch to Yearly or Monthly for this plan.</p>
       <span className={`${styles.planCta} ${switchStyles.disabledCta}`}>Not available</span>
-      <ul>
-        <li>Switch back to Monthly or Yearly for this plan</li>
-      </ul>
+      <div className={`${switchStyles.planLimits} ${plan.featured ? switchStyles.darkLimits : ""}`}>
+        {plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}
+      </div>
     </article>
   );
 }
 
 function PerformanceMaxCard() {
   return (
-    <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard}`}>
+    <article className={styles.planCard}>
       <span className={styles.popular}>Performance</span>
-      <p className={styles.planEyebrow}>PAY WHEN YOU PROFIT</p>
+      <p className={styles.planEyebrow}>MAXIMUM AUTOMATION CAPACITY</p>
       <h2>Max</h2>
       <div className={switchStyles.performancePrice}>
         <strong>Pay when you profit</strong>
-        <span>No profitable month? You pay $0.</span>
       </div>
+      <p className={styles.billing}>No profitable month? You pay $0 · Up to $78/month</p>
       <p className={styles.planCopy}>Same Max power. A smarter way to pay.</p>
-      <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
+      <a className={styles.planCta} href={PERFORMANCE_URL}>Start Performance →</a>
+      <div className={switchStyles.planLimits}>
         <div><strong>100</strong><span>Strategy bots</span></div>
         <div><strong>100</strong><span>active Single-pair DCA bots</span></div>
         <div><strong>10</strong><span>active Multi-pair DCA bots</span></div>
         <div><strong>Unlimited</strong><span>Manual trades</span></div>
         <div><strong>Full</strong><span>Paper account</span></div>
       </div>
-      <div className={switchStyles.performanceNote}>We get paid after you do. Up to $78/month.</div>
-      <a className={styles.planCta} href={PERFORMANCE_URL}>Start Performance →</a>
-      <p className={styles.planCopy}>All supported exchanges can be connected and Live-enabled.</p>
     </article>
   );
 }
@@ -124,8 +124,8 @@ export default function PricingPlans() {
       {performance ? (
         <>
           <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", maxWidth: 1180, marginInline: "auto" }}>
-            <DisabledPerformanceCard name="Free" price="$0" copy="Free access stays available, but profit-based billing is reserved for Max." />
-            <DisabledPerformanceCard name="Pro" price="$9.99" copy="Pro remains available on the fixed monthly and yearly pricing views." />
+            <DisabledPerformanceCard plan={fixedPlans[0]} />
+            <DisabledPerformanceCard plan={fixedPlans[1]} />
             <PerformanceMaxCard />
           </div>
           <p className={styles.limitNote}>
