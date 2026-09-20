@@ -65,36 +65,44 @@ const fixedPlans = [
   },
 ] as const;
 
-function DisabledPerformanceCard({ name, price, copy }: { name: string; price: string; copy: string }) {
+function DisabledPerformanceCard({ plan }: { plan: "free" | "pro" }) {
+  const definition = fixedPlans.find((item) => item.name.toLowerCase() === plan)!;
+  const price = plan === "free" ? "$0" : "$14.99";
+
   return (
-    <article className={`${styles.planCard} ${switchStyles.performanceDisabledCard}`}>
-      <p className={styles.planEyebrow}>FIXED-PRICE PLAN</p>
-      <h2>{name}</h2>
-      <div className={styles.priceLine}>
-        <strong>{price}</strong>
-        <span>/mo</span>
+    <article className={`${styles.planCard} ${switchStyles.performanceDisabledCard} ${switchStyles.performanceAlignedCard}`}>
+      <div className={switchStyles.performanceTop}>
+        <h2>{definition.name}</h2>
+        <p>Performance billing is available with Max.</p>
       </div>
-      <p className={styles.billing}>Performance billing is available with Max.</p>
-      <p className={styles.planCopy}>{copy}</p>
-      <span className={`${styles.planCta} ${switchStyles.disabledCta}`}>Not available</span>
-      <ul>
-        <li>Switch back to Monthly or Yearly for this plan</li>
-      </ul>
+      <div className={switchStyles.disabledPerformancePrice}>
+        <strong>{price}</strong>
+        <span>/ month</span>
+        <small>{plan === "free" ? "Free forever · Live exchanges included" : "Prepaid monthly access"}</small>
+      </div>
+      <span className={`${styles.planCta} ${switchStyles.disabledCta} ${switchStyles.performanceCta}`}>Not available</span>
+      <div className={`${switchStyles.planLimits} ${switchStyles.disabledLimits}`}>
+        {definition.features.map((feature) => (
+          <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>
+        ))}
+      </div>
     </article>
   );
 }
 
 function PerformanceMaxCard() {
   return (
-    <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard}`}>
+    <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard} ${switchStyles.performanceAlignedCard}`}>
       <span className={`${styles.popular} ${switchStyles.plainBadge}`}>Performance</span>
-      <p className={styles.planEyebrow}>PAY WHEN YOU PROFIT</p>
-      <h2>Max</h2>
+      <div className={switchStyles.performanceTop}>
+        <h2>Max</h2>
+        <p>Same Max power. A smarter way to pay.</p>
+      </div>
       <div className={switchStyles.performancePrice}>
         <strong>Pay when you profit</strong>
-        <span>No profitable month? You pay $0.</span>
+        <span>No profit, no fee.<br />Profitable months: max $78.</span>
       </div>
-      <p className={styles.planCopy}>Same Max power. A smarter way to pay.</p>
+      <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start Performance →</a>
       <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
         <div><strong>100</strong><span>Strategy bots</span></div>
         <div><strong>100</strong><span>active Single-pair DCA bots</span></div>
@@ -102,9 +110,6 @@ function PerformanceMaxCard() {
         <div><strong>Unlimited</strong><span>Manual trades</span></div>
         <div><strong>Full</strong><span>Paper account</span></div>
       </div>
-      <div className={switchStyles.performanceNote}>We get paid after you do. Up to $78/month.</div>
-      <a className={styles.planCta} href={PERFORMANCE_URL}>Start Performance →</a>
-      <p className={styles.planCopy}>All supported exchanges can be connected and Live-enabled.</p>
     </article>
   );
 }
@@ -124,8 +129,8 @@ export default function PricingPlans() {
       {performance ? (
         <>
           <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", maxWidth: 1180, marginInline: "auto" }}>
-            <DisabledPerformanceCard name="Free" price="$0" copy="Free access stays available, but profit-based billing is reserved for Max." />
-            <DisabledPerformanceCard name="Pro" price="$9.99" copy="Pro remains available on the fixed monthly and yearly pricing views." />
+            <DisabledPerformanceCard plan="free" />
+            <DisabledPerformanceCard plan="pro" />
             <PerformanceMaxCard />
           </div>
           <p className={styles.limitNote}>
