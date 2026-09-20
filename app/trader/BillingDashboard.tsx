@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { browserSupabase } from "../../lib/supabase-browser";
 import styles from "./billing-dashboard.module.css";
+import PerformancePlanPanel from "./PerformancePlanPanel";
 
 type Plan = {
   id: string;
@@ -194,6 +195,8 @@ export default function BillingDashboard() {
         {activePaid && confirmCancel && <div className={styles.cancelConfirm}><button onClick={() => setConfirmCancel(false)} disabled={busy === "cancel"}>Keep plan</button><button className={styles.danger} onClick={() => void cancelRenewal()} disabled={busy === "cancel"}>{busy === "cancel" ? "Cancelling…" : "Confirm cancellation"}</button></div>}
       </div>
     </section>}
+
+    <PerformancePlanPanel />
 
     <div className={styles.cards}>
       <article className={styles.card}>
