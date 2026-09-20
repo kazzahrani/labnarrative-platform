@@ -61,6 +61,14 @@ type SettlementStatus = {
     paidProvider?: string | null;
     paidAt?: string | null;
   } | null;
+  attempts?: Array<{
+    id?: string;
+    provider?: "paypal" | "nowpayments" | string;
+    status?: string;
+    externalId?: string | null;
+    checkoutUrl?: string | null;
+    createdAt?: string | null;
+  }>;
 };
 
 declare global {
@@ -173,6 +181,8 @@ export default function PerformancePlanPanel() {
   const subscriptionStatus = settlement?.subscription?.status || "";
   const period = settlement?.period || accounting?.period || null;
   const due = settlement?.settlement && ["due", "pending"].includes(String(settlement.settlement.status));
+  const pendingAttempt = settlement?.attempts?.find((attempt) => ["created", "pending"].includes(String(attempt.status)));
+  const pendingProvider = pendingAttempt?.provider || "";
   const paidWaitingResume = performanceSub && period?.status === "paid" && subscriptionStatus === "paused";
   const pausedForEligibility = performanceSub && subscriptionStatus === "paused" && !due && period?.status === "paid";
   const minimum = Number(accounting?.config?.minimumSpotBalanceUsd || 2500);
@@ -215,7 +225,7 @@ export default function PerformancePlanPanel() {
 
   useEffect(() => {
     const clientId = settlement?.paypalClientId || "";
-    const shouldRender = Boolean(due && settlement?.providers?.paypal && clientId && paypalRef.current);
+    const shouldRender = Boolean(due && (!pendingProvider || pendingProvider === "paypal") && settlement?.providers?.paypal && clientId && paypalRef.current);
     if (!shouldRender) {
       if (paypalRef.current) paypalRef.current.innerHTML = "";
       return;
@@ -260,7 +270,7 @@ export default function PerformancePlanPanel() {
       try { buttons?.close?.(); } catch {}
       if (paypalRef.current) paypalRef.current.innerHTML = "";
     };
-  }, [due, settlement?.paypalClientId, settlement?.providers?.paypal, refresh]);
+  }, [due, pendingProvider, settlement?.paypalClientId, settlement?.providers?.paypal, refresh]);
 
   const livePnl = estimate?.active ? Number(estimate.netPnl || 0) : Number(period?.netPnlQuote || 0);
   const liveFee = estimate?.active ? Number(estimate.estimatedFee || 0) : Number(period?.chargeUsd || settlement?.settlement?.amountUsd || 0);
@@ -317,8 +327,9 @@ export default function PerformancePlanPanel() {
         <p>This month's Performance fee has been finalized. New Performance activity stays paused until this settlement is confirmed.</p>
       </div>
       <div className={styles.payments}>
-        {settlement?.providers?.paypal && <div><span>PayPal</span><div ref={paypalRef} className={styles.paypal}/></div>}
-        {settlement?.providers?.nowpayments && <button className={styles.crypto} onClick={() => void cryptoPay()} disabled={Boolean(busy)}>{busy === "crypto" ? "Opening…" : "Pay with crypto via NOWPayments"}</button>}
+        {pendingProvider && <div className={styles.pending}><span>PAYMENT IN PROGRESS</span><strong>{pendingProvider === "nowpayments" ? "NOWPayments crypto checkout pending" : "PayPal checkout pending"}</strong><small>The other payment method is locked until this attempt completes or expires.</small></div>}
+        {(!pendingProvider || pendingProvider === "paypal") && settlement?.providers?.paypal && <div><span>PayPal</span><div ref={paypalRef} className={styles.paypal}/></div>}
+        {(!pendingProvider || pendingProvider === "nowpayments") && settlement?.providers?.nowpayments && <button className={styles.crypto} onClick={() => void cryptoPay()} disabled={Boolean(busy)}>{busy === "crypto" ? "Opening…" : pendingProvider === "nowpayments" ? "Reopen crypto checkout" : "Pay with crypto via NOWPayments"}</button>}
       </div>
     </div>}
 
