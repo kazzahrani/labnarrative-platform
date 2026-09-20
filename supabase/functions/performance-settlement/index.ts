@@ -125,6 +125,9 @@ Deno.serve(async(req:Request)=>{
       const attempt=attemptQ.data as any;
       const amount=money(attempt.amountUsd);
       if(!(amount>0&&amount<=99))throw new Error("performance_amount_invalid");
+      if(attempt.existing===true&&attempt.externalId&&attempt.checkoutUrl){
+        return json({ok:true,reused:true,provider:"paypal",attemptId:attempt.attemptId,settlementId:attempt.settlementId,orderId:attempt.externalId,approvalUrl:attempt.checkoutUrl,amountUsd:amount});
+      }
 
       const made=await paypal("/v2/checkout/orders",{
         method:"POST",
@@ -209,6 +212,9 @@ Deno.serve(async(req:Request)=>{
       const attempt=attemptQ.data as any;
       const amount=money(attempt.amountUsd);
       if(!(amount>0&&amount<=99))throw new Error("performance_amount_invalid");
+      if(attempt.existing===true&&attempt.externalId&&attempt.checkoutUrl){
+        return json({ok:true,reused:true,provider:"nowpayments",attemptId:attempt.attemptId,settlementId:attempt.settlementId,invoiceId:attempt.externalId,invoiceUrl:attempt.checkoutUrl,amountUsd:amount});
+      }
 
       const orderId=`lnperf:${attempt.settlementId}:${attempt.attemptId}`;
       const callback=`${base.replace(/\/$/,"")}/functions/v1/performance-nowpayments-ipn`;
@@ -242,6 +248,7 @@ Deno.serve(async(req:Request)=>{
   }catch(error){
     console.error("performance-settlement",error);
     const message=error instanceof Error?error.message:"performance_settlement_failed";
-    return json({ok:false,error:message},500);
+    const status=message.startsWith("performance_payment_attempt_pending")?409:500;
+    return json({ok:false,error:message},status);
   }
 });
