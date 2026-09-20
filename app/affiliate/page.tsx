@@ -19,6 +19,18 @@ const audiences = [
   ["Blogs / Newsletters", "Long-form education, comparisons and automation guides"],
 ];
 
+const creatorPackages = [
+  ["YouTube", "1 long-form video (5+ min) OR 2 standard videos (<5 min)"],
+  ["YouTube Shorts", "4 approved Shorts"],
+  ["TikTok", "4 approved videos"],
+  ["Instagram Reels", "4 approved Reels"],
+  ["Reddit", "3 high-quality original posts in relevant communities + share/repost in 5 other relevant communities where permitted"],
+  ["X / Twitter", "6 substantial posts OR 3 substantial threads"],
+  ["LinkedIn", "6 substantial posts"],
+  ["Medium / Substack", "1 original detailed article"],
+  ["Telegram / Discord / Facebook", "6 substantial posts across relevant communities"],
+];
+
 const creatorBonuses = [
   {
     eyebrow: "Content package",
@@ -74,7 +86,7 @@ const faqs = [
     body: (
       <>
         <p>Approved qualifying content packages earn one Max month. Eligible creator content can also earn additional Max months from verified view or impression milestones.</p>
-        <p>Current creator formats include YouTube, YouTube Shorts, TikTok, Instagram Reels, Reddit, X / Twitter, LinkedIn, Medium / Substack / blogs, and Telegram / Discord / Facebook community content. Exact package requirements are shown inside the Creator & Affiliate dashboard.</p>
+        <p>Current creator formats include YouTube, YouTube Shorts, TikTok, Instagram Reels, Reddit, X / Twitter, LinkedIn, Medium / Substack, and Telegram / Discord / Facebook community content. The current qualifying package requirements are listed on this page and inside the Creator & Affiliate dashboard.</p>
       </>
     ),
   },
@@ -144,6 +156,22 @@ export default function AffiliatePage() {
               <span>{title.slice(0, 1)}</span>
               <h3>{title}</h3>
               <p>{copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className={affiliateStyles.audienceSection} id="creator-rewards">
+        <div className={affiliateStyles.sectionHeading}>
+          <p className={affiliateStyles.eyebrow}>Creator rewards</p>
+          <h2>Complete any one qualifying package → earn 1 month Max.</h2>
+        </div>
+        <div className={affiliateStyles.audienceGrid}>
+          {creatorPackages.map(([platform, requirement]) => (
+            <article key={platform}>
+              <span>✓</span>
+              <h3>{platform}</h3>
+              <p>{requirement}</p>
             </article>
           ))}
         </div>
