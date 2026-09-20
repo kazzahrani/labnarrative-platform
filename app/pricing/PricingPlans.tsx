@@ -19,11 +19,11 @@ const fixedPlans = [
     annualTotal: 0,
     copy: "Connect and Live-enable all supported exchanges. Upgrade only when you need automation capacity.",
     features: [
-      "0 Strategy bots",
-      "0 active Single-pair DCA bots",
-      "0 active Multi-pair DCA bots",
-      "0 Manual trades",
-      "Full Paper account",
+      { value: "0", label: "Strategy bots" },
+      { value: "0", label: "active Single-pair DCA bots" },
+      { value: "0", label: "active Multi-pair DCA bots" },
+      { value: "0", label: "Manual trades" },
+      { value: "Full", label: "Paper account" },
     ],
     cta: "Start free →",
     featured: false,
@@ -36,11 +36,11 @@ const fixedPlans = [
     annualTotal: 119.88,
     copy: "For individual traders running focused Spot automation.",
     features: [
-      "10 Strategy bots",
-      "10 active Single-pair DCA bots",
-      "1 active Multi-pair DCA bot",
-      "Unlimited Manual trades",
-      "Full Paper account",
+      { value: "10", label: "Strategy bots" },
+      { value: "10", label: "active Single-pair DCA bots" },
+      { value: "1", label: "active Multi-pair DCA bot" },
+      { value: "Unlimited", label: "Manual trades" },
+      { value: "Full", label: "Paper account" },
     ],
     cta: "Choose Pro →",
     featured: true,
@@ -52,14 +52,13 @@ const fixedPlans = [
     monthlyPrice: 39.99,
     annualMonthlyPrice: 19.99,
     annualTotal: 239.88,
-    copy: "For traders running a larger automation setup.",
+    copy: "Includes a 7-day free trial with full Max limits.",
     features: [
-      "7-day free trial with full Max limits",
-      "100 Strategy bots",
-      "100 active Single-pair DCA bots",
-      "10 active Multi-pair DCA bots",
-      "Unlimited Manual trades",
-      "Full Paper account",
+      { value: "100", label: "Strategy bots" },
+      { value: "100", label: "active Single-pair DCA bots" },
+      { value: "10", label: "active Multi-pair DCA bots" },
+      { value: "Unlimited", label: "Manual trades" },
+      { value: "Full", label: "Paper account" },
     ],
     cta: "Choose Max →",
     featured: false,
@@ -96,7 +95,7 @@ function PerformanceMaxCard() {
         <span>No profitable month? You pay $0.</span>
       </div>
       <p className={styles.planCopy}>Same Max power. A smarter way to pay.</p>
-      <div className={switchStyles.performanceLimits}>
+      <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
         <div><strong>100</strong><span>Strategy bots</span></div>
         <div><strong>100</strong><span>active Single-pair DCA bots</span></div>
         <div><strong>10</strong><span>active Multi-pair DCA bots</span></div>
@@ -158,7 +157,7 @@ export default function PricingPlans() {
                   <p className={styles.billing}>{billing}</p>
                   <p className={styles.planCopy}>{plan.copy}</p>
                   <a className={styles.planCta} href={free ? APP_URL : PRICING_URL}>{plan.cta}</a>
-                  <ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
+                  <div className={switchStyles.planLimits}>{plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}</div>
                 </article>
               );
             })}
