@@ -161,6 +161,36 @@ Deno.serve(async(req:Request)=>{
       return json({ok:true,config:{minimumSpotBalanceUsd:minimum,monthlyChargeCapUsd:cap},eligibility:check});
     }
 
+    if(action==="estimate"){
+      const contextQ=await db.rpc("performance_current_estimate_context_internal",{p_user_id:uid});
+      if(contextQ.error)throw contextQ.error;
+      const context=(contextQ.data||{}) as any;
+      if(!context?.period)return json({ok:true,active:false,netPnl:0,estimatedFee:0,period:null,trades:[]});
+      const rows=Array.isArray(context.trades)?context.trades:[];
+      let net=0;
+      const contributions:any[]=[];
+      for(const row of rows){
+        const opening=n(row.openingCumulativePnl);
+        let cumulative=0;
+        let markPrice=n(row.closingMarkPrice);
+        let markSource="crystallized";
+        if(row.closingMarkedAt){
+          cumulative=n(row.closingCumulativePnl);
+        }else{
+          markSource="live_quote";
+          try{markPrice=await pairPrice(String(row.provider||""),String(row.pair||""))}
+          catch{markPrice=n(row.lastPrice);markSource="last_verifiable"}
+          if(!(markPrice>0))throw new Error(`trade_mark_unavailable:${row.tradeId}`);
+          cumulative=n(row.realizedPnl)+n(row.quantity)*(markPrice-n(row.averagePrice,markPrice));
+        }
+        const contribution=cumulative-opening;
+        net+=contribution;
+        contributions.push({tradeId:row.tradeId,pair:row.pair,markPrice,markSource,contribution});
+      }
+      const estimatedFee=Math.round(Math.min(Math.max(net,0),cap)*100)/100;
+      return json({ok:true,active:true,period:context.period,netPnl:net,estimatedFee,cap,trades:contributions,checkedAt:new Date().toISOString()});
+    }
+
     if(action==="enroll"){
       if(state?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
       const planQ=await db.from("billing_plans").select("plan_key,is_active").eq("plan_key","performance").maybeSingle();
