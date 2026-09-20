@@ -109,11 +109,31 @@ export default function PricingPlans() {
             </article>
           );
         })}
+        <article className={styles.planCard}>
+          <p className={styles.planEyebrow}>Pay only from eligible LabNarrative trading profits</p>
+          <h2>Performance</h2>
+          <div className={styles.priceLine}>
+            <strong>$0–99</strong>
+            <span>/mo</span>
+          </div>
+          <p className={styles.billing}>No eligible monthly profit · $0 due</p>
+          <p className={styles.planCopy}>We get paid after your bots do. The first eligible LabNarrative trading profits each month pay the subscription, up to $99.</p>
+          <a className={styles.planCta} href={PRICING_URL}>Choose Performance →</a>
+          <ul>
+            <li>Requires ≥ $2,500 combined connected Spot balance at the start of each monthly period</li>
+            <li>Bots + LabNarrative Manual Trades included in Performance P&amp;L</li>
+            <li>Realized + unrealized eligible P&amp;L, net across LabNarrative activity</li>
+            <li>Maximum $99 per month</li>
+            <li>No eligible profit · $0</li>
+            <li>No debt or carry-forward from losing months</li>
+            <li>Pay settlement through PayPal or crypto via NOWPayments</li>
+          </ul>
+        </article>
       </div>
       <p className={styles.limitNote}>
         {interval === "year"
           ? "Pro is $9.99/month equivalent ($119.88/year) and Max is $19.99/month equivalent ($239.88/year)."
-          : "Pro is $14.99/month and Max is $29.99/month."} Crypto payment is currently available. Monthly and annual purchases are prepaid and do not renew automatically.
+          : "Pro is $14.99/month and Max is $29.99/month."} Performance is separate: $0–$99/month, paid only from eligible LabNarrative trading profits. Fixed Pro/Max purchases are prepaid; Performance settlements can be paid through PayPal or crypto via NOWPayments.
       </p>
     </>
   );
