@@ -154,14 +154,19 @@ Deno.serve(async(req:Request)=>{
     const canaryQ=await db.rpc("performance_canary_allowed_internal",{p_user_id:uid});
     if(canaryQ.error)throw canaryQ.error;
     const canary=canaryQ.data===true;
-    const minimum=n(state?.config?.minimumSpotBalanceUsd,2500);
+    const canarySettingsQ=await db.rpc("performance_canary_settings_internal",{p_user_id:uid});
+    if(canarySettingsQ.error)throw canarySettingsQ.error;
+    const canarySettings=(canarySettingsQ.data||{}) as any;
+    const configuredMinimum=n(state?.config?.minimumSpotBalanceUsd,2500);
+    const canaryMinimum=n(canarySettings?.minimumSpotBalanceOverrideUsd,0);
+    const minimum=canary&&canaryMinimum>0?canaryMinimum:configuredMinimum;
     const cap=n(state?.config?.monthlyChargeCapUsd,99);
 
-    if(action==="status")return json({ok:true,canary,...state});
+    if(action==="status")return json({ok:true,canary,effectiveMinimumSpotBalanceUsd:minimum,configuredMinimumSpotBalanceUsd:configuredMinimum,...state});
 
     if(action==="preview_eligibility"){
       const check=await eligibility(db,base,publishable,auth,uid,minimum);
-      return json({ok:true,config:{minimumSpotBalanceUsd:minimum,monthlyChargeCapUsd:cap},eligibility:check});
+      return json({ok:true,canary,config:{minimumSpotBalanceUsd:minimum,configuredMinimumSpotBalanceUsd:configuredMinimum,monthlyChargeCapUsd:cap},eligibility:check});
     }
 
     if(action==="estimate"){
