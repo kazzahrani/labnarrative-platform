@@ -148,7 +148,7 @@ export default function PerformancePlanPanel() {
 
     const performanceSub = s.subscription?.plan_key === "performance";
     const periodOpen = s.period?.status === "open" || a.period?.status === "open";
-    if (performanceSub && periodOpen) {
+    if ((performanceSub || Boolean(a.canary || s.canary)) && periodOpen) {
       try { setEstimate(await invoke("performance-accounting", { action: "estimate" }) as Estimate); }
       catch { setEstimate(null); }
     } else {
@@ -309,7 +309,7 @@ export default function PerformancePlanPanel() {
       </div>
     </div>
 
-    {!performanceContext && <div className={styles.join}>}
+    {!performanceContext && <div className={styles.join}>
       <div>
         <small>ELIGIBILITY CHECK</small>
         <strong>{eligibility ? `${balanceText} connected Spot balance` : `Minimum ${compactMoney(minimum)} combined Spot balance`}</strong>
@@ -321,7 +321,7 @@ export default function PerformancePlanPanel() {
       </div>
     </div>}
 
-    {performanceContext && <div className={styles.metrics}>}
+    {performanceContext && <div className={styles.metrics}>
       <div><span>Monthly LN P&L</span><strong className={livePnl >= 0 ? styles.good : styles.bad}>{money(livePnl)}</strong><small>Realized + unrealized, net across eligible LN activity</small></div>
       <div><span>Current Performance fee</span><strong>{money(liveFee)} <i>/ $99</i></strong><small>{livePnl > 0 ? "Based on current eligible monthly P&L" : "Nothing due while net eligible P&L is ≤ $0"}</small></div>
       <div><span>Period</span><strong className={styles.period}>{date(period?.periodStart)} → {date(period?.periodEnd)}</strong><small>Subscription-anniversary cycle</small></div>
@@ -342,7 +342,7 @@ export default function PerformancePlanPanel() {
 
     {(paidWaitingResume || pausedForEligibility) && !due && <div className={styles.resume}>
       <div><small>READY FOR NEXT MONTH</small><strong>Previous Performance month is settled.</strong><span>We will recheck the combined connected Spot balance before starting the next monthly period.</span></div>
-      <button onClick={() => void resume()} disabled={Boolean(busy)}>{busy === "resume" ? "Checking…" : "Check $2,500 & resume"}</button>
+      <button onClick={() => void resume()} disabled={Boolean(busy)}>{busy === "resume" ? "Checking…" : `Check ${compactMoney(minimum)} & resume`}</button>
     </div>}
 
     {notice && <div className={styles.notice}>{notice}</div>}
