@@ -23,10 +23,10 @@
 .performanceCard .planCopy{min-height:auto}
 .performanceCard .planCta{margin-top:22px}
 .performanceCard .planLimits{margin-top:20px}
-:global(.featured) .planLimits{border-top-color:#3a3a38;border-bottom-color:#3a3a38}
-:global(.featured) .planLimits>div:before{color:#6cb38c}
-:global(.featured) .planLimits strong{color:#f2f2ef}
-:global(.featured) .planLimits span{color:#a8a8a3}
+.darkLimits{border-top-color:#3a3a38;border-bottom-color:#3a3a38}
+.darkLimits>div:before{color:#6cb38c}
+.darkLimits strong{color:#f2f2ef}
+.darkLimits span{color:#a8a8a3}
 @media(max-width:640px){
   .planLimits>div{grid-template-columns:14px 88px minmax(0,1fr)}
 }
