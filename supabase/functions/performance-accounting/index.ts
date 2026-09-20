@@ -79,34 +79,38 @@ async function eligibility(db:any,base:string,publishable:string,auth:string,use
     .eq("account_type","spot");
   if(q.error)throw q.error;
   const connections=(q.data||[]) as Connection[];
-  let totalUsd=0;
-  const providers:any[]=[];
-  const errors:any[]=[];
-  const unpriced:any[]=[];
-  for(const connection of connections){
+
+  const checks=await Promise.all(connections.map(async(connection)=>{
     try{
       const snapshot=await accountSnapshot(base,publishable,auth,connection.id);
       const balances=Array.isArray(snapshot?.balances)?snapshot.balances as Balance[]:[];
-      let providerTotal=0;
-      const valued:ValuedAsset[]=[];
-      for(const row of balances){
+      const valued=await Promise.all(balances.map(async(row)=>{
         const asset=String(row.asset||"").toUpperCase(),total=n(row.total);
-        if(!asset||!(total>0))continue;
+        if(!asset||!(total>0))return null;
         try{
           const price=await assetPrice(connection.provider,asset),value=total*price;
-          providerTotal+=value;
-          valued.push({...row,asset,total,usdPrice:price,usdValue:value});
+          return {ok:true,row:{...row,asset,total,usdPrice:price,usdValue:value} as ValuedAsset};
         }catch{
-          valued.push({...row,asset,total,usdPrice:null,usdValue:null});
-          unpriced.push({connectionId:connection.id,provider:connection.provider,asset,total});
+          return {ok:false,row:{...row,asset,total,usdPrice:null,usdValue:null} as ValuedAsset};
         }
-      }
-      totalUsd+=providerTotal;
-      providers.push({connectionId:connection.id,provider:connection.provider,label:connection.label||null,totalUsd:providerTotal,balances:valued});
+      }));
+      const rows=valued.filter(Boolean) as Array<{ok:boolean;row:ValuedAsset}>;
+      const providerTotal=rows.reduce((sum,item)=>sum+n(item.row.usdValue),0);
+      return {
+        ok:true,
+        provider:{connectionId:connection.id,provider:connection.provider,label:connection.label||null,totalUsd:providerTotal,balances:rows.map(item=>item.row)},
+        unpriced:rows.filter(item=>!item.ok).map(item=>({connectionId:connection.id,provider:connection.provider,asset:item.row.asset,total:item.row.total})),
+      };
     }catch(error){
-      errors.push({connectionId:connection.id,provider:connection.provider,error:clean(error)});
+      return {ok:false,error:{connectionId:connection.id,provider:connection.provider,error:clean(error)},unpriced:[]};
     }
-  }
+  }));
+
+  const providers=checks.filter((x:any)=>x.ok).map((x:any)=>x.provider);
+  const errors=checks.filter((x:any)=>!x.ok).map((x:any)=>x.error);
+  const unpriced=checks.flatMap((x:any)=>x.unpriced||[]);
+  const totalUsd=providers.reduce((sum:number,row:any)=>sum+n(row.totalUsd),0);
+
   return {
     totalUsd,
     eligible:totalUsd+1e-8>=minimum,
@@ -161,8 +165,11 @@ Deno.serve(async(req:Request)=>{
     const canaryMinimum=n(canarySettings?.minimumSpotBalanceOverrideUsd,0);
     const minimum=canary&&canaryMinimum>0?canaryMinimum:configuredMinimum;
     const cap=n(state?.config?.monthlyChargeCapUsd,99);
+    const performancePlanQ=await db.from("billing_plans").select("is_active").eq("plan_key","performance").maybeSingle();
+    if(performancePlanQ.error)throw performancePlanQ.error;
+    const publicPlanActive=performancePlanQ.data?.is_active===true;
 
-    if(action==="status")return json({ok:true,canary,effectiveMinimumSpotBalanceUsd:minimum,configuredMinimumSpotBalanceUsd:configuredMinimum,...state});
+    if(action==="status")return json({ok:true,canary,publicPlanActive,effectiveMinimumSpotBalanceUsd:minimum,configuredMinimumSpotBalanceUsd:configuredMinimum,...state});
 
     if(action==="preview_eligibility"){
       const check=await eligibility(db,base,publishable,auth,uid,minimum);
