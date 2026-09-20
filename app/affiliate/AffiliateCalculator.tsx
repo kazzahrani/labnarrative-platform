@@ -3,51 +3,82 @@
 import { useMemo, useState } from "react";
 import styles from "./affiliate.module.css";
 
-type PlatformKey = "youtube"|"tiktok"|"instagram"|"x"|"facebook"|"snapchat"|"telegram"|"discord"|"reddit"|"website";
-type PlatformPreset={label:string;metric:string;shortMetric:string;starterReach:number;sliderMin:number;sliderMax:number;sliderStep:number;clickRate:number;freeRate:number;paidRate:number;note:string};
+const COMMISSION_RATE = 0.4;
+const PRO_MONTHLY = 14.99;
+const MAX_MONTHLY = 39.99;
+const ILLUSTRATIVE_PRO_SHARE = 0.75;
+const ILLUSTRATIVE_MAX_SHARE = 0.25;
+const AVG_MONTHLY_PAYMENT =
+  PRO_MONTHLY * ILLUSTRATIVE_PRO_SHARE + MAX_MONTHLY * ILLUSTRATIVE_MAX_SHARE;
 
-const PLATFORMS:Record<PlatformKey,PlatformPreset>={
- youtube:{label:"YouTube",metric:"monthly video views",shortMetric:"views",starterReach:5_000,sliderMin:500,sliderMax:50_000,sliderStep:500,clickRate:.02,freeRate:.28,paidRate:.08,note:"Starter example: a small, relevant trading channel where viewers can click from the description or pinned comment."},
- tiktok:{label:"TikTok",metric:"monthly video views",shortMetric:"views",starterReach:20_000,sliderMin:1_000,sliderMax:150_000,sliderStep:1_000,clickRate:.005,freeRate:.24,paidRate:.06,note:"Starter example: higher view volume but a lower outbound-click assumption because viewers usually need an extra step to reach a link."},
- instagram:{label:"Instagram",metric:"monthly Reels / Story views",shortMetric:"views",starterReach:8_000,sliderMin:500,sliderMax:75_000,sliderStep:500,clickRate:.008,freeRate:.25,paidRate:.06,note:"Starter example: a small trading creator using Stories, profile links, and Reels to move interested followers into a free tool."},
- x:{label:"X",metric:"monthly impressions",shortMetric:"impressions",starterReach:15_000,sliderMin:1_000,sliderMax:100_000,sliderStep:1_000,clickRate:.008,freeRate:.24,paidRate:.06,note:"Starter example: a small account with regular posts, where impressions are easier to earn than outbound link clicks."},
- facebook:{label:"Facebook",metric:"monthly post / Reel views",shortMetric:"views",starterReach:7_000,sliderMin:500,sliderMax:75_000,sliderStep:500,clickRate:.007,freeRate:.23,paidRate:.06,note:"Starter example: a small page or group sharing trading content, with modest outbound clicking from posts and Reels."},
- snapchat:{label:"Snapchat",metric:"monthly Story / Spotlight views",shortMetric:"views",starterReach:10_000,sliderMin:1_000,sliderMax:100_000,sliderStep:1_000,clickRate:.004,freeRate:.22,paidRate:.05,note:"Starter affiliate example: strong view volume but a deliberately cautious outbound-click assumption. Snapchat referrals can earn cash commission even though Snapchat does not currently have a creator-content package reward."},
- telegram:{label:"Telegram",metric:"monthly post views",shortMetric:"post views",starterReach:2_500,sliderMin:250,sliderMax:20_000,sliderStep:250,clickRate:.04,freeRate:.32,paidRate:.09,note:"Starter example: a compact trading community where links are visible directly inside posts and the audience is already topic-focused."},
- discord:{label:"Discord",metric:"monthly announcement / resource views",shortMetric:"views",starterReach:1_000,sliderMin:100,sliderMax:10_000,sliderStep:100,clickRate:.05,freeRate:.34,paidRate:.09,note:"Starter example: a small trading server where a resource or bot link is shared with an already engaged community."},
- reddit:{label:"Reddit",metric:"monthly post / comment views",shortMetric:"views",starterReach:8_000,sliderMin:500,sliderMax:50_000,sliderStep:500,clickRate:.01,freeRate:.25,paidRate:.07,note:"Starter example: useful posts and comments in relevant trading communities, with conservative outbound clicking."},
- website:{label:"Website / Blog",metric:"monthly visitors",shortMetric:"visitors",starterReach:1_500,sliderMin:100,sliderMax:20_000,sliderStep:100,clickRate:.05,freeRate:.30,paidRate:.09,note:"Starter example: a small niche site whose visitors are already reading trading or automation content."},
-};
-const SOCIAL_PLATFORMS:PlatformKey[]=["youtube","tiktok","instagram","x","facebook","snapchat"];
-const COMMUNITY_PLATFORMS:PlatformKey[]=["telegram","discord","reddit","website"];
-const COMMISSION_RATE=.4;
-const PRO_MONTHLY_COMMISSION=14.99*COMMISSION_RATE,MAX_MONTHLY_COMMISSION=39.99*COMMISSION_RATE,PRO_ANNUAL_COMMISSION=119.88*COMMISSION_RATE,MAX_ANNUAL_COMMISSION=239.88*COMMISSION_RATE;
-const PERFORMANCE_MAX_COMMISSION=78*COMMISSION_RATE;
-const AVG_MONTHLY_FIRST_PAYMENT=PRO_MONTHLY_COMMISSION*.75+MAX_MONTHLY_COMMISSION*.25;
-const AVG_ANNUAL_FIRST_PAYMENT=PRO_ANNUAL_COMMISSION*.75+MAX_ANNUAL_COMMISSION*.25;
-const AVG_FIRST_PAYMENT_COMMISSION=AVG_MONTHLY_FIRST_PAYMENT*.75+AVG_ANNUAL_FIRST_PAYMENT*.25;
-const money=(value:number,digits=0)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:digits,maximumFractionDigits:2}).format(value);
-const compact=(value:number)=>new Intl.NumberFormat("en-US",{notation:"compact",maximumFractionDigits:1}).format(value);
-const pct=(value:number)=>`${(value*100).toFixed(value<.01?1:0)}%`;
-const expected=(value:number)=>value>=100?Math.round(value).toLocaleString("en-US"):value>=10?value.toFixed(1):value.toFixed(2);
+const money = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
 
-export default function AffiliateCalculator(){
- const[platform,setPlatform]=useState<PlatformKey>("youtube"),[reach,setReach]=useState(PLATFORMS.youtube.starterReach);const selected=PLATFORMS[platform];
- const funnel=useMemo(()=>{const clicks=reach*selected.clickRate,freeUsers=clicks*selected.freeRate,paidUsers=freeUsers*selected.paidRate,commission=paidUsers*AVG_FIRST_PAYMENT_COMMISSION,rpm=reach>0?commission/reach*1000:0;return{clicks,freeUsers,paidUsers,commission,rpm}},[reach,selected]);
- const choosePlatform=(key:PlatformKey)=>{setPlatform(key);setReach(PLATFORMS[key].starterReach)};
- const platformButtons=(keys:PlatformKey[],label:string)=><div className={styles.platformGroup}><span className={styles.platformGroupLabel}>{label}</span><div className={styles.platformPicker} role="tablist" aria-label={label}>{keys.map(key=><button key={key} type="button" role="tab" aria-selected={platform===key} className={platform===key?styles.platformActive:""} onClick={()=>choosePlatform(key)}>{PLATFORMS[key].label}</button>)}</div></div>;
- return <section className={styles.calculatorSection} aria-labelledby="affiliate-calculator-title"><div className={styles.calculatorCopy}>
-  <p className={styles.label}>Creator + affiliate earnings estimator</p><h2 id="affiliate-calculator-title">What could a small audience become?</h2><p>Estimate the cash side of the program from referred fixed-plan payments. Performance payments also earn 40%, but vary by the customer&apos;s actual monthly settlement and are shown separately below.</p>
-  <div className={styles.rpmHero}><div className={styles.rpmHeroTop}><span>Estimated {selected.label} Affiliate RPM</span><em>Starter preset</em></div><strong>{money(funnel.rpm,2)} <small>/ 1,000 {selected.shortMetric}</small></strong><p>{selected.note}</p></div>
-  <div className={styles.earningHighlights}><div><span>Approved content package</span><strong>+1 month</strong><small>Max per completed qualifying package</small></div><div><span>Performance bonus</span><strong>Up to +12 mo</strong><small>Max at the highest verified milestone on eligible content</small></div><div><span>Cash commission</span><strong>{COMMISSION_RATE*100}%</strong><small>of qualifying Pro, Max and paid Performance settlements</small></div></div>
- </div><div className={styles.calculatorCard}>
-  <div className={styles.platformGroups}>{platformButtons(SOCIAL_PLATFORMS,"Social creators")}{platformButtons(COMMUNITY_PLATFORMS,"Communities & content")}</div>
-  <div className={styles.audienceInputBlock}><div><span>{selected.label} · starter creator</span><label htmlFor="affiliate-audience">Your {selected.metric}</label></div><div className={styles.audienceNumberWrap}><input id="affiliate-audience" className={styles.audienceNumber} type="number" min={selected.sliderMin} max="10000000" step={selected.sliderStep} value={reach} onChange={event=>setReach(Math.max(selected.sliderMin,Math.min(10_000_000,Number(event.target.value)||selected.sliderMin)))}/><small>{selected.shortMetric}</small></div></div>
-  <input className={styles.affiliateSlider} type="range" min={selected.sliderMin} max={selected.sliderMax} step={selected.sliderStep} value={Math.min(Math.max(reach,selected.sliderMin),selected.sliderMax)} onChange={event=>setReach(Number(event.target.value))} aria-label={`Estimated ${selected.metric}`}/><div className={styles.sliderTicks} aria-hidden="true"><span>{compact(selected.sliderMin)}</span><span>{compact(selected.starterReach)}</span><span>{compact(selected.sliderMax/2)}</span><span>{compact(selected.sliderMax)}+</span></div>
-  <div className={styles.rpmResult}><span>Estimated cash commission from one month of audience activity</span><strong>≈ {money(funnel.commission)}</strong><small>at {compact(reach)} {selected.shortMetric} · creator Max rewards and referral Max milestones are additional</small></div>
-  <div className={styles.funnelNumbers}><div><span>Audience</span><strong>{compact(reach)}</strong><small>{selected.shortMetric}</small></div><b>→</b><div><span>Link visits</span><strong>≈ {expected(funnel.clicks)}</strong><small>{pct(selected.clickRate)} click rate</small></div><b>→</b><div><span>Try free</span><strong>≈ {expected(funnel.freeUsers)}</strong><small>{pct(selected.freeRate)} of visits</small></div><b>→</b><div><span>New paid</span><strong>≈ {expected(funnel.paidUsers)}</strong><small>{pct(selected.paidRate)} of free users</small></div></div>
-  <div className={styles.resultGrid}><div><span>Estimated affiliate RPM</span><strong>{money(funnel.rpm,2)}</strong><small>fixed-plan model · cash per 1,000 {selected.shortMetric}</small></div><div><span>Fixed-plan first payment</span><strong>{money(AVG_FIRST_PAYMENT_COMMISSION,2)}</strong><small>modelled average per new Pro/Max customer</small></div><div><span>Performance settlement</span><strong>40% · up to {money(PERFORMANCE_MAX_COMMISSION,2)}</strong><small>$0 month = $0 commission; $78 paid = $31.20</small></div></div>
-  <details className={styles.assumptionBox}><summary>See the assumptions behind this {selected.label} estimate</summary><div><span><b>{pct(selected.clickRate)}</b> audience → LabNarrative visit</span><span><b>{pct(selected.freeRate)}</b> visit → free Paper Trading user</span><span><b>{pct(selected.paidRate)}</b> free user → paid user</span><span><b>75 / 25</b> illustrative Pro / Max mix</span><span><b>75 / 25</b> illustrative monthly / annual mix</span><span><b>Performance</b> pays 40% of the actual non-zero settlement and is not included in this fixed-plan RPM estimate</span></div></details>
-  <p className={styles.calculatorFootnote}>Illustrative starter-creator scenario only — not an industry benchmark, historical LabNarrative affiliate performance, or guaranteed payout. Real results can be lower or higher. The cash estimate excludes variable Performance settlements, plus the value of creator-content Max rewards and referral Max access. Performance commissions equal 40% of each paid settlement, up to $31.20 when the customer pays the $78 monthly cap.</p>
- </div></section>;
+export default function AffiliateCalculator() {
+  const [referrals, setReferrals] = useState(50);
+
+  const estimate = useMemo(
+    () => referrals * AVG_MONTHLY_PAYMENT * COMMISSION_RATE,
+    [referrals],
+  );
+
+  const monthlyPerReferral = AVG_MONTHLY_PAYMENT * COMMISSION_RATE;
+
+  return (
+    <aside className={styles.earningsCard} aria-label="Affiliate earnings estimator">
+      <div className={styles.earningsTop}>
+        <span>Illustrative monthly affiliate income</span>
+        <b>40% commission</b>
+      </div>
+
+      <div className={styles.earningsValue}>
+        <strong>{money(estimate)}</strong>
+        <span>/ month</span>
+      </div>
+
+      <div className={styles.sliderBlock}>
+        <div className={styles.sliderLabel}>
+          <span>Active referred customers</span>
+          <strong>{referrals}</strong>
+        </div>
+        <input
+          className={styles.referralSlider}
+          type="range"
+          min="10"
+          max="100"
+          step="5"
+          value={referrals}
+          onChange={(event) => setReferrals(Number(event.target.value))}
+          aria-label="Number of active referred customers"
+        />
+        <div className={styles.sliderTicks} aria-hidden="true">
+          <span>10</span><span>25</span><span>50</span><span>100</span>
+        </div>
+      </div>
+
+      <div className={styles.calculatorFacts}>
+        <div>
+          <span>Illustrative fixed-plan commission</span>
+          <strong>{money(monthlyPerReferral)}</strong>
+          <small>per active monthly referral</small>
+        </div>
+        <div>
+          <span>Performance settlement</span>
+          <strong>up to $31.20</strong>
+          <small>40% of the $78 monthly cap</small>
+        </div>
+      </div>
+
+      <p className={styles.calculatorNote}>
+        Illustration only, using a 75% Pro / 25% Max monthly-plan mix. Actual
+        earnings vary by plan, payment timing and Performance settlements. A
+        $0 Performance month earns $0 commission.
+      </p>
+    </aside>
+  );
 }
