@@ -10,6 +10,7 @@ let lastKrakenNonce=0n;
 function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json","cache-control":"no-store"}})}
 function envMap(name:string):Record<string,string>{try{return JSON.parse(Deno.env.get(name)||"{}") as Record<string,string>}catch{return{}}}
 function serviceKey(){return envMap("SUPABASE_SECRET_KEYS").default||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||""}
+function edgeSecret(...names:string[]){for(const name of names){const direct=Deno.env.get(name);if(direct)return direct;const mapped=envMap(name).default;if(mapped)return mapped}return""}
 function gatewayToken(){const v=Deno.env.get("GATEWAY_TOKEN");if(!v)throw new Error("gateway_token_missing");return v}
 function n(v:unknown,fallback=0){const x=Number(v);return Number.isFinite(x)?x:fallback}
 function clean(rows:Balance[]){return rows.filter(x=>x.total>0||x.available>0||x.locked>0).sort((a,b)=>b.total-a.total).slice(0,300)}
@@ -98,6 +99,52 @@ Deno.serve(async(req:Request)=>{
     if(expectedQ.error||!expectedQ.data)return json({ok:false,error:"worker_key_unavailable"},500);
     const supplied=req.headers.get("x-ln-worker-key")||"";
     if(!supplied||supplied!==String(expectedQ.data))return json({ok:false,error:"unauthorized"},401);
+    const body=await req.json().catch(()=>({})) as J;
+    const action=String(body?.action||"cycle");
+
+    if(action==="canary_status"||action==="canary_start"){
+      const userId=String(body?.userId||"").trim();
+      if(!userId)return json({ok:false,error:"user_id_required"},400);
+      const canaryQ=await db.rpc("performance_canary_allowed_internal",{p_user_id:userId});
+      if(canaryQ.error)throw canaryQ.error;
+      if(canaryQ.data!==true)return json({ok:false,error:"performance_canary_not_allowed"},403);
+
+      const stateQ=await db.rpc("performance_status_internal",{p_user_id:userId});
+      if(stateQ.error)throw stateQ.error;
+      const state=(stateQ.data||{}) as any;
+      const minimum=n(state?.config?.minimumSpotBalanceUsd,2500);
+      const check=await eligibility(db,userId,minimum);
+      const periodQ=await db.rpc("performance_settlement_status_internal",{p_user_id:userId});
+      if(periodQ.error)throw periodQ.error;
+      const providerState={
+        paypal:Boolean(edgeSecret("PAYPAL_CLIENT_ID")&&edgeSecret("PAYPAL_CLIENT_SECRET")),
+        nowpayments:Boolean(edgeSecret("NOWPAYMENTS_API_KEY","NOWPAYMENTS_KEY","NOWPAYMENTS_KEYS")),
+      };
+
+      if(action==="canary_status"){
+        return json({ok:true,canary:true,enabled:state?.config?.enabled===true,providers:providerState,eligibility:check,...(periodQ.data||{})});
+      }
+
+      if(state?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
+      if(!check.eligible)return json({ok:false,error:check.incomplete?"performance_eligibility_incomplete":"performance_minimum_balance_required",eligibility:check},409);
+      const existing=(periodQ.data||{}) as any;
+      if(existing?.period?.status==="open")return json({ok:true,canary:true,alreadyActive:true,period:existing.period,eligibility:check,providers:providerState});
+
+      const activeQ=await db.from("trading_trades").select("id,exchange_provider,pair,last_price").eq("user_id",userId).eq("execution_mode","live").eq("status","active");
+      if(activeQ.error)throw activeQ.error;
+      const active=(activeQ.data||[]).map((t:any)=>({tradeId:t.id,provider:t.exchange_provider,pair:t.pair,lastPrice:t.last_price}));
+      const marks=await marksForTrades(active);
+      const start=new Date().toISOString(),end=addMonth(start);
+      const openedQ=await db.rpc("performance_start_period_api_internal",{
+        p_user_id:userId,p_period_start:start,p_period_end:end,
+        p_spot_balance_usd:check.totalUsd,
+        p_eligibility_snapshot:{providers:check.providers,checkedAt:check.checkedAt,canary:true},
+        p_marks:marks,
+      });
+      if(openedQ.error)throw openedQ.error;
+      return json({ok:true,canary:true,started:true,period:openedQ.data,eligibility:check,providers:providerState,activeTradeMarks:marks.length});
+    }
+
     const enabledQ=await db.rpc("performance_enabled_internal");
     if(enabledQ.error)throw enabledQ.error;
     if(enabledQ.data!==true)return json({ok:true,enabled:false,processed:0});
