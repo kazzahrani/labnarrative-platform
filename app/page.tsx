@@ -94,9 +94,9 @@ export default function HomePage() {
     </header>
 
     <section className={styles.hero}>
-      <h1><span>Powerful crypto automation.</span><em>Without the expensive subscription.</em></h1>
-      <p className={styles.lead}>LabNarrative is a crypto trading automation platform for Spot DCA bots, TradingView automation, Paper Trading and Live execution.</p>
-      <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a></div>
+      <h1><span>Powerful crypto automation.</span><em>Pay only when you profit.</em></h1>
+      <p className={styles.lead}>Build, test and run Spot automation with fixed-price plans or Max Performance billing. No profitable month? You pay $0.</p>
+      <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a><a className={styles.secondary} href="/pricing">See Performance pricing →</a></div>
 
       <div className={styles.heroFrame}>
         <div className={styles.window}>
