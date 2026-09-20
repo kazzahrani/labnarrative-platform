@@ -180,7 +180,12 @@ Deno.serve(async(req:Request)=>{
         if(prepared?.noCharge===true){
           const configQ=await db.rpc("performance_status_internal",{p_user_id:period.userId});
           if(configQ.error)throw configQ.error;
-          const minimum=n((configQ.data as any)?.config?.minimumSpotBalanceUsd,2500);
+          const configuredMinimum=n((configQ.data as any)?.config?.minimumSpotBalanceUsd,2500);
+          const canarySettingsQ=await db.rpc("performance_canary_settings_internal",{p_user_id:period.userId});
+          if(canarySettingsQ.error)throw canarySettingsQ.error;
+          const canarySettings=(canarySettingsQ.data||{}) as any;
+          const canaryOverride=n(canarySettings?.minimumSpotBalanceOverrideUsd,0);
+          const minimum=canarySettings?.enabled===true&&canaryOverride>0?canaryOverride:configuredMinimum;
           const check=await eligibility(db,String(period.userId),minimum);
           if(check.eligible){
             const activeQ=await db.from("trading_trades").select("id,exchange_provider,pair,last_price").eq("user_id",period.userId).eq("execution_mode","live").eq("status","active");
