@@ -51,8 +51,8 @@ export default function PricingPage() {
 
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
-        <h2>Start with full Pro access for 7 days. Then choose how you want to pay.</h2>
-        <p>No payment is required to start. After the trial, stay on Free for exchange connections and the full Paper account, choose Pro or Max for automation and Manual trades, or use Max Performance and pay only in profitable months.</p>
+        <h2>Start with full Max access for 7 days. Then choose how you want to pay.</h2>
+        <p>No payment is required to start. The first 7 days include full Max limits: 100 Strategy bots, 100 active Single-pair DCA bots, 10 active Multi-pair DCA bots and Unlimited Manual trades. After the trial, stay on Free or choose Pro, Max or Max Performance.</p>
         <a className={styles.primary} href={APP_URL}>Start free →</a>
       </section>
 
