@@ -1,0 +1,199 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+type Json = Record<string, unknown>;
+type Connection = { id:string; provider:string; label?:string|null; status:string; is_testnet:boolean; account_type:string };
+type Balance = { asset:string; available?:number; locked?:number; total?:number };
+type ValuedAsset = Balance & { usdPrice:number|null; usdValue:number|null };
+
+function json(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:{...cors,"content-type":"application/json","cache-control":"no-store"}})}
+function envKey(name:string){const raw=Deno.env.get(name);if(!raw)throw new Error(`missing_${name.toLowerCase()}`);try{const parsed=JSON.parse(raw);if(parsed?.default)return String(parsed.default)}catch{}return raw}
+function n(v:unknown,fallback=0){const x=Number(v);return Number.isFinite(x)?x:fallback}
+function clean(error:unknown){return error instanceof Error?error.message:String(error||"unknown_error")}
+async function read(res:Response){const text=await res.text();try{return text?JSON.parse(text):{}}catch{return{message:text.slice(0,500)}}}
+function compact(pair:string){return pair.replace("/","")}
+function dashed(pair:string){return pair.replace("/","-")}
+
+async function pairPrice(provider:string,pair:string){
+  if(provider==="binance"){
+    const r=await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(compact(pair))}`,{signal:AbortSignal.timeout(7000)}),b=await read(r),p=n(b?.price);
+    if(r.ok&&p>0)return p;
+  }
+  if(provider==="bybit"){
+    const r=await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${encodeURIComponent(compact(pair))}`,{signal:AbortSignal.timeout(7000)}),b=await read(r),p=n(b?.result?.list?.[0]?.lastPrice);
+    if(r.ok&&b?.retCode===0&&p>0)return p;
+  }
+  if(provider==="okx"){
+    const r=await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${encodeURIComponent(dashed(pair))}`,{signal:AbortSignal.timeout(7000)}),b=await read(r),p=n(b?.data?.[0]?.last);
+    if(r.ok&&b?.code==="0"&&p>0)return p;
+  }
+  if(provider==="kucoin"){
+    const r=await fetch(`https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${encodeURIComponent(dashed(pair))}`,{signal:AbortSignal.timeout(7000)}),b=await read(r),p=n(b?.data?.price);
+    if(r.ok&&b?.code==="200000"&&p>0)return p;
+  }
+  if(provider==="kraken"){
+    const [base,quote]=pair.split("/"),kb=base==="BTC"?"XBT":base;
+    const r=await fetch(`https://api.kraken.com/0/public/Ticker?pair=${encodeURIComponent(`${kb}${quote}`)}`,{signal:AbortSignal.timeout(7000)}),b=await read(r);
+    const first=b?.result&&typeof b.result==="object"?Object.values(b.result)[0] as any:null,p=n(first?.c?.[0]);
+    if(r.ok&&(!Array.isArray(b?.error)||b.error.length===0)&&p>0)return p;
+  }
+  if(provider!=="binance"){
+    try{
+      const r=await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(compact(pair))}`,{signal:AbortSignal.timeout(5000)}),b=await read(r),p=n(b?.price);
+      if(r.ok&&p>0)return p;
+    }catch{}
+  }
+  throw new Error(`price_unavailable:${provider}:${pair}`);
+}
+
+async function assetPrice(provider:string,asset:string){
+  const upper=asset.toUpperCase();
+  if(upper==="USDT"||upper==="USD"||upper==="USDC")return 1;
+  return pairPrice(provider,`${upper}/USDT`);
+}
+
+async function accountSnapshot(base:string,publishable:string,auth:string,connectionId:string){
+  const r=await fetch(`${base}/functions/v1/exchange-account-read`,{
+    method:"POST",
+    headers:{apikey:publishable,Authorization:auth,"content-type":"application/json"},
+    body:JSON.stringify({connectionId}),
+    signal:AbortSignal.timeout(30000),
+  });
+  const b=await read(r);
+  if(!r.ok||b?.ok!==true)throw new Error(String(b?.message||b?.error||"account_read_failed"));
+  return b?.snapshot||{};
+}
+
+async function eligibility(db:any,base:string,publishable:string,auth:string,userId:string,minimum:number){
+  const q=await db.from("exchange_connections")
+    .select("id,provider,label,status,is_testnet,account_type")
+    .eq("user_id",userId)
+    .eq("status","connected")
+    .eq("is_testnet",false)
+    .eq("account_type","spot");
+  if(q.error)throw q.error;
+  const connections=(q.data||[]) as Connection[];
+  let totalUsd=0;
+  const providers:any[]=[];
+  const errors:any[]=[];
+  const unpriced:any[]=[];
+  for(const connection of connections){
+    try{
+      const snapshot=await accountSnapshot(base,publishable,auth,connection.id);
+      const balances=Array.isArray(snapshot?.balances)?snapshot.balances as Balance[]:[];
+      let providerTotal=0;
+      const valued:ValuedAsset[]=[];
+      for(const row of balances){
+        const asset=String(row.asset||"").toUpperCase(),total=n(row.total);
+        if(!asset||!(total>0))continue;
+        try{
+          const price=await assetPrice(connection.provider,asset),value=total*price;
+          providerTotal+=value;
+          valued.push({...row,asset,total,usdPrice:price,usdValue:value});
+        }catch{
+          valued.push({...row,asset,total,usdPrice:null,usdValue:null});
+          unpriced.push({connectionId:connection.id,provider:connection.provider,asset,total});
+        }
+      }
+      totalUsd+=providerTotal;
+      providers.push({connectionId:connection.id,provider:connection.provider,label:connection.label||null,totalUsd:providerTotal,balances:valued});
+    }catch(error){
+      errors.push({connectionId:connection.id,provider:connection.provider,error:clean(error)});
+    }
+  }
+  return {
+    totalUsd,
+    eligible:totalUsd+1e-8>=minimum,
+    minimumSpotBalanceUsd:minimum,
+    connectedSpotExchanges:connections.length,
+    providers,
+    errors,
+    unpriced,
+    incomplete:errors.length>0||unpriced.length>0,
+    checkedAt:new Date().toISOString(),
+  };
+}
+
+async function liveMarks(db:any,userId:string){
+  const q=await db.from("trading_trades")
+    .select("id,exchange_provider,pair,last_price,status,execution_mode")
+    .eq("user_id",userId)
+    .eq("execution_mode","live")
+    .eq("status","active");
+  if(q.error)throw q.error;
+  const marks:any[]=[];
+  for(const trade of q.data||[]){
+    let price=0,source="live_quote";
+    try{price=await pairPrice(String(trade.exchange_provider||""),String(trade.pair||""))}
+    catch{price=n(trade.last_price);source="last_verifiable"}
+    if(!(price>0))throw new Error(`trade_mark_unavailable:${trade.id}`);
+    marks.push({tradeId:String(trade.id),markPrice:price,source});
+  }
+  return marks;
+}
+
+Deno.serve(async(req:Request)=>{
+  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
+  if(req.method!=="POST")return json({ok:false,error:"method_not_allowed"},405);
+  try{
+    const base=Deno.env.get("SUPABASE_URL")||"",publishable=envKey("SUPABASE_PUBLISHABLE_KEYS"),secret=envKey("SUPABASE_SECRET_KEYS"),auth=req.headers.get("Authorization")||"";
+    if(!base||!auth.startsWith("Bearer "))return json({ok:false,error:"unauthorized"},401);
+    const authRes=await fetch(`${base}/auth/v1/user`,{headers:{apikey:publishable,Authorization:auth}}),user=await read(authRes);
+    if(!authRes.ok||!user?.id)return json({ok:false,error:"unauthorized"},401);
+    const uid=String(user.id),db=createClient(base,secret,{auth:{persistSession:false,autoRefreshToken:false}}),body=await req.json().catch(()=>({})),action=String(body?.action||"status");
+
+    const statusQ=await db.rpc("performance_status_internal",{p_user_id:uid});
+    if(statusQ.error)throw statusQ.error;
+    const state=(statusQ.data||{}) as any;
+    const minimum=n(state?.config?.minimumSpotBalanceUsd,2500);
+    const cap=n(state?.config?.monthlyChargeCapUsd,99);
+
+    if(action==="status")return json({ok:true,...state});
+
+    if(action==="preview_eligibility"){
+      const check=await eligibility(db,base,publishable,auth,uid,minimum);
+      return json({ok:true,config:{minimumSpotBalanceUsd:minimum,monthlyChargeCapUsd:cap},eligibility:check});
+    }
+
+    if(action==="start_period"){
+      if(state?.config?.enabled!==true)return json({ok:false,error:"performance_not_enabled"},409);
+      const subQ=await db.from("user_subscriptions")
+        .select("user_id,plan_key,status,billing_interval,current_period_start,current_period_end")
+        .eq("user_id",uid)
+        .eq("plan_key","performance")
+        .in("status",["active","trialing"])
+        .maybeSingle();
+      if(subQ.error)throw subQ.error;
+      const sub=subQ.data;
+      if(!sub)return json({ok:false,error:"performance_subscription_required"},409);
+      if(sub.billing_interval!=="month")return json({ok:false,error:"performance_monthly_cycle_required"},409);
+      const start=String(sub.current_period_start||""),end=String(sub.current_period_end||"");
+      if(!start||!end||!Number.isFinite(Date.parse(start))||!Number.isFinite(Date.parse(end))||Date.parse(end)<=Date.parse(start))return json({ok:false,error:"performance_subscription_period_invalid"},409);
+
+      const check=await eligibility(db,base,publishable,auth,uid,minimum);
+      if(!check.eligible)return json({ok:false,error:check.incomplete?"performance_eligibility_incomplete":"performance_minimum_balance_required",eligibility:check},409);
+
+      const marks=await liveMarks(db,uid);
+      const periodQ=await db.rpc("performance_start_period_api_internal",{
+        p_user_id:uid,
+        p_period_start:start,
+        p_period_end:end,
+        p_spot_balance_usd:check.totalUsd,
+        p_eligibility_snapshot:{providers:check.providers.map((p:any)=>({connectionId:p.connectionId,provider:p.provider,totalUsd:p.totalUsd})),checkedAt:check.checkedAt},
+        p_marks:marks,
+      });
+      if(periodQ.error)throw periodQ.error;
+      return json({ok:true,period:periodQ.data,eligibility:check});
+    }
+
+    return json({ok:false,error:"unsupported_action"},400);
+  }catch(error){
+    console.error("performance-accounting",clean(error));
+    return json({ok:false,error:"performance_accounting_failed",message:clean(error)},500);
+  }
+});
