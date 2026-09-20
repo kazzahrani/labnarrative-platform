@@ -14,6 +14,9 @@ type Eligibility = {
 
 type AccountingStatus = {
   ok?: boolean;
+  canary?: boolean;
+  effectiveMinimumSpotBalanceUsd?: number;
+  configuredMinimumSpotBalanceUsd?: number;
   config?: {
     enabled?: boolean;
     minimumSpotBalanceUsd?: number;
@@ -43,6 +46,7 @@ type Estimate = {
 type SettlementStatus = {
   ok?: boolean;
   enabled?: boolean;
+  canary?: boolean;
   providers?: { paypal?: boolean; nowpayments?: boolean };
   paypalClientId?: string;
   subscription?: {
@@ -171,21 +175,24 @@ export default function PerformancePlanPanel() {
 
   useEffect(() => {
     const performanceSub = settlement?.subscription?.plan_key === "performance";
-    if (!performanceSub) return;
+    const canary = Boolean(accounting?.canary || settlement?.canary);
+    if (!performanceSub && !canary) return;
     const timer = window.setInterval(() => { void refresh(); }, settlement?.settlement?.status === "pending" ? 10000 : 30000);
     return () => window.clearInterval(timer);
-  }, [refresh, settlement?.subscription?.plan_key, settlement?.settlement?.status]);
+  }, [refresh, accounting?.canary, settlement?.canary, settlement?.subscription?.plan_key, settlement?.settlement?.status]);
 
   const enabled = Boolean(accounting?.config?.enabled && settlement?.enabled);
+  const canary = Boolean(accounting?.canary || settlement?.canary);
   const performanceSub = settlement?.subscription?.plan_key === "performance";
   const subscriptionStatus = settlement?.subscription?.status || "";
   const period = settlement?.period || accounting?.period || null;
+  const performanceContext = performanceSub || Boolean(canary && period);
   const due = settlement?.settlement && ["due", "pending"].includes(String(settlement.settlement.status));
   const pendingAttempt = settlement?.attempts?.find((attempt) => ["created", "pending"].includes(String(attempt.status)));
   const pendingProvider = pendingAttempt?.provider || "";
-  const paidWaitingResume = performanceSub && period?.status === "paid" && subscriptionStatus === "paused";
-  const pausedForEligibility = performanceSub && subscriptionStatus === "paused" && !due && period?.status === "paid";
-  const minimum = Number(accounting?.config?.minimumSpotBalanceUsd || 2500);
+  const paidWaitingResume = performanceContext && period?.status === "paid" && (canary || subscriptionStatus === "paused");
+  const pausedForEligibility = performanceContext && !due && period?.status === "paid" && (canary || subscriptionStatus === "paused");
+  const minimum = Number(accounting?.effectiveMinimumSpotBalanceUsd || accounting?.config?.minimumSpotBalanceUsd || 2500);
   const cap = Number(accounting?.config?.monthlyChargeCapUsd || 99);
 
   const enroll = async () => {
@@ -277,32 +284,32 @@ export default function PerformancePlanPanel() {
   const balanceText = eligibility ? compactMoney(eligibility.totalUsd) : "Check balance";
 
   const stateText = useMemo(() => {
-    if (!performanceSub) return enabled ? "Available" : "Preview only";
+    if (!performanceContext) return enabled ? (canary ? "Founder canary" : "Available") : "Preview only";
     if (due) return "Payment due";
     if (subscriptionStatus === "paused") return "Paused";
     if (period?.status === "open") return "Active";
     if (period?.status === "paid") return "Settled";
     return subscriptionStatus || "Performance";
-  }, [due, enabled, performanceSub, period?.status, subscriptionStatus]);
+  }, [due, enabled, canary, performanceContext, period?.status, subscriptionStatus]);
 
   if (!enabled && !preview) return null;
 
   return <section className={styles.wrap}>
     <div className={styles.hero}>
       <div>
-        <div className={styles.kicker}><span>PERFORMANCE</span><b>{stateText}</b></div>
+        <div className={styles.kicker}><span>PERFORMANCE</span><b>{stateText}</b>{canary && <b>Founder only</b>}</div>
         <h2>We get paid after your bots do.</h2>
         <p>The first eligible LabNarrative trading profits each month pay your subscription, up to <strong>$99</strong>. No eligible profit means <strong>$0</strong>.</p>
       </div>
       <div className={styles.ruleGrid}>
-        <div><span>Start-of-month eligibility</span><strong>≥ $2,500 Spot</strong></div>
+        <div><span>Start-of-month eligibility</span><strong>{canary ? `Canary ≥ ${compactMoney(minimum)}` : "≥ $2,500 Spot"}</strong></div>
         <div><span>Maximum monthly fee</span><strong>$99</strong></div>
         <div><span>Eligible trading</span><strong>Bots + LN Manual</strong></div>
         <div><span>Loss / no profit</span><strong>$0</strong></div>
       </div>
     </div>
 
-    {!performanceSub && <div className={styles.join}>
+    {!performanceContext && <div className={styles.join}>}
       <div>
         <small>ELIGIBILITY CHECK</small>
         <strong>{eligibility ? `${balanceText} connected Spot balance` : `Minimum ${compactMoney(minimum)} combined Spot balance`}</strong>
@@ -314,7 +321,7 @@ export default function PerformancePlanPanel() {
       </div>
     </div>}
 
-    {performanceSub && <div className={styles.metrics}>
+    {performanceContext && <div className={styles.metrics}>}
       <div><span>Monthly LN P&L</span><strong className={livePnl >= 0 ? styles.good : styles.bad}>{money(livePnl)}</strong><small>Realized + unrealized, net across eligible LN activity</small></div>
       <div><span>Current Performance fee</span><strong>{money(liveFee)} <i>/ $99</i></strong><small>{livePnl > 0 ? "Based on current eligible monthly P&L" : "Nothing due while net eligible P&L is ≤ $0"}</small></div>
       <div><span>Period</span><strong className={styles.period}>{date(period?.periodStart)} → {date(period?.periodEnd)}</strong><small>Subscription-anniversary cycle</small></div>
