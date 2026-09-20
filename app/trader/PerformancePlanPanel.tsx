@@ -17,6 +17,7 @@ type AccountingStatus = {
   canary?: boolean;
   effectiveMinimumSpotBalanceUsd?: number;
   configuredMinimumSpotBalanceUsd?: number;
+  publicPlanActive?: boolean;
   config?: {
     enabled?: boolean;
     minimumSpotBalanceUsd?: number;
@@ -292,7 +293,7 @@ export default function PerformancePlanPanel() {
     return subscriptionStatus || "Performance";
   }, [due, enabled, canary, performanceContext, period?.status, subscriptionStatus]);
 
-  if (!enabled && !preview) return null;
+  if ((!enabled || (!canary && !performanceSub && accounting?.publicPlanActive !== true)) && !preview) return null;
 
   return <section className={styles.wrap}>
     <div className={styles.hero}>
