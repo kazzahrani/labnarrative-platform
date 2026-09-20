@@ -40,19 +40,19 @@ export default function PricingPage() {
         <div className={styles.sectionIntro}>
           <p className={styles.label}>Fixed + Performance pricing</p>
           <h2>Connect freely. Pay for automation — or only when you profit.</h2>
-          <p>Every plan can connect all supported Live exchanges. Free keeps the manual and Paper workspace available; Pro and Max add automation capacity; Max Performance gives you Max capacity with profit-based monthly billing.</p>
+          <p>Every plan can connect and Live-enable all supported exchanges. The plan difference is automation capacity: Free has no bots or Manual trades, Pro adds 10 Strategy bots + 10 Single-pair DCA bots + 1 Multi-pair DCA bot, and Max adds 100 + 100 + 10.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>Free stays free</h3><p>Connect all supported Live exchanges, use the Paper Account and make unlimited manual trades. Free includes 0 active DCA bots and 0 Strategy bots after the trial.</p></article>
-          <article><span>02</span><h3>Pro or Max — fixed price</h3><p>Pro is $14.99/month or $119.88/year ($9.99/month equivalent) with 10 DCA bots + 10 Strategy bots. Max is $39.99/month or $239.88/year ($19.99/month equivalent) with 100 + 100.</p></article>
-          <article><span>03</span><h3>Max Performance — pay when you profit</h3><p>Get the same 100 DCA bots, 100 Strategy bots and all supported exchanges. A non-profitable month costs $0; the monthly charge is capped at $78. A verified $2,000 Spot balance is required to start.</p></article>
+          <article><span>01</span><h3>Free stays free</h3><p>Connect and Live-enable all supported exchanges and use the full Paper account. Free includes 0 Strategy bots, 0 active Single-pair DCA bots, 0 active Multi-pair DCA bots and 0 Manual trades after the trial.</p></article>
+          <article><span>02</span><h3>Pro or Max — fixed price</h3><p>Pro is $14.99/month or $119.88/year ($9.99/month equivalent) with 10 Strategy bots, 10 active Single-pair DCA bots and 1 active Multi-pair DCA bot. Max is $39.99/month or $239.88/year ($19.99/month equivalent) with 100, 100 and 10.</p></article>
+          <article><span>03</span><h3>Max Performance — pay when you profit</h3><p>Get the same Max capacity: 100 Strategy bots, 100 active Single-pair DCA bots, 10 active Multi-pair DCA bots and Unlimited Manual trades. A non-profitable month costs $0; the monthly charge is capped at $78. A verified $2,000 Spot balance is required to start.</p></article>
         </div>
       </section>
 
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
         <h2>Start with full Pro access for 7 days. Then choose how you want to pay.</h2>
-        <p>No payment is required to start. After the trial, stay on Free for exchange connections, Paper and manual trading, choose Pro or Max for fixed pricing, or use Max Performance and pay only in profitable months.</p>
+        <p>No payment is required to start. After the trial, stay on Free for exchange connections and the full Paper account, choose Pro or Max for automation and Manual trades, or use Max Performance and pay only in profitable months.</p>
         <a className={styles.primary} href={APP_URL}>Start free →</a>
       </section>
 
