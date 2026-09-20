@@ -83,3 +83,29 @@
   background:#f0f0ed!important;
   color:#202020!important;
 }
+
+
+/* Yearly savings indicators, matching the app pricing view. */
+.yearlyDiscountBadge{
+  display:inline-flex;
+  align-items:center;
+  margin-left:6px;
+  padding:2px 5px;
+  border:1px solid #cfcfca;
+  border-radius:999px;
+  background:#f1f1ee;
+  color:#777772;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.04em;
+  line-height:1;
+  vertical-align:1px;
+}
+.toggle button.active .yearlyDiscountBadge{
+  border-color:#6d6d6a;
+  background:#333;
+  color:#d5d5d2;
+}
+@media(max-width:640px){
+  .yearlyDiscountBadge{display:none}
+}
