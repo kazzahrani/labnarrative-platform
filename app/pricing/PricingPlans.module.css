@@ -257,3 +257,61 @@
 :global(.featured) .planPositioning{
   color:#aaa!important;
 }
+
+
+/* Fixed Monthly / Yearly plans use the same 4-row rhythm as Performance. */
+.fixedAlignedCard{
+  display:grid!important;
+  grid-template-rows:92px 112px 84px minmax(0,1fr)!important;
+  align-content:stretch!important;
+}
+.fixedTop{
+  grid-row:1;
+  min-height:0;
+}
+.fixedTop h2{
+  margin:0!important;
+}
+.fixedTop .planPositioning{
+  min-height:0!important;
+  margin:10px 0 0!important;
+}
+.fixedPriceBlock{
+  grid-row:2;
+  align-self:start;
+  margin-top:4px;
+}
+.fixedPriceBlock :global(.priceLine){
+  margin-top:0!important;
+}
+.fixedPriceBlock :global(.billing){
+  margin-top:11px!important;
+}
+.fixedCta{
+  grid-row:3;
+  align-self:start;
+  width:100%;
+  margin:0!important;
+  min-height:46px;
+}
+.fixedLimits{
+  grid-row:4;
+  align-self:start;
+  margin-top:0!important;
+}
+.fixedLimits>div{
+  min-height:38px;
+}
+@media(max-width:640px){
+  .fixedAlignedCard{
+    display:flex!important;
+  }
+  .fixedTop,
+  .fixedPriceBlock,
+  .fixedCta,
+  .fixedLimits{
+    grid-row:auto;
+  }
+  .fixedCta{margin-top:20px!important}
+  .fixedLimits{margin-top:20px!important}
+}
