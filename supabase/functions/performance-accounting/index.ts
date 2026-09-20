@@ -187,8 +187,9 @@ Deno.serve(async(req:Request)=>{
         net+=contribution;
         contributions.push({tradeId:row.tradeId,pair:row.pair,markPrice,markSource,contribution});
       }
-      const estimatedFee=Math.round(Math.min(Math.max(net,0),cap)*100)/100;
-      return json({ok:true,active:true,period:context.period,netPnl:net,estimatedFee,cap,trades:contributions,checkedAt:new Date().toISOString()});
+      const periodCap=n(context?.period?.monthlyChargeCapUsd,cap);
+      const estimatedFee=Math.round(Math.min(Math.max(net,0),periodCap)*100)/100;
+      return json({ok:true,active:true,period:context.period,netPnl:net,estimatedFee,cap:periodCap,trades:contributions,checkedAt:new Date().toISOString()});
     }
 
     if(action==="enroll"){
