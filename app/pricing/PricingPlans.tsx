@@ -153,7 +153,6 @@ export default function PricingPlans() {
               return (
                 <article className={`${styles.planCard} ${plan.featured ? styles.featured : ""}`} key={plan.name}>
                   {"badge" in plan && plan.badge && <span className={`${styles.popular} ${switchStyles.plainBadge}`}>{plan.badge}</span>}
-                  <p className={styles.planEyebrow}>{plan.eyebrow}</p>
                   <h2>{plan.name}</h2>
                   <div className={styles.priceLine}>
                     {yearly && !free ? <del>{"$" + plan.monthlyPrice}</del> : null}
