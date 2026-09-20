@@ -17,7 +17,7 @@ const fixedPlans = [
     monthlyPrice: 0,
     annualMonthlyPrice: 0,
     annualTotal: 0,
-    copy: "Connect and Live-enable all supported exchanges. Upgrade only when you need automation capacity.",
+    copy: "For traders learning the platform with Paper Trading.",
     features: [
       { value: "0", label: "Strategy bots" },
       { value: "0", label: "active Single-pair DCA bots" },
@@ -34,7 +34,7 @@ const fixedPlans = [
     monthlyPrice: 14.99,
     annualMonthlyPrice: 9.99,
     annualTotal: 119.88,
-    copy: "For individual traders running focused Spot automation.",
+    copy: "For active Spot traders running focused automation.",
     features: [
       { value: "10", label: "Strategy bots" },
       { value: "10", label: "active Single-pair DCA bots" },
@@ -52,7 +52,7 @@ const fixedPlans = [
     monthlyPrice: 39.99,
     annualMonthlyPrice: 19.99,
     annualTotal: 239.88,
-    copy: "Includes a 7-day free trial with full Max limits.",
+    copy: "For traders running larger, multi-strategy automation setups.",
     features: [
       { value: "100", label: "Strategy bots" },
       { value: "100", label: "active Single-pair DCA bots" },
@@ -154,13 +154,13 @@ export default function PricingPlans() {
                 <article className={`${styles.planCard} ${plan.featured ? styles.featured : ""}`} key={plan.name}>
                   {"badge" in plan && plan.badge && <span className={`${styles.popular} ${switchStyles.plainBadge}`}>{plan.badge}</span>}
                   <h2>{plan.name}</h2>
+                  <p className={`${styles.planCopy} ${switchStyles.planPositioning}`}>{plan.copy}</p>
                   <div className={styles.priceLine}>
                     {yearly && !free ? <del>{"$" + plan.monthlyPrice}</del> : null}
                     <strong>{"$" + price}</strong>
                     <span>/mo</span>
                   </div>
                   <p className={styles.billing}>{billing}</p>
-                  <p className={styles.planCopy}>{plan.copy}</p>
                   <a className={styles.planCta} href={free ? APP_URL : PRICING_URL}>{plan.cta}</a>
                   <div className={`${switchStyles.planLimits} ${plan.featured ? switchStyles.darkLimits : ""}`}>{plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}</div>
                 </article>
