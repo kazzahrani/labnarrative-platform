@@ -151,18 +151,22 @@ export default function PricingPlans() {
                   : "Prepaid monthly access";
 
               return (
-                <article className={`${styles.planCard} ${plan.featured ? styles.featured : ""}`} key={plan.name}>
+                <article className={`${styles.planCard} ${switchStyles.fixedAlignedCard} ${plan.featured ? styles.featured : ""}`} key={plan.name}>
                   {"badge" in plan && plan.badge && <span className={`${styles.popular} ${switchStyles.plainBadge}`}>{plan.badge}</span>}
-                  <h2>{plan.name}</h2>
-                  <p className={`${styles.planCopy} ${switchStyles.planPositioning}`}>{plan.copy}</p>
-                  <div className={styles.priceLine}>
-                    {yearly && !free ? <del>{"$" + plan.monthlyPrice}</del> : null}
-                    <strong>{"$" + price}</strong>
-                    <span>/mo</span>
+                  <div className={switchStyles.fixedTop}>
+                    <h2>{plan.name}</h2>
+                    <p className={`${styles.planCopy} ${switchStyles.planPositioning}`}>{plan.copy}</p>
                   </div>
-                  <p className={styles.billing}>{billing}</p>
-                  <a className={styles.planCta} href={free ? APP_URL : PRICING_URL}>{plan.cta}</a>
-                  <div className={`${switchStyles.planLimits} ${plan.featured ? switchStyles.darkLimits : ""}`}>{plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}</div>
+                  <div className={switchStyles.fixedPriceBlock}>
+                    <div className={styles.priceLine}>
+                      {yearly && !free ? <del>{"$" + plan.monthlyPrice}</del> : null}
+                      <strong>{"$" + price}</strong>
+                      <span>/mo</span>
+                    </div>
+                    <p className={styles.billing}>{billing}</p>
+                  </div>
+                  <a className={`${styles.planCta} ${switchStyles.fixedCta}`} href={free ? APP_URL : PRICING_URL}>{plan.cta}</a>
+                  <div className={`${switchStyles.planLimits} ${switchStyles.fixedLimits} ${plan.featured ? switchStyles.darkLimits : ""}`}>{plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}</div>
                 </article>
               );
             })}
