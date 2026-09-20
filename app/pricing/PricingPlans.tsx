@@ -13,41 +13,34 @@ type PricingView = "month" | "year" | "performance";
 const fixedPlans = [
   {
     name: "Free",
-    eyebrow: "Live connections, manual trading & Paper",
+    eyebrow: "Free forever",
     monthlyPrice: 0,
     annualMonthlyPrice: 0,
     annualTotal: 0,
-    copy: "Connect every supported exchange and use the manual/Paper workspace for free. Automation capacity starts on Pro.",
+    copy: "Connect and Live-enable all supported exchanges. Upgrade only when you need automation capacity.",
     features: [
-      "All supported Live exchange connections",
-      "0 active DCA bots",
       "0 Strategy bots",
-      "Paper Account",
-      "Unlimited manual trades",
-      "Positions + Signal Monitor",
-      "Analytics + strategy drilldown",
-      "Full position controls",
+      "0 active Single-pair DCA bots",
+      "0 active Multi-pair DCA bots",
+      "0 Manual trades",
+      "Full Paper account",
     ],
     cta: "Start free →",
     featured: false,
   },
   {
     name: "Pro",
-    eyebrow: "Focused Live automation",
+    eyebrow: "Focused automation",
     monthlyPrice: 14.99,
     annualMonthlyPrice: 9.99,
     annualTotal: 119.88,
-    copy: "For individual traders who want focused Live Spot automation with all supported exchanges enabled.",
+    copy: "For individual traders running focused Spot automation.",
     features: [
-      "Full Pro plan free for the first 7 days",
-      "All supported Live exchange connections",
-      "10 active DCA bots",
       "10 Strategy bots",
-      "Paper Account included",
-      "Unlimited manual trades",
-      "Positions + Signal Monitor",
-      "Analytics + strategy drilldown",
-      "Full position controls",
+      "10 active Single-pair DCA bots",
+      "1 active Multi-pair DCA bot",
+      "Unlimited Manual trades",
+      "Full Paper account",
     ],
     cta: "Choose Pro →",
     featured: true,
@@ -59,16 +52,13 @@ const fixedPlans = [
     monthlyPrice: 39.99,
     annualMonthlyPrice: 19.99,
     annualTotal: 239.88,
-    copy: "For traders running a larger automation setup while keeping every supported exchange available.",
+    copy: "For traders running a larger automation setup.",
     features: [
-      "All supported Live exchange connections",
-      "100 active DCA bots",
       "100 Strategy bots",
-      "Paper Account included",
-      "Unlimited manual trades",
-      "Positions + Signal Monitor",
-      "Analytics + strategy drilldown",
-      "Full position controls",
+      "100 active Single-pair DCA bots",
+      "10 active Multi-pair DCA bots",
+      "Unlimited Manual trades",
+      "Full Paper account",
     ],
     cta: "Choose Max →",
     featured: false,
@@ -107,19 +97,14 @@ function PerformanceMaxCard() {
       <p className={styles.planCopy}>Same Max power. A smarter way to pay.</p>
       <div className={switchStyles.performanceLimits}>
         <div><strong>100</strong><span>Strategy bots</span></div>
-        <div><strong>All</strong><span>supported Live exchanges</span></div>
-        <div><strong>100</strong><span>active DCA bots</span></div>
+        <div><strong>100</strong><span>active Single-pair DCA bots</span></div>
+        <div><strong>10</strong><span>active Multi-pair DCA bots</span></div>
+        <div><strong>Unlimited</strong><span>Manual trades</span></div>
+        <div><strong>Full</strong><span>Paper account</span></div>
       </div>
       <div className={switchStyles.performanceNote}>We get paid after you do. Up to $78/month.</div>
       <a className={styles.planCta} href={PERFORMANCE_URL}>Start Performance →</a>
-      <ul>
-        <li>Paper Account included</li>
-        <li>TradingView execution</li>
-        <li>Signal Monitor</li>
-        <li>Analytics + strategy drilldown</li>
-        <li>Unlimited manual trades</li>
-        <li>Full position controls</li>
-      </ul>
+      <p className={styles.planCopy}>All supported exchanges can be connected and Live-enabled.</p>
     </article>
   );
 }
