@@ -14,15 +14,15 @@ type PackageOption={key:string;label:string;requirement:string;minimum:number};
 const PACKAGES:PackageOption[]=[
  {key:"youtube_long",label:"YouTube — long-form",requirement:"1 long-form video (5+ min)",minimum:1},
  {key:"youtube_standard",label:"YouTube — standard",requirement:"2 standard videos (<5 min)",minimum:2},
- {key:"youtube_shorts",label:"YouTube Shorts",requirement:"5 approved Shorts",minimum:5},
- {key:"tiktok",label:"TikTok",requirement:"5 approved videos",minimum:5},
- {key:"instagram_reels",label:"Instagram Reels",requirement:"5 approved Reels",minimum:5},
- {key:"reddit",label:"Reddit",requirement:"2 high-quality original posts; permitted relevant reposts may be included",minimum:2},
- {key:"x_posts",label:"X / Twitter — posts",requirement:"4 substantial posts",minimum:4},
+ {key:"youtube_shorts",label:"YouTube Shorts",requirement:"4 approved Shorts",minimum:4},
+ {key:"tiktok",label:"TikTok",requirement:"4 approved videos",minimum:4},
+ {key:"instagram_reels",label:"Instagram Reels",requirement:"4 approved Reels",minimum:4},
+ {key:"reddit",label:"Reddit",requirement:"3 high-quality original posts + share/repost in 5 other relevant communities where permitted",minimum:8},
+ {key:"x_posts",label:"X / Twitter — posts",requirement:"6 substantial posts",minimum:6},
  {key:"x_threads",label:"X / Twitter — threads",requirement:"3 substantial threads",minimum:3},
- {key:"linkedin",label:"LinkedIn",requirement:"4 substantial posts",minimum:4},
+ {key:"linkedin",label:"LinkedIn",requirement:"6 substantial posts",minimum:6},
  {key:"article",label:"Medium / Substack / Blog",requirement:"1 original detailed article",minimum:1},
- {key:"communities",label:"Telegram / Discord / Facebook",requirement:"5 substantial posts in relevant communities",minimum:5},
+ {key:"communities",label:"Telegram / Discord / Facebook",requirement:"6 substantial posts across relevant communities",minimum:6},
 ];
 const percent=(bps=0)=>`${(bps/100).toFixed(bps%100===0?0:2)}%`;
 const money=(cents=0,currency="USD")=>new Intl.NumberFormat("en-US",{style:"currency",currency,maximumFractionDigits:2}).format(cents/100);
