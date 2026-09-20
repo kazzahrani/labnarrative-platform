@@ -3,9 +3,9 @@ import PricingPlans from "./PricingPlans";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Crypto Trading Bot Pricing — Free, Pro & Max | LabNarrative",
+  title: "Crypto Trading Bot Pricing — Free, Pro, Max & Performance | LabNarrative",
   description:
-    "Free crypto Paper trading. Pro is $14.99/month or $9.99/month billed yearly. Max is $29.99/month or $19.99/month billed yearly.",
+    "Connect supported exchanges free. Pro is $14.99/month, Max is $39.99/month, or choose Max Performance and pay only in profitable months, capped at $78/month.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -38,21 +38,21 @@ export default function PricingPage() {
 
       <section className={styles.section}>
         <div className={styles.sectionIntro}>
-          <p className={styles.label}>Two focused Live plans</p>
-          <h2>Start small. Scale only when you need to.</h2>
-          <p>Both paid plans include the same core crypto Spot automation workflow. The difference is how many Live exchange connections, DCA bots and Strategy bots you can run.</p>
+          <p className={styles.label}>Fixed + Performance pricing</p>
+          <h2>Connect freely. Pay for automation — or only when you profit.</h2>
+          <p>Every plan can connect all supported Live exchanges. Free keeps the manual and Paper workspace available; Pro and Max add automation capacity; Max Performance gives you Max capacity with profit-based monthly billing.</p>
         </div>
         <div className={styles.principleGrid}>
-          <article><span>01</span><h3>Free stays free</h3><p>Run up to 10 Paper DCA bots and 10 Paper Strategy bots permanently, with 0 Live exchange connections.</p></article>
-          <article><span>02</span><h3>Pro — $14.99 monthly</h3><p>Or $9.99/month billed yearly ($119.88/year). New accounts get the full Pro plan free for 7 days. Pro includes 5 Live exchange connections, 20 active DCA bots and 20 Strategy bots.</p></article>
-          <article><span>03</span><h3>Max — $29.99 monthly</h3><p>Or $19.99/month billed yearly ($239.88/year). Use all supported exchanges in the platform, with up to 100 active DCA bots and 100 Strategy bots.</p></article>
+          <article><span>01</span><h3>Free stays free</h3><p>Connect all supported Live exchanges, use the Paper Account and make unlimited manual trades. Free includes 0 active DCA bots and 0 Strategy bots after the trial.</p></article>
+          <article><span>02</span><h3>Pro or Max — fixed price</h3><p>Pro is $14.99/month or $119.88/year ($9.99/month equivalent) with 10 DCA bots + 10 Strategy bots. Max is $39.99/month or $239.88/year ($19.99/month equivalent) with 100 + 100.</p></article>
+          <article><span>03</span><h3>Max Performance — pay when you profit</h3><p>Get the same 100 DCA bots, 100 Strategy bots and all supported exchanges. A non-profitable month costs $0; the monthly charge is capped at $78. A verified $2,000 Spot balance is required to start.</p></article>
         </div>
       </section>
 
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
-        <h2>Start with Pro for 7 days. Keep Paper free forever.</h2>
-        <p>No payment is required to start. After the 7-day Pro trial, keep up to 10 Paper DCA bots and 10 Paper Strategy bots free, or continue Live with Pro or Max.</p>
+        <h2>Start with full Pro access for 7 days. Then choose how you want to pay.</h2>
+        <p>No payment is required to start. After the trial, stay on Free for exchange connections, Paper and manual trading, choose Pro or Max for fixed pricing, or use Max Performance and pay only in profitable months.</p>
         <a className={styles.primary} href={APP_URL}>Start free →</a>
       </section>
 
