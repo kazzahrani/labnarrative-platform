@@ -21,7 +21,7 @@ const PACKAGES:PackageOption[]=[
  {key:"x_posts",label:"X / Twitter — posts",requirement:"6 substantial posts",minimum:6},
  {key:"x_threads",label:"X / Twitter — threads",requirement:"3 substantial threads",minimum:3},
  {key:"linkedin",label:"LinkedIn",requirement:"6 substantial posts",minimum:6},
- {key:"article",label:"Medium / Substack / Blog",requirement:"1 original detailed article",minimum:1},
+ {key:"article",label:"Medium / Substack",requirement:"1 original detailed article",minimum:1},
  {key:"communities",label:"Telegram / Discord / Facebook",requirement:"6 substantial posts across relevant communities",minimum:6},
 ];
 const percent=(bps=0)=>`${(bps/100).toFixed(bps%100===0?0:2)}%`;
