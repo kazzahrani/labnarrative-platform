@@ -87,7 +87,7 @@ function DisabledPerformanceCard({ name, price, copy }: { name: string; price: s
 function PerformanceMaxCard() {
   return (
     <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard}`}>
-      <span className={styles.popular}>Performance</span>
+      <span className={`${styles.popular} ${switchStyles.plainBadge}`}>Performance</span>
       <p className={styles.planEyebrow}>PAY WHEN YOU PROFIT</p>
       <h2>Max</h2>
       <div className={switchStyles.performancePrice}>
@@ -147,7 +147,7 @@ export default function PricingPlans() {
 
               return (
                 <article className={`${styles.planCard} ${plan.featured ? styles.featured : ""}`} key={plan.name}>
-                  {"badge" in plan && plan.badge && <span className={styles.popular}>{plan.badge}</span>}
+                  {"badge" in plan && plan.badge && <span className={`${styles.popular} ${switchStyles.plainBadge}`}>{plan.badge}</span>}
                   <p className={styles.planEyebrow}>{plan.eyebrow}</p>
                   <h2>{plan.name}</h2>
                   <div className={styles.priceLine}>
