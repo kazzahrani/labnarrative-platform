@@ -43,7 +43,7 @@ const structuredData = {
       url: "https://labnarrative.com",
       description,
       publisher: { "@id": "https://labnarrative.com/#organization" },
-      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "29.99", offerCount: "3" },
+      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "78", offerCount: "4" },
       featureList: [
         "Crypto Spot DCA bots",
         "Crypto paper trading",
