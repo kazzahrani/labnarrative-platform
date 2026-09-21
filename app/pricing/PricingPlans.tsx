@@ -73,7 +73,7 @@ function DisabledPerformanceCard({ plan }: { plan: "free" | "pro" }) {
     <article className={`${styles.planCard} ${switchStyles.performanceDisabledCard} ${switchStyles.performanceAlignedCard}`}>
       <div className={switchStyles.performanceTop}>
         <h2>{definition.name}</h2>
-        <p>Performance billing is available with Max.</p>
+        <p>Pay when you profit is available with Max.</p>
       </div>
       <div className={switchStyles.disabledPerformancePrice}>
         <strong>{price}</strong>
@@ -93,7 +93,7 @@ function DisabledPerformanceCard({ plan }: { plan: "free" | "pro" }) {
 function PerformanceMaxCard() {
   return (
     <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard} ${switchStyles.performanceAlignedCard}`}>
-      <span className={`${styles.popular} ${switchStyles.plainBadge}`}>Performance</span>
+      <span className={`${styles.popular} ${switchStyles.plainBadge}`}>Pay when you profit</span>
       <div className={switchStyles.performanceTop}>
         <h2>Max</h2>
         <p>Same Max power. A smarter way to pay.</p>
@@ -102,7 +102,7 @@ function PerformanceMaxCard() {
         <strong>Pay when you profit</strong>
         <span>No profit, no fee.<br />Profitable months: $0.1-$78.</span>
       </div>
-      <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start Performance →</a>
+      <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start →</a>
       <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
         <div><strong>100</strong><span>Strategy bots</span></div>
         <div><strong>100</strong><span>active Single-pair DCA bots</span></div>
@@ -123,7 +123,7 @@ export default function PricingPlans() {
       <div className={switchStyles.toggle} aria-label="Pricing view">
         <button className={view === "year" ? switchStyles.active : ""} onClick={() => setView("year")} type="button">Yearly <span className={switchStyles.yearlyDiscountBadge}>save 50%</span></button>
         <button className={view === "month" ? switchStyles.active : ""} onClick={() => setView("month")} type="button">Monthly</button>
-        <button className={performance ? switchStyles.active : ""} onClick={() => setView("performance")} type="button">Performance</button>
+        <button className={performance ? switchStyles.active : ""} onClick={() => setView("performance")} type="button">Pay when you profit</button>
       </div>
 
       {performance ? (
@@ -134,7 +134,7 @@ export default function PricingPlans() {
             <PerformanceMaxCard />
           </div>
           <p className={styles.limitNote}>
-            Performance requires at least $2,000 in verified connected Spot balance to start. The monthly charge follows eligible realized net profit from LabNarrative Live Spot trading, never exceeds $78, and is $0 when the month is not profitable.
+            Pay when you profit charges only on eligible realized net profit from LabNarrative Live Spot trading. No profit, no fee.
           </p>
         </>
       ) : (
