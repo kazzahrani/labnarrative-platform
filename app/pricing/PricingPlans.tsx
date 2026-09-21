@@ -100,7 +100,7 @@ function PerformanceMaxCard() {
       </div>
       <div className={switchStyles.performancePrice}>
         <strong>Pay when you profit</strong>
-        <span>No profit, no fee.<br />Profitable months: $0.1-78.</span>
+        <span>No profit, no fee.<br />Profitable months: max $78.</span>
         <small>$78 reusable billing reserve required.</small>
       </div>
       <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start Performance →</a>
