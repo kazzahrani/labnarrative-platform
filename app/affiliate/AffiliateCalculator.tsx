@@ -4,13 +4,14 @@ import { useMemo, useState } from "react";
 import styles from "./affiliate.module.css";
 
 const COMMISSION_RATE = 0.4;
-const PRO_MONTHLY = 14.99;
-const MAX_MONTHLY = 39.99;
+const TRADER_MONTHLY = 14.99;
+const PRO_MONTHLY = 29.99;
+const MAX_MONTHLY = 69.99;
 const PERFORMANCE_MONTHLY = 78;
 const REFERRAL_OPTIONS = [10, 25, 50, 100] as const;
 
 const AVG_MONTHLY_PAYMENT =
-  (PRO_MONTHLY + MAX_MONTHLY + PERFORMANCE_MONTHLY) / 3;
+  (TRADER_MONTHLY + PRO_MONTHLY + MAX_MONTHLY + PERFORMANCE_MONTHLY) / 4;
 const AVG_MONTHLY_COMMISSION = AVG_MONTHLY_PAYMENT * COMMISSION_RATE;
 
 const whole = (value: number) =>
@@ -59,10 +60,10 @@ export default function AffiliateCalculator() {
       </div>
 
       <p className={styles.calculatorNote}>
-        * Estimate uses the current 40% commission and an equal Pro / Max /
-        Performance mix. Average modeled payment = $44.33
-        (($14.99 + $39.99 + $78) / 3). Performance is modeled at the $78
-        monthly cap; actual earnings vary with what referred customers pay.
+        * Estimate uses the current 40% commission and an equal Trader / Pro /
+        Max / Performance mix. Average modeled payment = $48.24
+        (($14.99 + $29.99 + $69.99 + $78) / 4). Performance is modeled at the
+        $78 monthly cap; actual earnings vary with what referred customers pay.
       </p>
     </aside>
   );
