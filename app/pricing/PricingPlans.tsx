@@ -107,9 +107,10 @@ function PerformanceMaxCard() {
       </div>
       <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start →</a>
       <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
-        <div><strong>100</strong><span>Strategy bots</span></div>
-        <div><strong>100</strong><span>active Single-pair DCA bots</span></div>
-        <div><strong>10</strong><span>active Multi-pair DCA bots</span></div>
+        <div><strong>250</strong><span>Strategy bots</span></div>
+        <div><strong>250</strong><span>active Single-pair DCA bots</span></div>
+        <div><strong>100</strong><span>Grid bots (soon)</span></div>
+        <div><strong>100</strong><span>active Multi-pair DCA bots</span></div>
         <div><strong>Unlimited</strong><span>Manual trades</span></div>
         <div><strong>Full</strong><span>Paper account</span></div>
       </div>
