@@ -3,9 +3,9 @@ import PricingPlans from "./PricingPlans";
 import styles from "../trading-public-pages.module.css";
 
 export const metadata: Metadata = {
-  title: "Crypto Trading Bot Pricing — Trader, Pro, Max & Performance | LabNarrative",
+  title: "Crypto Trading Bot Pricing — Trader, Pro, Max & Pay When You Profit | LabNarrative",
   description:
-    "Trader is $14.99/month, Pro is $29.99/month, Max is $69.99/month, with discounted annual billing or Pay when you profit capped at $78/month.",
+    "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month. Pro and Max also offer Pay when you profit: Pro capped at $49 and Max capped at $78 in profitable months.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -45,14 +45,14 @@ export default function PricingPage() {
         <div className={styles.principleGrid}>
           <article><span>01</span><h3>Trader</h3><p>$14.99/month, or $119.88/year ($9.99/month equivalent), with 2 Strategy bots, 2 active Single-pair DCA bots, 1 Grid bot (soon), 1 active Multi-pair DCA bot, Unlimited Manual trades and the Full Paper account.</p></article>
           <article><span>02</span><h3>Pro or Max — fixed price</h3><p>Pro is $29.99/month or $239.88/year ($19.99/month equivalent) with 20 Strategy bots, 20 active Single-pair DCA bots, 10 Grid bots (soon) and 10 active Multi-pair DCA bots. Max is $69.99/month or $599.88/year ($49.99/month equivalent) with 250, 250, 100 and 100.</p></article>
-          <article><span>03</span><h3>Max Performance — pay when you profit</h3><p>Pay when you profit now uses the new Max limits: 250 Strategy bots, 250 active Single-pair DCA bots, 100 Grid bots (soon), 100 active Multi-pair DCA bots and Unlimited Manual trades. A non-profitable month costs $0 and the monthly charge is capped at $78.</p></article>
+          <article><span>03</span><h3>Pro or Max — pay when you profit</h3><p>Choose Pro limits with a fee capped at $49 in profitable months, or Max limits with a fee capped at $78. A non-profitable month costs $0. Pro uses a $49 reusable billing reserve and Max uses $78; only the fee you actually owe is deducted, and any unused balance remains yours if you cancel.</p></article>
         </div>
       </section>
 
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
         <h2>Start with full Pro access for 3 days. Then choose how you want to pay.</h2>
-        <p>No payment is required to start. The first 3 days include Pro limits: 20 Strategy bots, 20 active Single-pair DCA bots, 10 Grid bots (soon), 10 active Multi-pair DCA bots and Unlimited Manual trades. After the trial, choose Trader, Pro, Max or Pay when you profit.</p>
+        <p>No payment is required to start. The first 3 days include Pro limits: 20 Strategy bots, 20 active Single-pair DCA bots, 10 Grid bots (soon), 10 active Multi-pair DCA bots and Unlimited Manual trades. After the trial, choose Trader, Pro or Max at a fixed price, or choose Pay when you profit on Pro or Max.</p>
         <a className={styles.primary} href={APP_URL}>Start free →</a>
       </section>
 

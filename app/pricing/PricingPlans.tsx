@@ -68,20 +68,19 @@ const fixedPlans = [
   },
 ] as const;
 
-function DisabledPerformanceCard({ plan }: { plan: "trader" | "pro" }) {
-  const definition = fixedPlans.find((item) => item.name.toLowerCase() === plan)!;
-  const price = plan === "trader" ? "$9.99" : "$19.99";
+function DisabledPerformanceCard() {
+  const definition = fixedPlans.find((item) => item.name === "Trader")!;
 
   return (
     <article className={`${styles.planCard} ${switchStyles.performanceDisabledCard} ${switchStyles.performanceAlignedCard}`}>
       <div className={switchStyles.performanceTop}>
         <h2>{definition.name}</h2>
-        <p>Pay when you profit is available with Max.</p>
+        <p>Pay when you profit is available with Pro and Max.</p>
       </div>
       <div className={switchStyles.disabledPerformancePrice}>
-        <strong>{price}</strong>
+        <strong>$9.99</strong>
         <span>/ month</span>
-        <small>Billed {plan === "trader" ? "$119.88/year" : "$239.88/year"}</small>
+        <small>Billed $119.88/year</small>
       </div>
       <span className={`${styles.planCta} ${switchStyles.disabledCta} ${switchStyles.performanceCta}`}>Not available</span>
       <div className={`${switchStyles.planLimits} ${switchStyles.disabledLimits}`}>
@@ -93,27 +92,31 @@ function DisabledPerformanceCard({ plan }: { plan: "trader" | "pro" }) {
   );
 }
 
-function PerformanceMaxCard() {
+function PerformanceTierCard({ tier }: { tier: "pro" | "max" }) {
+  const definition = fixedPlans.find((item) => item.name.toLowerCase() === tier)!;
+  const cap = tier === "pro" ? 49 : 78;
+  const reserve = cap;
+
   return (
     <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard} ${switchStyles.performanceAlignedCard}`}>
       <span className={`${styles.popular} ${switchStyles.plainBadge}`}>Pay when you profit</span>
       <div className={switchStyles.performanceTop}>
-        <h2>Max</h2>
-        <p>Same Max power. A smarter way to pay.</p>
+        <h2>{definition.name}</h2>
+        <p>Same {definition.name} power. A smarter way to pay.</p>
       </div>
       <div className={switchStyles.performancePrice}>
         <strong>Pay when you profit</strong>
-        <span>No profit, no fee.<br />Profitable months: $0.1-$78.</span>
+        <span>No profit, no fee.<br />Profitable months: $0.1-${cap}.</span>
       </div>
       <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start →</a>
       <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
-        <div><strong>250</strong><span>Strategy bots</span></div>
-        <div><strong>250</strong><span>active Single-pair DCA bots</span></div>
-        <div><strong>100</strong><span>Grid bots (soon)</span></div>
-        <div><strong>100</strong><span>active Multi-pair DCA bots</span></div>
-        <div><strong>Unlimited</strong><span>Manual trades</span></div>
-        <div><strong>Full</strong><span>Paper account</span></div>
+        {definition.features.map((feature) => (
+          <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>
+        ))}
       </div>
+      <p className={switchStyles.performanceReserveCopy}>
+        Deposit ${reserve} in a reusable billing reserve to start. We only deduct the fee you owe. Anything unused stays for next month and remains yours if you cancel.
+      </p>
     </article>
   );
 }
@@ -133,12 +136,12 @@ export default function PricingPlans() {
       {performance ? (
         <>
           <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", maxWidth: 1180, marginInline: "auto" }}>
-            <DisabledPerformanceCard plan="trader" />
-            <DisabledPerformanceCard plan="pro" />
-            <PerformanceMaxCard />
+            <DisabledPerformanceCard />
+            <PerformanceTierCard tier="pro" />
+            <PerformanceTierCard tier="max" />
           </div>
           <p className={styles.limitNote}>
-            Pay when you profit charges only when your LabNarrative Live Spot trading makes a realized net profit. No profit, no fee.
+            Pay when you profit charges only when your LabNarrative Live Spot trading makes a realized net profit. Pro is capped at $49 per profitable month with a $49 reusable billing reserve; Max is capped at $78 with a $78 reserve. No profit, no fee. Any unused reserve stays available for the next month and remains yours if you cancel.
           </p>
         </>
       ) : (
