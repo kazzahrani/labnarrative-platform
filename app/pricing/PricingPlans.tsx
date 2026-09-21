@@ -148,7 +148,7 @@ export default function PricingPlans() {
               const popular = yearly ? plan.name === "Max" : plan.name === "Pro";
               const price = yearly ? plan.annualMonthlyPrice : plan.monthlyPrice;
               const billing = yearly
-                ? `Billed ${plan.annualTotal.toFixed(2)}/year`
+                ? "Billed $" + plan.annualTotal.toFixed(2) + "/year"
                 : "Prepaid monthly access";
 
               return (
