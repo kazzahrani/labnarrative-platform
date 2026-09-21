@@ -115,7 +115,7 @@ function PerformanceTierCard({ tier }: { tier: "pro" | "max" }) {
         ))}
       </div>
       <p className={switchStyles.performanceReserveCopy}>
-        Deposit ${reserve} in a reusable billing reserve to start. We only deduct the fee you owe. Anything unused stays for next month and remains yours if you cancel.
+        Deposit ${reserve} in a reusable billing reserve to start. We only deduct the fee you owe. Anything left stays for next month or you get it back upon cancellation.
       </p>
     </article>
   );
@@ -141,7 +141,7 @@ export default function PricingPlans() {
             <PerformanceTierCard tier="max" />
           </div>
           <p className={styles.limitNote}>
-            Pay when you profit charges only when your LabNarrative Live Spot trading makes a realized net profit. Pro is capped at $49 per profitable month with a $49 reusable billing reserve; Max is capped at $78 with a $78 reserve. No profit, no fee. Any unused reserve stays available for the next month and remains yours if you cancel.
+            Pay when you profit charges only when your LabNarrative Live Spot trading makes a realized net profit. Pro is capped at $49 per profitable month with a $49 reusable billing reserve; Max is capped at $78 with a $78 reserve. No profit, no fee. Anything left stays for next month or you get it back upon cancellation.
           </p>
         </>
       ) : (
