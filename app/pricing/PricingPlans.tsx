@@ -12,33 +12,35 @@ type PricingView = "month" | "year" | "performance";
 
 const fixedPlans = [
   {
-    name: "Free",
-    eyebrow: "Free forever",
-    monthlyPrice: 0,
-    annualMonthlyPrice: 0,
-    annualTotal: 0,
-    copy: "For traders learning the platform with Paper Trading.",
+    name: "Trader",
+    eyebrow: "Start automating",
+    monthlyPrice: 14.99,
+    annualMonthlyPrice: 9.99,
+    annualTotal: 119.88,
+    copy: "For traders starting with focused Spot automation.",
     features: [
-      { value: "0", label: "Strategy bots" },
-      { value: "0", label: "active Single-pair DCA bots" },
-      { value: "0", label: "active Multi-pair DCA bots" },
-      { value: "0", label: "Manual trades" },
+      { value: "2", label: "Strategy bots" },
+      { value: "2", label: "active Single-pair DCA bots" },
+      { value: "1", label: "Grid bot (soon)" },
+      { value: "1", label: "active Multi-pair DCA bot" },
+      { value: "Unlimited", label: "Manual trades" },
       { value: "Full", label: "Paper account" },
     ],
-    cta: "Start free →",
+    cta: "Choose Trader →",
     featured: false,
   },
   {
     name: "Pro",
     eyebrow: "Focused automation",
-    monthlyPrice: 14.99,
-    annualMonthlyPrice: 9.99,
-    annualTotal: 119.88,
-    copy: "For active Spot traders running focused automation.",
+    monthlyPrice: 29.99,
+    annualMonthlyPrice: 19.99,
+    annualTotal: 239.88,
+    copy: "For active Spot traders running more automation.",
     features: [
-      { value: "10", label: "Strategy bots" },
-      { value: "10", label: "active Single-pair DCA bots" },
-      { value: "1", label: "active Multi-pair DCA bot" },
+      { value: "20", label: "Strategy bots" },
+      { value: "20", label: "active Single-pair DCA bots" },
+      { value: "10", label: "Grid bots (soon)" },
+      { value: "10", label: "active Multi-pair DCA bots" },
       { value: "Unlimited", label: "Manual trades" },
       { value: "Full", label: "Paper account" },
     ],
@@ -49,14 +51,15 @@ const fixedPlans = [
   {
     name: "Max",
     eyebrow: "Maximum automation capacity",
-    monthlyPrice: 39.99,
-    annualMonthlyPrice: 19.99,
-    annualTotal: 239.88,
+    monthlyPrice: 69.99,
+    annualMonthlyPrice: 49.99,
+    annualTotal: 599.88,
     copy: "For traders running larger, multi-strategy automation setups.",
     features: [
-      { value: "100", label: "Strategy bots" },
-      { value: "100", label: "active Single-pair DCA bots" },
-      { value: "10", label: "active Multi-pair DCA bots" },
+      { value: "250", label: "Strategy bots" },
+      { value: "250", label: "active Single-pair DCA bots" },
+      { value: "100", label: "Grid bots (soon)" },
+      { value: "100", label: "active Multi-pair DCA bots" },
       { value: "Unlimited", label: "Manual trades" },
       { value: "Full", label: "Paper account" },
     ],
@@ -65,9 +68,9 @@ const fixedPlans = [
   },
 ] as const;
 
-function DisabledPerformanceCard({ plan }: { plan: "free" | "pro" }) {
+function DisabledPerformanceCard({ plan }: { plan: "trader" | "pro" }) {
   const definition = fixedPlans.find((item) => item.name.toLowerCase() === plan)!;
-  const price = plan === "free" ? "$0" : "$14.99";
+  const price = plan === "trader" ? "$9.99" : "$19.99";
 
   return (
     <article className={`${styles.planCard} ${switchStyles.performanceDisabledCard} ${switchStyles.performanceAlignedCard}`}>
@@ -78,7 +81,7 @@ function DisabledPerformanceCard({ plan }: { plan: "free" | "pro" }) {
       <div className={switchStyles.disabledPerformancePrice}>
         <strong>{price}</strong>
         <span>/ month</span>
-        <small>{plan === "free" ? "Free forever · Live exchanges included" : "Prepaid monthly access"}</small>
+        <small>Billed {plan === "trader" ? "$119.88/year" : "$239.88/year"}</small>
       </div>
       <span className={`${styles.planCta} ${switchStyles.disabledCta} ${switchStyles.performanceCta}`}>Not available</span>
       <div className={`${switchStyles.planLimits} ${switchStyles.disabledLimits}`}>
@@ -121,7 +124,7 @@ export default function PricingPlans() {
   return (
     <>
       <div className={switchStyles.toggle} aria-label="Pricing view">
-        <button className={view === "year" ? switchStyles.active : ""} onClick={() => setView("year")} type="button">Yearly <span className={switchStyles.yearlyDiscountBadge}>save 50%</span></button>
+        <button className={view === "year" ? switchStyles.active : ""} onClick={() => setView("year")} type="button">Yearly <span className={switchStyles.yearlyDiscountBadge}>save up to 33%</span></button>
         <button className={view === "month" ? switchStyles.active : ""} onClick={() => setView("month")} type="button">Monthly</button>
         <button className={performance ? switchStyles.active : ""} onClick={() => setView("performance")} type="button">Pay when you profit</button>
       </div>
@@ -129,7 +132,7 @@ export default function PricingPlans() {
       {performance ? (
         <>
           <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", maxWidth: 1180, marginInline: "auto" }}>
-            <DisabledPerformanceCard plan="free" />
+            <DisabledPerformanceCard plan="trader" />
             <DisabledPerformanceCard plan="pro" />
             <PerformanceMaxCard />
           </div>
@@ -141,15 +144,12 @@ export default function PricingPlans() {
         <>
           <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", maxWidth: 1180, marginInline: "auto" }}>
             {fixedPlans.map((plan) => {
-              const free = plan.name === "Free";
               const yearly = view === "year";
               const popular = yearly ? plan.name === "Max" : plan.name === "Pro";
-              const price = free ? 0 : yearly ? plan.annualMonthlyPrice : plan.monthlyPrice;
-              const billing = free
-                ? "Free forever · Live exchanges included"
-                : yearly
-                  ? `Billed ${plan.annualTotal.toFixed(2)}/year`
-                  : "Prepaid monthly access";
+              const price = yearly ? plan.annualMonthlyPrice : plan.monthlyPrice;
+              const billing = yearly
+                ? `Billed ${plan.annualTotal.toFixed(2)}/year`
+                : "Prepaid monthly access";
 
               return (
                 <article className={`${styles.planCard} ${switchStyles.fixedAlignedCard} ${popular ? styles.featured : ""}`} key={plan.name}>
@@ -160,13 +160,13 @@ export default function PricingPlans() {
                   </div>
                   <div className={switchStyles.fixedPriceBlock}>
                     <div className={styles.priceLine}>
-                      {yearly && !free ? <del>{"$" + plan.monthlyPrice}</del> : null}
+                      {yearly ? <del>{"$" + plan.monthlyPrice}</del> : null}
                       <strong>{"$" + price}</strong>
                       <span>/mo</span>
                     </div>
                     <p className={styles.billing}>{billing}</p>
                   </div>
-                  <a className={`${styles.planCta} ${switchStyles.fixedCta}`} href={free ? APP_URL : PRICING_URL}>{plan.cta}</a>
+                  <a className={`${styles.planCta} ${switchStyles.fixedCta}`} href={PRICING_URL}>{plan.cta}</a>
                   <div className={`${switchStyles.planLimits} ${switchStyles.fixedLimits} ${popular ? switchStyles.darkLimits : ""}`}>{plan.features.map((feature) => <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>)}</div>
                 </article>
               );
@@ -174,8 +174,8 @@ export default function PricingPlans() {
           </div>
           <p className={styles.limitNote}>
             {view === "year"
-              ? "Pro is $9.99/month equivalent ($119.88/year) and Max is $19.99/month equivalent ($239.88/year)."
-              : "Pro is $14.99/month and Max is $39.99/month."} PayPal and crypto payments are available; cards and wallets are coming soon. Monthly and annual purchases are prepaid and do not renew automatically.
+              ? "Trader is $9.99/month equivalent ($119.88/year), Pro is $19.99/month equivalent ($239.88/year), and Max is $49.99/month equivalent ($599.88/year)."
+              : "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month."} PayPal and crypto payments are available; cards and wallets are coming soon. Monthly and annual purchases are prepaid and do not renew automatically.
           </p>
         </>
       )}
