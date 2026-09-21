@@ -134,7 +134,7 @@ export default function PricingPlans() {
             <PerformanceMaxCard />
           </div>
           <p className={styles.limitNote}>
-            Pay when you profit charges only on eligible realized net profit from LabNarrative Live Spot trading. No profit, no fee.
+            Pay when you profit charges only when your LabNarrative Live Spot trading makes a realized net profit. No profit, no fee.
           </p>
         </>
       ) : (
