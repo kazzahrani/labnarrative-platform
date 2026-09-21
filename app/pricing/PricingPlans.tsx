@@ -101,6 +101,7 @@ function PerformanceMaxCard() {
       <div className={switchStyles.performancePrice}>
         <strong>Pay when you profit</strong>
         <span>No profit, no fee.<br />Profitable months: $0.1-78.</span>
+        <small>$78 reusable billing reserve required.</small>
       </div>
       <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start Performance →</a>
       <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
@@ -134,7 +135,7 @@ export default function PricingPlans() {
             <PerformanceMaxCard />
           </div>
           <p className={styles.limitNote}>
-            Performance requires at least $2,000 in verified connected Spot balance to start. The monthly charge follows eligible realized net profit from LabNarrative Live Spot trading, never exceeds $78, and is $0 when the month is not profitable.
+            Performance requires at least $2,000 in verified connected Spot balance and a $78 reusable billing reserve to start. The reserve is used only for Performance fees; unused balance rolls forward. The monthly charge follows eligible realized net profit from LabNarrative Live Spot trading, never exceeds $78, and is $0 when the month is not profitable.
           </p>
         </>
       ) : (
