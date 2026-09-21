@@ -6,7 +6,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Affiliate Program — Earn 40% Commission | LabNarrative",
   description:
-    "Refer traders to LabNarrative and earn 40% cash commission on qualifying Pro, Max and paid Pay when you profit payments, plus creator and Max rewards.",
+    "Refer traders to LabNarrative and earn 40% cash commission on qualifying Trader, Pro, Max and paid Pay when you profit payments, plus creator and Max rewards.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -66,7 +66,7 @@ const faqs = [
     title: "Affiliate program details",
     body: (
       <>
-        <p><strong>Pro and Max:</strong> you earn 40% of each successful qualifying payment. For annual plans, the full commission is credited when the annual payment clears.</p>
+        <p><strong>Trader, Pro and Max:</strong> you earn 40% of each successful qualifying payment. For annual plans, the full commission is credited when the annual payment clears.</p>
         <p><strong>Performance:</strong> you earn 40% of each non-zero Pay when you profit settlement actually paid. A $50 settlement pays $20 commission; the $78 monthly cap pays $31.20. A $0 month earns $0 commission.</p>
         <p><strong>Referral Max:</strong> the customer&apos;s first qualifying paid transaction creates one Max month for you. Later payments continue generating cash commission but do not create another customer reward.</p>
       </>
@@ -128,7 +128,7 @@ export default function AffiliatePage() {
           <p className={affiliateStyles.eyebrow}>LabNarrative Affiliate Program</p>
           <h1><span>Earn 40% commission</span><br />from every trader you refer.</h1>
           <p className={affiliateStyles.heroLead}>
-            Turn your audience into affiliate income. Earn on qualifying Pro, Max
+            Turn your audience into affiliate income. Earn on qualifying Trader, Pro, Max
             and paid Pay when you profit settlements — plus Max rewards for customers and
             useful creator content.
           </p>
@@ -199,7 +199,7 @@ export default function AffiliatePage() {
             <div className={affiliateStyles.stepIcon}>$</div>
             <span>03</span>
             <h3>Earn 40% commission</h3>
-            <p>Get paid on qualifying Pro, Max and non-zero Pay when you profit payments attributed to your link.</p>
+            <p>Get paid on qualifying Trader, Pro, Max and non-zero Pay when you profit payments attributed to your link.</p>
           </article>
         </div>
         <div className={affiliateStyles.centerCta}>
@@ -215,19 +215,19 @@ export default function AffiliatePage() {
         </div>
         <div className={affiliateStyles.commissionGrid}>
           <article>
-            <small>Pro monthly</small>
+            <small>Trader monthly</small>
             <strong>$6.00</strong>
             <span>40% of $14.99</span>
           </article>
           <article>
-            <small>Max monthly</small>
-            <strong>$16.00</strong>
-            <span>40% of $39.99</span>
+            <small>Pro monthly</small>
+            <strong>$12.00</strong>
+            <span>40% of $29.99</span>
           </article>
           <article>
-            <small>Performance example</small>
-            <strong>$20.00</strong>
-            <span>40% of a $50 settlement</span>
+            <small>Max monthly</small>
+            <strong>$28.00</strong>
+            <span>40% of $69.99</span>
           </article>
           <article className={affiliateStyles.highlightCard}>
             <small>Pay when you profit monthly cap</small>
