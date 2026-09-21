@@ -6,7 +6,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Affiliate Program — Earn 40% Commission | LabNarrative",
   description:
-    "Refer traders to LabNarrative and earn 40% cash commission on qualifying Pro, Max and paid Performance payments, plus creator and Max rewards.",
+    "Refer traders to LabNarrative and earn 40% cash commission on qualifying Pro, Max and paid Pay when you profit payments, plus creator and Max rewards.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -67,7 +67,7 @@ const faqs = [
     body: (
       <>
         <p><strong>Pro and Max:</strong> you earn 40% of each successful qualifying payment. For annual plans, the full commission is credited when the annual payment clears.</p>
-        <p><strong>Performance:</strong> you earn 40% of each non-zero Performance settlement actually paid. A $50 settlement pays $20 commission; the $78 monthly cap pays $31.20. A $0 month earns $0 commission.</p>
+        <p><strong>Performance:</strong> you earn 40% of each non-zero Pay when you profit settlement actually paid. A $50 settlement pays $20 commission; the $78 monthly cap pays $31.20. A $0 month earns $0 commission.</p>
         <p><strong>Referral Max:</strong> the customer&apos;s first qualifying paid transaction creates one Max month for you. Later payments continue generating cash commission but do not create another customer reward.</p>
       </>
     ),
@@ -76,7 +76,7 @@ const faqs = [
     title: "How do Performance referrals count as paying customers?",
     body: (
       <>
-        <p>Joining the Performance plan alone does not count. The referral becomes a paying customer when their first non-zero Performance settlement is actually paid.</p>
+        <p>Joining the Performance plan alone does not count. The referral becomes a paying customer when their first non-zero Pay when you profit settlement is actually paid.</p>
         <p>That first payment creates the normal one-time +1 Max month referral reward and also earns the regular 40% cash commission.</p>
       </>
     ),
@@ -129,7 +129,7 @@ export default function AffiliatePage() {
           <h1><span>Earn 40% commission</span><br />from every trader you refer.</h1>
           <p className={affiliateStyles.heroLead}>
             Turn your audience into affiliate income. Earn on qualifying Pro, Max
-            and paid Performance settlements — plus Max rewards for customers and
+            and paid Pay when you profit settlements — plus Max rewards for customers and
             useful creator content.
           </p>
           <div className={affiliateStyles.heroActions}>
@@ -199,7 +199,7 @@ export default function AffiliatePage() {
             <div className={affiliateStyles.stepIcon}>$</div>
             <span>03</span>
             <h3>Earn 40% commission</h3>
-            <p>Get paid on qualifying Pro, Max and non-zero Performance payments attributed to your link.</p>
+            <p>Get paid on qualifying Pro, Max and non-zero Pay when you profit payments attributed to your link.</p>
           </article>
         </div>
         <div className={affiliateStyles.centerCta}>
@@ -230,7 +230,7 @@ export default function AffiliatePage() {
             <span>40% of a $50 settlement</span>
           </article>
           <article className={affiliateStyles.highlightCard}>
-            <small>Performance monthly cap</small>
+            <small>Pay when you profit monthly cap</small>
             <strong>$31.20</strong>
             <span>40% of the $78 maximum settlement</span>
           </article>
