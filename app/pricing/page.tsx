@@ -45,7 +45,7 @@ export default function PricingPage() {
         <div className={styles.principleGrid}>
           <article><span>01</span><h3>Trader</h3><p>$14.99/month, or $119.88/year ($9.99/month equivalent), with 2 Strategy bots, 2 active Single-pair DCA bots, 1 Grid bot (soon), 1 active Multi-pair DCA bot, Unlimited Manual trades and the Full Paper account.</p></article>
           <article><span>02</span><h3>Pro or Max — fixed price</h3><p>Pro is $29.99/month or $239.88/year ($19.99/month equivalent) with 20 Strategy bots, 20 active Single-pair DCA bots, 10 Grid bots (soon) and 10 active Multi-pair DCA bots. Max is $69.99/month or $599.88/year ($49.99/month equivalent) with 250, 250, 100 and 100.</p></article>
-          <article><span>03</span><h3>Pro or Max — pay when you profit</h3><p>Choose Pro limits with a fee capped at $49 in profitable months, or Max limits with a fee capped at $78. A non-profitable month costs $0. Pro uses a $49 reusable billing reserve and Max uses $78; only the fee you actually owe is deducted, and any unused balance remains yours if you cancel.</p></article>
+          <article><span>03</span><h3>Pro or Max — pay when you profit</h3><p>Choose Pro limits with a fee capped at $49 in profitable months, or Max limits with a fee capped at $78. A non-profitable month costs $0. Pro uses a $49 reusable billing reserve and Max uses $78; only the fee you actually owe is deducted. Anything left stays for next month or you get it back upon cancellation.</p></article>
         </div>
       </section>
 
