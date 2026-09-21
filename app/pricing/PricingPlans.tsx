@@ -78,9 +78,9 @@ function DisabledPerformanceCard() {
         <p>Pay when you profit is available with Pro and Max.</p>
       </div>
       <div className={switchStyles.disabledPerformancePrice}>
-        <strong>$9.99</strong>
+        <strong>$14.99</strong>
         <span>/ month</span>
-        <small>Billed $119.88/year</small>
+        <small>Prepaid monthly access</small>
       </div>
       <span className={`${styles.planCta} ${switchStyles.disabledCta} ${switchStyles.performanceCta}`}>Not available</span>
       <div className={`${switchStyles.planLimits} ${switchStyles.disabledLimits}`}>
