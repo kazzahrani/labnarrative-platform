@@ -45,14 +45,14 @@ export default function PricingPage() {
         <div className={styles.principleGrid}>
           <article><span>01</span><h3>Trader</h3><p>$14.99/month, or $119.88/year ($9.99/month equivalent), with 2 Strategy bots, 2 active Single-pair DCA bots, 1 Grid bot (soon), 1 active Multi-pair DCA bot, Unlimited Manual trades and the Full Paper account.</p></article>
           <article><span>02</span><h3>Pro or Max — fixed price</h3><p>Pro is $29.99/month or $239.88/year ($19.99/month equivalent) with 20 Strategy bots, 20 active Single-pair DCA bots, 10 Grid bots (soon) and 10 active Multi-pair DCA bots. Max is $69.99/month or $599.88/year ($49.99/month equivalent) with 250, 250, 100 and 100.</p></article>
-          <article><span>03</span><h3>Max Performance — pay when you profit</h3><p>Pay when you profit remains unchanged: 100 Strategy bots, 100 active Single-pair DCA bots, 10 active Multi-pair DCA bots and Unlimited Manual trades. A non-profitable month costs $0 and the monthly charge is capped at $78.</p></article>
+          <article><span>03</span><h3>Max Performance — pay when you profit</h3><p>Pay when you profit now uses the new Max limits: 250 Strategy bots, 250 active Single-pair DCA bots, 100 Grid bots (soon), 100 active Multi-pair DCA bots and Unlimited Manual trades. A non-profitable month costs $0 and the monthly charge is capped at $78.</p></article>
         </div>
       </section>
 
       <section className={styles.finalCta}>
         <p className={styles.eyebrow}>Start free</p>
-        <h2>Start with full Max access for 7 days. Then choose how you want to pay.</h2>
-        <p>No payment is required to start. The first 7 days include the new Max limits: 250 Strategy bots, 250 active Single-pair DCA bots, 100 Grid bots (soon), 100 active Multi-pair DCA bots and Unlimited Manual trades. After the trial, choose Trader, Pro, Max or Pay when you profit.</p>
+        <h2>Start with full Pro access for 3 days. Then choose how you want to pay.</h2>
+        <p>No payment is required to start. The first 3 days include Pro limits: 20 Strategy bots, 20 active Single-pair DCA bots, 10 Grid bots (soon), 10 active Multi-pair DCA bots and Unlimited Manual trades. After the trial, choose Trader, Pro, Max or Pay when you profit.</p>
         <a className={styles.primary} href={APP_URL}>Start free →</a>
       </section>
 
