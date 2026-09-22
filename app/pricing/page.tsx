@@ -5,7 +5,7 @@ import styles from "../trading-public-pages.module.css";
 export const metadata: Metadata = {
   title: "Crypto Trading Bot Pricing — Trader, Pro, Max & Pay When You Profit | LabNarrative",
   description:
-    "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month. Pro and Max also offer Pay when you profit: Pro capped at $49 and Max capped at $78 in profitable months.",
+    "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month. Pro and Max also offer Pay when you profit with no upfront subscription fee: Pro capped at $39 and Max capped at $69 per billing month.",
 };
 
 const APP_URL = "https://app.labnarrative.com";
@@ -45,7 +45,7 @@ export default function PricingPage() {
         <div className={styles.principleGrid}>
           <article><span>01</span><h3>Trader</h3><p>$14.99/month, or $119.88/year ($9.99/month equivalent), with 2 Strategy bots, 2 active Single-pair DCA bots, 1 Grid bot (soon), 1 active Multi-pair DCA bot, Unlimited Manual trades and the Full Paper account.</p></article>
           <article><span>02</span><h3>Pro or Max — fixed price</h3><p>Pro is $29.99/month or $239.88/year ($19.99/month equivalent) with 20 Strategy bots, 20 active Single-pair DCA bots, 10 Grid bots (soon) and 10 active Multi-pair DCA bots. Max is $69.99/month or $599.88/year ($49.99/month equivalent) with 250, 250, 100 and 100.</p></article>
-          <article><span>03</span><h3>Pro or Max — pay when you profit</h3><p>Choose Pro limits with a fee capped at $49 in profitable months, or Max limits with a fee capped at $78. A non-profitable month costs $0. Pro uses a $49 reusable billing reserve and Max uses $78; only the fee you actually owe is deducted. Anything left stays for next month or you get it back upon cancellation.</p></article>
+          <article><span>03</span><h3>Pro or Max — pay when you profit</h3><p>Make profit first. Pay us second. There is no upfront subscription fee. Pro follows positive net realized PnL up to $39 per billing month; Max up to $69. If the cap is reached it is charged automatically, otherwise any positive amount owed is settled at month-end.</p></article>
         </div>
       </section>
 

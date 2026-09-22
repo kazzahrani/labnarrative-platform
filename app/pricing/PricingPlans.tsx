@@ -94,8 +94,7 @@ function DisabledPerformanceCard() {
 
 function PerformanceTierCard({ tier }: { tier: "pro" | "max" }) {
   const definition = fixedPlans.find((item) => item.name.toLowerCase() === tier)!;
-  const cap = tier === "pro" ? 49 : 78;
-  const reserve = cap;
+  const cap = tier === "pro" ? 39 : 69;
 
   return (
     <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard} ${switchStyles.performanceAlignedCard}`}>
@@ -105,8 +104,8 @@ function PerformanceTierCard({ tier }: { tier: "pro" | "max" }) {
         <p>Same {definition.name} power. A smarter way to pay.</p>
       </div>
       <div className={switchStyles.performancePrice}>
-        <strong>Pay when you profit</strong>
-        <span>No profit, no fee.<br />Profitable months: $0.1-${cap}.</span>
+        <strong>Make profit first. Pay us second.</strong>
+        <span>No upfront subscription fee.<br />$0–${cap} / month.</span>
       </div>
       <a className={`${styles.planCta} ${switchStyles.performanceCta}`} href={PERFORMANCE_URL}>Start →</a>
       <div className={`${switchStyles.planLimits} ${switchStyles.performanceLimits}`}>
@@ -141,7 +140,7 @@ export default function PricingPlans() {
             <PerformanceTierCard tier="max" />
           </div>
           <p className={styles.limitNote}>
-            Pay when you profit charges only when your LabNarrative Live Spot trading makes a realized net profit. Pro is capped at $49 per profitable month with a $49 reusable billing reserve; Max is capped at $78 with a $78 reserve. No profit, no fee. Anything left stays for next month or you get it back upon cancellation.
+            No subscription fee upfront. Pay when you profit follows positive net realized PnL from LabNarrative Live Spot trading: Pro is capped at $39 per billing month and Max at $69. Reach the cap and it is charged automatically; otherwise any positive amount owed is settled at month-end.
           </p>
         </>
       ) : (
@@ -179,7 +178,7 @@ export default function PricingPlans() {
           <p className={styles.limitNote}>
             {view === "year"
               ? "Trader is $9.99/month equivalent ($119.88/year), Pro is $19.99/month equivalent ($239.88/year), and Max is $49.99/month equivalent ($599.88/year)."
-              : "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month."} PayPal and crypto payments are available; cards and wallets are coming soon. Monthly and annual purchases are prepaid and do not renew automatically.
+              : "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month."} Card payments via Tap, PayPal and crypto are available. Monthly and annual purchases are prepaid and do not renew automatically.
           </p>
         </>
       )}

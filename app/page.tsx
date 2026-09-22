@@ -43,7 +43,7 @@ const structuredData = {
       url: "https://labnarrative.com",
       description,
       publisher: { "@id": "https://labnarrative.com/#organization" },
-      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "78", offerCount: "4" },
+      offers: { "@type": "AggregateOffer", priceCurrency: "USD", lowPrice: "0", highPrice: "69", offerCount: "4" },
       featureList: [
         "Crypto Spot DCA bots",
         "Crypto paper trading",
@@ -94,8 +94,8 @@ export default function HomePage() {
     </header>
 
     <section className={styles.hero}>
-      <h1><span>Powerful crypto automation.</span><em>Pay only when you profit.</em></h1>
-      <p className={styles.lead}>Build, test and run Spot automation with fixed-price plans or Max Performance billing. No profitable month? You pay $0.</p>
+      <h1><span>Powerful crypto automation.</span><em>Make profit first. Pay us second.</em></h1>
+      <p className={styles.lead}>Build, test and run Spot automation with fixed-price plans or Pay when you profit on Pro and Max. No subscription fee upfront; performance fees follow realized profit and are capped monthly.</p>
       <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a><a className={styles.secondary} href="/pricing">Pay when you profit</a></div>
 
       <div className={styles.heroFrame}>
