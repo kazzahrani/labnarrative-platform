@@ -114,7 +114,7 @@ function PerformanceTierCard({ tier }: { tier: "pro" | "max" }) {
         ))}
       </div>
       <p className={switchStyles.performanceReserveCopy}>
-        Deposit ${reserve} in a reusable billing reserve to start. We only deduct the fee you owe. Anything left stays for next month or you get it back upon cancellation.
+        Add a card securely through Tap. If realized net PnL reaches the ${cap} cap, the cap is charged then; otherwise any positive fee is settled at month-end.
       </p>
     </article>
   );
