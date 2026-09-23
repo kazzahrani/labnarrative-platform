@@ -68,33 +68,9 @@ const fixedPlans = [
   },
 ] as const;
 
-function DisabledPerformanceCard() {
-  const definition = fixedPlans.find((item) => item.name === "Trader")!;
-
-  return (
-    <article className={`${styles.planCard} ${switchStyles.performanceDisabledCard} ${switchStyles.performanceAlignedCard}`}>
-      <div className={switchStyles.performanceTop}>
-        <h2>{definition.name}</h2>
-        <p>Pay when you profit is available with Pro and Max.</p>
-      </div>
-      <div className={switchStyles.disabledPerformancePrice}>
-        <strong>$14.99</strong>
-        <span>/ month</span>
-        <small>Prepaid monthly access</small>
-      </div>
-      <span className={`${styles.planCta} ${switchStyles.disabledCta} ${switchStyles.performanceCta}`}>Not available</span>
-      <div className={`${switchStyles.planLimits} ${switchStyles.disabledLimits}`}>
-        {definition.features.map((feature) => (
-          <div key={`${feature.value}-${feature.label}`}><strong>{feature.value}</strong><span>{feature.label}</span></div>
-        ))}
-      </div>
-    </article>
-  );
-}
-
-function PerformanceTierCard({ tier }: { tier: "pro" | "max" }) {
+function PerformanceTierCard({ tier }: { tier: "trader" | "pro" | "max" }) {
   const definition = fixedPlans.find((item) => item.name.toLowerCase() === tier)!;
-  const cap = tier === "pro" ? 39 : 69;
+  const cap = tier === "trader" ? 19 : tier === "pro" ? 39 : 69;
 
   return (
     <article className={`${styles.planCard} ${styles.featured} ${switchStyles.performanceCard} ${switchStyles.performanceAlignedCard}`}>
@@ -135,12 +111,12 @@ export default function PricingPlans() {
       {performance ? (
         <>
           <div className={styles.planGrid} style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", maxWidth: 1180, marginInline: "auto" }}>
-            <DisabledPerformanceCard />
+            <PerformanceTierCard tier="trader" />
             <PerformanceTierCard tier="pro" />
             <PerformanceTierCard tier="max" />
           </div>
           <p className={styles.limitNote}>
-            No subscription fee upfront. Pay when you profit follows positive net realized PnL from LabNarrative Live Spot trading: Pro is capped at $39 per billing month and Max at $69. Reach the cap and it is charged automatically; otherwise any positive amount owed is settled at month-end.
+            No subscription fee upfront. Pay when you profit follows positive net realized PnL from LabNarrative Live Spot trading: Trader is capped at $19, Pro at $39, and Max at $69 per billing month. Reach the cap and it becomes due; otherwise any positive amount owed is settled at month-end.
           </p>
         </>
       ) : (
