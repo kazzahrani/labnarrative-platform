@@ -114,7 +114,7 @@ function PerformanceTierCard({ tier }: { tier: "pro" | "max" }) {
         ))}
       </div>
       <p className={switchStyles.performanceReserveCopy}>
-        Add a card securely through Tap. If realized net PnL reaches the ${cap} cap, the cap is charged then; otherwise any positive fee is settled at month-end.
+        No card or reserve is required to start. If realized net PnL reaches the ${cap} cap, that fee becomes due then; otherwise any positive fee is settled at month-end.
       </p>
     </article>
   );
@@ -178,7 +178,7 @@ export default function PricingPlans() {
           <p className={styles.limitNote}>
             {view === "year"
               ? "Trader is $9.99/month equivalent ($119.88/year), Pro is $19.99/month equivalent ($239.88/year), and Max is $49.99/month equivalent ($599.88/year)."
-              : "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month."} Card payments via Tap, PayPal and crypto are available. Monthly and annual purchases are prepaid and do not renew automatically.
+              : "Trader is $14.99/month, Pro is $29.99/month, and Max is $69.99/month."} PayPal and crypto are available. Card payments are temporarily unavailable. Monthly and annual purchases are prepaid and do not renew automatically.
           </p>
         </>
       )}
