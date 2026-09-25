@@ -58,12 +58,12 @@ const structuredData = {
 };
 
 const steps = [
-  ["01", "Build", "Define the automation and its risk controls."],
-  ["02", "Simulate", "Run the complete workflow with Paper capital."],
-  ["03", "Connect", "Link Binance, Bybit, KuCoin, OKX or Kraken when you are ready."],
-  ["04", "Automate", "Let the strategy manage Spot entries, DCA and exits."],
-  ["05", "Analyse", "Review positions, signals and bot performance."],
-];
+  ["01", "Build", "Define the automation and its risk controls.", "/characters/builder.webp"],
+  ["02", "Simulate", "Run the complete workflow with Paper capital.", "/characters/patient.webp"],
+  ["03", "Connect", "Link Binance, Bybit, KuCoin, OKX or Kraken when you are ready.", null],
+  ["04", "Automate", "Let the strategy manage Spot entries, DCA and exits.", null],
+  ["05", "Analyse", "Review positions, signals and bot performance.", "/characters/analyst.webp"],
+] as const;
 
 function Brand() {
   return <span className={styles.brand}><img src="/labnarrative-mark.svg" alt="" />LabNarrative</span>;
@@ -94,6 +94,7 @@ export default function HomePage() {
     </header>
 
     <section className={styles.hero}>
+      <img className={styles.heroCharacter} src="/characters/watcher.webp" alt="" />
       <h1><span>Powerful crypto automation.</span><em>Make profit first. Pay us second.</em></h1>
       <p className={styles.lead}>Build, test and run Spot automation with fixed-price plans or Pay when you profit on Pro and Max. No subscription fee upfront; performance fees follow realized profit and are capped monthly.</p>
       <div className={styles.heroActions}><a className={styles.primary} href={APP_URL}>Start free with Paper →</a><a className={styles.secondary} href="/pricing">Pay when you profit</a></div>
@@ -138,7 +139,7 @@ export default function HomePage() {
 
     <section className={styles.workflow} id="workflow">
       <h2>Build. Simulate. Connect. Automate. Analyse.</h2>
-      <div className={styles.steps}>{steps.map(([number,title,copy])=><article className={styles.step} key={title}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div>
+      <div className={styles.steps}>{steps.map(([number,title,copy,character])=><article className={`${styles.step} ${character ? styles.characterStep : ""}`} key={title}><span>{number}</span>{character?<img className={styles.stepCharacter} src={character} alt="" />:null}<h3>{title}</h3><p>{copy}</p></article>)}</div>
     </section>
 
     <section className={styles.story}>
