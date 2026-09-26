@@ -16,3 +16,128 @@
   text-decoration-color:#8e8e89;
 }
 .featured .priceLine del{color:#8e8e89}
+
+
+/* Public website dark-theme rollout — align all marketing/SEO pages with Bot League. */
+.page{
+  --ink:#f4f4f1;
+  --muted:#a0a0a0;
+  --soft:#747474;
+  --line:#373737;
+  --paper:#1f1f1f;
+  --paper2:#1a1a1a;
+  --white:#242424;
+  --green:#6fcf97;
+  --greenDark:#6fcf97;
+  --red:#df8087;
+  background:#1f1f1f;
+  color:#f4f4f1;
+}
+.header{
+  border-bottom-color:#343434;
+  background:rgba(31,31,31,.94);
+}
+.brand{color:#f4f4f1}
+.nav{color:#9a9a9a}
+.nav a:hover,.nav .current{color:#f4f4f1}
+.signIn{color:#aaa}
+.launch,.primary{
+  background:#f1f1ef;
+  color:#1d1d1d!important;
+  box-shadow:none;
+}
+.secondary{
+  background:#242424;
+  border-color:#3b3b3b;
+  color:#d2d2d2!important;
+}
+.eyebrow,.label{color:#8f8f8a}
+.hero,.affiliateHero{
+  border-bottom-color:#343434;
+  background:#1f1f1f;
+}
+.hero:before{
+  background:
+    radial-gradient(circle at 50% 18%,rgba(112,137,165,.09),transparent 27%),
+    linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:auto,48px 48px,48px 48px;
+}
+.hero h1,.affiliateHero h1,.sectionHead h2,.sectionIntro h2,.finalCta h2{color:#f4f4f1}
+.hero h1 em,.affiliateHero h1 em{color:#a8a8a3}
+.lead,.affiliateLead,.sectionIntro>p:last-child{color:#9a9a95}
+.notePill{
+  border-color:#3a3a3a;
+  background:#242424;
+  color:#929292;
+}
+.notePill strong{color:#ddd}
+.section{background:#1f1f1f}
+.planSection,.fitSection{background:#1a1a1a}
+.planCard,
+.principleGrid article,
+.partnerGrid article,
+.programGrid article,
+.commissionPanel{
+  border-color:#393939;
+  background:#242424;
+  color:#f1f1ee;
+}
+.planCard.featured{
+  background:#191919;
+  border-color:#474747;
+  box-shadow:0 24px 55px rgba(0,0,0,.22);
+}
+.popular{
+  background:#efefec;
+  color:#202020;
+}
+.planEyebrow,.commissionPanel small,.programGrid span,.principleGrid span{color:#92928d}
+.planCard h2,.principleGrid h3,.partnerGrid h3,.programGrid h3,.commissionPanel strong{color:#f4f4f1}
+.priceLine span,.billing,.planCopy,.planCard li,
+.principleGrid p,.partnerGrid p,.programGrid p,.commissionPanel p{color:#a0a09b}
+.planCta{
+  background:#efefec;
+  color:#202020!important;
+}
+.featured .planCta{
+  background:#efefec;
+  color:#202020!important;
+}
+.limitNote{color:#888883}
+.founding{
+  background:#181818;
+  border-top:1px solid #343434;
+  border-bottom:1px solid #343434;
+}
+.founding aside{
+  border-color:#3b3b3b;
+  background:#222;
+}
+.finalCta{
+  background:#181818;
+  border-top:1px solid #353535;
+  border-bottom:1px solid #353535;
+}
+.finalCta>p:nth-of-type(2){color:#969691}
+.affiliateHero:before{
+  background:radial-gradient(circle at 22% 12%,rgba(112,137,165,.09),transparent 28%);
+}
+.terms{background:#1f1f1f}
+.termList{border-top-color:#383838}
+.termList li{
+  border-bottom-color:#383838;
+  color:#9b9b96;
+}
+.applyBox{
+  background:#181818;
+  border:1px solid #3a3a3a;
+}
+.footer{
+  border-top-color:#353535;
+  background:#1b1b1b;
+}
+.footerLinks{color:#989893}
+.footer small{color:#747470}
+.priceLine del{color:#7f7f7b}
+.featured .priceLine del{color:#7f7f7b}
