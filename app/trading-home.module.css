@@ -33,14 +33,6 @@
   background:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
   background-size:48px 48px,48px 48px;
 }
-.heroCharacter{
-  position:relative;
-  display:block;
-  width:220px;
-  max-width:38vw;
-  height:auto;
-  margin:0 auto 20px;
-}
 .hero h1 em{color:#aaa}
 .lead{color:#aaa}
 .primary{
@@ -80,15 +72,15 @@
   min-height:248px;
   padding-right:24px;
 }
-.stepCharacter{
+.stepIllustration{
   display:block;
-  width:116px;
-  height:92px;
+  width:124px;
+  height:100px;
   object-fit:contain;
-  object-position:left bottom;
-  margin:18px 0 0;
+  object-position:left center;
+  margin:20px 0 0;
 }
-.characterStep h3{margin-top:18px}
+.step h3{margin-top:16px}
 .step p{color:#929292}
 .story{background:#1f1f1f}
 .affiliate{
@@ -110,7 +102,6 @@
 .footer small{color:#777}
 
 @media(max-width:720px){
-  .heroCharacter{width:170px;max-width:62vw;margin-bottom:16px}
   .step{min-height:230px}
-  .stepCharacter{width:100px;height:80px}
+  .stepIllustration{width:108px;height:88px}
 }
