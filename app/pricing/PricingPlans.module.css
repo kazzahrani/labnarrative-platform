@@ -323,3 +323,42 @@
   font-size:9px;
   line-height:1.55;
 }
+
+
+/* Pricing controls on dark public theme. */
+.toggle{
+  border-color:#3a3a3a;
+  background:#242424;
+  box-shadow:none;
+}
+.toggle button{color:#9d9d98}
+.toggle button.active{
+  background:#efefec;
+  color:#202020;
+  box-shadow:none;
+}
+.performanceDisabledCard{
+  opacity:.5;
+  filter:grayscale(1);
+  background:#202020!important;
+  border-color:#383838!important;
+}
+.disabledCta{
+  background:#303030!important;
+  color:#777!important;
+}
+.planLimits{
+  border-top-color:#3a3a3a;
+  border-bottom-color:#3a3a3a;
+}
+.planLimits strong{color:#ecece8}
+.planLimits span{color:#9a9a95}
+.planLimits>div:before{color:#6fcf97}
+.yearlyDiscountBadge{color:#8e8e89!important}
+.toggle button.active .yearlyDiscountBadge{color:#5f5f5b!important}
+.planPositioning{color:#9a9a95!important}
+.disabledPerformancePrice strong{color:#e8e8e4}
+.disabledPerformancePrice>span,
+.disabledPerformancePrice small{color:#8f8f8a}
+.performanceDisabledCard .planLimits strong{color:#777!important}
+.performanceDisabledCard .planLimits span{color:#666!important}
