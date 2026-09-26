@@ -545,3 +545,67 @@
   .cta a { justify-self: start; }
   .footer { padding: 26px 18px; }
 }
+
+
+/* Learn library dark-theme rollout. */
+.page{background:#1f1f1f;color:#f4f4f1}
+.header{
+  background:rgba(31,31,31,.94);
+  border-bottom-color:#353535;
+}
+.brand{color:#f4f4f1}
+.headerNav a{color:#999}
+.headerNav a:hover,.headerNav .active{color:#f4f4f1}
+.signIn{color:#aaa}
+.launch{background:#efefec;color:#202020}
+.breadcrumb{color:#7e7e7a}
+.breadcrumb strong{color:#ddd}
+.heroCopy p:first-child,.sectionLabel,.cardKicker{color:#8e8e89}
+.hero h1{color:#f4f4f1}
+.hero h1 em{color:#adada8}
+.heroCopy>p:last-child{color:#9c9c98}
+.heroAside{
+  background:#242424;
+  border-color:#393939;
+}
+.heroAside p{color:#9a9a95}
+.heroAside a,.heroAside strong{color:#f0f0ed}
+.libraryBar{background:rgba(31,31,31,.94)}
+.categoryButton{color:#969691}
+.categoryButton:hover{
+  background:#282828;
+  color:#efefec;
+}
+.categoryButtonActive{
+  background:#efefec;
+  color:#202020;
+}
+.searchWrap input{
+  border-color:#393939;
+  background:#242424;
+  color:#efefec;
+}
+.searchWrap input:focus{
+  border-color:#666;
+  box-shadow:0 0 0 3px rgba(255,255,255,.04);
+}
+.featured,.card,.empty{
+  background:#242424;
+  border-color:#393939;
+}
+.featured:hover,.card:hover{box-shadow:0 20px 50px rgba(0,0,0,.22)}
+.featuredContent h2,.cardBody h3,.sectionHead h2{color:#f3f3ef}
+.meta,.sectionHead p,.featuredContent p,.cardBody p,.empty{color:#969691}
+.readMore{color:#e9e9e5}
+.cta{
+  background:#181818;
+  border:1px solid #393939;
+}
+.cta p{color:#9c9c97}
+.cta a{background:#efefec;color:#202020}
+.footer{
+  background:#1b1b1b;
+  border-top-color:#353535;
+}
+.footerLinks{color:#979792}
+.footer small{color:#73736f}
