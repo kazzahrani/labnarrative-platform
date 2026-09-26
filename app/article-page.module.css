@@ -606,3 +606,69 @@
   .finalCta { grid-template-columns: 1fr; padding: 30px 24px; }
   .footer { padding: 26px 18px; }
 }
+
+
+/* Learn article dark-theme rollout. */
+.page{background:#1f1f1f;color:#f4f4f1}
+.header{
+  background:rgba(31,31,31,.95);
+  border-bottom-color:#353535;
+}
+.brand{color:#f4f4f1}
+.headerNav a{color:#999}
+.headerNav a:hover,.headerNav .active{color:#f4f4f1}
+.signIn{color:#aaa}
+.launch{background:#efefec;color:#202020!important}
+.breadcrumb{color:#7f7f7a}
+.breadcrumb strong{color:#ddd}
+.articleMeta span{
+  border-color:#393939;
+  background:#242424;
+  color:#9d9d98;
+}
+.articleHeader h1{color:#f4f4f1}
+.articleHeader>p{color:#a0a09b}
+.heroVisual{
+  background:linear-gradient(135deg,#181818 0%,#24292d 58%,#546b61 100%);
+  border:1px solid #3a3a3a;
+}
+.articleBody{color:#c5c5c1}
+.articleBody h2,.articleBody h3{color:#f1f1ed}
+.articleBody a{color:#f1f1ed}
+.quickAnswer,.toc,.mobileToc,.relatedCard{
+  background:#242424;
+  border-color:#393939;
+}
+.quickAnswer strong,.callout strong,.toc strong,.mobileToc strong{color:#efefeb}
+.callout{
+  background:#222;
+  border-left-color:#666;
+}
+.inlineCta,.sidebarCta,.finalCta{
+  background:#181818;
+  border:1px solid #393939;
+}
+.inlineCta{color:#aaa}
+.inlineCta strong,.sidebarCta h2,.finalCta h2{color:#f3f3ef}
+.inlineCta a,.sidebarCta a,.finalCta>a{
+  background:#efefec;
+  color:#202020;
+}
+.comparisonTable{
+  border-color:#393939;
+  background:#242424;
+}
+.comparisonTable th,.comparisonTable td{border-bottom-color:#393939}
+.comparisonTable th{color:#efefec}
+.comparisonTable td{color:#aaa}
+.toc li,.mobileToc li{color:#969691}
+.toc a:hover,.mobileToc a:hover{color:#f1f1ed}
+.relatedHead>a,.relatedCard p{color:#999}
+.relatedCard h3,.relatedCard strong{color:#efefec}
+.relatedCard:hover{box-shadow:0 18px 45px rgba(0,0,0,.22)}
+.footer{
+  background:#1b1b1b;
+  border-top-color:#353535;
+}
+.footerLinks{color:#979792}
+.footer small{color:#73736f}
