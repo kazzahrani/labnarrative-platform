@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { browserSupabase as supabase } from "@/lib/supabase-browser";
-import styles from "./InternalVideoStudio.module.css";
+import styles from "./AdminVideoStudio.module.css";
 
 type LeagueBot = {
   id: string;
