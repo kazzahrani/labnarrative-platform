@@ -93,6 +93,16 @@ for (const file of files) {
 }
 
 if (!optionPatched) {
-  throw new Error("PSTE+PSAR scanner UI patch: generated scanner options were not found.");
+  const debug = [];
+  for (const file of files) {
+    const c = fs.readFileSync(file, "utf8");
+    for (const needle of ["SMA Trend Long", "LabNarrative Strategy Scanner", "scannerKey", "SCANNER_OPTIONS"]) {
+      const i = c.indexOf(needle);
+      if (i >= 0) debug.push("FILE " + path.relative(process.cwd(), file) + "\nNEEDLE " + needle + "\n" + c.slice(Math.max(0, i - 3500), i + 12000));
+    }
+  }
+  fs.mkdirSync(path.join(process.cwd(), "public"), { recursive: true });
+  fs.writeFileSync(path.join(process.cwd(), "public/pste-scanner-debug.txt"), debug.join("\n\n====================\n\n") || "NO MATCHING SCANNER UI SOURCE FOUND");
+  console.warn("PSTE+PSAR scanner UI: scanner options not patched; wrote public/pste-scanner-debug.txt");
 }
 console.log("Prepared PSTE+PSAR scanner UI. Patched files:", patchedFiles);
