@@ -27,6 +27,7 @@ const sharedTools=[
  {label:"Client Care",href:"/admin/websites/care"},
  {label:"LinkedIn",href:"/admin/websites/linkedin"},
  {label:"Operations Guide",href:"/admin/guide"},
+ {label:"Video Studio",href:"/admin/video-studio"},
 ];
 
 export default function LabNarrativeAdminHome(){
