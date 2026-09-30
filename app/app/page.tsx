@@ -5,6 +5,7 @@ import Link from "next/link";
 import { calculateQuote, demoDraft, QuoteDraft, QuoteItem } from "@/lib/quote";
 
 type Lang = "en" | "ar";
+type Theme = "dark" | "light";
 type View = "dashboard" | "quotes" | "catalog" | "settings";
 type ServiceStatus = { ai: boolean; voice: boolean; whatsapp: boolean; database: boolean };
 type RecentQuote = { quote_number: string; customer_name: string; total: number; status: string; created_at?: string };
@@ -43,7 +44,8 @@ function Brand({ lang }: { lang: Lang }) {
 function money(n: number) { return new Intl.NumberFormat("en-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); }
 
 export default function AppPage() {
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useState<Lang>("ar");
+  const [theme, setThemeState] = useState<Theme>("dark");
   const [view, setView] = useState<View>("dashboard");
   const [input, setInput] = useState("");
   const [draft, setDraft] = useState<QuoteDraft>(demoDraft);
@@ -74,11 +76,14 @@ export default function AppPage() {
 
   useEffect(() => {
     const savedLang = localStorage.getItem("thrwa-lang") as Lang | null;
-    if (savedLang === "ar" || savedLang === "en") {
-      setLang(savedLang);
-      document.documentElement.lang = savedLang;
-      document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
-    }
+    const resolvedLang: Lang = savedLang === "en" || savedLang === "ar" ? savedLang : "ar";
+    const savedTheme = localStorage.getItem("thrwa-theme") as Theme | null;
+    const resolvedTheme: Theme = savedTheme === "light" ? "light" : "dark";
+    setLang(resolvedLang);
+    setThemeState(resolvedTheme);
+    document.documentElement.lang = resolvedLang;
+    document.documentElement.dir = resolvedLang === "ar" ? "rtl" : "ltr";
+    document.documentElement.dataset.theme = resolvedTheme;
     void refreshData();
   }, []);
 
@@ -87,6 +92,12 @@ export default function AppPage() {
     localStorage.setItem("thrwa-lang", l);
     document.documentElement.lang = l;
     document.documentElement.dir = l === "ar" ? "rtl" : "ltr";
+  };
+
+  const setTheme = (next: Theme) => {
+    setThemeState(next);
+    localStorage.setItem("thrwa-theme", next);
+    document.documentElement.dataset.theme = next;
   };
 
   const generate = async () => {
@@ -166,7 +177,7 @@ export default function AppPage() {
     </aside>
 
     <main className="workspace">
-      <header className="workspaceTop"><div className="langSwitch"><button className={lang === "ar" ? "active" : ""} onClick={() => setLanguage("ar")}>العربية</button><button className={lang === "en" ? "active" : ""} onClick={() => setLanguage("en")}>English</button></div><div className="accountChip"><span>KA</span><div><strong>Demo Company</strong><small>Business workspace</small></div></div></header>
+      <header className="workspaceTop"><button className="themeToggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Light mode" : "Dark mode"}>{theme === "dark" ? "☀" : "☾"}</button><div className="langSwitch"><button className={lang === "ar" ? "active" : ""} onClick={() => setLanguage("ar")}>العربية</button><button className={lang === "en" ? "active" : ""} onClick={() => setLanguage("en")}>English</button></div><div className="accountChip"><span>KA</span><div><strong>Demo Company</strong><small>Business workspace</small></div></div></header>
 
       {view === "dashboard" && <>
         <section className="workspaceHead"><p className="eyebrow">{t.kicker}</p><h1>{t.title}</h1><p>{t.sub}</p></section>
