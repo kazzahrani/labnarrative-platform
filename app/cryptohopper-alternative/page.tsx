@@ -59,6 +59,12 @@ export default function CryptohopperAlternativePage() {
       date="Updated 30 Sep 2026"
       readTime="6 min read"
       visualKicker="Make profit first. Pay us second."
+      comparisonHero={{
+        competitor: "Cryptohopper",
+        competitorMark: "CH",
+        tagline: "Make profit first. Pay us second.",
+        competitorItems: ["Broad automation ecosystem", "Strategy marketplace", "Subscription pricing"],
+      }}
       toc={toc}
       relatedGuides={[
         { href: "/pricing", category: "Pricing", title: "LabNarrative pricing", excerpt: "Compare fixed Trader, Pro and Max plans with Pay when you profit on Pro and Max." },

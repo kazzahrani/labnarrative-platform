@@ -35,6 +35,12 @@ type ArticleLayoutProps = {
   finalTitle?: string;
   finalCopy?: string;
   finalCtaLabel?: string;
+  comparisonHero?: {
+    competitor: string;
+    competitorMark: string;
+    tagline?: string;
+    competitorItems?: string[];
+  };
 };
 
 function Brand() {
@@ -66,6 +72,7 @@ export default function ArticleLayout({
   finalTitle = "Reading explains the workflow. Paper Trading shows how it behaves.",
   finalCopy = "Build the supported setup with simulated capital, review its positions and history, and decide what belongs in your Live workflow only after you have observed it.",
   finalCtaLabel = "Start free with Paper →",
+  comparisonHero,
 }: ArticleLayoutProps) {
   return (
     <main className={styles.page}>
@@ -109,13 +116,52 @@ export default function ArticleLayout({
             <p>{intro}</p>
           </header>
 
-          <div className={styles.heroVisual} aria-hidden="true">
-            <div className={styles.heroGrid} />
-            <div className={styles.heroOrb} />
-            <div className={styles.heroTrace} />
-            <span>LabNarrative Learn · {category}</span>
-            <strong>{visualKicker}</strong>
-          </div>
+          {comparisonHero ? (
+            <div className={styles.comparisonHero}>
+              <div className={styles.heroGrid} aria-hidden="true" />
+              <div className={styles.comparisonHeroCopy}>
+                <span>LabNarrative Learn · {category}</span>
+                <h2>LabNarrative <em>vs</em> {comparisonHero.competitor}</h2>
+                <p>{comparisonHero.tagline || visualKicker}</p>
+              </div>
+
+              <div className={styles.comparisonBrandStage} aria-label={`LabNarrative compared with ${comparisonHero.competitor}`}>
+                <div className={`${styles.comparisonBrandCard} ${styles.labBrandCard}`}>
+                  <div className={styles.brandIdentity}>
+                    <span className={styles.labMark}><img src="/labnarrative-mark.svg" alt="" /></span>
+                    <strong>LabNarrative</strong>
+                  </div>
+                  <ul>
+                    <li>Paper-first testing</li>
+                    <li>Focused Spot automation</li>
+                    <li>Pay when you profit</li>
+                  </ul>
+                </div>
+
+                <div className={styles.vsBadge}>VS</div>
+
+                <div className={`${styles.comparisonBrandCard} ${styles.competitorBrandCard}`}>
+                  <div className={styles.brandIdentity}>
+                    <span className={styles.competitorMark}>{comparisonHero.competitorMark}</span>
+                    <strong>{comparisonHero.competitor}</strong>
+                  </div>
+                  <ul>
+                    {(comparisonHero.competitorItems || ["Established platform", "Broader automation suite", "Subscription pricing"]).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.heroVisual} aria-hidden="true">
+              <div className={styles.heroGrid} />
+              <div className={styles.heroOrb} />
+              <div className={styles.heroTrace} />
+              <span>LabNarrative Learn · {category}</span>
+              <strong>{visualKicker}</strong>
+            </div>
+          )}
 
           <div className={styles.mobileToc}>
             <strong>Table of contents</strong>

@@ -59,6 +59,12 @@ export default function BitsgapAlternativePage() {
       date="Updated 30 Sep 2026"
       readTime="6 min read"
       visualKicker="Test first. Move only if it fits."
+      comparisonHero={{
+        competitor: "Bitsgap",
+        competitorMark: "B",
+        tagline: "Test first. Move only if it fits.",
+        competitorItems: ["Grid + DCA workflows", "Established bot suite", "Subscription pricing"],
+      }}
       toc={toc}
       relatedGuides={[
         { href: "/pricing", category: "Pricing", title: "LabNarrative pricing", excerpt: "Compare fixed plans with Pay when you profit on Pro and Max." },
