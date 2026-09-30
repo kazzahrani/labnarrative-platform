@@ -59,3 +59,9 @@ html[data-theme="light"] .sideNav button.active{background:#dedad1;color:#171717
 .appShell[dir="rtl"] .sidebar{grid-area:sidebar!important;grid-column:auto!important;grid-row:1!important;border-right:0!important;border-left:1px solid var(--line2)!important}
 .appShell[dir="rtl"] .workspace{grid-area:workspace!important;grid-column:auto!important;grid-row:1!important}
 @media(max-width:900px){.appShell,.appShell[dir="rtl"],.appShell[dir="ltr"]{grid-template-areas:none}.appShell[dir="rtl"] .sidebar,.appShell[dir="ltr"] .sidebar,.appShell[dir="rtl"] .workspace,.appShell[dir="ltr"] .workspace{grid-area:auto!important;grid-column:1!important;grid-row:auto!important;border-left:0!important}}
+
+.shareReady{margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);display:flex;align-items:center;gap:8px;font-size:9px;color:var(--muted)}
+.appShell[lang=ar] .shareReady{font-size:12px}
+.shareReady span{margin-inline-end:auto}
+.shareReady button,.shareReady a{border:0;background:transparent;color:var(--soft);font-size:inherit;font-weight:800;padding:4px 6px}
+html[data-theme="light"] .shareReady{background:#f4f1eb}
