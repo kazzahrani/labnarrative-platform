@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { calculateQuote, QuoteDraft } from "@/lib/quote";
 
-const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
+const graphVersion = process.env.WHATSAPP_GRAPH_VERSION || "v26.0";
 const token = () => process.env.WHATSAPP_ACCESS_TOKEN || "";
 
 export function verifyMetaSignature(rawBody: string, signatureHeader: string | null) {
@@ -45,7 +45,7 @@ export async function transcribeBlob(blob: Blob, mimeType: string) {
   if (!apiKey) throw new Error("OpenAI transcription is not configured");
   const body = new FormData();
   body.append("file", new File([blob], "whatsapp-voice.ogg", { type: mimeType }));
-  body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-transcribe");
+  body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
   body.append("response_format", "json");
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
