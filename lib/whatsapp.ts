@@ -47,28 +47,34 @@ export async function transcribeBlob(blob: Blob, mimeType: string) {
   body.append("file", new File([blob], "whatsapp-voice.ogg", { type: mimeType }));
   body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
   body.append("response_format", "json");
+  body.append("temperature", "0");
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body,
     cache: "no-store"
   });
-  if (!response.ok) throw new Error("WhatsApp voice transcription failed");
-  const data = await response.json();
-  return String(data?.text || "").trim();
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error?.message || "WhatsApp voice transcription failed");
+  const text = String(data?.text || "").trim();
+  if (!text) throw new Error("WhatsApp voice note contained no clear speech");
+  return text;
 }
 
-export function quoteReply(draft: QuoteDraft) {
+export function quoteReply(draft: QuoteDraft, customerLink?: string) {
   const totals = calculateQuote(draft);
   const lines = draft.items.map(i => `• ${i.descriptionAr || i.description} × ${i.quantity} — ${(i.quantity * i.unitPrice).toFixed(2)} ر.س`);
   return [
-    `عرض السعر المقترح لـ ${draft.customer}`,
+    `تم تجهيز عرض السعر لـ ${draft.customer}`,
     "",
     ...lines,
     draft.discount ? `الخصم: ${draft.discount.toFixed(2)} ر.س` : "",
     `الضريبة: ${draft.vatRate}%`,
     `الإجمالي: ${totals.total.toFixed(2)} ر.س`,
     "",
-    "راجع البنود ثم افتح THRWA لاعتماد العرض وإرساله."
+    customerLink ? "رابط العرض للعميل:" : "",
+    customerLink || "",
+    "",
+    customerLink ? "راجع العرض ثم أرسل الرابط للعميل." : "راجع البنود في THRWA قبل إرسال العرض."
   ].filter(Boolean).join("\n");
 }
