@@ -50,6 +50,7 @@ export default function AppPage() {
   const [input, setInput] = useState("");
   const [draft, setDraft] = useState<QuoteDraft>(demoDraft);
   const [busy, setBusy] = useState(false);
+  const [parseMode, setParseMode] = useState<"" | "ai" | "local-fallback">("");
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -108,7 +109,10 @@ export default function AppPage() {
     try {
       const res = await fetch("/api/quote/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input }) });
       const data = await res.json();
-      if (data.draft) setDraft(data.draft);
+      if (data.draft) {
+        setDraft(data.draft);
+        setParseMode(data.mode === "ai" ? "ai" : "local-fallback");
+      }
     } finally { setBusy(false); }
   };
 
@@ -188,7 +192,15 @@ export default function AppPage() {
   const patchItem = (id: string, patch: Partial<QuoteItem>) => setDraft(d => ({ ...d, items: d.items.map(i => i.id === id ? { ...i, ...patch } : i) }));
   const addItem = () => setDraft(d => ({ ...d, items: [...d.items, { id: crypto.randomUUID(), description: "New item", descriptionAr: "بند جديد", quantity: 1, unitPrice: 0 }] }));
 
-  const statusText = status.database ? (status.ai ? "● LIVE SERVICES" : "● DATABASE READY") : status.ai ? "● AI READY" : "● DEMO MODE";
+  const statusText = parseMode === "ai"
+    ? "● AI LIVE"
+    : parseMode === "local-fallback"
+      ? "● FALLBACK"
+      : status.database
+        ? (status.ai ? "● LIVE SERVICES" : "● DATABASE READY")
+        : status.ai
+          ? "● AI READY"
+          : "● DEMO MODE";
 
   return <div className="appShell" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
     <aside className="sidebar">
