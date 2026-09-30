@@ -24,8 +24,17 @@ async function rest(path: string, init?: RequestInit) {
     const text = await response.text().catch(() => "");
     throw new Error(`Supabase request failed (${response.status}): ${text.slice(0, 300)}`);
   }
+
   if (response.status === 204) return null;
-  return response.json();
+
+  const text = await response.text();
+  if (!text.trim()) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 export async function listQuotes(limit = 20) {
