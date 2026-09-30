@@ -61,7 +61,7 @@ export default function ThreeCommasAlternativePage() {
       visualKicker="Profit first. Pay second."
       comparisonHero={{
         competitor: "3Commas",
-        competitorMark: "///",
+        slug: "3commas",
         tagline: "Profit first. Pay second.",
         competitorItems: ["Established automation suite", "Spot + futures workflows", "Subscription pricing"],
       }}
@@ -90,12 +90,12 @@ export default function ThreeCommasAlternativePage() {
       sidebarKicker="Switch without guessing"
       sidebarTitle="Recreate the supported setup in Paper first."
       sidebarCopy="Keep 3Commas running while you reproduce the Spot DCA or TradingView workflow you actually use and compare the behavior."
-      sidebarCtaLabel="Start free in Paper →"
+      sidebarCtaLabel="Recreate my 3Commas setup free →"
       sidebarNote="Need help? Email hello@labnarrative.com and we will help with the first supported migration."
       finalKicker="Founder-assisted migration"
       finalTitle="Send us the setup. We will help recreate the first supported workflow."
       finalCopy="Share the relevant settings or screenshots. We will help translate one supported 3Commas Spot DCA or TradingView workflow into LabNarrative Paper so you can evaluate it before moving Live."
-      finalCtaLabel="Open LabNarrative Paper →"
+      finalCtaLabel="Start my free 3Commas migration →"
     >
       <div className={styles.quickAnswer}>
         <strong>Quick answer</strong>
@@ -165,7 +165,7 @@ export default function ThreeCommasAlternativePage() {
           <strong>Switching from 3Commas?</strong>
           <p>Email your first setup to hello@labnarrative.com. We will help recreate the supported workflow in Paper with you.</p>
         </div>
-        <a href="mailto:hello@labnarrative.com?subject=3Commas%20migration%20to%20LabNarrative">Get migration help →</a>
+        <a href="https://app.labnarrative.com/migration?platform=3commas&utm_source=competitor_page&utm_medium=organic&utm_campaign=3commas-alternative" data-competitor-growth>Get migration help →</a>
       </div>
 
       <h2 id="boundaries">What does not map one-to-one</h2>
