@@ -63,8 +63,16 @@ export async function saveQuote(draft: QuoteDraft, sourceText?: string, sourceTy
     })
   });
 
-  const quote = Array.isArray(created) ? created[0] : created;
+  let quote = Array.isArray(created) ? created[0] : created;
   if (!quote?.id) throw new Error("Quote was created without an id");
+
+  if (!quote.public_token) {
+    const rows = await rest(
+      `quotes?id=eq.${encodeURIComponent(quote.id)}&select=id,quote_number,public_token,customer_name,status,total,created_at&limit=1`
+    );
+    const persisted = Array.isArray(rows) ? rows[0] : null;
+    if (persisted?.public_token) quote = persisted;
+  }
 
   if (draft.items.length) {
     await rest("quote_items", {
