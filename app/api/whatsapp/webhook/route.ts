@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { parseQuoteWithAI } from "@/lib/ai";
 import { parseDemoInput } from "@/lib/quote";
-import { databaseConfigured, saveQuote } from "@/lib/supabase-rest";
+import {
+  databaseConfigured,
+  listCatalog,
+  saveQuote,
+  saveWhatsAppEvent,
+  whatsappEventExists
+} from "@/lib/supabase-rest";
 import { downloadWhatsAppMedia, quoteReply, sendWhatsAppText, transcribeBlob, verifyMetaSignature } from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
@@ -28,8 +34,25 @@ export async function POST(request: Request) {
   if (!message) return NextResponse.json({ ok: true });
 
   const from = String(message.from || "");
+  const messageId = String(message.id || "");
   let input = "";
   let sourceType = "text";
+
+  if (databaseConfigured() && messageId) {
+    try {
+      if (await whatsappEventExists(messageId)) {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      await saveWhatsAppEvent({
+        messageId,
+        fromNumber: from,
+        messageType: String(message.type || ""),
+        payload: message
+      });
+    } catch (error) {
+      console.error("THRWA WhatsApp event log error:", error);
+    }
+  }
 
   try {
     if (message.type === "text") input = String(message.text?.body || "");
@@ -44,15 +67,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    const catalog = databaseConfigured() ? await listCatalog().catch(() => []) : [];
+
     let draft = null;
-    try { draft = await parseQuoteWithAI(input); } catch (error) { console.error(error); }
+    try {
+      draft = await parseQuoteWithAI(input, Array.isArray(catalog) ? catalog : []);
+    } catch (error) {
+      console.error("THRWA WhatsApp AI parse error:", error);
+    }
     draft ||= parseDemoInput(input);
 
+    let customerLink = "";
     if (databaseConfigured()) {
-      try { await saveQuote({ ...draft, phone: draft.phone || from }, input, sourceType); } catch (error) { console.error(error); }
+      try {
+        const quote = await saveQuote({ ...draft, phone: draft.phone || from }, input, sourceType);
+        if (quote?.public_token) {
+          const origin = new URL(request.url).origin;
+          customerLink = `${origin}/q/${quote.public_token}`;
+        }
+      } catch (error) {
+        console.error("THRWA WhatsApp quote save error:", error);
+      }
     }
 
-    await sendWhatsAppText(from, quoteReply(draft));
+    await sendWhatsAppText(from, quoteReply(draft, customerLink));
   } catch (error) {
     console.error("THRWA WhatsApp webhook error:", error);
     if (from) {
