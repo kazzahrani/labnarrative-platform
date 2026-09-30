@@ -672,3 +672,34 @@
 }
 .footerLinks{color:#979792}
 .footer small{color:#73736f}
+
+/* Branded article hero illustration system */
+.heroVisual{
+  background:
+    radial-gradient(circle at 76% 45%,rgba(111,143,182,.14),transparent 30%),
+    linear-gradient(145deg,#181818 0%,#202427 64%,#252a2d 100%)!important;
+  border:1px solid #3a3a3a;
+}
+.heroOrb,.heroTrace{display:none!important}
+.heroGlow{
+  position:absolute;
+  right:4%;
+  top:8%;
+  width:360px;
+  height:360px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(230,179,92,.11),transparent 68%);
+}
+.heroIllustration{
+  position:absolute;
+  right:5%;
+  bottom:7%;
+  width:min(43%,520px);
+  height:auto;
+  filter:drop-shadow(0 22px 36px rgba(0,0,0,.28));
+}
+.heroVisual>strong{max-width:42%}
+@media(max-width:760px){
+  .heroIllustration{width:56%;right:0;bottom:5%}
+  .heroVisual>strong{max-width:48%}
+}
