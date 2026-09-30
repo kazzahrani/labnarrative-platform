@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import PublicComparisonTracker from "./PublicComparisonTracker";
 import styles from "./article-page.module.css";
 import LearnIllustration, { type LearnVisual, visualForCategory } from "./LearnIllustration";
 
@@ -36,7 +37,12 @@ type ArticleLayoutProps = {
   finalTitle?: string;
   finalCopy?: string;
   finalCtaLabel?: string;
-  visual?: LearnVisual;
+  comparisonHero?: {
+    competitor: string;
+    slug: string;
+    tagline?: string;
+    competitorItems?: string[];
+  };
 };
 
 function Brand() {
@@ -68,10 +74,15 @@ export default function ArticleLayout({
   finalTitle = "Reading explains the workflow. Paper Trading shows how it behaves.",
   finalCopy = "Build the supported setup with simulated capital, review its positions and history, and decide what belongs in your Live workflow only after you have observed it.",
   finalCtaLabel = "Start free with Paper →",
-  visual,
+  comparisonHero,
 }: ArticleLayoutProps) {
+  const migrationHref = comparisonHero
+    ? `https://app.labnarrative.com/migration?platform=${encodeURIComponent(comparisonHero.slug)}&utm_source=competitor_page&utm_medium=organic&utm_campaign=${encodeURIComponent(comparisonHero.slug)}-alternative`
+    : APP_URL;
+
   return (
     <main className={styles.page}>
+      {comparisonHero ? <PublicComparisonTracker competitor={comparisonHero.slug} /> : null}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -87,8 +98,8 @@ export default function ArticleLayout({
           <a href="/pricing">Pricing</a>
         </nav>
         <div className={styles.headerActions}>
-          <a className={styles.signIn} href={APP_URL}>Sign in</a>
-          <a className={styles.launch} href={APP_URL}>Launch app →</a>
+          <a className={styles.signIn} href={APP_URL} data-competitor-growth={comparisonHero ? true : undefined}>Sign in</a>
+          <a className={styles.launch} href={APP_URL} data-competitor-growth={comparisonHero ? true : undefined}>Launch app →</a>
         </div>
       </header>
 
@@ -112,13 +123,58 @@ export default function ArticleLayout({
             <p>{intro}</p>
           </header>
 
-          <div className={styles.heroVisual} aria-hidden="true">
-            <div className={styles.heroGrid} />
-            <div className={styles.heroGlow} />
-            <LearnIllustration visual={visual ?? visualForCategory(category)} className={styles.heroIllustration} />
-            <span>LabNarrative Learn · {category}</span>
-            <strong>{visualKicker}</strong>
-          </div>
+          {comparisonHero ? (
+            <div className={styles.comparisonHero}>
+              <div className={styles.heroGrid} aria-hidden="true" />
+              <div className={styles.comparisonHeroCopy}>
+                <span>LabNarrative Learn · {category}</span>
+                <h2>LabNarrative <em>vs</em> {comparisonHero.competitor}</h2>
+                <p>{comparisonHero.tagline || visualKicker}</p>
+                <a
+                  className={styles.comparisonHeroCta}
+                  href={migrationHref}
+                  data-competitor-growth
+                >
+                  Recreate my {comparisonHero.competitor} setup free →
+                </a>
+              </div>
+
+              <div className={styles.comparisonBrandStage} aria-label={`LabNarrative compared with ${comparisonHero.competitor}`}>
+                <div className={`${styles.comparisonBrandCard} ${styles.labBrandCard}`}>
+                  <div className={styles.brandIdentity}>
+                    <span className={styles.labMark}><img src="/labnarrative-mark.svg" alt="" /></span>
+                    <strong>LabNarrative</strong>
+                  </div>
+                  <ul>
+                    <li>Paper-first testing</li>
+                    <li>Focused Spot automation</li>
+                    <li>Pay when you profit</li>
+                  </ul>
+                </div>
+
+                <div className={styles.vsBadge}>VS</div>
+
+                <div className={`${styles.comparisonBrandCard} ${styles.competitorBrandCard}`}>
+                  <div className={styles.brandIdentity}>
+                    <strong className={styles.competitorWordmark}>{comparisonHero.competitor}</strong>
+                  </div>
+                  <ul>
+                    {(comparisonHero.competitorItems || ["Established platform", "Broader automation suite", "Subscription pricing"]).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.heroVisual} aria-hidden="true">
+              <div className={styles.heroGrid} />
+              <div className={styles.heroOrb} />
+              <div className={styles.heroTrace} />
+              <span>LabNarrative Learn · {category}</span>
+              <strong>{visualKicker}</strong>
+            </div>
+          )}
 
           <div className={styles.mobileToc}>
             <strong>Table of contents</strong>
@@ -146,7 +202,7 @@ export default function ArticleLayout({
                 <span>{sidebarKicker}</span>
                 <h2>{sidebarTitle}</h2>
                 <p>{sidebarCopy}</p>
-                <a href={APP_URL}>{sidebarCtaLabel}</a>
+                <a href={migrationHref} data-competitor-growth={comparisonHero ? true : undefined}>{sidebarCtaLabel}</a>
                 <small>{sidebarNote}</small>
               </div>
             </aside>
@@ -179,7 +235,7 @@ export default function ArticleLayout({
             <h2>{finalTitle}</h2>
             <p>{finalCopy}</p>
           </div>
-          <a href={APP_URL}>{finalCtaLabel}</a>
+          <a href={migrationHref} data-competitor-growth={comparisonHero ? true : undefined}>{finalCtaLabel}</a>
         </section>
       </div>
 
@@ -190,6 +246,9 @@ export default function ArticleLayout({
           <a href="/dca-bot">DCA Bots</a>
           <a href="/crypto-paper-trading">Paper Trading</a>
           <a href="/tradingview-automation">TradingView</a>
+          <a href="/3commas-alternative">3Commas alternative</a>
+          <a href="/bitsgap-alternative">Bitsgap alternative</a>
+          <a href="/cryptohopper-alternative">Cryptohopper alternative</a>
           <a href="/pricing">Pricing</a>
         </div>
         <small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small>
