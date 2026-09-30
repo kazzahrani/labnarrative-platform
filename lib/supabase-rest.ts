@@ -132,3 +132,32 @@ export async function updatePublicQuoteStatus(publicToken: string, status: "acce
 
   return Array.isArray(rows) ? rows[0] : rows;
 }
+
+
+export async function whatsappEventExists(messageId: string) {
+  if (!messageId) return false;
+  const rows = await rest(
+    `whatsapp_events?whatsapp_message_id=eq.${encodeURIComponent(messageId)}&select=id&limit=1`
+  );
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+export async function saveWhatsAppEvent(args: {
+  messageId: string;
+  fromNumber?: string;
+  messageType?: string;
+  payload?: unknown;
+}) {
+  if (!args.messageId) return null;
+  return rest("whatsapp_events", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      business_id: businessId(),
+      whatsapp_message_id: args.messageId,
+      from_number: args.fromNumber || null,
+      message_type: args.messageType || null,
+      payload: args.payload || null
+    })
+  });
+}
