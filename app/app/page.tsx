@@ -104,18 +104,29 @@ export default function AppPage() {
     document.documentElement.dataset.theme = next;
   };
 
-  const generate = async () => {
-    if (!input.trim()) return;
-    setBusy(true); setSaved(false);
+  const generateFromText = async (message: string) => {
+    const clean = message.trim();
+    if (!clean) return;
+    setBusy(true); setSaved(false); setShareUrl("");
     try {
-      const res = await fetch("/api/quote/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ input }) });
+      const res = await fetch("/api/quote/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: clean })
+      });
       const data = await res.json();
       if (data.draft) {
         setDraft(data.draft);
         setParseMode(data.mode === "ai" ? "ai" : "local-fallback");
         setAiError(typeof data.aiError === "string" ? data.aiError : "");
       }
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const generate = async () => {
+    await generateFromText(input);
   };
 
   const saveDraft = async () => {
@@ -161,30 +172,50 @@ export default function AppPage() {
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 }
+      });
       chunksRef.current = [];
-      const recorder = new MediaRecorder(stream);
+
+      const preferredTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4;codecs=mp4a.40.2",
+        "audio/mp4",
+        "audio/ogg;codecs=opus",
+        "audio/ogg"
+      ];
+      const supportedType = preferredTypes.find(type => MediaRecorder.isTypeSupported(type));
+      const recorder = supportedType
+        ? new MediaRecorder(stream, { mimeType: supportedType })
+        : new MediaRecorder(stream);
       recorderRef.current = recorder;
       recorder.ondataavailable = event => { if (event.data.size) chunksRef.current.push(event.data); };
       recorder.onstop = async () => {
         setRecording(false);
         stream.getTracks().forEach(track => track.stop());
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const recordedType = recorder.mimeType || chunksRef.current[0]?.type || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: recordedType });
+        const baseType = recordedType.toLowerCase().split(";")[0];
+        const extension = baseType === "audio/mp4" ? "m4a" : baseType === "audio/ogg" ? "ogg" : "webm";
         const form = new FormData();
-        form.append("file", blob, "thrwa-voice.webm");
+        form.append("file", blob, `thrwa-voice.${extension}`);
         setVoiceBusy(true);
         try {
           const response = await fetch("/api/audio/transcribe", { method: "POST", body: form });
           const data = await response.json();
           if (!response.ok) throw new Error(data?.error || "Transcription failed");
-          setInput(data.text || "");
+          const transcript = String(data.text || "").trim();
+          if (!transcript) throw new Error(lang === "ar" ? "لم يتم التعرف على كلام في التسجيل." : "No speech was detected.");
+          setInput(transcript);
+          await generateFromText(transcript);
         } catch (error) {
           setVoiceError(error instanceof Error ? error.message : "Transcription failed");
         } finally {
           setVoiceBusy(false);
         }
       };
-      recorder.start();
+      recorder.start(250);
       setRecording(true);
     } catch {
       setVoiceError(lang === "ar" ? "لم نتمكن من الوصول إلى الميكروفون." : "Microphone access was not available.");
