@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import ArticleLayout from "../ArticleLayout";
 import styles from "../article-page.module.css";
 
-const title = "Cryptohopper Alternative for Spot DCA Automation | LabNarrative";
+const title = "Cryptohopper Alternative: Compare Pricing, Spot Automation & Paper Testing | LabNarrative";
 const description =
-  "Considering a Cryptohopper alternative for Spot DCA or TradingView automation? Compare the workflow you actually use, recreate supported rules in Paper, and switch only if the fit is right.";
+  "Compare LabNarrative with Cryptohopper for crypto Spot automation. See pricing, the retired free Pioneer tier, Pay when you profit, and a Paper-first migration path.";
 
 export const metadata: Metadata = {
   title,
@@ -15,11 +15,12 @@ export const metadata: Metadata = {
 };
 
 const toc = [
-  { id: "alternative-fit", label: "What kind of Cryptohopper user may fit" },
-  { id: "scope", label: "Why scope matters more than feature count" },
-  { id: "compare", label: "What to compare before switching" },
-  { id: "migration", label: "How to recreate the supported workflow" },
-  { id: "paper-test", label: "How Paper testing reduces migration risk" },
+  { id: "quick-comparison", label: "Cryptohopper vs LabNarrative at a glance" },
+  { id: "stay-with-cryptohopper", label: "When Cryptohopper may be the better fit" },
+  { id: "consider-labnarrative", label: "When LabNarrative may fit better" },
+  { id: "pricing-model", label: "The pricing difference" },
+  { id: "migration", label: "Free Paper-first migration help" },
+  { id: "boundaries", label: "What does not map one-to-one" },
 ];
 
 const structuredData = {
@@ -28,10 +29,10 @@ const structuredData = {
     {
       "@type": "Article",
       "@id": "https://labnarrative.com/cryptohopper-alternative#article",
-      headline: "Cryptohopper Alternative for Spot DCA Automation",
+      headline: "Cryptohopper Alternative: Compare Pricing, Spot Automation and Paper Testing",
       description,
       datePublished: "2026-09-14",
-      dateModified: "2026-09-15",
+      dateModified: "2026-09-30",
       author: { "@type": "Organization", name: "LabNarrative", url: "https://labnarrative.com" },
       publisher: { "@id": "https://labnarrative.com/#organization" },
       mainEntityOfPage: { "@id": "https://labnarrative.com/cryptohopper-alternative" },
@@ -45,16 +46,6 @@ const structuredData = {
       url: "https://labnarrative.com/cryptohopper-alternative",
       description,
       isPartOf: { "@id": "https://labnarrative.com/#website" },
-      breadcrumb: { "@id": "https://labnarrative.com/cryptohopper-alternative#breadcrumb" },
-    },
-    {
-      "@type": "BreadcrumbList",
-      "@id": "https://labnarrative.com/cryptohopper-alternative#breadcrumb",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Home", item: "https://labnarrative.com/" },
-        { "@type": "ListItem", position: 2, name: "Learn", item: "https://labnarrative.com/learn" },
-        { "@type": "ListItem", position: 3, name: "Cryptohopper Alternative", item: "https://labnarrative.com/cryptohopper-alternative" },
-      ],
     },
   ],
 };
@@ -63,89 +54,102 @@ export default function CryptohopperAlternativePage() {
   return (
     <ArticleLayout
       category="Comparisons"
-      title="Considering a Cryptohopper Alternative? Compare the Automation You Actually Use"
-      intro="A migration only makes sense when the new platform covers the part of your current workflow that matters. LabNarrative is focused on supported Spot DCA, TradingView automation, Paper testing and execution visibility rather than trying to reproduce every possible automation path."
-      date="Updated 15 Sep 2026"
+      title="Looking for a Cryptohopper alternative after the free tier change?"
+      intro="Cryptohopper retired its free Pioneer plan in June 2026 and its automated trading plans now begin with a paid subscription. LabNarrative takes a different route: start with Paper, then choose fixed pricing or Pro/Max Pay when you profit with no upfront subscription fee."
+      date="Updated 30 Sep 2026"
       readTime="6 min read"
-      visualKicker="Keep the useful part"
+      visualKicker="Make profit first. Pay us second."
       toc={toc}
       relatedGuides={[
-        { href: "/dca-bot", category: "DCA Bots", title: "Crypto DCA Bots: Entries, Averaging and Exit Rules Explained", excerpt: "Understand the DCA mechanics you need to preserve during a migration." },
-        { href: "/tradingview-automation", category: "TradingView", title: "TradingView Webhook Automation for Crypto Spot Trading", excerpt: "Test the signal path end to end before moving any webhook workflow Live." },
+        { href: "/pricing", category: "Pricing", title: "LabNarrative pricing", excerpt: "Compare fixed Trader, Pro and Max plans with Pay when you profit on Pro and Max." },
+        { href: "/dca-bot", category: "DCA Bots", title: "Crypto DCA Bots: Entries, Averaging and Exit Rules Explained", excerpt: "Understand the DCA mechanics that matter when recreating an automation." },
         { href: "/crypto-paper-trading", category: "Paper Trading", title: "Crypto Paper Trading: Test Your Automation Before Going Live", excerpt: "Use simulated capital to verify the recreated workflow before real funds are involved." },
       ]}
       structuredData={structuredData}
-      sidebarKicker="Test the fit"
-      sidebarTitle="Rebuild only what you actually use."
-      sidebarCopy="Use your current settings as the reference, then see whether the supported LabNarrative workflow is enough before switching."
-      sidebarCtaLabel="Recreate it in Paper →"
-      sidebarNote="Unsupported workflows should be treated as a migration boundary, not assumed to map automatically."
-      finalKicker="Preserve the workflow that matters"
-      finalTitle="The best alternative is the one that reproduces your real process clearly."
-      finalCopy="Test the supported DCA or TradingView workflow in Paper, inspect the resulting positions, and move Live only if the narrower setup genuinely covers your needs."
-      finalCtaLabel="Start the Paper test →"
+      sidebarKicker="Evaluate before subscribing"
+      sidebarTitle="Recreate the supported workflow in Paper first."
+      sidebarCopy="Keep your current setup intact while you test whether LabNarrative covers the Spot automation you actually need."
+      sidebarCtaLabel="Start free in Paper →"
+      sidebarNote="Need help? Email hello@labnarrative.com and we will help with the first supported migration."
+      finalKicker="Founder-assisted migration"
+      finalTitle="We will help translate the first supported Cryptohopper workflow."
+      finalCopy="Send one current setup or its screenshots. We will help recreate the supported Spot automation in LabNarrative Paper before you decide whether to switch."
+      finalCtaLabel="Open LabNarrative Paper →"
     >
       <div className={styles.quickAnswer}>
         <strong>Quick answer</strong>
         <p>
-          LabNarrative can be a Cryptohopper alternative for traders whose essential workflow fits its supported Spot DCA and TradingView scope. It should not be treated as a promise to replicate every Cryptohopper feature, so migration should begin by identifying which rules and automations you actually depend on.
+          If you depend on Cryptohopper&apos;s broader ecosystem and platform-specific features, keeping Cryptohopper may make sense. If your core need is supported Spot automation and you do not want another upfront subscription before your Live automation has realized profit, LabNarrative&apos;s Paper-first and Pay when you profit model is designed around that objection.
         </p>
       </div>
 
-      <h2 id="alternative-fit">What kind of Cryptohopper user may fit</h2>
+      <h2 id="quick-comparison">Cryptohopper vs LabNarrative at a glance</h2>
       <p>
-        The strongest fit is someone who already knows the exact automation they want to preserve: a Spot entry rule, a DCA ladder, a set of exit controls, or a TradingView strategy that should create supported actions in a Spot account.
+        As of 30 September 2026, Cryptohopper lists monthly Explorer, Adventurer and Hero plans at $29, $69 and $129. Its free Pioneer plan was discontinued on 18 June 2026. LabNarrative lists Trader, Pro and Max at $14.99, $29.99 and $69.99 per month, with Pay when you profit also available on Pro and Max.
       </p>
-      <p>
-        If that is the majority of your workflow, the migration can be evaluated directly by recreating the rules and comparing the resulting positions rather than by comparing entire product catalogs.
-      </p>
-
-      <h2 id="scope">Why scope matters more than feature count</h2>
-      <p>
-        A platform with fewer features can still be the better fit if the smaller feature set covers the automation you repeatedly use and makes it easier to understand what is happening. The opposite is also true: if your strategy depends on functionality outside LabNarrative's supported scope, then a narrower platform is not a complete replacement.
-      </p>
-      <div className={styles.callout}>
-        <strong>Do not migrate based on the word “alternative.”</strong>
-        <p>Map the exact entry, position-management and exit workflow first. The migration is only valid if those essential steps can be recreated accurately.</p>
-      </div>
-
-      <h2 id="compare">What to compare before switching</h2>
       <table className={styles.comparisonTable}>
-        <thead><tr><th>Question</th><th>Why it matters</th></tr></thead>
+        <thead><tr><th>Compare</th><th>Cryptohopper</th><th>LabNarrative</th></tr></thead>
         <tbody>
-          <tr><td>What opens a deal?</td><td>The new automation must interpret the entry condition the same way you intend.</td></tr>
-          <tr><td>How does DCA progress?</td><td>Spacing and order sizing determine both average entry and total exposure.</td></tr>
-          <tr><td>How much capital can be committed?</td><td>The complete ladder matters more than the first order size.</td></tr>
-          <tr><td>What closes the position?</td><td>Take-profit and risk controls need to act on the actual resulting position.</td></tr>
-          <tr><td>Can you audit the workflow?</td><td>You should be able to see the signal, position and outcome instead of guessing what the bot did.</td></tr>
+          <tr><td>Product scope</td><td>Broader established crypto automation ecosystem.</td><td>Focused on supported crypto Spot automation, Paper testing, signals, positions and analytics.</td></tr>
+          <tr><td>Monthly list price</td><td>$29 Explorer · $69 Adventurer · $129 Hero</td><td>$14.99 Trader · $29.99 Pro · $69.99 Max</td></tr>
+          <tr><td>Free / performance path</td><td>Pioneer free tier retired in June 2026; automated trading requires a paid plan after the trial.</td><td>Start free in Paper. Pro/Max Pay when you profit has no upfront subscription fee and is capped monthly.</td></tr>
+          <tr><td>Migration approach</td><td>Existing mature workflow.</td><td>Recreate a supported setup in Paper first; founder-assisted first migration available.</td></tr>
         </tbody>
       </table>
-
-      <h2 id="migration">How to recreate the supported workflow</h2>
       <p>
-        Export or record the settings that define the automation you want to preserve. Focus on the logic, not the branding of the controls: pair selection, entry condition, order sizing, DCA deviations, scale factors, exit rules and any TradingView messages that affect the position.
+        Cryptohopper sources: <a href="https://www.cryptohopper.com/pricing" target="_blank" rel="noreferrer">official pricing ↗</a> and <a href="https://www.cryptohopper.com/blog/the-pioneer-plan-is-moving-to-explorer-what-you-need-to-know-13114" target="_blank" rel="noreferrer">Pioneer plan change ↗</a>. LabNarrative pricing and limits: <a href="/pricing">LabNarrative pricing →</a>. Prices can change; the competitor figures above were checked on 30 September 2026.
       </p>
-      <ol>
-        <li>write down the exact supported rules from the current setup;</li>
-        <li>identify anything outside LabNarrative's current product boundary;</li>
-        <li>recreate the supported rules in a Paper automation;</li>
-        <li>verify the maximum capital commitment and exit logic;</li>
-        <li>let the bot or webhook workflow run against new market conditions;</li>
-        <li>compare the actual behavior with what you intended;</li>
-        <li>and only then decide whether the migration is worth completing.</li>
-      </ol>
 
-      <div className={styles.inlineCta}>
-        <div><strong>Turn the migration into a forward test.</strong><p>Recreate the supported rules in Paper and let the workflow prove whether it behaves as intended.</p></div>
-        <a href="https://app.labnarrative.com">Open Paper →</a>
+      <h2 id="stay-with-cryptohopper">When Cryptohopper may be the better fit</h2>
+      <p>
+        Cryptohopper is the more natural choice if you rely on its broader ecosystem or specialized workflows that LabNarrative does not currently support. LabNarrative is not trying to win a catalog-size comparison.
+      </p>
+      <div className={styles.callout}>
+        <strong>The right alternative is the one that reproduces your actual workflow.</strong>
+        <p>If an essential Cryptohopper capability falls outside LabNarrative&apos;s supported Spot scope, do not assume it will map.</p>
       </div>
 
-      <h2 id="paper-test">How Paper testing reduces migration risk</h2>
+      <h2 id="consider-labnarrative">When LabNarrative may fit better</h2>
+      <p>LabNarrative is most relevant when you want to:</p>
+      <ul>
+        <li>run supported crypto Spot DCA or strategy automation;</li>
+        <li>use supported TradingView alerts as part of the execution workflow;</li>
+        <li>test the automation with Paper capital before going Live;</li>
+        <li>inspect signals, positions, closed trades and analytics in the same workflow;</li>
+        <li>choose simple fixed pricing when you prefer it;</li>
+        <li>or choose Pro/Max Pay when you profit with no upfront subscription fee.</li>
+      </ul>
+
+      <h2 id="pricing-model">The pricing difference</h2>
       <p>
-        The dangerous part of switching automation platforms is assuming that similar-looking settings produce identical behavior. Paper testing gives you a place to test that assumption without making the migration itself a Live trading experiment.
+        LabNarrative&apos;s performance-linked option is designed for the question many bot users ask: why should I pay the full software subscription before I know whether the Live automation will realize any profit? On Pro and Max Pay when you profit, there is no upfront subscription fee. A period without positive net realized PnL produces a $0 LabNarrative performance fee. Positive net realized PnL is owed up to the monthly cap: $39 on Pro or $69 on Max.
       </p>
       <p>
-        If the recreated entry timing, DCA progression, capital deployment and exits all behave as intended, you have evidence that the supported workflow maps reasonably well. If they do not, you can adjust or abandon the migration while the original Live workflow remains untouched.
+        Fixed monthly and annual pricing remains available. The performance option simply gives traders another way to pay: <strong>Make profit first. Pay us second.</strong>
+      </p>
+
+      <h2 id="migration">Free Paper-first migration help</h2>
+      <p>
+        If the Pioneer change or subscription cost is making you reconsider Cryptohopper, do not start by cancelling anything. Send one current automation configuration, screenshots or the TradingView rules behind it. We will help identify the supported subset and recreate it in LabNarrative Paper.
+      </p>
+      <ol>
+        <li>keep the current Cryptohopper workflow running;</li>
+        <li>capture the exact rules you want to preserve;</li>
+        <li>separate supported logic from platform-specific behavior;</li>
+        <li>run the recreation in LabNarrative Paper against new market conditions;</li>
+        <li>move Live only if the behavior is good enough for your use case.</li>
+      </ol>
+      <div className={styles.inlineCta}>
+        <div>
+          <strong>Switching from Cryptohopper?</strong>
+          <p>Email your first setup to hello@labnarrative.com. We will help recreate the supported workflow in Paper with you.</p>
+        </div>
+        <a href="mailto:hello@labnarrative.com?subject=Cryptohopper%20migration%20to%20LabNarrative">Get migration help →</a>
+      </div>
+
+      <h2 id="boundaries">What does not map one-to-one</h2>
+      <p>
+        LabNarrative is not a Cryptohopper clone. Unsupported strategy types, marketplace-dependent workflows or other platform-specific behavior should be treated as migration boundaries. Start with the exact automation you use and test that—not an abstract feature checklist.
       </p>
     </ArticleLayout>
   );

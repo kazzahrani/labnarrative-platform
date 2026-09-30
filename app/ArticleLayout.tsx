@@ -187,6 +187,9 @@ export default function ArticleLayout({
           <a href="/dca-bot">DCA Bots</a>
           <a href="/crypto-paper-trading">Paper Trading</a>
           <a href="/tradingview-automation">TradingView</a>
+          <a href="/3commas-alternative">3Commas alternative</a>
+          <a href="/bitsgap-alternative">Bitsgap alternative</a>
+          <a href="/cryptohopper-alternative">Cryptohopper alternative</a>
           <a href="/pricing">Pricing</a>
         </div>
         <small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small>
