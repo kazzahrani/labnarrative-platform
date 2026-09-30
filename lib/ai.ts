@@ -41,7 +41,14 @@ function responseText(data: any): string {
   return parts.join("\n").trim();
 }
 
-export async function parseQuoteWithAI(input: string): Promise<QuoteDraft | null> {
+type CatalogItem = {
+  name: string;
+  name_ar?: string | null;
+  unit?: string | null;
+  unit_price: number | string;
+};
+
+export async function parseQuoteWithAI(input: string, catalog: CatalogItem[] = []): Promise<QuoteDraft | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
@@ -60,14 +67,33 @@ export async function parseQuoteWithAI(input: string): Promise<QuoteDraft | null
             type: "input_text",
             text: [
               "You extract Saudi business quotation drafts from messy Arabic, English, or mixed Arabic-English messages.",
-              "Never invent a price that was not supplied. If an item has no stated price, use 0.",
-              "Preserve quantities and unit prices exactly. Default VAT to 15 only when VAT is not specified.",
+              "If the user explicitly states a unit price, use that exact price.",
+              "If no price is stated, match the requested service/product semantically to the supplied company catalogue and use its exact unit_price.",
+              "Do not invent prices. If there is no reliable catalogue match and no stated price, use 0.",
+              "Preserve quantities exactly. Default VAT to 15 only when VAT is not specified.",
               "Use a concise English description and a concise Arabic description for every line item.",
               "Return only the structured output requested."
             ].join(" ")
           }]
         },
-        { role: "user", content: [{ type: "input_text", text: input }] }
+        {
+          role: "user",
+          content: [{
+            type: "input_text",
+            text: [
+              "COMPANY CATALOGUE:",
+              JSON.stringify(catalog.map(item => ({
+                name: item.name,
+                name_ar: item.name_ar || null,
+                unit: item.unit || null,
+                unit_price: Number(item.unit_price || 0)
+              }))),
+              "",
+              "EMPLOYEE MESSAGE:",
+              input
+            ].join("\n")
+          }]
+        }
       ],
       text: {
         format: {
