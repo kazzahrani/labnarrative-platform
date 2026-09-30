@@ -250,6 +250,33 @@
   letter-spacing: -.025em;
 }
 
+.comparisonHeroCta {
+  display: inline-flex;
+  margin-top: 24px;
+  padding: 12px 16px;
+  border-radius: 11px;
+  background: #efefec;
+  color: #1e1f1e;
+  font-size: 14px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.comparisonHeroCta:hover {
+  transform: translateY(-1px);
+}
+
+.competitorWordmark {
+  display: grid;
+  place-items: center;
+  min-height: 72px;
+  padding: 0 12px;
+  color: #f3f3f0;
+  font-size: clamp(24px, 2.4vw, 34px) !important;
+  font-weight: 850;
+  letter-spacing: -.045em;
+}
+
 .comparisonBrandStage {
   display: grid;
   grid-template-columns: 1fr 58px 1fr;
