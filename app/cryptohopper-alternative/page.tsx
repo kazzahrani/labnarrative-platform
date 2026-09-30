@@ -61,7 +61,7 @@ export default function CryptohopperAlternativePage() {
       visualKicker="Make profit first. Pay us second."
       comparisonHero={{
         competitor: "Cryptohopper",
-        competitorMark: "CH",
+        slug: "cryptohopper",
         tagline: "Make profit first. Pay us second.",
         competitorItems: ["Broad automation ecosystem", "Strategy marketplace", "Subscription pricing"],
       }}
@@ -75,12 +75,12 @@ export default function CryptohopperAlternativePage() {
       sidebarKicker="Evaluate before subscribing"
       sidebarTitle="Recreate the supported workflow in Paper first."
       sidebarCopy="Keep your current setup intact while you test whether LabNarrative covers the Spot automation you actually need."
-      sidebarCtaLabel="Start free in Paper →"
+      sidebarCtaLabel="Recreate my Cryptohopper setup free →"
       sidebarNote="Need help? Email hello@labnarrative.com and we will help with the first supported migration."
       finalKicker="Founder-assisted migration"
       finalTitle="We will help translate the first supported Cryptohopper workflow."
       finalCopy="Send one current setup or its screenshots. We will help recreate the supported Spot automation in LabNarrative Paper before you decide whether to switch."
-      finalCtaLabel="Open LabNarrative Paper →"
+      finalCtaLabel="Start my free Cryptohopper migration →"
     >
       <div className={styles.quickAnswer}>
         <strong>Quick answer</strong>
@@ -150,7 +150,7 @@ export default function CryptohopperAlternativePage() {
           <strong>Switching from Cryptohopper?</strong>
           <p>Email your first setup to hello@labnarrative.com. We will help recreate the supported workflow in Paper with you.</p>
         </div>
-        <a href="mailto:hello@labnarrative.com?subject=Cryptohopper%20migration%20to%20LabNarrative">Get migration help →</a>
+        <a href="https://app.labnarrative.com/migration?platform=cryptohopper&utm_source=competitor_page&utm_medium=organic&utm_campaign=cryptohopper-alternative" data-competitor-growth>Get migration help →</a>
       </div>
 
       <h2 id="boundaries">What does not map one-to-one</h2>
