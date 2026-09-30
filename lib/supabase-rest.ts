@@ -30,7 +30,7 @@ async function rest(path: string, init?: RequestInit) {
 
 export async function listQuotes(limit = 20) {
   return rest(
-    `quotes?business_id=eq.${encodeURIComponent(businessId())}&select=id,quote_number,customer_name,status,total,created_at,sent_at,accepted_at&order=created_at.desc&limit=${limit}`
+    `quotes?business_id=eq.${encodeURIComponent(businessId())}&select=id,quote_number,public_token,customer_name,status,total,created_at,sent_at,accepted_at&order=created_at.desc&limit=${limit}`
   );
 }
 
@@ -83,4 +83,35 @@ export async function saveQuote(draft: QuoteDraft, sourceText?: string, sourceTy
   }
 
   return quote;
+}
+
+
+export async function getPublicQuote(publicToken: string) {
+  const rows = await rest(
+    `quotes?public_token=eq.${encodeURIComponent(publicToken)}&select=id,quote_number,public_token,customer_name,customer_phone,status,discount,vat_rate,subtotal,vat,total,created_at,sent_at,accepted_at&limit=1`
+  );
+  const quote = Array.isArray(rows) ? rows[0] : null;
+  if (!quote?.id) return null;
+
+  const items = await rest(
+    `quote_items?quote_id=eq.${encodeURIComponent(quote.id)}&select=id,description,description_ar,quantity,unit_price,line_total,sort_order&order=sort_order.asc`
+  );
+
+  return { ...quote, items: Array.isArray(items) ? items : [] };
+}
+
+export async function updatePublicQuoteStatus(publicToken: string, status: "accepted" | "rejected") {
+  const body: Record<string, unknown> = { status };
+  if (status === "accepted") body.accepted_at = new Date().toISOString();
+
+  const rows = await rest(
+    `quotes?public_token=eq.${encodeURIComponent(publicToken)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(body)
+    }
+  );
+
+  return Array.isArray(rows) ? rows[0] : rows;
 }
