@@ -30,6 +30,7 @@ create table if not exists public.quotes (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references public.businesses(id) on delete cascade,
   quote_number text not null,
+  public_token uuid not null default gen_random_uuid() unique,
   customer_name text not null,
   customer_phone text,
   status text not null default 'draft' check (status in ('draft','sent','accepted','rejected','expired')),
