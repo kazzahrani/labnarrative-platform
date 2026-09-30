@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   const body = new FormData();
   body.append("file", file, file.name || "voice-note.webm");
-  body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-transcribe");
+  body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
   body.append("response_format", "json");
 
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
