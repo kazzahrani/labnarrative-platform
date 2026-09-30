@@ -68,6 +68,7 @@ export default function BitsgapAlternativePage() {
       date="Updated 15 Sep 2026"
       readTime="6 min read"
       visualKicker="Test the narrower fit"
+      visual="bitsgap"
       toc={toc}
       relatedGuides={[
         { href: "/dca-bot", category: "DCA Bots", title: "Crypto DCA Bots: Entries, Averaging and Exit Rules Explained", excerpt: "See exactly which DCA settings should be compared during a migration." },
