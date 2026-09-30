@@ -61,7 +61,7 @@ export default function BitsgapAlternativePage() {
       visualKicker="Test first. Move only if it fits."
       comparisonHero={{
         competitor: "Bitsgap",
-        competitorMark: "B",
+        slug: "bitsgap",
         tagline: "Test first. Move only if it fits.",
         competitorItems: ["Grid + DCA workflows", "Established bot suite", "Subscription pricing"],
       }}
@@ -75,12 +75,12 @@ export default function BitsgapAlternativePage() {
       sidebarKicker="Switch without shutting anything down"
       sidebarTitle="Recreate the supported workflow in Paper first."
       sidebarCopy="Keep Bitsgap running while you test whether LabNarrative can reproduce the Spot automation you actually depend on."
-      sidebarCtaLabel="Start free in Paper →"
+      sidebarCtaLabel="Recreate my Bitsgap setup free →"
       sidebarNote="Need help? Email hello@labnarrative.com and we will help with the first supported migration."
       finalKicker="Founder-assisted migration"
       finalTitle="We will help recreate the first supported Bitsgap workflow."
       finalCopy="Send the settings or screenshots for one workflow. We will help translate the supported Spot DCA logic into LabNarrative Paper before you make a Live decision."
-      finalCtaLabel="Open LabNarrative Paper →"
+      finalCtaLabel="Start my free Bitsgap migration →"
     >
       <div className={styles.quickAnswer}>
         <strong>Quick answer</strong>
@@ -150,7 +150,7 @@ export default function BitsgapAlternativePage() {
           <strong>Switching from Bitsgap?</strong>
           <p>Email your first setup to hello@labnarrative.com. We will help recreate the supported workflow in Paper with you.</p>
         </div>
-        <a href="mailto:hello@labnarrative.com?subject=Bitsgap%20migration%20to%20LabNarrative">Get migration help →</a>
+        <a href="https://app.labnarrative.com/migration?platform=bitsgap&utm_source=competitor_page&utm_medium=organic&utm_campaign=bitsgap-alternative" data-competitor-growth>Get migration help →</a>
       </div>
 
       <h2 id="boundaries">What does not map one-to-one</h2>
