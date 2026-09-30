@@ -51,6 +51,7 @@ export default function AppPage() {
   const [draft, setDraft] = useState<QuoteDraft>(demoDraft);
   const [busy, setBusy] = useState(false);
   const [parseMode, setParseMode] = useState<"" | "ai" | "local-fallback">("");
+  const [aiError, setAiError] = useState("");
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -112,6 +113,7 @@ export default function AppPage() {
       if (data.draft) {
         setDraft(data.draft);
         setParseMode(data.mode === "ai" ? "ai" : "local-fallback");
+        setAiError(typeof data.aiError === "string" ? data.aiError : "");
       }
     } finally { setBusy(false); }
   };
@@ -215,7 +217,7 @@ export default function AppPage() {
         <section className="workspaceHead"><p className="eyebrow">{t.kicker}</p><h1>{t.title}</h1><p>{t.sub}</p></section>
         <section className="statGrid">{t.stats.map(([label,value]) => <article key={label}><small>{label}</small><strong>{value}</strong></article>)}</section>
         <section className="composerGrid">
-          <article className="panel capturePanel"><div className="panelTop"><div><small>01 · CAPTURE</small><h2>{t.inputLabel}</h2></div><span className="statusDot">{statusText}</span></div><textarea value={input} onChange={e => setInput(e.target.value)} placeholder={t.placeholder}/>{voiceError && <p className="inlineError">{voiceError}</p>}<div className="captureActions"><button className="softButton" onClick={() => setInput(lang === "ar" ? "سو عرض لخالد: تركيب 4 مكيفات 450 للحبة، 20 متر نحاس 75 للمتر، نقل 200، الضريبة 15%" : "Make a quote for Khaled: install 4 ACs at 450 each, 20m copper at 75, transport 200, VAT 15%")}>{t.load}</button><button className={`softButton ${recording ? "recording" : ""}`} disabled={voiceBusy} onClick={toggleRecording}>◉ {voiceBusy ? t.transcribing : recording ? t.stop : t.record}</button><button className="primaryButton" disabled={busy || !input.trim()} onClick={generate}>{busy ? "…" : t.generate} →</button></div></article>
+          <article className="panel capturePanel"><div className="panelTop"><div><small>01 · CAPTURE</small><h2>{t.inputLabel}</h2></div><span className="statusDot">{statusText}</span></div>{parseMode === "local-fallback" && aiError && <p className="inlineError">{aiError}</p>}<textarea value={input} onChange={e => setInput(e.target.value)} placeholder={t.placeholder}/>{voiceError && <p className="inlineError">{voiceError}</p>}<div className="captureActions"><button className="softButton" onClick={() => setInput(lang === "ar" ? "سو عرض لخالد: تركيب 4 مكيفات 450 للحبة، 20 متر نحاس 75 للمتر، نقل 200، الضريبة 15%" : "Make a quote for Khaled: install 4 ACs at 450 each, 20m copper at 75, transport 200, VAT 15%")}>{t.load}</button><button className={`softButton ${recording ? "recording" : ""}`} disabled={voiceBusy} onClick={toggleRecording}>◉ {voiceBusy ? t.transcribing : recording ? t.stop : t.record}</button><button className="primaryButton" disabled={busy || !input.trim()} onClick={generate}>{busy ? "…" : t.generate} →</button></div></article>
 
           <article className="panel quotePanel"><div className="panelTop"><div><small>02 · REVIEW</small><h2>{t.draft}</h2></div><span className="readyPill">{t.status}</span></div><label className="field"><span>{t.customer}</span><input value={draft.customer} onChange={e => setDraft(d => ({ ...d, customer: e.target.value }))}/></label>
             <div className="lineHeader"><span>{t.item}</span><span>{t.qty}</span><span>{t.price}</span><span>Amount</span></div>
