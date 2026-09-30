@@ -125,3 +125,77 @@ using (exists (
   select 1 from public.quotes q join public.businesses b on b.id = q.business_id
   where q.id = quote_items.quote_id and b.owner_user_id = (select auth.uid())
 ));
+
+
+-- Performance indexes
+create index if not exists catalog_items_business_id_idx on public.catalog_items(business_id);
+create index if not exists quotes_business_id_created_at_idx on public.quotes(business_id, created_at desc);
+create index if not exists quote_items_quote_id_idx on public.quote_items(quote_id);
+create index if not exists whatsapp_events_business_id_idx on public.whatsapp_events(business_id);
+
+-- Avoid overlapping permissive SELECT policies.
+drop policy if exists "owners read catalog" on public.catalog_items;
+drop policy if exists "owners manage catalog" on public.catalog_items;
+create policy "owners select catalog" on public.catalog_items
+for select to authenticated
+using (exists (
+  select 1 from public.businesses b
+  where b.id = catalog_items.business_id and b.owner_user_id = (select auth.uid())
+));
+create policy "owners insert catalog" on public.catalog_items
+for insert to authenticated
+with check (exists (
+  select 1 from public.businesses b
+  where b.id = catalog_items.business_id and b.owner_user_id = (select auth.uid())
+));
+create policy "owners update catalog" on public.catalog_items
+for update to authenticated
+using (exists (
+  select 1 from public.businesses b
+  where b.id = catalog_items.business_id and b.owner_user_id = (select auth.uid())
+))
+with check (exists (
+  select 1 from public.businesses b
+  where b.id = catalog_items.business_id and b.owner_user_id = (select auth.uid())
+));
+create policy "owners delete catalog" on public.catalog_items
+for delete to authenticated
+using (exists (
+  select 1 from public.businesses b
+  where b.id = catalog_items.business_id and b.owner_user_id = (select auth.uid())
+));
+
+drop policy if exists "owners read quotes" on public.quotes;
+drop policy if exists "owners manage quotes" on public.quotes;
+create policy "owners select quotes" on public.quotes
+for select to authenticated
+using (exists (
+  select 1 from public.businesses b
+  where b.id = quotes.business_id and b.owner_user_id = (select auth.uid())
+));
+create policy "owners insert quotes" on public.quotes
+for insert to authenticated
+with check (exists (
+  select 1 from public.businesses b
+  where b.id = quotes.business_id and b.owner_user_id = (select auth.uid())
+));
+create policy "owners update quotes" on public.quotes
+for update to authenticated
+using (exists (
+  select 1 from public.businesses b
+  where b.id = quotes.business_id and b.owner_user_id = (select auth.uid())
+))
+with check (exists (
+  select 1 from public.businesses b
+  where b.id = quotes.business_id and b.owner_user_id = (select auth.uid())
+));
+create policy "owners delete quotes" on public.quotes
+for delete to authenticated
+using (exists (
+  select 1 from public.businesses b
+  where b.id = quotes.business_id and b.owner_user_id = (select auth.uid())
+));
+
+create policy "owners insert businesses" on public.businesses
+for insert to authenticated
+with check ((select auth.uid()) = owner_user_id);
