@@ -69,6 +69,7 @@ export default function ThreeCommasAlternativePage() {
       date="Updated 15 Sep 2026"
       readTime="7 min read"
       visualKicker="Compare the workflow"
+      visual="threecommas"
       toc={toc}
       relatedGuides={[
         {
