@@ -1,4 +1,4 @@
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
 
-// This file is generated for Next.js TypeScript support.
+// NOTE: This file should not be edited
