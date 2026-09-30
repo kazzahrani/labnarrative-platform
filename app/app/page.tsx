@@ -8,7 +8,7 @@ type Lang = "en" | "ar";
 type Theme = "dark" | "light";
 type View = "dashboard" | "quotes" | "catalog" | "settings";
 type ServiceStatus = { ai: boolean; voice: boolean; whatsapp: boolean; database: boolean };
-type RecentQuote = { quote_number: string; customer_name: string; total: number; status: string; created_at?: string };
+type RecentQuote = { quote_number: string; public_token?: string; customer_name: string; total: number; status: string; created_at?: string };
 type CatalogItem = { id: string; name: string; name_ar?: string; unit?: string; unit_price: number };
 
 const text = {
@@ -52,6 +52,7 @@ export default function AppPage() {
   const [busy, setBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
   const [recording, setRecording] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceError, setVoiceError] = useState("");
@@ -119,6 +120,9 @@ export default function AppPage() {
         body: JSON.stringify({ draft, sourceText: input, sourceType: "text" })
       });
       if (response.ok) {
+        const data = await response.json();
+        const token = data?.quote?.public_token;
+        if (token) setShareUrl(`${window.location.origin}/q/${token}`);
         setSaved(true);
         await refreshData();
       } else {
@@ -190,6 +194,7 @@ export default function AppPage() {
             <div className="lineItems">{draft.items.map(item => <div className="lineItem" key={item.id}><input value={lang === "ar" ? (item.descriptionAr || item.description) : item.description} onChange={e => patchItem(item.id, lang === "ar" ? { descriptionAr: e.target.value } : { description: e.target.value })}/><input type="number" min="0" value={item.quantity} onChange={e => patchItem(item.id, { quantity: Number(e.target.value) })}/><input type="number" min="0" value={item.unitPrice} onChange={e => patchItem(item.id, { unitPrice: Number(e.target.value) })}/><strong>{money(item.quantity * item.unitPrice)}</strong></div>)}</div>
             <button className="textButton" onClick={addItem}>{t.add}</button>
             <div className="quoteFoot"><div className="smallFields"><label><span>{t.discount}</span><input type="number" value={draft.discount} onChange={e => setDraft(d => ({ ...d, discount: Number(e.target.value) }))}/></label><label><span>{t.vat}</span><input type="number" value={draft.vatRate} onChange={e => setDraft(d => ({ ...d, vatRate: Number(e.target.value) }))}/></label></div><div className="totals"><div><span>{t.subtotal}</span><b>SAR {money(totals.subtotal)}</b></div><div><span>{t.vat}</span><b>SAR {money(totals.vat)}</b></div><div className="grand"><span>{t.total}</span><strong>SAR {money(totals.total)}</strong></div></div></div>
+            {shareUrl && <div className="shareReady"><span>{lang === "ar" ? "رابط العميل جاهز" : "Customer link ready"}</span><button onClick={() => navigator.clipboard.writeText(shareUrl)}>{lang === "ar" ? "نسخ الرابط" : "Copy link"}</button><a href={shareUrl} target="_blank" rel="noreferrer">{lang === "ar" ? "فتح" : "Open"} ↗</a></div>}
             <div className="quoteActions"><button className="softButton" disabled={saveBusy} onClick={saveDraft}>{saveBusy ? t.saving : saved ? "✓ " + t.saved : t.save}</button><button className="primaryButton" onClick={() => window.print()}>{t.print}</button></div>
           </article>
         </section>
