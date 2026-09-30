@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   body.append("file", normalized, normalized.name);
   body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
   body.append("response_format", "json");
-  body.append("prompt", "Saudi Arabic or English business quotation voice note. Preserve names, quantities, units, and numbers accurately.");
+  body.append("temperature", "0");
 
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
@@ -51,8 +51,22 @@ export async function POST(request: Request) {
     }, { status: response.status });
   }
 
+  const text = String(data?.text || "").trim();
+  const normalized = text.toLowerCase();
+  const looksLikePromptLeak =
+    normalized.includes("saudi arabic or english business quotation voice note") ||
+    normalized.includes("preserve names, quantities, units, and numbers accurately");
+
+  if (!text || looksLikePromptLeak) {
+    return NextResponse.json({
+      error: "No clear speech was detected. Please try recording again and speak for at least 2 seconds.",
+      audioType: type,
+      audioSize: file.size
+    }, { status: 422 });
+  }
+
   return NextResponse.json({
-    text: String(data?.text || "").trim(),
+    text,
     audioType: type,
     audioSize: file.size
   });
