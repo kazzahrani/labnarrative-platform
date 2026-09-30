@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { parseQuoteWithAI } from "@/lib/ai";
 import { parseDemoInput } from "@/lib/quote";
+import { databaseConfigured, saveQuote } from "@/lib/supabase-rest";
 import { downloadWhatsAppMedia, quoteReply, sendWhatsAppText, transcribeBlob, verifyMetaSignature } from "@/lib/whatsapp";
 
 export const runtime = "nodejs";
@@ -28,10 +29,12 @@ export async function POST(request: Request) {
 
   const from = String(message.from || "");
   let input = "";
+  let sourceType = "text";
 
   try {
     if (message.type === "text") input = String(message.text?.body || "");
     if (message.type === "audio" && message.audio?.id) {
+      sourceType = "audio";
       const media = await downloadWhatsAppMedia(String(message.audio.id));
       input = await transcribeBlob(media.blob, media.mimeType);
     }
@@ -44,6 +47,10 @@ export async function POST(request: Request) {
     let draft = null;
     try { draft = await parseQuoteWithAI(input); } catch (error) { console.error(error); }
     draft ||= parseDemoInput(input);
+
+    if (databaseConfigured()) {
+      try { await saveQuote({ ...draft, phone: draft.phone || from }, input, sourceType); } catch (error) { console.error(error); }
+    }
 
     await sendWhatsAppText(from, quoteReply(draft));
   } catch (error) {
