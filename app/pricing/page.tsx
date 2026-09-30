@@ -58,7 +58,7 @@ export default function PricingPage() {
 
       <footer className={styles.footer}>
         <a href="/"><Brand /></a>
-        <div className={styles.footerLinks}><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div>
+        <div className={styles.footerLinks}><a href="/3commas-alternative">3Commas alternative</a><a href="/bitsgap-alternative">Bitsgap alternative</a><a href="/cryptohopper-alternative">Cryptohopper alternative</a><a href="/pricing">Pricing</a><a href="/affiliate">Affiliates</a><a href={APP_URL}>Launch app</a><a href="mailto:hello@labnarrative.com">Contact</a></div>
         <small>Software for trading automation. Not financial advice. Trading digital assets involves risk.</small>
       </footer>
     </main>
