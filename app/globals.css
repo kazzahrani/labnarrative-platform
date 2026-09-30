@@ -142,3 +142,66 @@ html[data-theme="light"] .publicQuoteCard{background:#fff}
     border-bottom:1px solid var(--line2)!important;
   }
 }
+
+/* Definitive app-shell layout: flex avoids RTL/grid coordinate conflicts */
+.appShell,
+.appShell[dir="ltr"],
+.appShell[dir="rtl"]{
+  display:flex!important;
+  min-height:100vh!important;
+  direction:ltr!important;
+  grid-template-columns:none!important;
+  grid-template-areas:none!important;
+}
+.appShell[dir="ltr"]{flex-direction:row!important}
+.appShell[dir="rtl"]{flex-direction:row-reverse!important}
+.appShell .sidebar{
+  flex:0 0 226px!important;
+  width:226px!important;
+  min-width:226px!important;
+  max-width:226px!important;
+  grid-area:auto!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+}
+.appShell .workspace{
+  flex:1 1 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  grid-area:auto!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+}
+.appShell[dir="rtl"] .sidebar,
+.appShell[dir="rtl"] .workspace{direction:rtl!important}
+.appShell[dir="ltr"] .sidebar,
+.appShell[dir="ltr"] .workspace{direction:ltr!important}
+.appShell[dir="rtl"] .sidebar{
+  border-left:0!important;
+  border-right:1px solid var(--line2)!important;
+}
+.appShell[dir="ltr"] .sidebar{
+  border-left:0!important;
+  border-right:1px solid var(--line2)!important;
+}
+.appShell[dir="rtl"] .workspaceTop{justify-content:flex-start!important}
+.appShell[dir="ltr"] .workspaceTop{justify-content:flex-end!important}
+@media(max-width:900px){
+  .appShell,
+  .appShell[dir="ltr"],
+  .appShell[dir="rtl"]{
+    display:block!important;
+  }
+  .appShell .sidebar{
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    height:auto!important;
+    position:static!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-bottom:1px solid var(--line2)!important;
+  }
+  .appShell .workspace{width:100%!important}
+}
