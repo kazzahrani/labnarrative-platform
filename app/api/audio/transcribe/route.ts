@@ -27,10 +27,10 @@ export async function POST(request: Request) {
   const type = normalizedType(file.type);
   const ext = extensionFor(type);
   const bytes = await file.arrayBuffer();
-  const normalized = new File([bytes], `thrwa-voice.${ext}`, { type });
+  const normalizedFile = new File([bytes], `thrwa-voice.${ext}`, { type });
 
   const body = new FormData();
-  body.append("file", normalized, normalized.name);
+  body.append("file", normalizedFile, normalizedFile.name);
   body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
   body.append("response_format", "json");
   body.append("temperature", "0");
@@ -52,10 +52,10 @@ export async function POST(request: Request) {
   }
 
   const text = String(data?.text || "").trim();
-  const normalized = text.toLowerCase();
+  const normalizedText = text.toLowerCase();
   const looksLikePromptLeak =
-    normalized.includes("saudi arabic or english business quotation voice note") ||
-    normalized.includes("preserve names, quantities, units, and numbers accurately");
+    normalizedText.includes("saudi arabic or english business quotation voice note") ||
+    normalizedText.includes("preserve names, quantities, units, and numbers accurately");
 
   if (!text || looksLikePromptLeak) {
     return NextResponse.json({
