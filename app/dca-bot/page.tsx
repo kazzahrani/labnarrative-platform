@@ -70,6 +70,7 @@ export default function DcaBotPage() {
       date="Updated 15 Sep 2026"
       readTime="9 min read"
       visualKicker="Build the ladder"
+      visual="dca"
       toc={toc}
       relatedGuides={[
         {

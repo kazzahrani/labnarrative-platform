@@ -69,6 +69,7 @@ export default function CryptoPaperTradingPage() {
       date="Updated 15 Sep 2026"
       readTime="8 min read"
       visualKicker="Paper first"
+      visual="paper"
       toc={toc}
       structuredData={structuredData}
       relatedGuides={[

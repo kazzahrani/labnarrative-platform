@@ -609,3 +609,38 @@
 }
 .footerLinks{color:#979792}
 .footer small{color:#73736f}
+
+/* Branded Learn cover system */
+.cover{
+  background:
+    radial-gradient(circle at 74% 48%,rgba(111,143,182,.14),transparent 33%),
+    linear-gradient(145deg,#181818 0%,#202427 62%,#252a2d 100%)!important;
+  border-bottom:1px solid #343434;
+}
+.cover::before,.cover::after{display:none!important}
+.coverGlow{
+  position:absolute;
+  width:240px;height:240px;
+  right:-42px;top:-52px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(230,179,92,.12),transparent 68%);
+}
+.coverIllustration{
+  position:absolute;
+  right:4%;
+  bottom:6%;
+  width:min(58%,310px);
+  height:auto;
+  opacity:.98;
+  filter:drop-shadow(0 16px 24px rgba(0,0,0,.24));
+}
+.coverLabel{color:#b9b9b3}
+.coverTitle{
+  max-width:46%;
+  color:#f3f3ef;
+  text-shadow:0 2px 16px rgba(0,0,0,.28);
+}
+@media(max-width:760px){
+  .coverIllustration{width:56%;right:2%;bottom:5%}
+  .coverTitle{max-width:50%}
+}

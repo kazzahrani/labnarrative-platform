@@ -59,6 +59,7 @@ export default function ThreeCommasAlternativePage() {
       date="Updated 30 Sep 2026"
       readTime="6 min read"
       visualKicker="Profit first. Pay second."
+      visual="threecommas"
       comparisonHero={{
         competitor: "3Commas",
         slug: "3commas",

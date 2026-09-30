@@ -1,3 +1,5 @@
+import type { LearnVisual } from "../LearnIllustration";
+
 export type LearnGuide = {
   href: string;
   title: string;
@@ -5,7 +7,7 @@ export type LearnGuide = {
   category: string;
   readTime: string;
   kicker: string;
-  visual: "paper" | "dca" | "tradingview" | "threecommas" | "bitsgap" | "cryptohopper" | "coinrule";
+  visual?: LearnVisual;
   featured?: boolean;
 };
 

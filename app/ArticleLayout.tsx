@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import PublicComparisonTracker from "./PublicComparisonTracker";
 import styles from "./article-page.module.css";
+import LearnIllustration, { type LearnVisual, visualForCategory } from "./LearnIllustration";
 
 const APP_URL = "https://app.labnarrative.com";
 
@@ -36,6 +37,7 @@ type ArticleLayoutProps = {
   finalTitle?: string;
   finalCopy?: string;
   finalCtaLabel?: string;
+  visual?: LearnVisual;
   comparisonHero?: {
     competitor: string;
     slug: string;
@@ -73,6 +75,7 @@ export default function ArticleLayout({
   finalTitle = "Reading explains the workflow. Paper Trading shows how it behaves.",
   finalCopy = "Build the supported setup with simulated capital, review its positions and history, and decide what belongs in your Live workflow only after you have observed it.",
   finalCtaLabel = "Start free with Paper →",
+  visual,
   comparisonHero,
 }: ArticleLayoutProps) {
   const migrationHref = comparisonHero
@@ -168,8 +171,8 @@ export default function ArticleLayout({
           ) : (
             <div className={styles.heroVisual} aria-hidden="true">
               <div className={styles.heroGrid} />
-              <div className={styles.heroOrb} />
-              <div className={styles.heroTrace} />
+              <div className={styles.heroGlow} />
+              <LearnIllustration visual={visual ?? visualForCategory(category)} className={styles.heroIllustration} />
               <span>LabNarrative Learn · {category}</span>
               <strong>{visualKicker}</strong>
             </div>

@@ -59,6 +59,7 @@ export default function BitsgapAlternativePage() {
       date="Updated 30 Sep 2026"
       readTime="6 min read"
       visualKicker="Test first. Move only if it fits."
+      visual="bitsgap"
       comparisonHero={{
         competitor: "Bitsgap",
         slug: "bitsgap",
