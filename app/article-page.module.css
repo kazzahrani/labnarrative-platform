@@ -194,6 +194,177 @@
   letter-spacing: -.055em;
 }
 
+
+.comparisonHero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(520px, 1.1fr);
+  gap: 54px;
+  align-items: center;
+  min-height: 430px;
+  overflow: hidden;
+  padding: 46px 50px;
+  border: 1px solid #3a3a3a;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 77% 50%, rgba(63, 112, 91, .23), transparent 36%),
+    linear-gradient(135deg, #181818 0%, #202427 66%, #2d3a35 100%);
+  isolation: isolate;
+}
+
+.comparisonHero > *:not(.heroGrid) {
+  position: relative;
+  z-index: 1;
+}
+
+.comparisonHeroCopy > span {
+  display: block;
+  margin-bottom: 28px;
+  color: #f0f0ed;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.comparisonHeroCopy h2 {
+  max-width: 600px;
+  margin: 0;
+  color: #f7f7f4;
+  font-size: clamp(44px, 5vw, 76px);
+  line-height: .95;
+  letter-spacing: -.06em;
+}
+
+.comparisonHeroCopy h2 em {
+  color: #78b59b;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.comparisonHeroCopy p {
+  margin: 24px 0 0;
+  color: #b6b8b4;
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+
+.comparisonBrandStage {
+  display: grid;
+  grid-template-columns: 1fr 58px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.comparisonBrandCard {
+  min-height: 280px;
+  padding: 28px 26px;
+  border: 1px solid #484b4d;
+  border-radius: 24px;
+  background: rgba(28, 31, 32, .88);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .2);
+}
+
+.labBrandCard {
+  border-color: rgba(112, 201, 162, .62);
+  background: linear-gradient(180deg, rgba(27, 42, 36, .96), rgba(27, 31, 30, .95));
+  box-shadow: 0 24px 70px rgba(42, 111, 80, .15);
+}
+
+.competitorBrandCard {
+  background: linear-gradient(180deg, rgba(38, 42, 44, .95), rgba(30, 32, 33, .95));
+}
+
+.brandIdentity {
+  display: grid;
+  justify-items: center;
+  gap: 13px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.brandIdentity strong {
+  color: #f3f3f0;
+  font-size: 24px;
+  letter-spacing: -.035em;
+  text-align: center;
+}
+
+.labMark,
+.competitorMark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+}
+
+.labMark {
+  background: #f2f2ef;
+}
+
+.labMark img {
+  width: 45px;
+  height: 45px;
+}
+
+.competitorMark {
+  background: #2c8170;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -.05em;
+}
+
+.comparisonBrandCard ul {
+  display: grid;
+  gap: 12px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comparisonBrandCard li {
+  position: relative;
+  margin: 0;
+  padding-left: 22px;
+  color: #b9bdb9;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.comparisonBrandCard li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .45em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #767d79;
+}
+
+.labBrandCard li::before {
+  background: #75c99f;
+}
+
+.vsBadge {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: auto;
+  border: 1px solid #607068;
+  border-radius: 50%;
+  background: #202523;
+  color: #efefeb;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  box-shadow: 0 0 28px rgba(91, 159, 129, .18);
+}
+
 .articleGrid {
   display: grid;
   grid-template-columns: minmax(0, 820px) minmax(260px, 330px);
@@ -672,3 +843,69 @@
 }
 .footerLinks{color:#979792}
 .footer small{color:#73736f}
+
+@media (max-width: 1120px) {
+  .comparisonHero {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+  .comparisonHeroCopy h2 {
+    max-width: 900px;
+  }
+  .comparisonBrandStage {
+    max-width: 760px;
+  }
+}
+
+@media (max-width: 760px) {
+  .comparisonHero {
+    min-height: auto;
+    padding: 28px 22px;
+    border-radius: 20px;
+  }
+  .comparisonHeroCopy > span {
+    margin-bottom: 18px;
+  }
+  .comparisonHeroCopy h2 {
+    font-size: clamp(38px, 12vw, 58px);
+  }
+  .comparisonHeroCopy p {
+    margin-top: 16px;
+    font-size: 19px;
+  }
+  .comparisonBrandStage {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .comparisonBrandCard {
+    min-height: 0;
+    padding: 22px 20px;
+  }
+  .vsBadge {
+    width: 44px;
+    height: 44px;
+  }
+  .brandIdentity {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    align-items: center;
+    padding-bottom: 16px;
+  }
+  .brandIdentity strong {
+    font-size: 21px;
+    text-align: left;
+  }
+  .labMark,
+  .competitorMark {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+  }
+  .labMark img {
+    width: 36px;
+    height: 36px;
+  }
+  .comparisonBrandCard ul {
+    margin-top: 16px;
+  }
+}
