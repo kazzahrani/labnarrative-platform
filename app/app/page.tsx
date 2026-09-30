@@ -51,6 +51,7 @@ export default function AppPage() {
   const [draft, setDraft] = useState<QuoteDraft>(demoDraft);
   const [busy, setBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [recording, setRecording] = useState(false);
@@ -112,23 +113,38 @@ export default function AppPage() {
   };
 
   const saveDraft = async () => {
-    setSaveBusy(true); setSaved(false);
+    setSaveBusy(true); setSaved(false); setSaveError(""); setShareUrl("");
     try {
       const response = await fetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft, sourceText: input, sourceType: "text" })
       });
-      if (response.ok) {
-        const data = await response.json();
-        const token = data?.quote?.public_token;
-        if (token) setShareUrl(`${window.location.origin}/q/${token}`);
-        setSaved(true);
-        await refreshData();
-      } else {
-        localStorage.setItem("thrwa-demo-draft", JSON.stringify(draft));
-        setSaved(true);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || (lang === "ar" ? "تعذر حفظ عرض السعر." : "Could not save quotation."));
       }
+
+      let token = data?.quote?.public_token;
+      if (!token) {
+        const latest = await fetch("/api/quotes", { cache: "no-store" }).then(r => r.json()).catch(() => null);
+        const match = latest?.quotes?.find((q: RecentQuote) =>
+          q.customer_name === draft.customer &&
+          Number(q.total || 0) === Number(totals.total)
+        );
+        token = match?.public_token;
+      }
+
+      if (!token) {
+        throw new Error(lang === "ar" ? "تم الحفظ لكن تعذر إنشاء رابط العميل." : "Saved, but the customer link could not be created.");
+      }
+
+      setShareUrl(`${window.location.origin}/q/${token}`);
+      setSaved(true);
+      await refreshData();
+    } catch (error) {
+      setSaved(false);
+      setSaveError(error instanceof Error ? error.message : (lang === "ar" ? "تعذر الحفظ." : "Save failed."));
     } finally { setSaveBusy(false); }
   };
 
@@ -195,6 +211,7 @@ export default function AppPage() {
             <button className="textButton" onClick={addItem}>{t.add}</button>
             <div className="quoteFoot"><div className="smallFields"><label><span>{t.discount}</span><input type="number" value={draft.discount} onChange={e => setDraft(d => ({ ...d, discount: Number(e.target.value) }))}/></label><label><span>{t.vat}</span><input type="number" value={draft.vatRate} onChange={e => setDraft(d => ({ ...d, vatRate: Number(e.target.value) }))}/></label></div><div className="totals"><div><span>{t.subtotal}</span><b>SAR {money(totals.subtotal)}</b></div><div><span>{t.vat}</span><b>SAR {money(totals.vat)}</b></div><div className="grand"><span>{t.total}</span><strong>SAR {money(totals.total)}</strong></div></div></div>
             {shareUrl && <div className="shareReady"><span>{lang === "ar" ? "رابط العميل جاهز" : "Customer link ready"}</span><button onClick={() => navigator.clipboard.writeText(shareUrl)}>{lang === "ar" ? "نسخ الرابط" : "Copy link"}</button><a href={shareUrl} target="_blank" rel="noreferrer">{lang === "ar" ? "فتح" : "Open"} ↗</a></div>}
+            {saveError && <p className="inlineError">{saveError}</p>}
             <div className="quoteActions"><button className="softButton" disabled={saveBusy} onClick={saveDraft}>{saveBusy ? t.saving : saved ? "✓ " + t.saved : t.save}</button><button className="primaryButton" onClick={() => window.print()}>{t.print}</button></div>
           </article>
         </section>
