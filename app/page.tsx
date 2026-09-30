@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Lang = "en" | "ar";
+type Theme = "dark" | "light";
 
 const copy = {
   en: {
@@ -53,16 +54,28 @@ function Brand({ lang }: { lang: Lang }) {
 }
 
 export default function Home() {
-  const [lang, setLang] = useState<Lang>("en");
-  useEffect(() => { const saved = localStorage.getItem("thrwa-lang") as Lang | null; if (saved === "ar" || saved === "en") setLang(saved); }, []);
+  const [lang, setLang] = useState<Lang>("ar");
+  const [theme, setThemeState] = useState<Theme>("dark");
+  useEffect(() => {
+    const savedLang = localStorage.getItem("thrwa-lang") as Lang | null;
+    const resolvedLang: Lang = savedLang === "en" || savedLang === "ar" ? savedLang : "ar";
+    const savedTheme = localStorage.getItem("thrwa-theme") as Theme | null;
+    const resolvedTheme: Theme = savedTheme === "light" ? "light" : "dark";
+    setLang(resolvedLang);
+    setThemeState(resolvedTheme);
+    document.documentElement.lang = resolvedLang;
+    document.documentElement.dir = resolvedLang === "ar" ? "rtl" : "ltr";
+    document.documentElement.dataset.theme = resolvedTheme;
+  }, []);
   const setLanguage = (next: Lang) => { setLang(next); localStorage.setItem("thrwa-lang", next); document.documentElement.lang = next; document.documentElement.dir = next === "ar" ? "rtl" : "ltr"; };
+  const setTheme = (next: Theme) => { setThemeState(next); localStorage.setItem("thrwa-theme", next); document.documentElement.dataset.theme = next; };
   const t = copy[lang];
 
   return <main className="marketing" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
     <header className="topbar shell">
       <Link href="/" aria-label="THRWA home"><Brand lang={lang} /></Link>
       <nav><a href="#workflow">{t.navHow}</a><a href="#who">{t.navWho}</a><a href="#pricing">{t.navPricing}</a></nav>
-      <div className="topActions"><div className="langSwitch"><button className={lang === "ar" ? "active" : ""} onClick={() => setLanguage("ar")}>العربية</button><button className={lang === "en" ? "active" : ""} onClick={() => setLanguage("en")}>English</button></div><Link className="button ghost" href="/app">{t.login}</Link></div>
+      <div className="topActions"><button className="themeToggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Light mode" : "Dark mode"}>{theme === "dark" ? "☀" : "☾"}</button><div className="langSwitch"><button className={lang === "ar" ? "active" : ""} onClick={() => setLanguage("ar")}>العربية</button><button className={lang === "en" ? "active" : ""} onClick={() => setLanguage("en")}>English</button></div><Link className="button ghost" href="/app">{t.login}</Link></div>
     </header>
 
     <section className="hero shell">
