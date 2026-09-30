@@ -109,3 +109,36 @@ html[data-theme="light"] .shareReady{background:#f4f1eb}
 html[data-theme="light"] .publicQuoteCard{background:#fff}
 @media(max-width:650px){.publicQuoteCard{padding:22px}.publicQuoteHero{display:grid}.publicQuoteTotal{text-align:start}.publicQuoteHeader{display:none}.publicQuoteRow{grid-template-columns:1fr 58px 80px}.publicQuoteRow span:last-child{grid-column:1/-1;text-align:end;font-weight:800}.publicQuoteActions{display:grid;grid-template-columns:1fr 1fr}.publicQuoteTop{height:72px}}
 @media print{.publicQuoteTop,.publicQuoteActions,.printQuoteButton,.publicQuoteFooter,.decisionState{display:none!important}.publicQuotePage{background:white;color:#111;padding:0}.publicQuoteCard{margin:0;border:0;box-shadow:none;background:white;color:#111}.publicQuoteRow,.publicQuoteHero,.publicQuoteSummary .grand{border-color:#ddd}.publicQuoteHero p:last-child,.publicQuoteHeader,.publicQuoteSummary>div{color:#555}.publicQuoteSummary b,.publicQuoteSummary .grand strong{color:#111}}
+
+
+/* Stable app geometry: keep grid coordinates LTR; apply RTL only inside content */
+.appShell{direction:ltr!important;display:grid!important;grid-template-columns:226px minmax(0,1fr)!important;grid-template-areas:"sidebar workspace"!important}
+.appShell[dir="rtl"]{direction:ltr!important;grid-template-columns:minmax(0,1fr) 226px!important;grid-template-areas:"workspace sidebar"!important}
+.appShell .sidebar{grid-area:sidebar!important;grid-column:auto!important;grid-row:1!important;min-width:0}
+.appShell .workspace{grid-area:workspace!important;grid-column:auto!important;grid-row:1!important;min-width:0}
+.appShell[dir="rtl"] .sidebar,
+.appShell[dir="rtl"] .workspace{direction:rtl}
+.appShell[dir="ltr"] .sidebar,
+.appShell[dir="ltr"] .workspace{direction:ltr}
+.appShell[dir="rtl"] .sidebar{border-right:0!important;border-left:1px solid var(--line2)!important}
+.appShell[dir="ltr"] .sidebar{border-left:0!important;border-right:1px solid var(--line2)!important}
+.appShell[dir="rtl"] .workspaceTop{justify-content:flex-start}
+.appShell[dir="ltr"] .workspaceTop{justify-content:flex-end}
+@media(max-width:900px){
+  .appShell,.appShell[dir="rtl"],.appShell[dir="ltr"]{
+    display:block!important;
+    direction:ltr!important;
+  }
+  .appShell .sidebar,.appShell .workspace{
+    grid-area:auto!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+  }
+  .appShell[dir="rtl"] .sidebar,.appShell[dir="ltr"] .sidebar{
+    position:static!important;
+    height:auto!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-bottom:1px solid var(--line2)!important;
+  }
+}
