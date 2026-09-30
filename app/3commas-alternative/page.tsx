@@ -59,6 +59,12 @@ export default function ThreeCommasAlternativePage() {
       date="Updated 30 Sep 2026"
       readTime="6 min read"
       visualKicker="Profit first. Pay second."
+      comparisonHero={{
+        competitor: "3Commas",
+        competitorMark: "///",
+        tagline: "Profit first. Pay second.",
+        competitorItems: ["Established automation suite", "Spot + futures workflows", "Subscription pricing"],
+      }}
       toc={toc}
       relatedGuides={[
         {
