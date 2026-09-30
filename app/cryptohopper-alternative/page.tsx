@@ -68,6 +68,7 @@ export default function CryptohopperAlternativePage() {
       date="Updated 15 Sep 2026"
       readTime="6 min read"
       visualKicker="Keep the useful part"
+      visual="cryptohopper"
       toc={toc}
       relatedGuides={[
         { href: "/dca-bot", category: "DCA Bots", title: "Crypto DCA Bots: Entries, Averaging and Exit Rules Explained", excerpt: "Understand the DCA mechanics you need to preserve during a migration." },
