@@ -97,8 +97,8 @@ export default function ArticleLayout({
           <a href="/pricing">Pricing</a>
         </nav>
         <div className={styles.headerActions}>
-          <a className={styles.signIn} href={APP_URL}>Sign in</a>
-          <a className={styles.launch} href={APP_URL}>Launch app →</a>
+          <a className={styles.signIn} href={APP_URL} data-competitor-growth={comparisonHero ? true : undefined}>Sign in</a>
+          <a className={styles.launch} href={APP_URL} data-competitor-growth={comparisonHero ? true : undefined}>Launch app →</a>
         </div>
       </header>
 
