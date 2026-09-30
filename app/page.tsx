@@ -48,16 +48,19 @@ const copy = {
   }
 } as const;
 
-function Mark() { return <span className="brand"><span className="brandMark"><i /><b /></span><strong>THRWA</strong></span>; }
+function Brand({ lang }: { lang: Lang }) {
+  return <span className="brand"><img className="brandLogo" src="/thrwa-logo.svg" alt="" /><strong>{lang === "ar" ? "ثروة" : "THRWA"}</strong></span>;
+}
 
 export default function Home() {
   const [lang, setLang] = useState<Lang>("en");
   useEffect(() => { const saved = localStorage.getItem("thrwa-lang") as Lang | null; if (saved === "ar" || saved === "en") setLang(saved); }, []);
-  const setLanguage = (next: Lang) => { setLang(next); localStorage.setItem("thrwa-lang", next); };
+  const setLanguage = (next: Lang) => { setLang(next); localStorage.setItem("thrwa-lang", next); document.documentElement.lang = next; document.documentElement.dir = next === "ar" ? "rtl" : "ltr"; };
   const t = copy[lang];
+
   return <main className="marketing" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
     <header className="topbar shell">
-      <Link href="/" aria-label="THRWA home"><Mark /></Link>
+      <Link href="/" aria-label="THRWA home"><Brand lang={lang} /></Link>
       <nav><a href="#workflow">{t.navHow}</a><a href="#who">{t.navWho}</a><a href="#pricing">{t.navPricing}</a></nav>
       <div className="topActions"><div className="langSwitch"><button className={lang === "ar" ? "active" : ""} onClick={() => setLanguage("ar")}>العربية</button><button className={lang === "en" ? "active" : ""} onClick={() => setLanguage("en")}>English</button></div><Link className="button ghost" href="/app">{t.login}</Link></div>
     </header>
@@ -65,7 +68,7 @@ export default function Home() {
     <section className="hero shell">
       <div className="heroCopy"><p className="eyebrow">{t.eyebrow}</p><h1>{t.title1}<br/><em>{t.title2}</em></h1><p className="lead">{t.lead}</p><div className="heroActions"><Link className="button primary" href="/app">{t.cta} →</Link><a className="button secondary" href="#workflow">{t.secondary}</a></div></div>
       <div className="heroDemo">
-        <div className="chatWindow"><div className="chatTop"><Mark /><span>{t.input}</span></div><div className="voiceCard"><span className="mic">●</span><p>{t.bubble}</p></div><div className="quoteMini"><span>{t.ready}</span><strong>{t.amount}</strong><div className="miniLines"><i/><i/><i/></div><button>{t.approve}</button></div></div>
+        <div className="chatWindow"><div className="chatTop"><Brand lang={lang} /><span>{t.input}</span></div><div className="voiceCard"><span className="mic">●</span><p>{t.bubble}</p></div><div className="quoteMini"><span>{t.ready}</span><strong>{t.amount}</strong><div className="miniLines"><i/><i/><i/></div><button>{t.approve}</button></div></div>
       </div>
     </section>
 
@@ -76,6 +79,6 @@ export default function Home() {
     <section className="section shell" id="pricing"><div className="sectionHead"><p className="eyebrow">{t.pricingKicker}</p><h2>{t.pricingTitle}</h2></div><div className="pricingGrid">{t.plans.map(([name,price,desc], index) => <article className={index === 1 ? "featured" : ""} key={name}><small>{name}</small><strong>{price}</strong><p>{desc}</p><Link href="/app">{t.cta} →</Link></article>)}</div></section>
 
     <section className="finalCta shell"><h2>{t.final}</h2><Link className="button primary" href="/app">{t.finalCta} →</Link></section>
-    <footer className="footer shell"><Mark /><span>thrwa.tech</span><small>© 2026 THRWA</small></footer>
+    <footer className="footer shell"><Brand lang={lang} /><span>thrwa.tech</span><small>© 2026 THRWA</small></footer>
   </main>;
 }

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "THRWA — From WhatsApp to quotation",
   description: "Turn text and voice notes into professional quotations. Built for Saudi field businesses.",
   applicationName: "THRWA",
+  icons: { icon: "/thrwa-logo.svg", apple: "/thrwa-logo.svg" },
   openGraph: {
     title: "THRWA — From WhatsApp to quotation",
     description: "Turn text and voice notes into professional quotations in seconds.",
