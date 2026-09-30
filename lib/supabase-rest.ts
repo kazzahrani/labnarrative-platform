@@ -1,7 +1,7 @@
 import { calculateQuote, QuoteDraft } from "@/lib/quote";
 
 const url = () => (process.env.SUPABASE_URL || "").replace(/\/$/, "");
-const key = () => process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const key = () => process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const businessId = () => process.env.THRWA_BUSINESS_ID || "";
 
 export function databaseConfigured() {
