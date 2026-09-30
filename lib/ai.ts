@@ -108,7 +108,11 @@ export async function parseQuoteWithAI(input: string, catalog: CatalogItem[] = [
     cache: "no-store"
   });
 
-  if (!response.ok) throw new Error(`OpenAI quote extraction failed (${response.status})`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const message = body?.error?.message || body?.error?.code || "OpenAI request failed";
+    throw new Error(`OpenAI ${response.status}: ${message}`);
+  }
   const data = await response.json();
   const raw = responseText(data);
   if (!raw) throw new Error("OpenAI returned no quotation output");
