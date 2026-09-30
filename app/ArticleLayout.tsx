@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import PublicComparisonTracker from "./PublicComparisonTracker";
 import styles from "./article-page.module.css";
 
 const APP_URL = "https://app.labnarrative.com";
@@ -37,7 +38,7 @@ type ArticleLayoutProps = {
   finalCtaLabel?: string;
   comparisonHero?: {
     competitor: string;
-    competitorMark: string;
+    slug: string;
     tagline?: string;
     competitorItems?: string[];
   };
@@ -74,8 +75,13 @@ export default function ArticleLayout({
   finalCtaLabel = "Start free with Paper →",
   comparisonHero,
 }: ArticleLayoutProps) {
+  const migrationHref = comparisonHero
+    ? `https://app.labnarrative.com/migration?platform=${encodeURIComponent(comparisonHero.slug)}&utm_source=competitor_page&utm_medium=organic&utm_campaign=${encodeURIComponent(comparisonHero.slug)}-alternative`
+    : APP_URL;
+
   return (
     <main className={styles.page}>
+      {comparisonHero ? <PublicComparisonTracker competitor={comparisonHero.slug} /> : null}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -123,6 +129,13 @@ export default function ArticleLayout({
                 <span>LabNarrative Learn · {category}</span>
                 <h2>LabNarrative <em>vs</em> {comparisonHero.competitor}</h2>
                 <p>{comparisonHero.tagline || visualKicker}</p>
+                <a
+                  className={styles.comparisonHeroCta}
+                  href={migrationHref}
+                  data-competitor-growth
+                >
+                  Recreate my {comparisonHero.competitor} setup free →
+                </a>
               </div>
 
               <div className={styles.comparisonBrandStage} aria-label={`LabNarrative compared with ${comparisonHero.competitor}`}>
@@ -142,8 +155,7 @@ export default function ArticleLayout({
 
                 <div className={`${styles.comparisonBrandCard} ${styles.competitorBrandCard}`}>
                   <div className={styles.brandIdentity}>
-                    <span className={styles.competitorMark}>{comparisonHero.competitorMark}</span>
-                    <strong>{comparisonHero.competitor}</strong>
+                    <strong className={styles.competitorWordmark}>{comparisonHero.competitor}</strong>
                   </div>
                   <ul>
                     {(comparisonHero.competitorItems || ["Established platform", "Broader automation suite", "Subscription pricing"]).map((item) => (
@@ -189,7 +201,7 @@ export default function ArticleLayout({
                 <span>{sidebarKicker}</span>
                 <h2>{sidebarTitle}</h2>
                 <p>{sidebarCopy}</p>
-                <a href={APP_URL}>{sidebarCtaLabel}</a>
+                <a href={migrationHref} data-competitor-growth={comparisonHero ? true : undefined}>{sidebarCtaLabel}</a>
                 <small>{sidebarNote}</small>
               </div>
             </aside>
@@ -222,7 +234,7 @@ export default function ArticleLayout({
             <h2>{finalTitle}</h2>
             <p>{finalCopy}</p>
           </div>
-          <a href={APP_URL}>{finalCtaLabel}</a>
+          <a href={migrationHref} data-competitor-growth={comparisonHero ? true : undefined}>{finalCtaLabel}</a>
         </section>
       </div>
 
