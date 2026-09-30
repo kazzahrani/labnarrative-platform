@@ -218,7 +218,7 @@ export default function AppPage() {
       recorder.start(250);
       setRecording(true);
     } catch {
-      setVoiceError(lang === "ar" ? "لم نتمكن من الوصول إلى الميكروفون." : "Microphone access was not available.");
+      setVoiceError(lang === "ar" ? "لم نتمكن من الوصول إلى الميكروفون. تأكد أن Chrome لديه صلاحية الميكروفون." : "Microphone access was not available. Make sure Chrome has microphone permission.");
     }
   };
 
