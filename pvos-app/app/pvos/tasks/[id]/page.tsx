@@ -23,7 +23,7 @@ export default function TaskPage(){
       pvosSupabase.from("pvos_companies").select("*").eq("id",t.company_id).single(),
       pvosSupabase.from("pvos_task_evidence").select("*").eq("task_id",id).is("archived_at",null).order("created_at",{ascending:false}),
       pvosSupabase.from("pvos_task_approvals").select("*").eq("task_id",id).order("step_position"),
-      pvosSupabase.from("pvos_audit_events").select("*").eq("entity_type","task").eq("entity_id",id).order("created_at",{ascending:false}).limit(20),
+      pvosSupabase.from("pvos_audit_events").select("*").or(`and(entity_type.eq.task,entity_id.eq.${id}),and(entity_type.eq.approval,metadata->>task_id.eq.${id})`).order("created_at",{ascending:false}).limit(30),
       t.product_id?pvosSupabase.from("pvos_products").select("*").eq("id",t.product_id).single():Promise.resolve({data:null})
     ]);
     setCompany(c.data);setEvidence(e.data??[]);setApprovals(a.data??[]);setAudit(au.data??[]);setProduct((p as any).data);
@@ -54,7 +54,7 @@ export default function TaskPage(){
   }
   async function openEvidence(item:any){if(!item.file_path)return;const {data,error}=await pvosSupabase.storage.from("pvos-evidence").createSignedUrl(item.file_path,60);if(error||!data?.signedUrl){setUploadMessage(error?.message??"Could not open file.");return}window.open(data.signedUrl,"_blank","noopener,noreferrer")}
   async function approveCurrent(){
-    const current=approvals.find(a=>a.status==="in_review")??approvals.find(a=>a.status==="pending");if(!current)return;setBusy(true);
+    const current=approvals.find(a=>a.status==="in_review");if(!current)return;setBusy(true);
     await pvosSupabase.from("pvos_task_approvals").update({status:"approved",completed_at:new Date().toISOString()}).eq("id",current.id);
     const next=approvals.find(a=>a.step_position>current.step_position&&a.status==="pending");
     if(next) await pvosSupabase.from("pvos_task_approvals").update({status:"in_review",received_at:new Date().toISOString()}).eq("id",next.id);
@@ -69,7 +69,12 @@ export default function TaskPage(){
     <div className={styles.grid2}>
       <section className={styles.stack}>
         <div className={styles.info}><h3>Task details</h3><div className={styles.kv}><span>Company</span><span>{company.name}</span></div>{product?<div className={styles.kv}><span>Product</span><span>{product.brand_name} · {product.active_ingredient}</span></div>:null}<div className={styles.kv}><span>Owner</span><span>{task.owner_user_id===session?.user.id?"Me":"Team"}</span></div><div className={styles.kv}><span>Due</span><span>{formatDue(task.due_at)}</span></div><div className={styles.kv}><span>Priority</span><span>{niceStatus(task.priority)}</span></div><div className={styles.kv}><span>Source</span><span>{niceStatus(task.source)}</span></div>
-          <div className={styles.inlineActions}>{task.status!=="in_progress"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Start work</button>:null}{task.status!=="awaiting_review"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("awaiting_review")}>{approvals.length?"Send into approval":"Send for review"}</button>:null}{task.status!=="complete"?<button className={styles.button} disabled={busy} onClick={()=>setStatus("complete")}>Mark complete</button>:<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Reopen</button>}</div>
+          <div className={styles.inlineActions}>
+            {task.status==="not_started"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Start work</button>:null}
+            {task.status!=="awaiting_review"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("awaiting_review")}>{approvals.length?"Send into approval":"Send for review"}</button>:null}
+            {!approvals.length&&task.status!=="complete"?<button className={styles.button} disabled={busy} onClick={()=>setStatus("complete")}>Mark complete</button>:null}
+            {task.status==="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Reopen</button>:null}
+          </div>
         </div>
 
         <div className={styles.info}><h3>Evidence & documents</h3>
@@ -81,7 +86,7 @@ export default function TaskPage(){
       </section>
 
       <aside className={styles.stack}>
-        <div className={styles.info}><h3>Approval route</h3>{approvals.length?<><div className={styles.timeline}>{approvals.map(a=>{const s=stepBy[a.route_id+"|"+a.step_position];return <div key={a.id} className={[styles.step,a.status==="approved"?styles.done:a.status==="in_review"?styles.current:""].join(" ")}><span className={styles.dot}></span><div><strong>{s?.role??("Step "+a.step_position)}</strong><p>{niceStatus(a.status)}{a.completed_at?" · "+new Date(a.completed_at).toLocaleString():""}</p></div></div>})}</div>{approvals.some(a=>["in_review","pending"].includes(a.status))?<button className={styles.button} disabled={busy} onClick={approveCurrent}>Approve current step</button>:null}</>:<div className={styles.muted}>No approval workflow attached to this task.</div>}</div>
+        <div className={styles.info}><h3>Approval route</h3>{approvals.length?<><div className={styles.timeline}>{approvals.map(a=>{const s=stepBy[a.route_id+"|"+a.step_position];return <div key={a.id} className={[styles.step,a.status==="approved"?styles.done:a.status==="in_review"?styles.current:""].join(" ")}><span className={styles.dot}></span><div><strong>{s?.role??("Step "+a.step_position)}</strong><p>{niceStatus(a.status)}{a.completed_at?" · "+new Date(a.completed_at).toLocaleString():""}</p></div></div>})}</div>{approvals.some(a=>a.status==="in_review")?<button className={styles.button} disabled={busy} onClick={approveCurrent}>Approve current step</button>:null}</>:<div className={styles.muted}>No approval workflow attached to this task.</div>}</div>
         <div className={styles.info}><h3>Audit history</h3>{audit.length?audit.map(a=><div className={styles.kv} key={a.id}><span>{new Date(a.created_at).toLocaleString()}</span><span>{niceStatus(a.event_type)}</span></div>):<div className={styles.muted}>No changes recorded yet.</div>}</div>
       </aside>
     </div>
