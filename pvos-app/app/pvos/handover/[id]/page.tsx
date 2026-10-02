@@ -19,7 +19,7 @@ export default function HandoverDetail(){
     if(!params.id)return;
     const [h,r]=await Promise.all([
       pvosSupabase.from("pvos_handovers").select("*").eq("id",params.id).single(),
-      pvosSupabase.from("pvos_handover_companies").select("*").eq("handover_id",params.id).order("created_at")
+      pvosSupabase.from("pvos_handover_companies").select("*").eq("handover_id",params.id)
     ]);
     setHandover(h.data);setRows(r.data??[]);
     const ids=(r.data??[]).map((x:any)=>x.company_id);
