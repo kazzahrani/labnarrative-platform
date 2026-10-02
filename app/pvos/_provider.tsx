@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
 import { pvosSupabase } from "./_pvos-supabase";
@@ -25,21 +25,32 @@ export function PVOSProvider({children}:{children:ReactNode}) {
   const [loading,setLoading] = useState(true);
   const [error,setError] = useState<string|null>(null);
   const [reloadToken,setReloadToken] = useState(0);
+  const initUserRef=useRef<string|null>(null);
   const isLogin = pathname === "/pvos/login";
 
   async function initialize(nextSession:Session|null) {
     setSession(nextSession);
     setError(null);
+
     if (!nextSession) {
+      initUserRef.current=null;
       setOrganizationId(null);
       setLoading(false);
       if (!isLogin) router.replace("/pvos/login");
       return;
     }
 
+    if(initUserRef.current===nextSession.user.id && organizationId){
+      setLoading(false);
+      if(isLogin) router.replace("/pvos/dashboard");
+      return;
+    }
+
+    initUserRef.current=nextSession.user.id;
     setLoading(true);
     const { data: orgId, error: bootstrapError } = await pvosSupabase.rpc("pvos_bootstrap_workspace", { workspace_name:"PVOS Demo Workspace" });
     if (bootstrapError || !orgId) {
+      initUserRef.current=null;
       setError(bootstrapError?.message ?? "Could not initialize PVOS workspace.");
       setLoading(false);
       return;
@@ -51,6 +62,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       setLoading(false);
       if (isLogin) router.replace("/pvos/dashboard");
     } catch (e:any) {
+      initUserRef.current=null;
       setError(e?.message ?? "Could not prepare demo workspace.");
       setLoading(false);
     }
@@ -59,8 +71,9 @@ export function PVOSProvider({children}:{children:ReactNode}) {
   useEffect(()=>{
     let active = true;
     pvosSupabase.auth.getSession().then(({data})=>{ if(active) initialize(data.session); });
-    const { data:{subscription} } = pvosSupabase.auth.onAuthStateChange((_event,nextSession)=>{
-      if(active) initialize(nextSession);
+    const { data:{subscription} } = pvosSupabase.auth.onAuthStateChange((event,nextSession)=>{
+      if(!active || event==="INITIAL_SESSION") return;
+      initialize(nextSession);
     });
     return ()=>{ active=false; subscription.unsubscribe(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
