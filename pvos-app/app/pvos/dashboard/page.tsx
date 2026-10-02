@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Header, Badge, statusTone } from "../_components";
+import { NewTaskModal } from "../_new-task-modal";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import { dueLabel, formatDue } from "../_utils";
@@ -18,6 +19,7 @@ export default function Dashboard(){
   const [typeFilter,setTypeFilter]=useState("all");
   const [statusFilter,setStatusFilter]=useState("all");
   const [queueFilter,setQueueFilter]=useState("attention");
+  const [showNew,setShowNew]=useState(false);
 
   useEffect(()=>{ if(!organizationId)return; let active=true; (async()=>{
     setLoading(true);
@@ -57,7 +59,7 @@ export default function Dashboard(){
   };
 
   return <>
-    <Header eyebrow="My PV operation" title="What needs attention now?" sub="One live view across every company, product, obligation and deadline. Planned recurring work and ad-hoc SFDA requests live in the same operational queue." action={<Link className={styles.button} href="/pvos/tasks/new">+ New task</Link>}/>
+    <Header eyebrow="My PV operation" title="What needs attention now?" sub="One live view across every company, product, obligation and deadline. Planned recurring work and ad-hoc SFDA requests live in the same operational queue." action={<button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button>}/>
     <section className={styles.cards}>
       <div className={[styles.card,styles.danger].join(" ")}><span>Overdue</span><strong>{counts.overdue}</strong></div>
       <div className={[styles.card,styles.warning].join(" ")}><span>Due today</span><strong>{counts.today}</strong></div>
@@ -76,5 +78,6 @@ export default function Dashboard(){
       {loading?<div className={styles.empty}>Loading live PV tasks…</div>:filtered.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Task</th><th>Type</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
       <tbody>{filtered.map(t=><tr key={t.id}><td><Link href={"/pvos/companies/"+t.company_id}>{company[t.company_id]?.name??"—"}</Link></td><td><Link href={"/pvos/tasks/"+t.id}>{t.title}</Link>{t.product_id?<div className={styles.muted}>{product[t.product_id]?.brand_name??"Product"}</div>:null}</td><td>{t.activity_type}</td><td>{t.owner_user_id===session?.user.id?"Me":"Team"}</td><td>{formatDue(t.due_at)}</td><td><Badge tone={statusTone(t.displayStatus)}>{t.displayStatus}</Badge></td></tr>)}</tbody></table></div>:<div className={styles.empty}>No tasks need attention under these filters. Switch to “All scheduled work” to see future recurring tasks.</div>}
     </section>
+    <NewTaskModal open={showNew} onClose={()=>setShowNew(false)} onCreated={()=>location.reload()}/>
   </>;
 }
