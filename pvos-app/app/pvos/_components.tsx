@@ -23,6 +23,7 @@ export function AppShell({children}:{children:ReactNode}) {
       <nav className={styles.nav}>
         <Link href="/pvos/dashboard">Dashboard</Link>
         <Link href="/pvos/companies">Companies</Link>
+        <Link href="/pvos/tasks">Tasks</Link>
         <Link href="/pvos/tasks/new">+ New task</Link>
         <Link href="/pvos/approvals">Approvals</Link>
         <Link href="/pvos/handover">Handover</Link>
