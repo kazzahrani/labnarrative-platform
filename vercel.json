@@ -2,5 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": true
-  }
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/pvos/dashboard",
+      "permanent": false
+    }
+  ]
 }
