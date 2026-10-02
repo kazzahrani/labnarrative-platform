@@ -17,6 +17,7 @@ export default function Dashboard(){
   const [companyFilter,setCompanyFilter]=useState("all");
   const [typeFilter,setTypeFilter]=useState("all");
   const [statusFilter,setStatusFilter]=useState("all");
+  const [queueFilter,setQueueFilter]=useState("attention");
 
   useEffect(()=>{ if(!organizationId)return; let active=true; (async()=>{
     setLoading(true);
@@ -36,11 +37,15 @@ export default function Dashboard(){
   const company=useMemo(()=>Object.fromEntries(companies.map(c=>[c.id,c])),[companies]);
   const product=useMemo(()=>Object.fromEntries(products.map(p=>[p.id,p])),[products]);
   const labels=useMemo(()=>tasks.map(t=>({...t,displayStatus:dueLabel(t.due_at,t.status)})),[tasks]);
-  const filtered=useMemo(()=>labels.filter(t=>
-    (companyFilter==="all"||t.company_id===companyFilter) &&
-    (typeFilter==="all"||t.activity_type===typeFilter) &&
-    (statusFilter==="all"||t.displayStatus===statusFilter)
-  ),[labels,companyFilter,typeFilter,statusFilter]);
+  const filtered=useMemo(()=>labels.filter(t=>{
+    const due=t.due_at?new Date(t.due_at).getTime():null;
+    const withinWeek=due===null||due<=Date.now()+7*86400000;
+    const attention=t.status!=="complete"&&(withinWeek||["awaiting_review","awaiting_external","in_progress"].includes(t.status));
+    return (queueFilter==="all"||attention) &&
+      (companyFilter==="all"||t.company_id===companyFilter) &&
+      (typeFilter==="all"||t.activity_type===typeFilter) &&
+      (statusFilter==="all"||t.displayStatus===statusFilter);
+  }),[labels,queueFilter,companyFilter,typeFilter,statusFilter]);
   const activityTypes=[...new Set(labels.map(t=>t.activity_type))].sort();
   const statusTypes=[...new Set(labels.map(t=>t.displayStatus))].sort();
   const counts={
@@ -62,13 +67,14 @@ export default function Dashboard(){
     </section>
     <section className={styles.panel}>
       <div className={styles.panelHeader}><h2>Unified workload</h2><span className={styles.muted}>{loading?"Loading…":`Across ${companies.length} companies · signed in as ${session?.user.email??""}`}</span></div>
-      <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(3,minmax(150px,220px))",gap:10,borderBottom:"1px solid #1d252d"}}>
+      <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(4,minmax(150px,220px))",gap:10,borderBottom:"1px solid #1d252d"}}>
+        <select className={styles.input} value={queueFilter} onChange={e=>setQueueFilter(e.target.value)}><option value="attention">Attention queue</option><option value="all">All scheduled work</option></select>
         <select className={styles.input} value={companyFilter} onChange={e=>setCompanyFilter(e.target.value)}><option value="all">All companies</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
         <select className={styles.input} value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">All activity types</option>{activityTypes.map(x=><option key={x}>{x}</option>)}</select>
         <select className={styles.input} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{statusTypes.map(x=><option key={x}>{x}</option>)}</select>
       </div>
       {loading?<div className={styles.empty}>Loading live PV tasks…</div>:filtered.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Task</th><th>Type</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
-      <tbody>{filtered.map(t=><tr key={t.id}><td><Link href={"/pvos/companies/"+t.company_id}>{company[t.company_id]?.name??"—"}</Link></td><td><Link href={"/pvos/tasks/"+t.id}>{t.title}</Link>{t.product_id?<div className={styles.muted}>{product[t.product_id]?.brand_name??"Product"}</div>:null}</td><td>{t.activity_type}</td><td>{t.owner_user_id===session?.user.id?"Me":"Team"}</td><td>{formatDue(t.due_at)}</td><td><Badge tone={statusTone(t.displayStatus)}>{t.displayStatus}</Badge></td></tr>)}</tbody></table></div>:<div className={styles.empty}>No tasks match these filters.</div>}
+      <tbody>{filtered.map(t=><tr key={t.id}><td><Link href={"/pvos/companies/"+t.company_id}>{company[t.company_id]?.name??"—"}</Link></td><td><Link href={"/pvos/tasks/"+t.id}>{t.title}</Link>{t.product_id?<div className={styles.muted}>{product[t.product_id]?.brand_name??"Product"}</div>:null}</td><td>{t.activity_type}</td><td>{t.owner_user_id===session?.user.id?"Me":"Team"}</td><td>{formatDue(t.due_at)}</td><td><Badge tone={statusTone(t.displayStatus)}>{t.displayStatus}</Badge></td></tr>)}</tbody></table></div>:<div className={styles.empty}>No tasks need attention under these filters. Switch to “All scheduled work” to see future recurring tasks.</div>}
     </section>
   </>;
 }
