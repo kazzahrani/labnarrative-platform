@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Header, Badge } from "../_components";
 import { usePVOS } from "../_provider";
@@ -49,10 +50,23 @@ export default function Handover(){
       leave_start:start,leave_end:end,status:"sent"
     }).select("*").single();
     if(error){setMessage(error.message);setBusy(false);return;}
-    const rows=preview.map(p=>({
-      handover_id:h.id,company_id:p.company.id,
-      snapshot:{open_tasks:p.open,next_deadline:p.next?.due_at??null,next_task:p.next?.title??null,risk:p.risk,created_from:"PVOS V0"}
-    }));
+    const rows=preview.map(p=>{
+      const companyTasks=tasks.filter(t=>t.company_id===p.company.id).map(t=>({
+        id:t.id,title:t.title,activity_type:t.activity_type,status:t.status,priority:t.priority,due_at:t.due_at
+      }));
+      return {
+        handover_id:h.id,company_id:p.company.id,
+        snapshot:{
+          open_tasks:p.open,
+          next_deadline:p.next?.due_at??null,
+          next_task:p.next?.title??null,
+          risk:p.risk,
+          tasks:companyTasks,
+          created_at:new Date().toISOString(),
+          created_from:"PVOS V0"
+        }
+      };
+    });
     if(rows.length) await pvosSupabase.from("pvos_handover_companies").insert(rows);
     setMessage(`${rows.length} company handover(s) generated and saved.`);
     setBusy(false);await load();
@@ -70,6 +84,6 @@ export default function Handover(){
       <aside className={styles.info}><h3>How the V0 flow works</h3><div className={styles.kv}><span>1</span><span>QPPV sends</span></div><div className={styles.kv}><span>2</span><span>Deputy acknowledges</span></div><div className={styles.kv}><span>3</span><span>Leave becomes active</span></div><div className={styles.kv}><span>4</span><span>Handback pending</span></div><div className={styles.kv}><span>5</span><span>QPPV closes handback</span></div></aside>
     </div>
     <section className={styles.panel}><div className={styles.panelHeader}><h2>Current handover preview</h2><span className={styles.muted}>Generated from live tasks</span></div><div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Open items</th><th>Next deadline</th><th>Risk</th></tr></thead><tbody>{preview.map(p=><tr key={p.company.id}><td>{p.company.name}</td><td>{p.open}</td><td>{p.next?`${p.next.title} · ${formatDue(p.next.due_at)}`:"—"}</td><td><Badge tone={p.risk==="High"?"red":p.risk==="Medium"?"amber":"default"}>{p.risk}</Badge></td></tr>)}</tbody></table></div></section>
-    <section className={styles.panel}><div className={styles.panelHeader}><h2>Saved leave events</h2><span className={styles.muted}>{handovers.length} recent</span></div>{handovers.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Leave</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>{handovers.map(h=><tr key={h.id}><td>{h.leave_start} → {h.leave_end}</td><td><Badge tone={h.status==="closed"?"green":h.status==="handback_pending"?"amber":"lime"}>{niceStatus(h.status)}</Badge></td><td>{new Date(h.created_at).toLocaleString()}</td><td>{h.status!=="closed"?<button className={styles.buttonGhost} onClick={()=>advance(h)}>Advance demo state</button>:null}</td></tr>)}</tbody></table></div>:<div className={styles.empty}>No handovers created yet.</div>}</section>
+    <section className={styles.panel}><div className={styles.panelHeader}><h2>Saved leave events</h2><span className={styles.muted}>{handovers.length} recent</span></div>{handovers.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Leave</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody>{handovers.map(h=><tr key={h.id}><td>{h.leave_start} → {h.leave_end}</td><td><Badge tone={h.status==="closed"?"green":h.status==="handback_pending"?"amber":"lime"}>{niceStatus(h.status)}</Badge></td><td>{new Date(h.created_at).toLocaleString()}</td><td><div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href={"/pvos/handover/"+h.id}>Open</Link>{h.status!=="closed"?<button className={styles.buttonGhost} onClick={()=>advance(h)}>{h.status==="sent"?"Deputy acknowledge":h.status==="accepted"?"Start leave":h.status==="active"?"Begin handback":"Close handback"}</button>:null}</div></td></tr>)}</tbody></table></div>:<div className={styles.empty}>No handovers created yet.</div>}</section>
   </>;
 }
