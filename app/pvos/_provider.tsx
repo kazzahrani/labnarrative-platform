@@ -41,6 +41,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
     }
 
     if(initUserRef.current===nextSession.user.id && organizationId){
+      await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
       setLoading(false);
       if(isLogin) router.replace("/pvos/dashboard");
       return;
@@ -58,6 +59,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
 
     try {
       await ensureDemoWorkspace(pvosSupabase, orgId as string, nextSession.user.id);
+      await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
       setOrganizationId(orgId as string);
       setLoading(false);
       if (isLogin) router.replace("/pvos/dashboard");
