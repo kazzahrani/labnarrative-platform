@@ -65,7 +65,7 @@ export default function TaskPage(){
   if(!task||!company)return <div className={styles.empty}>Loading task…</div>;
   const displayStatus=dueLabel(task.due_at,task.status);
   return <>
-    <Header eyebrow={task.activity_type+" · "+company.name} title={task.title} sub="Live structured PV task. Status, evidence and approval handoffs are persisted with audit history." action={<Badge tone={statusTone(displayStatus)}>{displayStatus}</Badge>}/>
+    <Header eyebrow={task.activity_type+" · "+company.name} title={task.title} sub="Live structured PV task. Status, evidence and approval handoffs are persisted with audit history." action={<div className={styles.inlineActions} style={{marginTop:0}}><a className={styles.buttonGhost} href={"/pvos/companies/"+company.id}>← Company</a><Badge tone={statusTone(displayStatus)}>{displayStatus}</Badge></div>}/>
     <div className={styles.grid2}>
       <section className={styles.stack}>
         <div className={styles.info}><h3>Task details</h3><div className={styles.kv}><span>Company</span><span>{company.name}</span></div>{product?<div className={styles.kv}><span>Product</span><span>{product.brand_name} · {product.active_ingredient}</span></div>:null}<div className={styles.kv}><span>Owner</span><span>{task.owner_user_id===session?.user.id?"Me":"Team"}</span></div><div className={styles.kv}><span>Due</span><span>{formatDue(task.due_at)}</span></div><div className={styles.kv}><span>Priority</span><span>{niceStatus(task.priority)}</span></div><div className={styles.kv}><span>Source</span><span>{niceStatus(task.source)}</span></div>
