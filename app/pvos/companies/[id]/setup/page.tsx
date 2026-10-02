@@ -7,6 +7,11 @@ import { usePVOS } from "../../../_provider";
 import { pvosSupabase } from "../../../_pvos-supabase";
 import styles from "../../../pvos.module.css";
 
+function localInput(offsetDays:number){
+  const d=new Date();d.setDate(d.getDate()+offsetDays);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  return d.toISOString().slice(0,16);
+}
+
 export default function CompanySetupPage(){
   const params=useParams<{id:string}>();
   const router=useRouter();
@@ -18,6 +23,7 @@ export default function CompanySetupPage(){
   const [obligationTitle,setObligationTitle]=useState("");
   const [activity,setActivity]=useState("Literature");
   const [cadence,setCadence]=useState("weekly");
+  const [nextDue,setNextDue]=useState(localInput(7));
   const [message,setMessage]=useState<string|null>(null);
   const [busy,setBusy]=useState(false);
 
@@ -41,16 +47,18 @@ export default function CompanySetupPage(){
     e.preventDefault();if(!company||!session)return;setBusy(true);setMessage(null);
     const {error}=await pvosSupabase.from("pvos_obligations").insert({
       company_id:company.id,title:obligationTitle.trim()||activity+" obligation",activity_type:activity,
-      cadence,owner_user_id:session.user.id,responsibility:"organization",evidence_required:true
+      cadence,owner_user_id:session.user.id,responsibility:"organization",evidence_required:true,
+      next_due_at:cadence==="event"?null:new Date(nextDue).toISOString()
     });
+    if(!error) await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
     setBusy(false);
     if(error){setMessage(error.message);return;}
-    setObligationTitle("");setMessage("Recurring obligation added.");
+    setObligationTitle("");setMessage(cadence==="event"?"Event-triggered obligation added.":"Recurring obligation added and upcoming tasks generated.");
   }
 
   if(!company)return <div className={styles.empty}>Loading company setup…</div>;
   return <>
-    <Header eyebrow="PV configuration" title={company.name+" setup"} sub="Add product records and recurring PV obligations. V0 stores the obligation definition; automatic future task generation is the next scheduler layer."/>
+    <Header eyebrow="PV configuration" title={company.name+" setup"} sub="Add product records and recurring PV obligations. Upcoming task instances are generated automatically from each obligation's frequency and next due date."/>
     {message?<div className={styles.successBox} style={{marginBottom:16}}>{message}</div>:null}
     <div className={styles.grid2}>
       <form className={styles.info} onSubmit={addProduct}>
@@ -68,6 +76,7 @@ export default function CompanySetupPage(){
           <label>Activity<select className={styles.input} value={activity} onChange={e=>setActivity(e.target.value)}>{["Literature","Signal","PSSF","RMP","PSUR/PBRER","Training","Reconciliation","SOP","CAPA","Other"].map(x=><option key={x}>{x}</option>)}</select></label>
           <label>Title<input className={styles.input} value={obligationTitle} onChange={e=>setObligationTitle(e.target.value)} placeholder="e.g. Monthly authority review"/></label>
           <label>Frequency<select className={styles.input} value={cadence} onChange={e=>setCadence(e.target.value)}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Every 6 months</option><option value="annual">Annual</option><option value="event">Event-triggered</option></select></label>
+          {cadence!=="event"?<label>Next due date<input className={styles.input} type="datetime-local" value={nextDue} onChange={e=>setNextDue(e.target.value)} required/></label>:null}
         </div>
         <div className={styles.inlineActions}><button className={styles.button} disabled={busy}>Add obligation</button></div>
       </form>
