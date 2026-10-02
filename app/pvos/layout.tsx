@@ -3,8 +3,8 @@ import { AppShell } from "./_components";
 import { PVOSProvider } from "./_provider";
 
 export const metadata = {
-  title:"PVOS V0",
-  description:"Saudi pharmacovigilance operations prototype",
+  title:"PVOS",
+  description:"Pharmacovigilance operations and compliance workspace",
   robots:{ index:false, follow:false },
 };
 
