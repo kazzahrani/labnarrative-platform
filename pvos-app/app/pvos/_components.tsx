@@ -40,7 +40,7 @@ export function AppShell({children}:{children:ReactNode}) {
 }
 
 export function Header({eyebrow,title,sub,action}:{eyebrow:string,title:string,sub:string,action?:ReactNode}) {
-  return <div className={styles.top}><div><div className={styles.eyebrow}>{eyebrow}</div><h1 className={styles.title}>{title}</h1><div className={styles.sub}>{sub}</div></div>{action ?? <span className={styles.pill}>V0 · live database</span>}</div>;
+  return <div className={styles.top}><div><div className={styles.eyebrow}>{eyebrow}</div><h1 className={styles.title}>{title}</h1><div className={styles.sub}>{sub}</div></div>{action ?? <span className={styles.pill}>Private prototype</span>}</div>;
 }
 
 export function Badge({children,tone="default"}:{children:ReactNode,tone?:"default"|"red"|"amber"|"green"|"lime"}) {
