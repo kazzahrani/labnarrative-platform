@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="PVOS">
+  <rect x="1.5" y="1.5" width="97" height="97" rx="20" fill="#D7FF3F" stroke="#858585" stroke-width="1.5"/>
+  <text x="50" y="48" text-anchor="middle"
+        font-family="Arial Black, Arial, Helvetica, sans-serif"
+        font-size="43" font-weight="900" letter-spacing="-3.8"
+        fill="#0B0E12">PV</text>
+  <text x="50" y="84" text-anchor="middle"
+        font-family="Arial Black, Arial, Helvetica, sans-serif"
+        font-size="40" font-weight="900" letter-spacing="-3.2"
+        fill="#FFFFFF" stroke="#858585" stroke-width="1.2" paint-order="stroke fill">OS</text>
+</svg>
