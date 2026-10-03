@@ -67,7 +67,7 @@ export default function Companies(){
   }
 
   return <>
-    <Header eyebrow="Client portfolio" title="Companies" sub="Each client has its own scope, product portfolio, recurring obligations and evidence history. This live view is backed by the dedicated PVOS database." action={<button className={styles.button} onClick={()=>setShowAdd(true)}>+ Add company</button>}/>
+    <Header eyebrow="Client portfolio" title="Companies" sub="Manage each company separately — its PV scope, products, recurring obligations, deadlines and related records." action={<button className={styles.button} onClick={()=>setShowAdd(true)}>+ Add company</button>}/>
     <div className={styles.companyGrid}>{companies.map(c=><Link className={styles.companyCard} href={"/pvos/companies/"+c.id} key={c.id}>
       <h3>{c.name}</h3><p>{c.contract_scope??"PV scope not defined"}</p>
       <div className={styles.stats}><div><strong>{stats[c.id]?.products??0}</strong><span>Products</span></div><div><strong>{stats[c.id]?.dueWeek??0}</strong><span>Due this week</span></div><div><strong>{stats[c.id]?.overdue??0}</strong><span>Overdue</span></div></div>
