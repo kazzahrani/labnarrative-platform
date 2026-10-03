@@ -33,7 +33,7 @@ export function AppShell({children}:{children:ReactNode}) {
 
   return <div className={rootClass}><div className={styles.shell}>
     <aside className={styles.sidebar}>
-      <div className={styles.brand}><span className={styles.mark}>PV</span><div>PVOS<small>Saudi PV operations</small></div></div>
+      <div className={styles.brand}><img className={styles.mark} src="/pvos-logo.svg" alt="" aria-hidden="true"/><div>PVOS<small>Saudi PV operations</small></div></div>
       <nav className={styles.nav}>
         <Link href="/pvos/dashboard">Dashboard</Link>
         <Link href="/pvos/companies">Companies</Link>
@@ -55,8 +55,17 @@ export function AppShell({children}:{children:ReactNode}) {
   </div></div>;
 }
 
-export function Header({eyebrow,title,sub,action}:{eyebrow:string,title:string,sub:string,action?:ReactNode}) {
-  return <div className={styles.top}><div><div className={styles.eyebrow}>{eyebrow}</div><h1 className={styles.title}>{title}</h1><div className={styles.sub}>{sub}</div></div>{action ?? <span className={styles.pill}>Private prototype</span>}</div>;
+export function Header({eyebrow,title,sub,action}:{eyebrow:string,title:string,sub?:string,action?:ReactNode}) {
+  return <div className={styles.top}>
+    <div>
+      <div className={styles.eyebrow}>{eyebrow}</div>
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>{title}</h1>
+        {sub?<span className={styles.infoTip} tabIndex={0} aria-label={sub}>i<span className={styles.tooltip} role="tooltip">{sub}</span></span>:null}
+      </div>
+    </div>
+    {action ?? null}
+  </div>;
 }
 
 export function Badge({children,tone="default"}:{children:ReactNode,tone?:"default"|"red"|"amber"|"green"|"lime"}) {
