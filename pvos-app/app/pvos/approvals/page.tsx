@@ -46,7 +46,7 @@ export default function Approvals(){
   }
 
   return <>
-    <Header eyebrow="Accountability" title="Approval tracking" sub="Know exactly where every document or task is, who has it, and how long it has been waiting. Approval actions persist and are written to the audit history."/>
+    <Header eyebrow="Accountability" title="Approval tracking" sub="Track documents and tasks through each approval step. See who currently has it, how long it has been waiting, and the full approval history."/>
     <section className={styles.panel}><div className={styles.panelHeader}><h2>Currently waiting</h2><span className={styles.muted}>{active.length} active approval step(s)</span></div>
     {active.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Task</th><th>Step</th><th>Status</th><th>Waiting since</th><th></th></tr></thead><tbody>{active.map(a=>{const t=taskBy[a.task_id];const s=stepBy[a.route_id+"|"+a.step_position];return <tr key={a.id}><td>{companyBy[t?.company_id]?.name??"—"}</td><td>{t?.title??"Task"}</td><td>{s?.role??("Step "+a.step_position)}</td><td><Badge tone={a.status==="in_review"?"amber":"default"}>{niceStatus(a.status)}</Badge></td><td>{new Date(a.received_at).toLocaleString()}</td><td>{["in_review","pending"].includes(a.status)?<button className={styles.buttonGhost} disabled={busy===a.id} onClick={()=>approve(a)}>{busy===a.id?"Saving…":"Approve"}</button>:null}</td></tr>})}</tbody></table></div>:<div className={styles.empty}>Nothing is waiting for approval.</div>}</section>
   </>;
