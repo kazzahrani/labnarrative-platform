@@ -6,9 +6,9 @@ export const metadata: Metadata={
   description:"Pharmacovigilance operations and compliance workspace",
   robots:{index:false,follow:false},
   icons:{
-    icon:[{url:"/pvos-logo.svg",type:"image/svg+xml"}],
-    shortcut:"/pvos-logo.svg",
-    apple:"/pvos-logo.svg",
+    icon:[{url:"/pvos-mark.svg",type:"image/svg+xml"}],
+    shortcut:"/pvos-mark.svg",
+    apple:"/pvos-mark.svg",
   },
 };
 export default function RootLayout({children}:{children:ReactNode}){return <html lang="en"><body>{children}</body></html>}
