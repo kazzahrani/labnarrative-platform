@@ -36,21 +36,17 @@ export async function ensureDemoWorkspace(supabase:SupabaseClient, organizationI
   if (productError) throw productError;
   const product = Object.fromEntries((products ?? []).map((p:any)=>[p.brand_name,p.id]));
 
-  const { data: obligations, error: obligationError } = await supabase.from("pvos_obligations").insert([
+  const { error: obligationError } = await supabase.from("pvos_obligations").insert([
     { company_id:company["Riyadh Pharma Demo"], activity_type:"Literature", title:"Weekly local literature screening", cadence:"weekly", owner_user_id:userId, next_due_at:atNoon(2) },
     { company_id:company["Najd Therapeutics Demo"], activity_type:"PSSF", title:"PSSF monthly maintenance", cadence:"monthly", owner_user_id:userId, next_due_at:atNoon(5) },
     { company_id:company["GulfMed Demo"], activity_type:"Reconciliation", title:"Monthly case reconciliation", cadence:"monthly", owner_user_id:userId, next_due_at:atNoon(7) },
-  ]).select("id,title,company_id");
+  ]);
   if (obligationError) throw obligationError;
-  const obligation = Object.fromEntries((obligations ?? []).map((o:any)=>[o.title+"|"+o.company_id,o.id]));
 
   const taskRows = [
     { organization_id:organizationId, company_id:company["Riyadh Pharma Demo"], product_id:product["Oncora"], title:"RMP annual review", activity_type:"RMP", source:"manual", status:"awaiting_review", priority:"high", owner_user_id:userId, due_at:atNoon(4) },
-    { organization_id:organizationId, company_id:company["Riyadh Pharma Demo"], obligation_id:obligation["Weekly local literature screening|"+company["Riyadh Pharma Demo"]], title:"Weekly local literature screening", activity_type:"Literature", source:"recurring", status:"not_started", priority:"medium", owner_user_id:userId, due_at:atNoon(2) },
     { organization_id:organizationId, company_id:company["Najd Therapeutics Demo"], product_id:product["Neurovia"], title:"SFDA safety inquiry response", activity_type:"SFDA Inquiry", source:"sfda_event", status:"in_progress", priority:"critical", owner_user_id:userId, due_at:atNoon(1) },
-    { organization_id:organizationId, company_id:company["Najd Therapeutics Demo"], obligation_id:obligation["PSSF monthly maintenance|"+company["Najd Therapeutics Demo"]], title:"PSSF monthly maintenance", activity_type:"PSSF", source:"recurring", status:"not_started", priority:"medium", owner_user_id:userId, due_at:atNoon(5) },
     { organization_id:organizationId, company_id:company["Najd Therapeutics Demo"], title:"Medical representative refresher training", activity_type:"Training", source:"manual", status:"awaiting_external", priority:"medium", owner_user_id:userId, due_at:atNoon(8) },
-    { organization_id:organizationId, company_id:company["GulfMed Demo"], obligation_id:obligation["Monthly case reconciliation|"+company["GulfMed Demo"]], title:"Monthly case reconciliation", activity_type:"Reconciliation", source:"recurring", status:"not_started", priority:"medium", owner_user_id:userId, due_at:atNoon(7) },
     { organization_id:organizationId, company_id:company["GulfMed Demo"], title:"September literature review archive", activity_type:"Literature", source:"recurring", status:"complete", priority:"medium", owner_user_id:userId, due_at:atNoon(-5), completed_at:atNoon(-5) },
   ];
   const { data: tasks, error: taskError } = await supabase.from("pvos_tasks").insert(taskRows).select("id,title,company_id");
