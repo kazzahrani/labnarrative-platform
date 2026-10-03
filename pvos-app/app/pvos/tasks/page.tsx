@@ -33,7 +33,7 @@ export default function TasksPage(){
   const company=useMemo(()=>Object.fromEntries(companies.map(c=>[c.id,c.name])),[companies]);
 
   return <>
-    <Header eyebrow="PV workload" title="Tasks" sub="All PV activities in one place so you can always return to work in progress." action={<button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button>}/>
+    <Header eyebrow="PV workload" title="Tasks" sub="View and manage all PV activities in one place, including recurring obligations, ad-hoc requests, deadlines and work in progress." action={<button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button>}/>
     <section className={styles.panel}>
       <div className={styles.panelHeader}><h2>All tasks</h2><span className={styles.muted}>{tasks.length} total</span></div>
       {loading?<div className={styles.empty}>Loading tasks…</div>:<div className={styles.tableWrap}><table className={styles.table}>
