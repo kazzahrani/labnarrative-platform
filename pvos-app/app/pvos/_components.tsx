@@ -33,7 +33,7 @@ export function AppShell({children}:{children:ReactNode}) {
 
   return <div className={rootClass}><div className={styles.shell}>
     <aside className={styles.sidebar}>
-      <div className={styles.brand}><img className={styles.mark} src="/pvos-logo.svg" alt="" aria-hidden="true"/><div>PVOS<small>Saudi PV operations</small></div></div>
+      <div className={styles.brand}><img className={styles.mark} src="/pvos-logo.svg" alt="" aria-hidden="true"/><div>PVOS<small>Pharmacovigilance operations system</small></div></div>
       <nav className={styles.nav}>
         <Link href="/pvos/dashboard">Dashboard</Link>
         <Link href="/pvos/companies">Companies</Link>
