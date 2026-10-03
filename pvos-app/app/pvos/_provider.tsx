@@ -40,10 +40,14 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       return;
     }
 
-    if(initUserRef.current===nextSession.user.id && organizationId){
-      await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
-      setLoading(false);
-      if(isLogin) router.replace("/pvos/dashboard");
+    if(initUserRef.current===nextSession.user.id){
+      // A second auth callback can arrive while the first workspace bootstrap is
+      // still in flight. Do not seed the same fresh organization twice.
+      if(organizationId){
+        await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
+        setLoading(false);
+        if(isLogin) router.replace("/pvos/dashboard");
+      }
       return;
     }
 
