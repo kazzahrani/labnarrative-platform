@@ -70,7 +70,7 @@ export default function Handover(){
   }
 
   return <>
-    <Header eyebrow="QPPV continuity" title="Leave handover" sub="Generate a frozen, auditable workload snapshot for each company before a QPPV absence. Each client handover is acknowledged separately."/>
+    <Header eyebrow="QPPV continuity" title="Leave handover" sub="Prepare a separate handover for every company before QPPV leave. Open tasks, deadlines and responsibilities are captured, and the Deputy acknowledges each company separately."/>
     <div className={styles.grid2}>
       <section className={styles.info}>
         <h3>Create handover</h3>
