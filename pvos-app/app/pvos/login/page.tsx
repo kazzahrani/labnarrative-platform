@@ -31,7 +31,7 @@ export default function LoginPage(){
 
   return <div className={styles.authWrap}>
     <div className={styles.authCard}>
-      <div className={styles.brand} style={{padding:0,marginBottom:24}}><span className={styles.mark}>PV</span><div>PVOS<small>Saudi PV operations</small></div></div>
+      <div className={styles.brand} style={{padding:0,marginBottom:24}}><img className={styles.mark} src="/pvos-logo.svg" alt="" aria-hidden="true"/><div>PVOS<small>Saudi PV operations</small></div></div>
       <div className={styles.eyebrow}>Private prototype</div>
       <h1 className={styles.title}>{mode==="signin"?"Sign in to PVOS":"Create your PVOS account"}</h1>
       <p className={styles.sub}>The first account automatically gets a private demo workspace with sample companies and PV tasks. No patient data is used.</p>
