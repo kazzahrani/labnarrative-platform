@@ -2,7 +2,7 @@
 .shell{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
 .sidebar{position:sticky;top:0;height:100vh;border-right:1px solid #202933;background:#0a0e12;padding:22px 16px;box-sizing:border-box}
 .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 24px;font-weight:800;letter-spacing:-.02em}
-.mark{width:46px;height:46px;display:block;object-fit:contain;flex:0 0 auto;background:transparent;border:0;box-shadow:none}
+.mark{width:38px;height:38px;display:block;object-fit:contain;flex:0 0 auto;background:transparent;border:0;box-shadow:none}
 .brand small{display:block;max-width:155px;color:#71808f;font-size:9.5px;line-height:1.35;font-weight:700;letter-spacing:.055em;text-transform:uppercase;margin-top:2px}
 .nav{display:grid;gap:5px}.nav a{color:#98a7b5;text-decoration:none;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:650}.nav a:hover{background:#141b22;color:#fff}
 .foot{position:absolute;bottom:18px;left:16px;right:16px;padding:12px;border:1px solid #202933;border-radius:12px;color:#8b98a5;font-size:11px;line-height:1.45}.userEmail{color:#d6dee4;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px}.signOut{background:transparent;border:0;color:#8b98a5;padding:7px 0 0;cursor:pointer;font-weight:700}.signOut:hover{color:#fff}
