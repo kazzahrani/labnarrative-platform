@@ -59,7 +59,7 @@ export default function Dashboard(){
   };
 
   return <>
-    <Header eyebrow="My PV operation" title="What needs attention now?" sub="One live view across every company, product, obligation and deadline. Planned recurring work and ad-hoc SFDA requests live in the same operational queue." action={<button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button>}/>
+    <Header eyebrow="My PV operation" title="What needs attention now?" sub="See what needs attention across all companies — overdue work, upcoming deadlines, approvals and active PV tasks. Use the filters to focus on a company, activity type or status." action={<button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button>}/>
     <section className={styles.cards}>
       <div className={[styles.card,styles.danger].join(" ")}><span>Overdue</span><strong>{counts.overdue}</strong></div>
       <div className={[styles.card,styles.warning].join(" ")}><span>Due today</span><strong>{counts.today}</strong></div>
