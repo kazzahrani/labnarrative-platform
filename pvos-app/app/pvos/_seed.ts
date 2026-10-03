@@ -7,75 +7,99 @@ function atNoon(offsetDays:number) {
   return d.toISOString();
 }
 
+async function upsertAndFetch(supabase:SupabaseClient, table:string, rows:any[], conflict:string, keyColumn:string, keys:string[]) {
+  const { error } = await supabase.from(table).upsert(rows,{onConflict:conflict,ignoreDuplicates:true});
+  if (error) throw error;
+  const { data, error:fetchError } = await supabase.from(table).select("*").in(keyColumn,keys);
+  if (fetchError) throw fetchError;
+  return data ?? [];
+}
+
 export async function ensureDemoWorkspace(supabase:SupabaseClient, organizationId:string, userId:string) {
-  const { data: existing, error: existingError } = await supabase
-    .from("pvos_companies")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .limit(1);
-  if (existingError) throw existingError;
-  if (existing?.length) return;
+  const companies=await upsertAndFetch(
+    supabase,"pvos_companies",
+    [
+      { organization_id:organizationId, seed_key:"demo-riyadh-pharma", name:"Riyadh Pharma Demo", contract_scope:"Local QPPV + Literature + RMP", qppv_user_id:userId },
+      { organization_id:organizationId, seed_key:"demo-najd-therapeutics", name:"Najd Therapeutics Demo", contract_scope:"Local QPPV + PSSF + Training", qppv_user_id:userId },
+      { organization_id:organizationId, seed_key:"demo-gulfmed", name:"GulfMed Demo", contract_scope:"Literature + ICSR + Reconciliation", qppv_user_id:userId },
+    ],
+    "organization_id,seed_key","seed_key",
+    ["demo-riyadh-pharma","demo-najd-therapeutics","demo-gulfmed"]
+  );
+  const company=Object.fromEntries(companies.map((c:any)=>[c.seed_key,c.id]));
 
-  const { data: companies, error: companyError } = await supabase
-    .from("pvos_companies")
-    .insert([
-      { organization_id:organizationId, name:"Riyadh Pharma Demo", contract_scope:"Local QPPV + Literature + RMP", qppv_user_id:userId },
-      { organization_id:organizationId, name:"Najd Therapeutics Demo", contract_scope:"Local QPPV + PSSF + Training", qppv_user_id:userId },
-      { organization_id:organizationId, name:"GulfMed Demo", contract_scope:"Literature + ICSR + Reconciliation", qppv_user_id:userId },
-    ])
-    .select("id,name");
-  if (companyError) throw companyError;
-  const company = Object.fromEntries((companies ?? []).map((c:any)=>[c.name,c.id]));
+  const products=await upsertAndFetch(
+    supabase,"pvos_products",
+    [
+      { company_id:company["demo-riyadh-pharma"], seed_key:"demo-cardiovex", brand_name:"Cardiovex", active_ingredient:"apixaban", registration_status:"Registered", rmp_status:"Active" },
+      { company_id:company["demo-riyadh-pharma"], seed_key:"demo-oncora", brand_name:"Oncora", active_ingredient:"osimertinib", registration_status:"Registered", rmp_status:"Active" },
+      { company_id:company["demo-najd-therapeutics"], seed_key:"demo-neurovia", brand_name:"Neurovia", active_ingredient:"fingolimod", registration_status:"Registered", rmp_status:"Routine" },
+      { company_id:company["demo-gulfmed"], seed_key:"demo-metaglix", brand_name:"Metaglix", active_ingredient:"metformin", registration_status:"Registered", rmp_status:"Routine" },
+    ],
+    "company_id,seed_key","seed_key",
+    ["demo-cardiovex","demo-oncora","demo-neurovia","demo-metaglix"]
+  );
+  const product=Object.fromEntries(products.map((p:any)=>[p.seed_key,p.id]));
 
-  const { data: products, error: productError } = await supabase.from("pvos_products").insert([
-    { company_id:company["Riyadh Pharma Demo"], brand_name:"Cardiovex", active_ingredient:"apixaban", registration_status:"Registered", rmp_status:"Active" },
-    { company_id:company["Riyadh Pharma Demo"], brand_name:"Oncora", active_ingredient:"osimertinib", registration_status:"Registered", rmp_status:"Active" },
-    { company_id:company["Najd Therapeutics Demo"], brand_name:"Neurovia", active_ingredient:"fingolimod", registration_status:"Registered", rmp_status:"Routine" },
-    { company_id:company["GulfMed Demo"], brand_name:"Metaglix", active_ingredient:"metformin", registration_status:"Registered", rmp_status:"Routine" },
-  ]).select("id,brand_name,company_id");
-  if (productError) throw productError;
-  const product = Object.fromEntries((products ?? []).map((p:any)=>[p.brand_name,p.id]));
+  await upsertAndFetch(
+    supabase,"pvos_obligations",
+    [
+      { company_id:company["demo-riyadh-pharma"], seed_key:"demo-weekly-literature", activity_type:"Literature", title:"Weekly local literature screening", cadence:"weekly", owner_user_id:userId, next_due_at:atNoon(2) },
+      { company_id:company["demo-najd-therapeutics"], seed_key:"demo-monthly-pssf", activity_type:"PSSF", title:"PSSF monthly maintenance", cadence:"monthly", owner_user_id:userId, next_due_at:atNoon(5) },
+      { company_id:company["demo-gulfmed"], seed_key:"demo-monthly-reconciliation", activity_type:"Reconciliation", title:"Monthly case reconciliation", cadence:"monthly", owner_user_id:userId, next_due_at:atNoon(7) },
+    ],
+    "company_id,seed_key","seed_key",
+    ["demo-weekly-literature","demo-monthly-pssf","demo-monthly-reconciliation"]
+  );
 
-  const { error: obligationError } = await supabase.from("pvos_obligations").insert([
-    { company_id:company["Riyadh Pharma Demo"], activity_type:"Literature", title:"Weekly local literature screening", cadence:"weekly", owner_user_id:userId, next_due_at:atNoon(2) },
-    { company_id:company["Najd Therapeutics Demo"], activity_type:"PSSF", title:"PSSF monthly maintenance", cadence:"monthly", owner_user_id:userId, next_due_at:atNoon(5) },
-    { company_id:company["GulfMed Demo"], activity_type:"Reconciliation", title:"Monthly case reconciliation", cadence:"monthly", owner_user_id:userId, next_due_at:atNoon(7) },
-  ]);
-  if (obligationError) throw obligationError;
+  const seededTasks=await upsertAndFetch(
+    supabase,"pvos_tasks",
+    [
+      { organization_id:organizationId, company_id:company["demo-riyadh-pharma"], product_id:product["demo-oncora"], seed_key:"demo-rmp-annual-review", title:"RMP annual review", activity_type:"RMP", source:"manual", status:"awaiting_review", priority:"high", owner_user_id:userId, due_at:atNoon(4) },
+      { organization_id:organizationId, company_id:company["demo-najd-therapeutics"], product_id:product["demo-neurovia"], seed_key:"demo-sfda-inquiry", title:"SFDA safety inquiry response", activity_type:"SFDA Inquiry", source:"sfda_event", status:"in_progress", priority:"critical", owner_user_id:userId, due_at:atNoon(1) },
+      { organization_id:organizationId, company_id:company["demo-najd-therapeutics"], seed_key:"demo-medrep-training", title:"Medical representative refresher training", activity_type:"Training", source:"manual", status:"awaiting_external", priority:"medium", owner_user_id:userId, due_at:atNoon(8) },
+      { organization_id:organizationId, company_id:company["demo-gulfmed"], seed_key:"demo-literature-archive", title:"September literature review archive", activity_type:"Literature", source:"recurring", status:"complete", priority:"medium", owner_user_id:userId, due_at:atNoon(-5), completed_at:atNoon(-5) },
+    ],
+    "organization_id,seed_key","seed_key",
+    ["demo-rmp-annual-review","demo-sfda-inquiry","demo-medrep-training","demo-literature-archive"]
+  );
+  const task=Object.fromEntries(seededTasks.map((t:any)=>[t.seed_key,t.id]));
 
-  const taskRows = [
-    { organization_id:organizationId, company_id:company["Riyadh Pharma Demo"], product_id:product["Oncora"], title:"RMP annual review", activity_type:"RMP", source:"manual", status:"awaiting_review", priority:"high", owner_user_id:userId, due_at:atNoon(4) },
-    { organization_id:organizationId, company_id:company["Najd Therapeutics Demo"], product_id:product["Neurovia"], title:"SFDA safety inquiry response", activity_type:"SFDA Inquiry", source:"sfda_event", status:"in_progress", priority:"critical", owner_user_id:userId, due_at:atNoon(1) },
-    { organization_id:organizationId, company_id:company["Najd Therapeutics Demo"], title:"Medical representative refresher training", activity_type:"Training", source:"manual", status:"awaiting_external", priority:"medium", owner_user_id:userId, due_at:atNoon(8) },
-    { organization_id:organizationId, company_id:company["GulfMed Demo"], title:"September literature review archive", activity_type:"Literature", source:"recurring", status:"complete", priority:"medium", owner_user_id:userId, due_at:atNoon(-5), completed_at:atNoon(-5) },
-  ];
-  const { data: tasks, error: taskError } = await supabase.from("pvos_tasks").insert(taskRows).select("id,title,company_id");
-  if (taskError) throw taskError;
-  const task = Object.fromEntries((tasks ?? []).map((t:any)=>[t.title+"|"+t.company_id,t.id]));
+  await upsertAndFetch(
+    supabase,"pvos_task_evidence",
+    [
+      { task_id:task["demo-rmp-annual-review"], seed_key:"demo-rmp-checklist", title:"RMP review checklist", evidence_type:"checklist", uploaded_by:userId },
+      { task_id:task["demo-sfda-inquiry"], seed_key:"demo-sfda-correspondence", title:"SFDA correspondence", evidence_type:"correspondence", uploaded_by:userId },
+      { task_id:task["demo-literature-archive"], seed_key:"demo-literature-log", title:"Signed literature review log", evidence_type:"document", uploaded_by:userId },
+    ],
+    "task_id,seed_key","seed_key",
+    ["demo-rmp-checklist","demo-sfda-correspondence","demo-literature-log"]
+  );
 
-  await supabase.from("pvos_task_evidence").insert([
-    { task_id:task["RMP annual review|"+company["Riyadh Pharma Demo"]], title:"RMP review checklist", evidence_type:"checklist", uploaded_by:userId },
-    { task_id:task["SFDA safety inquiry response|"+company["Najd Therapeutics Demo"]], title:"SFDA correspondence", evidence_type:"correspondence", uploaded_by:userId },
-    { task_id:task["September literature review archive|"+company["GulfMed Demo"]], title:"Signed literature review log", evidence_type:"document", uploaded_by:userId },
-  ]);
+  const routes=await upsertAndFetch(
+    supabase,"pvos_approval_routes",
+    [{ company_id:company["demo-riyadh-pharma"], seed_key:"demo-rmp-route", name:"RMP approval", activity_type:"RMP" }],
+    "company_id,seed_key","seed_key",["demo-rmp-route"]
+  );
+  const route=routes[0];
 
-  const { data: route, error: routeError } = await supabase.from("pvos_approval_routes").insert({
-    company_id:company["Riyadh Pharma Demo"], name:"RMP approval", activity_type:"RMP"
-  }).select("id").single();
-  if (routeError) throw routeError;
-
-  await supabase.from("pvos_approval_steps").insert([
+  const { error:stepsError } = await supabase.from("pvos_approval_steps").upsert([
     { route_id:route.id, position:1, role:"QPPV", assignee_user_id:userId },
     { route_id:route.id, position:2, role:"Quality" },
     { route_id:route.id, position:3, role:"Manager" },
     { route_id:route.id, position:4, role:"Client representative" },
-  ]);
+  ],{onConflict:"route_id,position",ignoreDuplicates:true});
+  if (stepsError) throw stepsError;
 
-  const rmpTaskId=task["RMP annual review|"+company["Riyadh Pharma Demo"]];
-  await supabase.from("pvos_task_approvals").insert([
-    { task_id:rmpTaskId, route_id:route.id, step_position:1, assigned_user_id:userId, status:"approved", completed_at:new Date(Date.now()-86400000).toISOString() },
-    { task_id:rmpTaskId, route_id:route.id, step_position:2, status:"in_review" },
-    { task_id:rmpTaskId, route_id:route.id, step_position:3, status:"pending" },
-    { task_id:rmpTaskId, route_id:route.id, step_position:4, status:"pending" },
-  ]);
+  await upsertAndFetch(
+    supabase,"pvos_task_approvals",
+    [
+      { task_id:task["demo-rmp-annual-review"], route_id:route.id, seed_key:"demo-rmp-step-1", step_position:1, assigned_user_id:userId, status:"approved", completed_at:new Date(Date.now()-86400000).toISOString() },
+      { task_id:task["demo-rmp-annual-review"], route_id:route.id, seed_key:"demo-rmp-step-2", step_position:2, status:"in_review" },
+      { task_id:task["demo-rmp-annual-review"], route_id:route.id, seed_key:"demo-rmp-step-3", step_position:3, status:"pending" },
+      { task_id:task["demo-rmp-annual-review"], route_id:route.id, seed_key:"demo-rmp-step-4", step_position:4, status:"pending" },
+    ],
+    "task_id,seed_key","seed_key",
+    ["demo-rmp-step-1","demo-rmp-step-2","demo-rmp-step-3","demo-rmp-step-4"]
+  );
 }
