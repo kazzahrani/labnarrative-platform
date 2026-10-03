@@ -143,7 +143,7 @@ export default function Inspection(){
   }
 
   return <>
-    <Header eyebrow="Inspection readiness" title="Can we prove the work was done?" sub="A live operational evidence view. The percentage below is a prototype workflow-health indicator, not a regulatory certification or SFDA score."/>
+    <Header eyebrow="Inspection readiness" title="Can we prove the work was done?" sub="Check whether completed PV activities have supporting evidence and whether important work is overdue. Use the records and audit history to help prepare for inspection. The percentage is a PVOS workflow indicator, not an SFDA score or certification."/>
     <div className={styles.grid2}>
       <section className={styles.info}><h3>Workflow evidence snapshot</h3><div style={{fontSize:42,fontWeight:900,letterSpacing:"-.05em",marginBottom:10}}>{metrics.score}%</div><div className={styles.progress}><span style={{width:metrics.score+"%"}}></span></div><p className={styles.sub} style={{marginTop:14}}>{metrics.missing} completed task(s) are missing evidence and {metrics.overdue} active task(s) are overdue.</p></section>
       <aside className={styles.info}><h3>Inspection export</h3><p className={styles.sub}>Export a readable task register, evidence register and append-only audit history. Internal UUIDs are intentionally excluded from this reviewer-facing export.</p><div className={styles.inlineActions}><button className={styles.button} onClick={exportCsv}>Export CSV</button><span className={styles.pill}>{companies.length} companies tracked</span></div></aside>
