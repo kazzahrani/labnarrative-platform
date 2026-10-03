@@ -68,7 +68,7 @@ export default function Dashboard(){
       <div className={[styles.card,styles.accent].join(" ")}><span>Completed</span><strong>{counts.complete}</strong></div>
     </section>
     <section className={styles.panel}>
-      <div className={styles.panelHeader}><h2>Unified workload</h2><span className={styles.muted}>{loading?"Loading…":`Across ${companies.length} companies · signed in as ${session?.user.email??""}`}</span></div>
+      <div className={styles.panelHeader}><h2>Unified workload</h2><span className={styles.muted}>{loading?"Loading…":`${companies.length} companies`}</span></div>
       <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(4,minmax(150px,220px))",gap:10,borderBottom:"1px solid #1d252d"}}>
         <select className={styles.input} value={queueFilter} onChange={e=>setQueueFilter(e.target.value)}><option value="attention">Attention queue</option><option value="all">All scheduled work</option></select>
         <select className={styles.input} value={companyFilter} onChange={e=>setCompanyFilter(e.target.value)}><option value="all">All companies</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
