@@ -11,59 +11,43 @@ async function isScientificAdmin() {
 
 export default function ScientificAdminGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"checking" | "signed_out" | "ready">("checking");
-  const [email, setEmail] = useState("oxyginmusic@gmail.com");
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     let active = true;
+
     const validate = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
+
       if (!data.session) {
         setState("signed_out");
         return;
       }
+
       const allowed = await isScientificAdmin();
       if (!active) return;
+
       if (allowed) {
         setState("ready");
-      } else {
-        await supabase.auth.signOut({ scope: "local" });
-        if (active) setState("signed_out");
+        return;
       }
+
+      await supabase.auth.signOut({ scope: "local" });
+      if (active) setState("signed_out");
     };
 
     void validate();
+
     const { data: subscription } = supabase.auth.onAuthStateChange(() => {
       if (!active) return;
       window.setTimeout(() => void validate(), 0);
     });
+
     return () => {
       active = false;
       subscription.subscription.unsubscribe();
     };
   }, []);
-
-  const sendCode = async () => {
-    if (busy || !email.trim()) return;
-    setBusy(true);
-    setMessage("");
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: "https://labnarrative.com/admin/scientific-transfer?return_to=%2Fadmin",
-      },
-    });
-    if (error) setMessage(error.message);
-    else {
-      setSent(true);
-      setMessage("Sign-in link sent. Open the email link; it will return you automatically to LabNarrative Scientific.");
-    }
-    setBusy(false);
-  };
 
   if (state === "ready") return <>{children}</>;
 
@@ -73,16 +57,8 @@ export default function ScientificAdminGate({ children }: { children: ReactNode 
         <div style={{fontWeight:850,fontSize:19,letterSpacing:"-.04em",marginBottom:28}}><span style={{color:"#73c9aa"}}>Lab</span>Narrative <span style={{color:"#708681",fontSize:11,letterSpacing:".12em"}}>SCIENTIFIC</span></div>
         <p style={{margin:"0 0 8px",color:"#73c9aa",fontSize:11,fontWeight:900,letterSpacing:".14em",textTransform:"uppercase"}}>Scientific administration</p>
         <h1 style={{margin:"0 0 10px",fontSize:34,letterSpacing:"-.045em"}}>{state === "checking" ? "Checking your session…" : "Sign in to Scientific."}</h1>
-        <p style={{margin:"0 0 24px",color:"#98aaa8",lineHeight:1.65,fontSize:14}}>This is the new admin for LabNarrative Scientific on labnarrative.site. Sign-in uses a secure email link and returns here automatically.</p>
-
-        {state === "signed_out" ? <>
-          <label style={{display:"grid",gap:7,marginBottom:11}}>
-            <span style={{color:"#98aaa8",fontSize:11,fontWeight:800}}>Administrator email</span>
-            <input value={email} onChange={(e)=>setEmail(e.target.value)} type="email" autoComplete="email" style={{width:"100%",boxSizing:"border-box",border:"1px solid #29404b",borderRadius:9,padding:"11px 12px",color:"#f2f6f4",background:"#0f1c23",font:"inherit"}} />
-          </label>
-          <button type="button" onClick={()=>void sendCode()} disabled={busy} style={{width:"100%",border:"1px solid #356b5a",background:"#173c32",color:"#c9eee0",borderRadius:9,padding:"11px 12px",fontWeight:850,cursor:busy?"default":"pointer",opacity:busy?.6:1}}>{busy?"Sending…":sent?"Send sign-in link again":"Send sign-in link"}</button>
-          {message ? <p style={{margin:"12px 0 0",color:message.toLowerCase().includes("sent")?"#9fd1bf":"#e2a5a5",fontSize:12,lineHeight:1.5}}>{message}</p> : null}
-        </> : null}
+        <p style={{margin:"0 0 24px",color:"#98aaa8",lineHeight:1.65,fontSize:14}}>Use your existing LabNarrative account password. No email code or magic-link redirect is required.</p>
+        {state === "signed_out" ? <a href="/admin/login" style={{display:"block",width:"100%",boxSizing:"border-box",border:"1px solid #356b5a",background:"#173c32",color:"#c9eee0",borderRadius:9,padding:"12px 14px",fontWeight:850,textAlign:"center",textDecoration:"none"}}>Sign in with password →</a> : null}
       </section>
     </main>
   );
