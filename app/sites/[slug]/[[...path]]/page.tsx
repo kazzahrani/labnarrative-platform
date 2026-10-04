@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import ConceptAnalytics from "@/components/ConceptAnalytics";
 import SiteShell from "@/components/SiteShell";
 import VisualOverridesHost from "@/components/VisualOverridesHost";
-import { getSite, resolveSiteRoute } from "@/lib/sites";
+import { getSite, resolveSiteRoute } from "@/lib/sites";\nimport { recoveredBourdonSite } from "@/lib/bourdon-recovered-site";
 
 export const revalidate = 60;
 
@@ -33,7 +33,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string; path?: string[] }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const status = await getSiteStatus(slug);
+  const status = slug.toLowerCase() === "bourdon-lab" ? "live" : await getSiteStatus(slug);
   return {
     robots: status === "live"
       ? { index: true, follow: true }
@@ -47,10 +47,11 @@ export default async function LabSitePage({
   params: Promise<{ slug: string; path?: string[] }>;
 }) {
   const { slug, path } = await params;
+  const isRecoveredBourdon = slug.toLowerCase() === "bourdon-lab";
   const [site, requestHeaders, status] = await Promise.all([
-    getSite(slug),
+    isRecoveredBourdon ? Promise.resolve(recoveredBourdonSite) : getSite(slug),
     headers(),
-    getSiteStatus(slug),
+    isRecoveredBourdon ? Promise.resolve<SiteStatus>("live") : getSiteStatus(slug),
   ]);
 
   if (!site) {
