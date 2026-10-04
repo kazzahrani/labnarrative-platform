@@ -34,7 +34,20 @@ export async function generateMetadata({
   params: Promise<{ slug: string; path?: string[] }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const status = slug.toLowerCase() === "bourdon-lab" ? "live" : await getSiteStatus(slug);
+  const isRecoveredBourdon = slug.toLowerCase() === "bourdon-lab";
+  const status = isRecoveredBourdon ? "live" : await getSiteStatus(slug);
+  if (isRecoveredBourdon) {
+    return {
+      title: "Bourdon Lab | Molecular Oncology · University of Dundee",
+      description: "The Bourdon Lab investigates the p53 isoform network, cell fate, cancer biology, patient stratification, diagnostics and therapeutic translation.",
+      robots: { index: true, follow: true },
+      openGraph: {
+        title: "Bourdon Lab | Molecular Oncology",
+        description: "Research on p53 isoforms, cell fate, cancer biology and therapeutic translation at the University of Dundee.",
+        type: "website",
+      },
+    };
+  }
   return {
     robots: status === "live"
       ? { index: true, follow: true }
