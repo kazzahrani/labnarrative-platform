@@ -1,7 +1,2008 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LabNarrative — Scientific websites for research groups</title><meta name="description" content="Clear, credible scientific websites for research groups, laboratories and academic programmes."><link rel="stylesheet" href="/styles.css"></head><body>
-<header><div class="shell nav"><a class="brand" href="/"><span class="mark">LN</span><span><strong>LabNarrative</strong><small>Scientific websites for research groups</small></span></a><nav><a href="#work">What we build</a><a href="#process">Process</a><a class="nav-cta" href="mailto:hello@labnarrative.com">Start a project</a></nav></div></header>
-<main><section class="hero"><div class="shell hero-grid"><div><p class="eyebrow">Scientific communication · built for research</p><h1>Research deserves a clear digital home.</h1><p>LabNarrative builds focused, credible websites for academic laboratories and research groups — combining scientific structure, publication-ready content and simple long-term maintenance.</p><div class="actions"><a class="btn primary" href="mailto:hello@labnarrative.com">Discuss a project</a><a class="btn" href="#process">See the process</a></div></div><aside class="note"><p class="eyebrow">Built around your science</p><strong>Not a generic university template.</strong><p>Research programmes, publications, people, reagents, opportunities, scientific articles and specialist community features can live in one coherent site.</p></aside></div></section>
-<section class="section" id="work"><div class="shell"><div class="section-head"><div><p class="eyebrow">What we build</p><h2>Scientific websites that stay useful.</h2></div><p>We start from the lab's real research structure, then build the website around how scientists, students, collaborators and funders actually look for information.</p></div><div class="grid-3"><article class="card"><span>01</span><h3>Research-first structure</h3><p>Clear research programmes, publications, people, opportunities and contact pathways — written and arranged for scientific audiences.</p></article><article class="card"><span>02</span><h3>Editable by the lab</h3><p>Structured editing for publications, team members, news and scientific resources without exposing the site design or requiring code.</p></article><article class="card"><span>03</span><h3>Managed after launch</h3><p>Hosting, SSL, monitoring, routine updates and technical support can remain managed through Annual Care.</p></article></div></div></section>
-<section class="section" id="process"><div class="shell"><div class="section-head"><div><p class="eyebrow">Project process</p><h2>Simple from first review to launch.</h2></div></div><div class="process"><div class="step"><b>01</b><h3>Scope & deposit</h3><p>We agree the project scope and the initial deposit confirms the work.</p></div><div class="step"><b>02</b><h3>Build & refine</h3><p>Content, functionality and presentation are developed against the approved concept.</p></div><div class="step"><b>03</b><h3>Private review</h3><p>The completed website is reviewed on a private staging link before launch.</p></div><div class="step"><b>04</b><h3>Launch & handover</h3><p>Final approval, balance, public launch and ongoing care.</p></div></div></div></section>
-<section class="cta"><div class="shell"><div><p class="eyebrow">LabNarrative</p><h2>Scientific websites without the agency overhead.</h2><p>Focused scope, direct communication and a site built around the research rather than around a generic marketing template.</p></div><a class="btn" href="mailto:hello@labnarrative.com">Contact Khaled</a></div></section></main>
-<footer><div class="shell footer-row"><span>© 2026 LabNarrative</span><span>Scientific websites for research groups</span></div></footer></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LabNarrative — Websites for scientific laboratories</title><meta name="description" content="We research, write and design modern laboratory websites so principal investigators can present their science without becoming web designers."><link rel="canonical" href="https://labnarrative.site/"><meta property="og:title" content="LabNarrative — Websites for scientific laboratories"><meta property="og:description" content="Your research deserves a clearer story."><meta property="og:url" content="https://labnarrative.site/"><meta property="og:type" content="website"><style>:root{color-scheme:light;font-synthesis:none;text-rendering:optimizeLegibility}html{scroll-behavior:smooth}body{margin:0}.page {
+  --paper: #f8f8f5;
+  --white: #ffffff;
+  --ink: #192126;
+  --muted: #507163;
+  --green: #284c3d;
+  --green-dark: #131b17;
+  --line: #dfe3e2;
+  --lime: #e0fe7b;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.page * {
+  box-sizing: border-box;
+}
+
+.page a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 82px;
+  margin: 0 clamp(24px, 4.4vw, 70px);
+  border-bottom: 1px solid var(--line);
+}
+
+.wordmark {
+  display: inline-block;
+  width: max-content;
+  white-space: nowrap;
+  color: var(--green);
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(24px, 3.4vw, 52px);
+  color: var(--ink);
+  font-size: 0.72rem;
+}
+
+.nav a,
+.headerCta {
+  transition: opacity 160ms ease;
+}
+
+.nav a:hover,
+.headerCta:hover {
+  opacity: 0.55;
+}
+
+.headerCta {
+  justify-self: end;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.headerCta span {
+  margin-left: 16px;
+}
+
+.hero,
+.approachSection,
+.workSection,
+.pricingSection,
+.founderSection {
+  padding-right: clamp(24px, 4.4vw, 70px);
+  padding-left: clamp(24px, 4.4vw, 70px);
+}
+
+.hero {
+  padding-top: clamp(80px, 10vw, 150px);
+  padding-bottom: clamp(70px, 8vw, 118px);
+}
+
+.eyebrow,
+.sectionLabel {
+  margin: 0;
+  color: var(--green);
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 11px 1px 0;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.52fr);
+  gap: clamp(44px, 8vw, 128px);
+  align-items: end;
+  margin-top: 44px;
+}
+
+.hero h1 {
+  max-width: 980px;
+  margin: 0;
+  font-size: clamp(4.8rem, 8.4vw, 8.6rem);
+  font-weight: 780;
+  letter-spacing: -0.075em;
+  line-height: 0.83;
+}
+
+.hero h1 em {
+  color: var(--green);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.02em;
+  font-weight: 400;
+  letter-spacing: -0.07em;
+}
+
+.heroAside {
+  max-width: 560px;
+  padding-bottom: 6px;
+}
+
+.heroAside p {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(0.98rem, 1.25vw, 1.12rem);
+  line-height: 1.78;
+}
+
+.heroAside a {
+  display: inline-block;
+  margin-top: 28px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--green);
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.heroAside a span {
+  margin-left: 15px;
+}
+
+.heroFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: clamp(26px, 5vw, 74px);
+  margin-top: clamp(78px, 10vw, 138px);
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: #8e9993;
+  font-size: 0.57rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.approachSection {
+  padding-top: clamp(88px, 11vw, 164px);
+  padding-bottom: clamp(92px, 11vw, 166px);
+}
+
+.approachSection > h2 {
+  max-width: 1100px;
+  margin: 58px 0 0;
+  font-size: clamp(3rem, 5vw, 5.2rem);
+  font-weight: 400;
+  letter-spacing: -0.065em;
+  line-height: 1.03;
+}
+
+.approachGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: clamp(78px, 9vw, 130px);
+  border-top: 1px solid var(--line);
+}
+
+.approachGrid article {
+  min-height: 318px;
+  padding: 28px clamp(24px, 3.8vw, 58px) 36px 0;
+  border-right: 1px solid var(--line);
+}
+
+.approachGrid article + article {
+  padding-left: clamp(24px, 3.8vw, 58px);
+}
+
+.approachGrid article:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.number {
+  display: block;
+  color: #94a099;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.approachGrid h3,
+.workList h3,
+.processGrid h3,
+.pricingGrid h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.approachGrid h3 {
+  margin-top: clamp(65px, 7vw, 95px);
+}
+
+.approachGrid p,
+.workList p,
+.processGrid p,
+.pricingGrid p,
+.platformNote > p,
+.founderCopy p {
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.approachGrid p {
+  max-width: 390px;
+  margin: 20px 0 0;
+  font-size: 0.75rem;
+}
+
+.workSection {
+  padding-top: clamp(88px, 10vw, 148px);
+  padding-bottom: clamp(94px, 10vw, 150px);
+  border-top: 1px solid var(--line);
+  background: var(--white);
+}
+
+.sectionTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.sectionTopline > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.workIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 0.68fr) minmax(280px, 0.32fr);
+  gap: clamp(54px, 9vw, 142px);
+  align-items: end;
+  margin-top: clamp(70px, 8vw, 112px);
+}
+
+.workIntro h2,
+.platformNote h2,
+.founderSection h2 {
+  margin: 0;
+  font-size: clamp(2.9rem, 5.2vw, 5.4rem);
+  font-weight: 400;
+  letter-spacing: -0.065em;
+  line-height: 1.01;
+}
+
+.workIntro > p {
+  margin: 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.75;
+}
+
+.workList {
+  margin-top: clamp(62px, 8vw, 110px);
+  border-top: 1px solid var(--line);
+}
+
+.workList > a {
+  display: grid;
+  grid-template-columns: 64px minmax(220px, 0.34fr) minmax(0, 1fr) 40px;
+  gap: clamp(18px, 3vw, 48px);
+  align-items: center;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--line);
+  transition: padding 180ms ease, background 180ms ease;
+}
+
+.workList > a:hover {
+  padding-right: 15px;
+  padding-left: 15px;
+  background: var(--paper);
+}
+
+.workList small {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workList h3 {
+  font-size: clamp(1.45rem, 2.2vw, 2.15rem);
+}
+
+.workList p {
+  max-width: 660px;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.arrow {
+  justify-self: end;
+  font-size: 1.12rem;
+}
+
+.processSection {
+  padding: clamp(88px, 10vw, 148px) clamp(24px, 4.4vw, 70px) clamp(92px, 10vw, 150px);
+  background: var(--green);
+  color: var(--white);
+}
+
+.processSection .sectionLabel {
+  color: var(--lime);
+}
+
+.processSection .sectionTopline > p:last-child {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.processGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: clamp(72px, 8vw, 112px);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.processGrid article {
+  min-height: 286px;
+  padding: 27px clamp(20px, 3vw, 44px) 36px 0;
+}
+
+.processGrid article + article {
+  padding-left: clamp(20px, 3vw, 44px);
+}
+
+.processGrid .number {
+  color: var(--lime);
+}
+
+.processGrid h3 {
+  margin-top: 52px;
+  color: var(--white);
+}
+
+.processGrid p {
+  max-width: 260px;
+  margin: 19px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.71rem;
+}
+
+.platformNote {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.58fr) minmax(280px, 0.42fr);
+  gap: clamp(54px, 9vw, 142px);
+  margin-top: clamp(58px, 7vw, 96px);
+  padding-top: clamp(48px, 6vw, 78px);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.platformNote h2 {
+  max-width: 780px;
+  color: var(--white);
+}
+
+.platformNote > p {
+  margin: 35px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+}
+
+.pricingSection {
+  padding-top: clamp(88px, 10vw, 148px);
+  padding-bottom: clamp(88px, 10vw, 148px);
+  background: var(--paper);
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: clamp(66px, 8vw, 108px);
+}
+
+.pricingGrid article {
+  position: relative;
+  min-height: 520px;
+  padding: clamp(34px, 4vw, 52px);
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+
+.pricingGrid .recommendedCard {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--white);
+}
+
+.badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 7px 10px;
+  background: var(--lime);
+  color: var(--green-dark);
+  font-size: 0.5rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pricingGrid h3 {
+  margin-top: 6px;
+}
+
+.pricingGrid strong {
+  display: block;
+  margin-top: 52px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.25rem, 3.4vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.pricingGrid > article > p {
+  min-height: 36px;
+  margin: 13px 0 42px;
+  font-size: 0.65rem;
+}
+
+.recommendedCard > p,
+.recommendedCard li {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.pricingGrid ul {
+  margin: 0;
+  padding: 24px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.recommendedCard ul {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.pricingGrid li {
+  position: relative;
+  padding: 11px 0 11px 22px;
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.pricingGrid li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+}
+
+.deliveryLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.founderSection {
+  padding-top: clamp(92px, 11vw, 160px);
+  padding-bottom: clamp(92px, 11vw, 160px);
+  border-top: 1px solid var(--line);
+  background: var(--white);
+}
+
+.founderSection > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.62fr) minmax(280px, 0.38fr);
+  gap: clamp(54px, 9vw, 142px);
+  align-items: start;
+  margin-top: 58px;
+}
+
+.founderCopy {
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.founderCopy p {
+  margin: 0 0 21px;
+  font-size: 0.78rem;
+}
+
+.founderCopy span {
+  display: block;
+  margin-top: 34px;
+  color: var(--green);
+  font-size: 0.69rem;
+  font-weight: 700;
+}
+
+.finalCta {
+  padding: clamp(92px, 11vw, 160px) clamp(24px, 4.4vw, 70px) clamp(100px, 12vw, 174px);
+  background: var(--green-dark);
+  color: var(--white);
+}
+
+.finalCta .sectionLabel {
+  color: var(--lime);
+}
+
+.finalCta h2 {
+  max-width: 1100px;
+  margin: 64px 0 0;
+  font-size: clamp(3.2rem, 6.5vw, 6.8rem);
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  line-height: 0.95;
+}
+
+.finalCta > p:not(.sectionLabel) {
+  max-width: 680px;
+  margin: 45px 0 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.77rem;
+  line-height: 1.75;
+}
+
+.finalCta > p a {
+  color: var(--white);
+  border-bottom: 1px solid currentColor;
+}
+
+.emailButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 28px;
+  min-height: 52px;
+  margin-top: 35px;
+  padding: 0 20px;
+  background: var(--lime);
+  color: var(--green-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
+  transition: transform 160ms ease;
+}
+
+.emailButton:hover {
+  transform: translateY(-2px);
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 30px;
+  min-height: 152px;
+  padding: 42px clamp(24px, 4.4vw, 70px);
+  background: var(--paper);
+  color: #89938e;
+  font-size: 0.58rem;
+}
+
+.footer > a:nth-child(2) {
+  justify-self: center;
+}
+
+.footer > span {
+  justify-self: end;
+}
+
+@media (max-width: 980px) {
+  .heroGrid,
+  .workIntro,
+  .platformNote,
+  .founderSection > div {
+    grid-template-columns: 1fr;
+  }
+
+  .heroAside,
+  .workIntro > p,
+  .platformNote > p,
+  .founderCopy {
+    max-width: 680px;
+  }
+
+  .heroAside {
+    padding-top: 20px;
+  }
+
+  .approachGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .approachGrid article,
+  .approachGrid article + article,
+  .approachGrid article:last-child {
+    min-height: auto;
+    padding: 28px 0 52px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .approachGrid article:last-child {
+    border-bottom: 0;
+  }
+
+  .approachGrid h3 {
+    margin-top: 44px;
+  }
+
+  .workList > a {
+    grid-template-columns: 52px minmax(210px, 0.45fr) minmax(0, 1fr) 32px;
+  }
+
+  .pricingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pricingGrid article {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .header {
+    grid-template-columns: 1fr auto;
+    min-height: auto;
+    padding: 22px 0;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .headerCta {
+    grid-column: 2;
+  }
+
+  .hero h1 {
+    font-size: clamp(4rem, 17vw, 6.2rem);
+  }
+
+  .heroFooter {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .sectionTopline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workList > a {
+    grid-template-columns: 40px 1fr 28px;
+    gap: 14px;
+  }
+
+  .workList > a > p {
+    grid-column: 2 / 4;
+  }
+
+  .workList .arrow {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .processGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .processGrid article {
+    min-height: 245px;
+  }
+
+  .deliveryLine {
+    flex-direction: column;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .footer > a:nth-child(2),
+  .footer > span {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .header,
+  .hero,
+  .approachSection,
+  .workSection,
+  .pricingSection,
+  .founderSection,
+  .processSection,
+  .finalCta,
+  .footer {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .header {
+    margin: 0;
+  }
+
+  .wordmark {
+    font-size: 1rem;
+  }
+
+  .headerCta {
+    font-size: 0.65rem;
+  }
+
+  .hero {
+    padding-top: 74px;
+  }
+
+  .hero h1 {
+    font-size: clamp(3.45rem, 17vw, 5rem);
+  }
+
+  .heroAside {
+    min-width: 0;
+  }
+
+  .heroFooter {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .approachSection > h2,
+  .workIntro h2,
+  .platformNote h2,
+  .founderSection h2,
+  .finalCta h2 {
+    font-size: clamp(2.6rem, 12vw, 4rem);
+  }
+
+  .processGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .processGrid article,
+  .processGrid article + article {
+    min-height: auto;
+    padding: 28px 0 42px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  }
+
+  .processGrid article:last-child {
+    border-bottom: 0;
+  }
+
+  .pricingGrid article {
+    padding: 32px 24px;
+  }
+
+  .finalCta h2 br {
+    display: none;
+  }
+}
+
+/* Public LabNarrative landing-page refinement.
+   Scoped structurally to the root page that owns the #top hero. */
+
+body main:has(> section#top) {
+  --ln-black: #111816;
+  --ln-ink: #192126;
+  --ln-green: #284c3d;
+  --ln-lime: #e0fe7b;
+  --ln-paper: #f8f8f5;
+  --ln-line: #dfe3e2;
+}
+
+/* Connected wordmark: Lab stays near-black, Narrative carries the brand green. */
+body main:has(> section#top) > header > a:first-child,
+body main:has(> section#top) > footer > a:first-child {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  color: var(--ln-black);
+  font-size: 1.42rem;
+  font-weight: 850;
+  letter-spacing: -0.06em;
+}
+
+body main:has(> section#top) > header > a:first-child span:first-child,
+body main:has(> section#top) > footer > a:first-child span:first-child {
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > header > a:first-child span:last-child,
+body main:has(> section#top) > footer > a:first-child span:last-child {
+  color: var(--ln-green);
+}
+
+body main:has(> section#top) > header nav {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+body main:has(> section#top) > header > a:last-child {
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+body main:has(> section#top) .sectionLabel,
+body main:has(> section#top) section#top > p:first-child {
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div p {
+  font-size: clamp(1.18rem, 1.5vw, 1.42rem);
+  font-weight: 500;
+  line-height: 1.66;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div a {
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+body main:has(> section#top) section#top > div:last-child {
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+/* Approach: substantially larger and easier to scan, while retaining the original structure. */
+body main:has(> section#top) > section:nth-of-type(2) > h2 {
+  max-width: 1180px;
+  font-size: clamp(3.45rem, 5.6vw, 6rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) > div {
+  border-top-color: var(--ln-black);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article {
+  min-height: 445px;
+  padding-top: 34px;
+  border-right-color: var(--ln-line);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 27px;
+  padding: 0 10px;
+  background: var(--ln-lime);
+  color: var(--ln-black);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article h3 {
+  max-width: 400px;
+  margin-top: clamp(68px, 7vw, 100px);
+  color: var(--ln-black);
+  font-size: clamp(1.7rem, 2.15vw, 2.15rem);
+  font-weight: 650;
+  line-height: 1.08;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article p {
+  max-width: 440px;
+  margin-top: 26px;
+  color: #435e53;
+  font-size: clamp(1.08rem, 1.25vw, 1.24rem);
+  font-weight: 500;
+  line-height: 1.62;
+}
+
+/* Selected work uses the same near-black language as the closing panel. */
+body main:has(> section#top) > section#work {
+  border-top-color: var(--ln-black);
+  background: var(--ln-black);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work .sectionLabel,
+body main:has(> section#top) > section#work small,
+body main:has(> section#top) > section#work article > span,
+body main:has(> section#top) > section#work a > span:first-child,
+body main:has(> section#top) > section#work a > span:last-child {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section#work > div:first-child > p:last-child,
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work a > p {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body main:has(> section#top) > section#work > div:first-child > p:last-child {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work a > p {
+  font-size: clamp(1rem, 1.1vw, 1.12rem);
+  font-weight: 500;
+  line-height: 1.64;
+}
+
+body main:has(> section#top) > section#work h2,
+body main:has(> section#top) > section#work h3 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work > div:last-of-type,
+body main:has(> section#top) > section#work > div:last-of-type > a {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+body main:has(> section#top) > section#work > div:last-of-type > a:hover {
+  background: rgba(224, 254, 123, 0.07);
+}
+
+body main:has(> section#top) > section#work a h3 {
+  font-size: clamp(1.85rem, 2.55vw, 2.55rem);
+  font-weight: 600;
+}
+
+body main:has(> section#top) > section#work small {
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+/* From papers to publication: larger, bolder and easier to read. */
+body main:has(> section#top) > section#process > div:first-child > p:last-child {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+body main:has(> section#top) > section#process article {
+  min-height: 330px;
+}
+
+body main:has(> section#top) > section#process article > span:first-child {
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+body main:has(> section#top) > section#process article h3 {
+  margin-top: 58px;
+  font-size: clamp(1.55rem, 1.9vw, 1.9rem);
+  font-weight: 650;
+  line-height: 1.08;
+}
+
+body main:has(> section#top) > section#process article p {
+  max-width: 320px;
+  margin-top: 23px;
+  font-size: clamp(1rem, 1.12vw, 1.12rem);
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+body main:has(> section#top) > section#process > div:last-child h2 {
+  font-weight: 500;
+}
+
+body main:has(> section#top) > section#process > div:last-child > p {
+  font-size: clamp(1.02rem, 1.18vw, 1.18rem);
+  font-weight: 500;
+  line-height: 1.64;
+}
+
+/* Pricing retains the reference layout, with larger copy and stronger contrast. */
+body main:has(> section#top) > section#pricing > div:first-child > p:last-child {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+body main:has(> section#top) > section#pricing article {
+  border-color: #cbd2cf;
+}
+
+body main:has(> section#top) > section#pricing article h3 {
+  color: var(--ln-black);
+  font-size: 1.24rem;
+  font-weight: 650;
+}
+
+body main:has(> section#top) > section#pricing article > strong {
+  color: var(--ln-black);
+  font-size: clamp(2.8rem, 3.95vw, 4rem);
+}
+
+body main:has(> section#top) > section#pricing article > p {
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+body main:has(> section#top) > section#pricing article li {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  color: #445c52;
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+body main:has(> section#top) > section#pricing article:nth-child(2) h3,
+body main:has(> section#top) > section#pricing article:nth-child(2) > strong {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#pricing article:nth-child(2) > span:first-child {
+  background: var(--ln-lime);
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section#pricing > div:last-child {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Founder and closing copy receive the same larger reading size. */
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div p {
+  font-size: clamp(1.02rem, 1.16vw, 1.14rem);
+  font-weight: 500;
+  line-height: 1.68;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div span {
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
+  font-size: clamp(1rem, 1.14vw, 1.12rem);
+  font-weight: 500;
+}
+
+body main:has(> section#top) > section:last-of-type > a:last-child {
+  min-height: 58px;
+  padding-right: 25px;
+  padding-left: 25px;
+  background: var(--ln-lime);
+  color: var(--ln-black);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+body main:has(> section#top) > footer {
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+@media (max-width: 980px) {
+  body main:has(> section#top) > section:nth-of-type(2) article {
+    min-height: auto;
+  }
+
+  body main:has(> section#top) > section:nth-of-type(2) article h3 {
+    margin-top: 48px;
+  }
+
+  body main:has(> section#top) > section#process article {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 760px) {
+  body main:has(> section#top) > header > a:first-child,
+  body main:has(> section#top) > footer > a:first-child {
+    font-size: 1.18rem;
+  }
+
+  body main:has(> section#top) > section:nth-of-type(2) article p {
+    font-size: 1.06rem;
+  }
+
+  body main:has(> section#top) > section#process article {
+    min-height: 275px;
+  }
+
+  body main:has(> section#top) > section#process article h3 {
+    font-size: 1.45rem;
+  }
+
+  body main:has(> section#top) > section#process article p {
+    font-size: 1rem;
+  }
+}
+
+/* Stronger public typography using the hero's bold sans-serif language. */
+
+body main:has(> section#top) {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+body main:has(> section#top) h2,
+body main:has(> section#top) h3,
+body main:has(> section#top) strong {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* Compact the overall page rhythm. */
+body main:has(> section#top) > section#top {
+  padding-top: clamp(64px, 7vw, 108px);
+  padding-bottom: clamp(56px, 6vw, 88px);
+}
+
+body main:has(> section#top) > section:nth-of-type(2),
+body main:has(> section#top) > section#work,
+body main:has(> section#top) > section#pricing,
+body main:has(> section#top) > section:nth-last-of-type(2) {
+  padding-top: clamp(68px, 7vw, 106px);
+  padding-bottom: clamp(70px, 7vw, 108px);
+}
+
+body main:has(> section#top) > section:last-of-type {
+  padding-top: clamp(74px, 8vw, 116px);
+  padding-bottom: clamp(78px, 8vw, 122px);
+}
+
+body main:has(> section#top) .sectionLabel,
+body main:has(> section#top) section#top > p:first-child {
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.2em;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div p {
+  font-size: clamp(1.04rem, 1.2vw, 1.2rem);
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+body main:has(> section#top) section#top > div:nth-of-type(1) > div a {
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+body main:has(> section#top) section#top > div:last-child {
+  margin-top: clamp(48px, 6vw, 82px);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+/* Major editorial headings use the same compact bold voice as the hero. */
+body main:has(> section#top) > section:nth-of-type(2) > h2,
+body main:has(> section#top) > section#work > div:nth-child(2) > h2,
+body main:has(> section#top) > section#process > div:last-child h2,
+body main:has(> section#top) > section:nth-last-of-type(2) h2,
+body main:has(> section#top) > section:last-of-type h2 {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 780;
+  letter-spacing: -0.075em;
+  line-height: 0.94;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) > h2 {
+  max-width: 1180px;
+  margin-top: 34px;
+  font-size: clamp(3.2rem, 5.2vw, 5.8rem);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) > div {
+  margin-top: clamp(48px, 5vw, 76px);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article {
+  min-height: 360px;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article h3 {
+  margin-top: clamp(44px, 5vw, 66px);
+  font-size: clamp(2rem, 2.6vw, 2.8rem);
+  font-weight: 760;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article p {
+  max-width: 470px;
+  margin-top: 20px;
+  font-size: clamp(0.94rem, 1vw, 1.02rem);
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+body main:has(> section#top) > section#work > div:first-child > p:last-child {
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) {
+  margin-top: clamp(44px, 5vw, 72px);
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > h2 {
+  max-width: 980px;
+  font-size: clamp(4rem, 6.5vw, 7rem);
+}
+
+body main:has(> section#top) > section#work > div:nth-child(2) > p,
+body main:has(> section#top) > section#work a > p {
+  font-size: clamp(0.92rem, 1vw, 1rem);
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+body main:has(> section#top) > section#work > div:last-of-type {
+  margin-top: clamp(42px, 5vw, 68px);
+}
+
+body main:has(> section#top) > section#work a h3 {
+  font-size: clamp(2.15rem, 3vw, 3.25rem);
+  font-weight: 760;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+body main:has(> section#top) > section#work small {
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+/* From papers to publication remains a major visual chapter, but without excessive empty space. */
+body main:has(> section#top) > section#process {
+  padding-top: clamp(74px, 8vw, 118px);
+  padding-bottom: clamp(78px, 8vw, 124px);
+}
+
+body main:has(> section#top) > section#process > div:first-child > p:last-child {
+  font-size: 0.86rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section#process > div:first-child .sectionLabel {
+  font-size: 0.78rem;
+}
+
+body main:has(> section#top) > section#process > div:nth-child(2) {
+  margin-top: clamp(48px, 5vw, 76px);
+}
+
+body main:has(> section#top) > section#process article {
+  min-height: 350px;
+  padding-top: 30px;
+  padding-bottom: 42px;
+}
+
+body main:has(> section#top) > section#process article > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--ln-lime);
+  color: var(--ln-black);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+body main:has(> section#top) > section#process article h3 {
+  max-width: 360px;
+  margin-top: clamp(48px, 5vw, 72px);
+  font-size: clamp(2.45rem, 3.3vw, 3.7rem);
+  font-weight: 780;
+  letter-spacing: -0.065em;
+  line-height: 0.95;
+}
+
+body main:has(> section#top) > section#process article p {
+  max-width: 340px;
+  margin-top: 24px;
+  font-size: clamp(0.96rem, 1.05vw, 1.08rem);
+  font-weight: 400;
+  line-height: 1.58;
+}
+
+body main:has(> section#top) > section#process > div:last-child {
+  margin-top: clamp(50px, 6vw, 82px);
+  padding-top: clamp(42px, 5vw, 68px);
+}
+
+body main:has(> section#top) > section#process > div:last-child h2 {
+  max-width: 850px;
+  font-size: clamp(3rem, 4.8vw, 5.2rem);
+}
+
+body main:has(> section#top) > section#process > div:last-child > p {
+  max-width: 620px;
+  font-size: clamp(0.98rem, 1.1vw, 1.12rem);
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+/* Pricing and founder retain strong headings, with quieter supporting copy. */
+body main:has(> section#top) > section#pricing > div:first-child > p:last-child {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section#pricing > div:nth-child(2) {
+  margin-top: clamp(44px, 5vw, 72px);
+}
+
+body main:has(> section#top) > section#pricing article {
+  min-height: 480px;
+}
+
+body main:has(> section#top) > section#pricing article h3 {
+  font-size: 1.32rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+body main:has(> section#top) > section#pricing article > strong {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: clamp(3.2rem, 4.5vw, 4.8rem);
+  font-weight: 720;
+  letter-spacing: -0.065em;
+}
+
+body main:has(> section#top) > section#pricing article > p {
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section#pricing article li {
+  font-size: 0.84rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+body main:has(> section#top) > section#pricing > div:last-child {
+  font-size: 0.76rem;
+  font-weight: 400;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div {
+  margin-top: 42px;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) h2 {
+  max-width: 980px;
+  font-size: clamp(4rem, 6.5vw, 7rem);
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div p {
+  font-size: clamp(0.96rem, 1.05vw, 1.06rem);
+  font-weight: 400;
+  line-height: 1.64;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div span {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+body main:has(> section#top) > section:last-of-type h2 {
+  max-width: 1080px;
+  margin-top: 42px;
+  font-size: clamp(3.2rem, 5.4vw, 5.9rem);
+}
+
+body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
+  max-width: 760px;
+  margin-top: 30px;
+  font-size: clamp(0.96rem, 1.05vw, 1.06rem);
+  font-weight: 400;
+  line-height: 1.62;
+}
+
+body main:has(> section#top) > section:last-of-type > a:last-child {
+  min-height: 58px;
+  margin-top: 26px;
+  padding-right: 25px;
+  padding-left: 25px;
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+body main:has(> section#top) > footer {
+  min-height: 120px;
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+@media (max-width: 1180px) {
+  body main:has(> section#top) > section#process > div:nth-child(2) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body main:has(> section#top) > section#process article {
+    min-height: 330px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  }
+}
+
+@media (max-width: 760px) {
+  body main:has(> section#top) > section#work > div:nth-child(2) > h2,
+  body main:has(> section#top) > section:nth-last-of-type(2) h2 {
+    font-size: clamp(3.2rem, 14vw, 5rem);
+  }
+
+  body main:has(> section#top) > section:nth-of-type(2) > h2 {
+    font-size: clamp(2.7rem, 11vw, 4rem);
+  }
+
+  body main:has(> section#top) > section#process > div:last-child h2 {
+    font-size: clamp(2.6rem, 10.5vw, 3.9rem);
+  }
+
+  body main:has(> section#top) > section:last-of-type h2 {
+    font-size: clamp(2.8rem, 11vw, 4.2rem);
+  }
+
+  body main:has(> section#top) > section#process article h3 {
+    font-size: clamp(2.25rem, 9vw, 3.2rem);
+  }
+
+  body main:has(> section#top) > section#process article p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 580px) {
+  body main:has(> section#top) > section#process > div:nth-child(2) {
+    grid-template-columns: 1fr;
+  }
+
+  body main:has(> section#top) > section#process article {
+    min-height: auto;
+    padding-bottom: 44px;
+  }
+}
+
+/* Distinct section rhythm using only the LabNarrative palette. */
+
+body main:has(> section#top) > section#top {
+  background: var(--ln-paper);
+  color: var(--ln-black);
+}
+
+/* Phosphoric approach section. */
+body main:has(> section#top) > section:nth-of-type(2) {
+  background: var(--ln-lime);
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) .sectionLabel {
+  color: var(--ln-green);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) h2,
+body main:has(> section#top) > section:nth-of-type(2) h3 {
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) > div {
+  border-top-color: rgba(17, 24, 22, 0.72);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article {
+  border-right-color: rgba(17, 24, 22, 0.22);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article > span:first-child {
+  background: var(--ln-black);
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section:nth-of-type(2) article p {
+  color: rgba(17, 24, 22, 0.72);
+}
+
+/* Black selected-work section. */
+body main:has(> section#top) > section#work {
+  background: var(--ln-black);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work .sectionLabel,
+body main:has(> section#top) > section#work small,
+body main:has(> section#top) > section#work a > span:first-child,
+body main:has(> section#top) > section#work a > span:last-child {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section#work h2,
+body main:has(> section#top) > section#work h3 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#work p {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+body main:has(> section#top) > section#work > div,
+body main:has(> section#top) > section#work a {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark-green process section. */
+body main:has(> section#top) > section#process {
+  background: var(--ln-green);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#process .sectionLabel,
+body main:has(> section#top) > section#process article > span:first-child {
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > section#process h2,
+body main:has(> section#top) > section#process h3 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section#process p {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body main:has(> section#top) > section#process > div,
+body main:has(> section#top) > section#process article {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+body main:has(> section#top) > section#process article > span:first-child {
+  background: var(--ln-lime);
+}
+
+/* Cream pricing section. */
+body main:has(> section#top) > section#pricing {
+  background: var(--ln-paper);
+  color: var(--ln-black);
+}
+
+/* Black founder section. */
+body main:has(> section#top) > section:nth-last-of-type(2) {
+  background: var(--ln-black);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) .sectionLabel,
+body main:has(> section#top) > section:nth-last-of-type(2) span {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) h2 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+body main:has(> section#top) > section:nth-last-of-type(2) > div,
+body main:has(> section#top) > section:nth-last-of-type(2) > div > div {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark-green closing section. */
+body main:has(> section#top) > section:last-of-type {
+  background: var(--ln-green);
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:last-of-type .sectionLabel {
+  color: var(--ln-lime);
+}
+
+body main:has(> section#top) > section:last-of-type h2 {
+  color: #ffffff;
+}
+
+body main:has(> section#top) > section:last-of-type > p:not(:first-child) {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body main:has(> section#top) > section:last-of-type > p a {
+  color: #ffffff;
+  border-bottom-color: rgba(255, 255, 255, 0.72);
+}
+
+body main:has(> section#top) > section:last-of-type > a:last-child {
+  background: var(--ln-lime);
+  color: var(--ln-black);
+}
+
+body main:has(> section#top) > footer {
+  background: var(--ln-paper);
+  color: var(--ln-black);
+}
+
+@media (max-width: 760px) {
+  body main:has(> section#top) > section:nth-of-type(2) article {
+    border-right: 0;
+    border-bottom-color: rgba(17, 24, 22, 0.22);
+  }
+}
+
+
+      body main:has(> section#top) > header {
+        position: relative !important;
+        top: auto !important;
+        z-index: 100 !important;
+        background: var(--ln-paper) !important;
+        background-image: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        filter: none !important;
+        transform: none !important;
+      }
+
+      main:has(> section#top)
+        > section[data-ln-overlap-panel="approach"]
+        article
+        > span:first-child {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        min-height: 48px;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      @media (min-width: 901px) {
+        main.ln-overlap-ready {
+          position: relative;
+          overflow: visible !important;
+          isolation: isolate;
+        }
+
+        main.ln-overlap-ready > .ln-narita-panel {
+          position: sticky !important;
+          top: 0 !important;
+          z-index: calc(10 + var(--ln-panel-layer, 0)) !important;
+          transform: translate3d(0, var(--ln-panel-offset, 0px), 0);
+          transform-origin: center top;
+          will-change: transform;
+          backface-visibility: hidden;
+          box-shadow: 0 -16px 38px rgba(8, 13, 11, 0.1);
+        }
+
+        main.ln-overlap-ready > section#top.ln-narita-panel {
+          box-shadow: none !important;
+        }
+
+        main.ln-overlap-ready > footer {
+          position: relative;
+          z-index: 100;
+          transform: none !important;
+        }
+      }
+
+      @media (max-width: 900px), (prefers-reduced-motion: reduce) {
+        main.ln-overlap-ready > .ln-narita-panel,
+        main.ln-overlap-ready > .ln-narita-static {
+          position: relative !important;
+          top: auto !important;
+          transform: none !important;
+          will-change: auto;
+          box-shadow: none;
+        }
+      }
+    
+@media(max-width:650px){.header{padding:20px;gap:16px;grid-template-columns:1fr auto}.nav{grid-column:1/-1;grid-row:2;justify-content:flex-start}.headerCta{font-size:.875rem!important}.hero h1{font-size:clamp(3rem,15vw,5rem)}}</style></head><body><main class="page">
+      
+
+      <header class="header">
+        <a class="wordmark" href="#top" aria-label="LabNarrative home">
+          <span class="logoLab">Lab</span><span class="logoNarrative">Narrative</span>
+        </a>
+
+        <nav class="nav" aria-label="Primary navigation">
+          <a href="#work">Approach</a>
+          <a href="/process">Process</a>
+          <a href="#pricing">Pricing</a>
+        </nav>
+
+        <a
+          class="headerCta"
+          href="mailto:hello@labnarrative.com?subject=Laboratory%20website%20enquiry"
+        >
+          Start a project <span aria-hidden="true">↗</span>
+        </a>
+      </header>
+
+      <section class="hero" id="top">
+        <p class="eyebrow">Websites for scientific laboratories</p>
+
+        <div class="heroGrid">
+          <h1>
+            Your research
+            <br />
+            deserves
+            <br />
+            a clearer <em>story.</em>
+          </h1>
+
+          <div class="heroAside">
+            <p>
+              We research, write and design modern laboratory websites—so principal investigators
+              can present their science without becoming web designers.
+            </p>
+            <a href="mailto:hello@labnarrative.com?subject=Request%20a%20private%20concept">
+              Request a private concept <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="heroFooter">
+          <span>Scientific understanding</span>
+          <span>Editorial design</span>
+          <span>Effortless launch</span>
+        </div>
+      </section>
+
+      <section
+        class="approachSection"
+        data-ln-overlap-panel="approach"
+      >
+        <p class="sectionLabel">The LabNarrative approach</p>
+        <h2>
+          Not a generic template filled with scientific words. A considered digital home built
+          around the work your laboratory actually does.
+        </h2>
+
+        <div class="approachGrid">
+          <article><span class="number">01</span><h3>We understand the science</h3><p>We read your publications and translate the work into a clear, accurate research story—without asking you to write the website yourself.</p></article><article><span class="number">02</span><h3>We design the experience</h3><p>A calm, modern website gives your group a credible home for its research, people, publications, opportunities and collaborations.</p></article><article><span class="number">03</span><h3>We make launch effortless</h3><p>Review a private concept, request focused changes, then launch on a domain owned by your laboratory or institution.</p></article>
+        </div>
+      </section>
+
+      <section
+        class="workSection"
+        id="work"
+        data-ln-overlap-panel="direction"
+      >
+        <div class="sectionTopline">
+          <p class="sectionLabel">A tailored direction</p>
+          <p>Different science. Different identity.</p>
+        </div>
+
+        <div class="workIntro">
+          <h2>A distinct scientific presence for every laboratory.</h2>
+          <p>
+            Every project begins with the research rather than a generic visual theme. The design
+            direction is shaped around the laboratory’s scientific identity, priorities and
+            audience.
+          </p>
+        </div>
+      </section>
+
+      <section class="processSection" id="process">
+        <div class="sectionTopline">
+          <p class="sectionLabel">From papers to publication</p>
+          <p>A focused process that protects your time.</p>
+        </div>
+
+        <div class="processGrid">
+          <article><span class="number">01</span><h3>Discover</h3><p>We study your laboratory, recent papers and current online presence.</p></article><article><span class="number">02</span><h3>Compose</h3><p>We shape the scientific narrative and build a private concept website.</p></article><article><span class="number">03</span><h3>Refine</h3><p>You verify the science and choose what should be adjusted or added.</p></article><article><span class="number">04</span><h3>Launch</h3><p>We connect your domain and hand over a finished, maintainable website.</p></article>
+        </div>
+      </section>
+
+      <section
+        id="after-launch"
+        data-ln-overlap-panel="after-launch"
+        style="padding:clamp(88px, 10vw, 148px) clamp(20px, 4.4vw, 70px) clamp(92px, 10vw, 150px);background:var(--green-dark);color:var(--white)"
+      >
+        <div
+          class="platformNote"
+          style="margin-top:0;padding-top:0;border-top:0"
+        >
+          <div>
+            <p class="sectionLabel" style="color:var(--lime)">
+              After launch
+            </p>
+            <h2 style="margin-top:clamp(38px, 5vw, 64px)">
+              A website your laboratory can keep current.
+            </h2>
+          </div>
+          <p>
+            Private editing access lets your group update projects, members, publications and
+            opportunities through a simple draft, preview and publish workflow—with version history
+            available when needed.
+          </p>
+        </div>
+      </section>
+
+      <section
+        class="pricingSection"
+        id="pricing"
+        data-ln-overlap-panel="pricing"
+      >
+        <div class="sectionTopline">
+          <p class="sectionLabel">Simple packages</p>
+          <p>Clear scope. No technical learning curve.</p>
+        </div>
+
+        <div class="pricingGrid">
+          <article><h3>Essential</h3><strong>$750</strong><p>For focused and emerging laboratories</p><ul><li>Custom scientific website direction</li><li>Research copy and content organisation</li><li>Responsive design</li><li>Core research, team and contact sections</li><li>Domain connection and launch</li></ul></article><article class="recommendedCard"><span class="badge">Most complete</span><h3>Professional</h3><strong>$1,050</strong><p>For active groups with people and projects</p><ul><li>Everything included in Essential</li><li>Complete multi-page laboratory website</li><li>Up to six research projects</li><li>Unlimited laboratory members</li><li>Publications and opportunities sections</li><li>Private editing and publishing access</li></ul></article><article><h3>+ Annual care</h3><strong>$300 / year</strong><p>For a site that stays current</p><ul><li>Managed hosting and maintenance</li><li>Backups and technical updates</li><li>Routine content support</li><li>Domain and delivery monitoring</li><li>Priority assistance</li></ul></article>
+        </div>
+
+        <div class="deliveryLine">
+          <span>25% deposit to begin</span>
+          <span>First review in 3–5 days</span>
+          <span>Typical launch in 7–10 days</span>
+        </div>
+      </section>
+
+      <section
+        class="founderSection"
+        data-ln-overlap-panel="founder"
+      >
+        <p class="sectionLabel">Built by a scientist, for scientists</p>
+        <div>
+          <h2>Scientific credibility is part of the design.</h2>
+          <div class="founderCopy">
+            <p>
+              Khaled Azzahrani, Ph.D., is a molecular oncology researcher whose work has focused on
+              p53, p21–RB/E2F signalling, DREAM and transcriptional regulation.
+            </p>
+            <p>
+              He founded LabNarrative so scientific groups can communicate their identity clearly,
+              accurately and with the visual quality their work deserves.
+            </p>
+            <span>Khaled Azzahrani, Ph.D. · Founder, LabNarrative</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="finalCta">
+        <p class="sectionLabel">Begin with the science</p>
+        <h2>
+          Send us your laboratory profile.
+          <br />
+          We’ll imagine the website.
+        </h2>
+        <p>
+          Introduce your group at <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
+           and receive a focused project recommendation.
+        </p>
+        <a
+          class="emailButton"
+          href="mailto:hello@labnarrative.com?subject=Laboratory%20website%20enquiry"
+        >
+          Email LabNarrative <span aria-hidden="true">↗</span>
+        </a>
+      </section>
+
+      <footer class="footer">
+        <a class="wordmark" href="#top"><span class="logoLab">Lab</span><span class="logoNarrative">Narrative</span></a>
+        <a href="mailto:hello@labnarrative.com">hello@labnarrative.com</a>
+        <span>© 2026 LabNarrative</span>
+      </footer>
+    </main><script>if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && window.innerWidth > 900) { (() => {
+    const hero = document.querySelector("main > section#top");
+    const main = hero?.parentElement;
+    if (!(main instanceof HTMLElement)) return;
+
+    const sections = Array.from(main.children).filter(
+      (element) =>
+        element instanceof HTMLElement && element.tagName === "SECTION",
+    );
+
+    if (sections.length === 0) return;
+
+    const movingPanels = sections;
+
+    main.classList.add("ln-overlap-ready");
+
+    sections.forEach((section, index) => {
+      section.style.setProperty("--ln-panel-layer", String(index));
+      section.classList.add("ln-narita-panel");
+    });
+
+    let frame = 0;
+    let measurements = [];
+
+    const measure = () => {
+      const approachPanel = sections.find(
+        (section) => section.dataset.lnOverlapPanel === "approach",
+      );
+      const directionPanel = sections.find(
+        (section) => section.dataset.lnOverlapPanel === "direction",
+      );
+      const afterLaunchPanel = sections.find((section) => section.id === "after-launch");
+      const pricingPanel = sections.find((section) => section.id === "pricing");
+
+      const approachStart = approachPanel ? documentTop(approachPanel) : undefined;
+      const directionStart = directionPanel ? documentTop(directionPanel) : undefined;
+      const afterLaunchStart = afterLaunchPanel ? documentTop(afterLaunchPanel) : undefined;
+      const pricingStart = pricingPanel ? documentTop(pricingPanel) : undefined;
+
+      measurements = movingPanels.map((panel) => {
+        const isApproach = panel.dataset.lnOverlapPanel === "approach";
+
+        return {
+          element: panel,
+          start:
+            isApproach && typeof approachStart === "number"
+              ? approachStart
+              : documentTop(panel),
+          end:
+            isApproach
+              ? directionStart
+              : panel.id === "process"
+                ? afterLaunchStart
+                : panel.id === "after-launch"
+                  ? pricingStart
+                  : undefined,
+          speed: 0.4,
+        };
+      });
+    };
+
+    const update = () => {
+      frame = 0;
+
+      measurements.forEach(({ element, start, end, speed }) => {
+        const travelled = Math.max(0, window.scrollY - start);
+        const distance =
+          typeof end === "number"
+            ? Math.min(travelled, Math.max(0, end - start))
+            : travelled;
+        const offset = -(distance * speed);
+        element.style.setProperty("--ln-panel-offset", `${offset.toFixed(2)}px`);
+      });
+    };
+
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+
+    const remeasure = () => {
+      measure();
+      requestUpdate();
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(remeasure)
+        : undefined;
+    resizeObserver?.observe(main);
+    sections.forEach((section) => resizeObserver?.observe(section));
+
+    measure();
+    update();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", remeasure);
+    window.addEventListener("load", remeasure);
+
+})(); }</script></body></html>
