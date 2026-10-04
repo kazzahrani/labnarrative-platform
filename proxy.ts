@@ -76,6 +76,10 @@ export function proxy(request: NextRequest) {
 
     // Dedicated Scientific admin. Keep the browser on labnarrative.site while
     // isolating it from the retired labnarrative.com admin/control center.
+    if (pathname === "/admin/setup-password") {
+      scientificUrl.pathname = "/scientific-password-setup";
+      return NextResponse.rewrite(scientificUrl);
+    }
     if (pathname === "/admin" || pathname.startsWith("/admin/")) {
       scientificUrl.pathname = `/scientific-admin${pathname.slice("/admin".length)}`;
       return NextResponse.rewrite(scientificUrl);
