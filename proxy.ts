@@ -35,6 +35,17 @@ export function proxy(request: NextRequest) {
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
   const pathname = request.nextUrl.pathname;
 
+  // Keep the approved Bourdon concept exactly as-is while moving its public URL.
+  // Every request (HTML, CSS, JS, images, RSC) is transparently proxied from the
+  // approved concept host so the browser remains on bourdon.labnarrative.site.
+  if (host === "bourdon.labnarrative.site") {
+    const proxyUrl = request.nextUrl.clone();
+    proxyUrl.pathname = "/api/bourdon-legacy-proxy";
+    proxyUrl.search = "";
+    proxyUrl.searchParams.set("path", `${pathname}${request.nextUrl.search}`);
+    return NextResponse.rewrite(proxyUrl);
+  }
+
   // Scientific client sites now live on <slug>.labnarrative.site.
   if (host.endsWith(`.${SCIENTIFIC_PUBLIC_ROOT}`) && !SCIENTIFIC_SITE_HOSTS.has(host)) {
     const subdomain = host.slice(0, -(SCIENTIFIC_PUBLIC_ROOT.length + 1)).split(".")[0];
