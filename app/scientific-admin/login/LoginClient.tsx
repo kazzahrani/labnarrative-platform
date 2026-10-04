@@ -9,6 +9,7 @@ export default function ScientificLoginClient() {
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [setupMessage, setSetupMessage] = useState("");
 
   useEffect(() => {
     void supabase.auth.getSession().then(async ({ data }) => {
@@ -17,6 +18,24 @@ export default function ScientificLoginClient() {
       if (allowed === true) window.location.replace("/admin");
     });
   }, []);
+
+  async function sendSetupLink() {
+    setLoading(true);
+    setError("");
+    setSetupMessage("");
+
+    const { error: linkError } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: "https://labnarrative.site/admin/setup-password",
+      },
+    });
+
+    if (linkError) setError(linkError.message);
+    else setSetupMessage("Setup link sent. Open the fresh email once, then set the same password you already use.");
+    setLoading(false);
+  }
 
   async function signIn() {
     setLoading(true);
@@ -64,9 +83,9 @@ export default function ScientificLoginClient() {
         <div className={styles.form}>
           <label><span>Email</span><input type="email" autoComplete="email" value={email} onChange={(e)=>setEmail(e.target.value)} /></label>
           <label><span>Password</span><input type="password" autoComplete="current-password" value={secret} onChange={(e)=>setSecret(e.target.value)} onKeyDown={(e)=>{ if(e.key==="Enter") void signIn(); }} /></label>
-          <button className={styles.button} type="button" onClick={()=>void signIn()} disabled={loading || !email.trim() || !secret}>{loading ? "SIGNING IN…" : "SIGN IN →"}</button>
+          <button className={styles.button} type="button" onClick={()=>void signIn()} disabled={loading || !email.trim() || !secret}>{loading ? "SIGNING IN…" : "SIGN IN →"}</button>\n          <button type="button" onClick={()=>void sendSetupLink()} disabled={loading || !email.trim()} style={{border:"1px solid rgba(255,255,255,.15)",background:"transparent",color:"inherit",borderRadius:10,padding:"12px 14px",fontWeight:800,cursor:"pointer"}}>FIRST-TIME SETUP — SEND LINK</button>
         </div>
-        {error ? <p className={styles.error}>{error}</p> : null}
+        {error ? <p className={styles.error}>{error}</p> : null}\n        {setupMessage ? <p style={{fontSize:12,lineHeight:1.55,opacity:.8}}>{setupMessage}</p> : null}
         <div className={styles.security}>Your session is securely managed by Supabase Auth.</div>
       </div>
     </section>
