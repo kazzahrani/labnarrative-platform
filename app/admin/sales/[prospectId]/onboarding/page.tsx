@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { browserSupabase as supabase } from "@/lib/supabase-browser";
+import { scientificSupabase as supabase } from "@/lib/scientific-supabase-browser";
 import styles from "./onboarding-admin.module.css";
 
 type Asset={id:string;kind:string;label:string;public_url:string;original_filename:string};
@@ -17,7 +17,7 @@ function Reviewed({ok}:{ok:boolean}){return <span className={`${styles.reviewed}
 export default function OnboardingAdminPage(){
  const params=useParams<{prospectId:string}>();const prospectId=String(params?.prospectId||"");const[data,setData]=useState<Data|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState("");const[notice,setNotice]=useState("");const[adminNotes,setAdminNotes]=useState("");const[busy,setBusy]=useState(false);
  const load=useCallback(async()=>{if(!prospectId)return;setLoading(true);setError("");const{data:session}=await supabase.auth.getSession();if(!session.session){setError("Administrator sign-in is required.");setLoading(false);return}const{data:res,error:e}=await supabase.rpc("sales_client_onboarding_admin_get",{p_prospect_id:prospectId});if(e)setError(e.message);else{const next=res as Data;setData(next);setAdminNotes(next.onboarding?.admin_notes||"")}setLoading(false)},[prospectId]);useEffect(()=>{void load()},[load]);
- async function copyLink(){if(!data?.onboarding)return;await navigator.clipboard.writeText(`https://labnarrative.com/onboarding/${data.onboarding.share_token}`);setNotice("Private onboarding link copied.");setTimeout(()=>setNotice(""),1800)}
+ async function copyLink(){if(!data?.onboarding)return;await navigator.clipboard.writeText(`https://labnarrative.site/onboarding/${data.onboarding.share_token}`);setNotice("Private onboarding link copied.");setTimeout(()=>setNotice(""),1800)}
  async function regenerate(){if(!confirm("Generate a new private onboarding link? The previous link will stop working."))return;setBusy(true);const{error:e}=await supabase.rpc("sales_client_onboarding_admin_regenerate_link",{p_prospect_id:prospectId});setBusy(false);if(e)setError(e.message);else{setNotice("A new onboarding link was created.");await load()}}
  async function status(next:string){setBusy(true);setError("");const{error:e}=await supabase.rpc("sales_client_onboarding_admin_status",{p_prospect_id:prospectId,p_status:next,p_admin_notes:adminNotes||null});setBusy(false);if(e)setError(e.message);else{setNotice(`Onboarding moved to ${next.replaceAll("_"," ")}.`);await load()}}
  if(loading)return <main className={styles.page}><div className={styles.state}><section className={styles.stateBox}>Loading client onboarding…</section></div></main>;
@@ -26,7 +26,7 @@ export default function OnboardingAdminPage(){
  const o=data.onboarding;const assets=data.assets||[];const siteUrl=data.site?.domain_url||(data.site?.slug?`https://${data.site.slug}.labnarrative.com`:"");
  return <main className={styles.page}><div className={styles.shell}>
   <header className={styles.top}><div><Link className={styles.back} href={`/admin/sales/${prospectId}`}>← Sales workspace</Link><p className={styles.eyebrow}>Client onboarding review</p><h1>{data.prospect.pi_name}</h1><p>{data.prospect.institution}{data.prospect.department?` · ${data.prospect.department}`:""}</p></div><aside className={styles.progress}><span>Client review progress</span><strong>{data.progress||0}%</strong><div className={styles.track}><div className={styles.fill} style={{width:`${data.progress||0}%`}}/></div></aside></header>
-  <div className={styles.toolbar}><button className={styles.primary} onClick={()=>void copyLink()}>Copy onboarding link</button><a href={`https://labnarrative.com/onboarding/${o.share_token}`} target="_blank" rel="noreferrer">Open client view ↗</a>{siteUrl?<a href={siteUrl} target="_blank" rel="noreferrer">Open website ↗</a>:null}{data.site?.slug?<Link href={`/admin/sites/${data.site.slug}/edit`}>Open visual editor</Link>:null}<button disabled={busy} onClick={()=>void regenerate()}>Regenerate private link</button></div>
+  <div className={styles.toolbar}><button className={styles.primary} onClick={()=>void copyLink()}>Copy onboarding link</button><a href={`https://labnarrative.site/onboarding/${o.share_token}`} target="_blank" rel="noreferrer">Open client view ↗</a>{siteUrl?<a href={siteUrl} target="_blank" rel="noreferrer">Open website ↗</a>:null}{data.site?.slug?<Link href={`/admin/sites/${data.site.slug}/edit`}>Open visual editor</Link>:null}<button disabled={busy} onClick={()=>void regenerate()}>Regenerate private link</button></div>
   {notice?<p className={styles.notice}>{notice}</p>:null}{error?<p className={styles.error}>{error}</p>:null}
   <section className={styles.meta}><article><span>Status</span><strong>{o.status.replaceAll("_"," ")}</strong></article><article><span>Deposit</span><strong>{data.payment?money(data.payment.amount,data.payment.currency):"—"}</strong></article><article><span>Submitted</span><strong>{fmt(o.submitted_at)}</strong></article><article><span>Last saved</span><strong>{fmt(o.last_saved_at)}</strong></article></section>
   <div className={styles.grid}>
