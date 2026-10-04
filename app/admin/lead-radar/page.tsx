@@ -197,7 +197,7 @@ export default function ScientificLeadRadarPage() {
   return <main className={styles.page}>
     <div className={styles.shell}>
       <header className={styles.topbar}>
-        <Link href="/admin/websites" className={styles.wordmark}><Wordmark /></Link>
+        <Link href="/admin" className={styles.wordmark}><Wordmark /></Link>
         <span className={styles.branch}>SCIENTIFIC LEAD RADAR</span>
         <div className={styles.topActions}>
           <select value={lookback} onChange={(e) => setLookback(Number(e.target.value))}>

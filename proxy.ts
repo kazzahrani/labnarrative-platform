@@ -74,6 +74,13 @@ export function proxy(request: NextRequest) {
   if (SCIENTIFIC_SITE_HOSTS.has(host)) {
     const scientificUrl = request.nextUrl.clone();
 
+    // Dedicated Scientific admin. Keep the browser on labnarrative.site while
+    // isolating it from the retired labnarrative.com admin/control center.
+    if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+      scientificUrl.pathname = `/scientific-admin${pathname.slice("/admin".length)}`;
+      return NextResponse.rewrite(scientificUrl);
+    }
+
     // Restore the original interactive proposal → PayPal → onboarding flow.
     if (
       pathname.startsWith("/proposal/") ||
