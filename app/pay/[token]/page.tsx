@@ -2,7 +2,7 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { browserSupabase as supabase } from "@/lib/supabase-browser";
+import { scientificSupabase as supabase } from "@/lib/scientific-supabase-browser";
 import ApplePayButton from "./ApplePayButton";
 import PayPalStandardButtons from "./PayPalStandardButtons";
 import styles from "../payment.module.css";
@@ -22,7 +22,7 @@ function formatDate(value?: string | null) { if (!value) return "—"; const dat
 export default function PrivatePaymentPage() {
   const params = useParams<{ token: string }>(); const searchParams = useSearchParams(); const token = String(params?.token || "");
   const [data, setData] = useState<PaymentData | null>(null); const [provider, setProvider] = useState<ProviderStatus>({ configured: false }); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const captureStarted = useRef(false);
-  const functionUrl = `${String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "")}/functions/v1/paypal-checkout`;
+  const functionUrl = `${String(process.env.NEXT_PUBLIC_SCIENTIFIC_SUPABASE_URL || "").replace(/\/$/, "")}/functions/v1/paypal-checkout`;
   const callProvider = useCallback(async (action: string, extra: Record<string, unknown> = {}) => { if (!functionUrl.startsWith("https://")) throw new Error("Payment service is unavailable."); const response = await fetch(functionUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, token, ...extra }) }); const payload = await response.json().catch(() => ({})) as Record<string, unknown>; if (!response.ok) throw new Error(String(payload.error || "Payment provider request failed.")); return payload; }, [functionUrl, token]);
   const load = useCallback(async () => { if (!token) return; setLoading(true); setError(""); const [{ data: payment, error: rpcError }, providerResult] = await Promise.all([supabase.rpc("sales_payment_public_get", { p_token: token }), callProvider("status").catch((): Record<string, unknown> => ({ configured: false }))]); if (rpcError) setError(rpcError.message); else if (payment && typeof payment === "object" && "error" in payment) setError(String((payment as { error?: string }).error || "Payment request unavailable.")); else setData(payment as PaymentData); setProvider({ configured: Boolean(providerResult.configured), environment: String(providerResult.environment || ""), clientId: String(providerResult.clientId || "") }); setLoading(false); }, [callProvider, token]);
   useEffect(() => { void load(); }, [load]);

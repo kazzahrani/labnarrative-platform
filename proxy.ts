@@ -38,13 +38,21 @@ export function proxy(request: NextRequest) {
   // shares the deployment while keeping the trading product on labnarrative.com.
   if (SCIENTIFIC_SITE_HOSTS.has(host)) {
     const scientificUrl = request.nextUrl.clone();
+
+    // Restore the original interactive proposal → PayPal → onboarding flow.
+    if (
+      pathname.startsWith("/proposal/") ||
+      pathname.startsWith("/pay/") ||
+      pathname.startsWith("/onboarding/")
+    ) {
+      return NextResponse.next();
+    }
+
     const staticRoutes = new Map<string, string>([
       ["/", "/scientific-site/index.html"],
       ["/styles.css", "/scientific-site/styles.css"],
       ["/process", "/scientific-site/process/index.html"],
       ["/process/", "/scientific-site/process/index.html"],
-      ["/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3", "/scientific-site/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/index.html"],
-      ["/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/", "/scientific-site/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/index.html"],
       ["/clients/bourdon-a660d7d9", "/scientific-site/clients/bourdon-a660d7d9/index.html"],
       ["/clients/bourdon-a660d7d9/", "/scientific-site/clients/bourdon-a660d7d9/index.html"],
     ]);

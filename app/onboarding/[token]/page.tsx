@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { browserSupabase as supabase } from "@/lib/supabase-browser";
+import { scientificSupabase as supabase } from "@/lib/scientific-supabase-browser";
 import styles from "./onboarding.module.css";
 
 type TeamMember={name:string;role:string;bio:string;photo_url:string};
