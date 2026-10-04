@@ -6,7 +6,8 @@ const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform-lab-narrative.vercel.app",
   "labnarrative-platform-git-main-lab-narrative.vercel.app",
 ]);
-const LEGACY_PLATFORM_HOST = "platform.labnarrative.com";\nconst SCIENTIFIC_SITE_HOSTS = new Set(["labnarrative.site", "www.labnarrative.site"]);
+const LEGACY_PLATFORM_HOST = "platform.labnarrative.com";
+const SCIENTIFIC_SITE_HOSTS = new Set(["labnarrative.site", "www.labnarrative.site"]);
 const REFERRAL_PENDING_COOKIE = "ln_referral_pending_v1";
 const WEBSITE_ADMIN_SEGMENTS = new Set([
   "sites",
