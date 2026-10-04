@@ -92,10 +92,9 @@ function activeSection(route: SiteRoute): SiteRoute["section"] {
 
 function SiteHeader({ site, route, basePath }: { site: LabSite; route: SiteRoute; basePath: string }) {
   const pages = getBourdonPages(site);
-  const homeHref = basePath || "/";
   const active = activeSection(route);
   const nav: Array<{ key: SiteRoute["section"]; label: string; href: string }> = [
-    { key: "home", label: pages.navigation.home, href: homeHref },
+    { key: "home", label: pages.navigation.home, href: basePath },
     { key: "research", label: pages.navigation.research, href: `${basePath}/research` },
     { key: "publications", label: pages.navigation.publications, href: `${basePath}/publications` },
     { key: "members", label: pages.navigation.members, href: `${basePath}/members` },
@@ -106,7 +105,7 @@ function SiteHeader({ site, route, basePath }: { site: LabSite; route: SiteRoute
   return (
     <header className="bn-site-header">
       <div className="bn-header-inner">
-        <Link href={homeHref} className="bn-wordmark" aria-label={`${site.labName} home`}>
+        <Link href={basePath} className="bn-wordmark" aria-label={`${site.labName} home`}>
           <span className="bn-wordmark-mark">
             <Picture
               src={pages.home.topPortrait}

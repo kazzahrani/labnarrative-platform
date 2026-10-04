@@ -5,7 +5,6 @@ import ConceptAnalytics from "@/components/ConceptAnalytics";
 import SiteShell from "@/components/SiteShell";
 import VisualOverridesHost from "@/components/VisualOverridesHost";
 import { getSite, resolveSiteRoute } from "@/lib/sites";
-import { recoveredBourdonSite } from "@/lib/bourdon-recovered-site";
 
 export const revalidate = 60;
 
@@ -34,20 +33,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string; path?: string[] }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const isRecoveredBourdon = slug.toLowerCase() === "bourdon-lab";
-  const status = isRecoveredBourdon ? "live" : await getSiteStatus(slug);
-  if (isRecoveredBourdon) {
-    return {
-      title: "Bourdon Lab | Molecular Oncology · University of Dundee",
-      description: "The Bourdon Lab investigates the p53 isoform network, cell fate, cancer biology, patient stratification, diagnostics and therapeutic translation.",
-      robots: { index: true, follow: true },
-      openGraph: {
-        title: "Bourdon Lab | Molecular Oncology",
-        description: "Research on p53 isoforms, cell fate, cancer biology and therapeutic translation at the University of Dundee.",
-        type: "website",
-      },
-    };
-  }
+  const status = await getSiteStatus(slug);
   return {
     robots: status === "live"
       ? { index: true, follow: true }
@@ -61,11 +47,10 @@ export default async function LabSitePage({
   params: Promise<{ slug: string; path?: string[] }>;
 }) {
   const { slug, path } = await params;
-  const isRecoveredBourdon = slug.toLowerCase() === "bourdon-lab";
   const [site, requestHeaders, status] = await Promise.all([
-    isRecoveredBourdon ? Promise.resolve(recoveredBourdonSite) : getSite(slug),
+    getSite(slug),
     headers(),
-    isRecoveredBourdon ? Promise.resolve<SiteStatus>("live") : getSiteStatus(slug),
+    getSiteStatus(slug),
   ]);
 
   if (!site) {
