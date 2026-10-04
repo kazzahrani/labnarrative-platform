@@ -145,7 +145,7 @@ export default function WebsitesCompanyHome() {
   return <main className={styles.page}><div className={styles.shell}>
     <header className={styles.topbar}>
       <Link href="/admin" className={styles.wordmark}><Wordmark /></Link><span className={styles.branch}>WEBSITES</span>
-      <div className={styles.topActions}><Link href="/admin/websites/concepts" className={styles.secondaryLink}>Connections + Concepts</Link><Link href="/admin/websites/sites" className={styles.secondaryLink}>Legacy PI archive</Link><button onClick={() => void load(session)} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button></div>
+      <div className={styles.topActions}><Link href="/admin/websites/lead-radar" className={styles.secondaryLink}>Scientific Lead Radar</Link><Link href="/admin/websites/concepts" className={styles.secondaryLink}>Connections + Concepts</Link><Link href="/admin/websites/sites" className={styles.secondaryLink}>Legacy PI archive</Link><button onClick={() => void load(session)} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button></div>
     </header>
 
     <section className={styles.hero}>

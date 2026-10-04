@@ -24,6 +24,7 @@ const WEBSITE_ADMIN_SEGMENTS = new Set([
   "outreach-setup",
   "preview",
   "recovery",
+  "lead-radar",
 ]);
 
 function normalizeReferralCode(value: string | null) {
