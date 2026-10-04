@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import ScientificAdminGate from "@/components/admin/ScientificAdminGate";
-import { scientificSupabase as supabase } from "@/lib/scientific-supabase-browser";
+import { scientificAdminLogout } from "@/lib/scientific-admin-auth";
 
 function Wordmark(){return <><span>Lab</span>Narrative</>}
 
@@ -13,7 +13,7 @@ export default function ScientificAdminHome(){
         <header style={{minHeight:76,display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid #213640"}}>
           <Link href="/admin" style={{color:"#f2f6f4",textDecoration:"none",fontSize:19,fontWeight:850,letterSpacing:"-.05em"}}><span style={{color:"#73c9aa"}}>Lab</span>Narrative</Link>
           <span style={{color:"#708681",fontSize:10,fontWeight:900,letterSpacing:".16em"}}>SCIENTIFIC ADMIN</span>
-          <button onClick={()=>void supabase.auth.signOut({scope:"local"})} style={{marginLeft:"auto",border:"1px solid #29404b",borderRadius:9,background:"#101d25",color:"#aebfbb",padding:"9px 12px",fontWeight:800,cursor:"pointer"}}>Sign out</button>
+          <button onClick={()=>void scientificAdminLogout().then(()=>window.location.replace("/admin/login"))} style={{marginLeft:"auto",border:"1px solid #29404b",borderRadius:9,background:"#101d25",color:"#aebfbb",padding:"9px 12px",fontWeight:800,cursor:"pointer"}}>Sign out</button>
         </header>
 
         <section style={{padding:"72px 0 48px"}}>

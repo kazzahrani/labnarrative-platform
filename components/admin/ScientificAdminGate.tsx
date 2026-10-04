@@ -2,51 +2,18 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { scientificSupabase as supabase } from "@/lib/scientific-supabase-browser";
-
-async function isScientificAdmin() {
-  const { data, error } = await supabase.rpc("is_labnarrative_admin");
-  return !error && data === true;
-}
+import { scientificAdminSessionIsValid } from "@/lib/scientific-admin-auth";
 
 export default function ScientificAdminGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"checking" | "signed_out" | "ready">("checking");
 
   useEffect(() => {
     let active = true;
-
-    const validate = async () => {
-      const { data } = await supabase.auth.getSession();
+    void scientificAdminSessionIsValid().then((ok) => {
       if (!active) return;
-
-      if (!data.session) {
-        setState("signed_out");
-        return;
-      }
-
-      const allowed = await isScientificAdmin();
-      if (!active) return;
-
-      if (allowed) {
-        setState("ready");
-        return;
-      }
-
-      await supabase.auth.signOut({ scope: "local" });
-      if (active) setState("signed_out");
-    };
-
-    void validate();
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
-      if (!active) return;
-      window.setTimeout(() => void validate(), 0);
+      setState(ok ? "ready" : "signed_out");
     });
-
-    return () => {
-      active = false;
-      subscription.subscription.unsubscribe();
-    };
+    return () => { active = false; };
   }, []);
 
   if (state === "ready") return <>{children}</>;
@@ -57,8 +24,8 @@ export default function ScientificAdminGate({ children }: { children: ReactNode 
         <div style={{fontWeight:850,fontSize:19,letterSpacing:"-.04em",marginBottom:28}}><span style={{color:"#73c9aa"}}>Lab</span>Narrative <span style={{color:"#708681",fontSize:11,letterSpacing:".12em"}}>SCIENTIFIC</span></div>
         <p style={{margin:"0 0 8px",color:"#73c9aa",fontSize:11,fontWeight:900,letterSpacing:".14em",textTransform:"uppercase"}}>Scientific administration</p>
         <h1 style={{margin:"0 0 10px",fontSize:34,letterSpacing:"-.045em"}}>{state === "checking" ? "Checking your session…" : "Sign in to Scientific."}</h1>
-        <p style={{margin:"0 0 24px",color:"#98aaa8",lineHeight:1.65,fontSize:14}}>Use your existing LabNarrative account password. No email code or magic-link redirect is required.</p>
-        {state === "signed_out" ? <a href="/admin/login" style={{display:"block",width:"100%",boxSizing:"border-box",border:"1px solid #356b5a",background:"#173c32",color:"#c9eee0",borderRadius:9,padding:"12px 14px",fontWeight:850,textAlign:"center",textDecoration:"none"}}>Sign in with password →</a> : null}
+        <p style={{margin:"0 0 24px",color:"#98aaa8",lineHeight:1.65,fontSize:14}}>Scientific admin access is isolated from LabNarrative Trading. No Trading authentication settings are used or changed.</p>
+        {state === "signed_out" ? <a href="/admin/login" style={{display:"block",width:"100%",boxSizing:"border-box",border:"1px solid #356b5a",background:"#173c32",color:"#c9eee0",borderRadius:9,padding:"12px 14px",fontWeight:850,textAlign:"center",textDecoration:"none"}}>Sign in →</a> : null}
       </section>
     </main>
   );
