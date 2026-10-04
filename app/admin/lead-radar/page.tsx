@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { scientificSupabase as supabase } from "@/lib/scientific-supabase-browser";
+import { getScientificAdminToken } from "@/lib/scientific-admin-auth";
 import styles from "./lead-radar.module.css";
 
 type Lead = {
@@ -78,7 +78,6 @@ function ageLabel(value: string | null) {
 function Wordmark() { return <><span>Lab</span>Narrative</>; }
 
 export default function ScientificLeadRadarPage() {
-  const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -94,28 +93,40 @@ export default function ScientificLeadRadarPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setNotice("");
-    const { data: adminResult, error: adminError } = await supabase.rpc("is_labnarrative_admin");
-    if (adminError || !adminResult) {
+
+    const token = getScientificAdminToken();
+    if (!token) {
       setIsAdmin(false);
-      setNotice(adminError?.message || "Administrator access required.");
+      setAuthReady(true);
       setLoading(false);
       return;
     }
+
+    const { data: sessionData, error: sessionError } = await supabase.rpc("scientific_admin_custom_session", { p_token: token });
+    if (sessionError || sessionData?.ok !== true) {
+      setIsAdmin(false);
+      setAuthReady(true);
+      setNotice("Scientific administrator session required.");
+      setLoading(false);
+      return;
+    }
+
     setIsAdmin(true);
+    setAuthReady(true);
 
     const [leadResult, runResult] = await Promise.all([
-      supabase
-        .from("scientific_lead_radar_leads")
-        .select("id,source,source_url,trigger_date,pi_name,pi_title,pi_count,institution,department,project_title,activity_code,award_amount,project_start_date,discovery_score,discovery_reasons,website_status,website_url,website_opportunity_score,recruiting_status,contact_status,preferred_email,contact_confidence_score,final_score,qualification_status,manual_notes,updated_at")
-        .order("discovery_score", { ascending: false })
-        .order("trigger_date", { ascending: false })
-        .limit(1000),
-      supabase
-        .from("scientific_lead_radar_runs")
-        .select("id,status,records_fetched,records_upserted,priority_count,started_at,completed_at,error_text,params")
-        .order("started_at", { ascending: false })
-        .limit(12),
+      supabase.rpc("scientific_lead_radar_custom_list", {
+        p_token: token,
+        p_stage: "all",
+        p_search: "",
+        p_limit: 1000,
+      }),
+      supabase.rpc("scientific_lead_radar_custom_runs", {
+        p_token: token,
+        p_limit: 12,
+      }),
     ]);
+
     const error = leadResult.error || runResult.error;
     if (error) setNotice(error.message);
     setLeads((leadResult.data || []) as Lead[]);
@@ -124,50 +135,75 @@ export default function ScientificLeadRadarPage() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setAuthReady(true);
-      if (data.session) void load();
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setAuthReady(true);
-      if (next) void load();
-      else setIsAdmin(false);
-    });
-    return () => subscription.unsubscribe();
+    void load();
   }, [load]);
+
 
   const scan = async () => {
     setScanning(true);
     setNotice("");
+
+    const token = getScientificAdminToken();
+    if (!token) {
+      setNotice("Scientific administrator session required.");
+      setScanning(false);
+      return;
+    }
+
     const { data, error } = await supabase.functions.invoke("scientific-lead-radar", {
       body: { action: "scan_nih", lookback_days: lookback, max_pages: 4, min_award: 250000 },
+      headers: { "X-Scientific-Session": token },
     });
+
     if (error) setNotice(error.message);
     else if (data?.error) setNotice(data.error);
     else setNotice(`NIH scan complete: ${data?.records_upserted ?? 0} leads loaded, ${data?.priority_count ?? 0} sent to enrichment.`);
+
     await load();
     setScanning(false);
   };
 
   const updateLead = async (lead: Lead, patch: Partial<Lead>) => {
     setNotice("");
-    const { error } = await supabase
-      .from("scientific_lead_radar_leads")
-      .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq("id", lead.id);
-    if (error) { setNotice(error.message); return; }
-    const { error: scoreError } = await supabase.rpc("scientific_lead_radar_recalculate", { p_lead_id: lead.id });
-    if (scoreError) { setNotice(scoreError.message); return; }
+
+    const token = getScientificAdminToken();
+    if (!token) {
+      setNotice("Scientific administrator session required.");
+      return;
+    }
+
+    const { data: result, error } = await supabase.rpc("scientific_lead_radar_custom_update", {
+      p_token: token,
+      p_lead_id: lead.id,
+      p_patch: {
+        website_status: patch.website_status ?? null,
+        website_url: patch.website_url ?? null,
+        website_opportunity_score: patch.website_opportunity_score ?? null,
+        recruiting_status: patch.recruiting_status ?? null,
+        contact_status: patch.contact_status ?? null,
+        preferred_email: patch.preferred_email ?? null,
+        contact_confidence_score: patch.contact_confidence_score ?? null,
+        manual_notes: patch.manual_notes ?? null,
+      },
+    });
+
+    if (error || result?.ok !== true) {
+      setNotice(error?.message || result?.error || "Could not update lead.");
+      return;
+    }
+
     await load();
-    const { data } = await supabase
-      .from("scientific_lead_radar_leads")
-      .select("*")
-      .eq("id", lead.id)
-      .maybeSingle();
-    if (data) setSelected(data as Lead);
+
+    const { data: refreshed } = await supabase.rpc("scientific_lead_radar_custom_list", {
+      p_token: token,
+      p_stage: "all",
+      p_search: "",
+      p_limit: 1000,
+    });
+    const found = ((refreshed || []) as Lead[]).find((item) => item.id === lead.id);
+    if (found) setSelected(found);
   };
+
 
   const metrics = useMemo(() => ({
     total: leads.length,
@@ -189,8 +225,7 @@ export default function ScientificLeadRadarPage() {
   }, [leads, search, stage]);
 
   if (!authReady) return <main className={styles.page}><div className={styles.center}>Preparing Lead Radar…</div></main>;
-  if (!session) return <main className={styles.page}><div className={styles.center}><h1>Scientific admin session required.</h1><p>Sign in through the LabNarrative admin, then return here.</p><Link href="/admin">Go to admin →</Link></div></main>;
-  if (!isAdmin) return <main className={styles.page}><div className={styles.center}><h1>Administrator permission required.</h1><p>{notice}</p></div></main>;
+  if (!isAdmin) return <main className={styles.page}><div className={styles.center}><h1>Scientific admin session required.</h1><p>{notice || "Sign in to the isolated Scientific admin."}</p><Link href="/admin/login">Sign in →</Link></div></main>;
 
   const latestRun = runs[0];
 
