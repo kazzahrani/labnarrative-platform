@@ -1,0 +1,207 @@
+import { createDefaultBourdonPages, type LabSite } from "@/lib/sites";
+
+const core: LabSite = {
+  schemaVersion: 1,
+  template: "bourdon-full",
+  design: {
+    key: "bourdon-full",
+    version: 1,
+    settings: {
+      homeHeroLayout: "image-right",
+      programmesLayout: "grid",
+      piLayout: "image-left",
+      researchIndexLayout: "image-right",
+      projectLayout: "split",
+      membersColumns: 3,
+      pageIntroStyle: "navy",
+      sectionSpacing: "balanced",
+      cornerStyle: "square",
+    },
+  },
+  slug: "bourdon-lab",
+  piName: "Dr Jean-Christophe Bourdon",
+  labName: "Bourdon Lab",
+  labSubtitle: "Molecular Oncology · University of Dundee",
+  title: "Senior Lecturer in Cancer Research",
+  institution: "University of Dundee",
+  department: "Cancer Research · School of Medicine",
+  address: "Nethergate\nDundee DD1 4HN\nScotland, UK",
+  email: "j.bourdon@dundee.ac.uk",
+  phone: "+44 (0)1382 383285",
+  profileUrl: "https://www.dundee.ac.uk/people/jean-christophe-bourdon",
+  pubmedUrl: "https://pubmed.ncbi.nlm.nih.gov/?term=Bourdon+JC%5BAuthor%5D",
+  eyebrow: "p53 isoforms · cell fate · cancer",
+  headline: "Understanding p53 at isoform resolution",
+  introduction: "We investigate how the family of proteins encoded by TP53 controls cell fate—and how its disruption shapes cancer, ageing and treatment response.",
+  overview: "p53 is not a single protein acting alone. TP53 produces a coordinated network of isoforms whose balance helps determine whether a cell repairs, adapts, senesces, dies or becomes cancerous. Our laboratory combines fundamental molecular oncology with clinically relevant models to understand this network and translate it into better biomarkers and therapeutic ideas.",
+  heroImage: "https://www.dundee.ac.uk/sites/default/files/styles/card_portrait/public/2024-02/Jean-Christophe-Bourdon.jpg.webp?h=3b8e1bb9&itok=7txRTipm",
+  focusAreas: ["p53 isoforms", "Cell fate", "Cancer biology", "Diagnostics and translation"],
+  projects: [
+    { title: "The p53 isoform network", description: "How TP53 generates and regulates a family of proteins with distinct roles in stress responses and cell fate." },
+    { title: "Cell fate and adaptive homeostasis", description: "How p53-isoform balance influences senescence, apoptosis, proliferation, DNA repair and regeneration." },
+    { title: "Cancer behaviour and patient stratification", description: "How altered p53-isoform expression shapes invasion, treatment response and patient outcome." },
+    { title: "Diagnostics and therapeutic translation", description: "How isoform-specific tools can improve diagnosis, disease modelling and therapeutic design." },
+  ],
+  research: [
+    {
+      slug: "p53-isoform-network",
+      title: "The p53 isoform network",
+      summary: "We study TP53 as a multi-protein system. Alternative promoters, translation starts and RNA splicing generate distinct p53 isoforms that combine to shape cellular responses to stress.",
+      question: "How are individual p53 isoforms produced, regulated and assembled into a functional network?",
+      body: [
+        "This programme maps the molecular architecture that expands TP53 beyond canonical p53α. It examines how promoter choice, RNA processing and translation produce isoforms with different N- and C-termini, expression patterns and biochemical properties.",
+        "Rather than assigning every outcome to one dominant protein, we study the relative abundance and interaction of co-expressed isoforms. This isoform-resolved view helps explain how the same locus supports sharply different responses across tissues and biological contexts.",
+      ],
+      methods: [
+        "Isoform-specific antibodies and detection protocols",
+        "Molecular and cellular models of TP53 regulation",
+        "Functional comparison of defined isoform combinations",
+        "Cross-species and evolutionary analysis",
+      ],
+      papers: [
+        "p53 isoforms can regulate p53 transcriptional activity (2005)",
+        "p53 isoforms through evolution (2010)",
+        "p53 Isoforms: Key Regulators of the Cell Fate Decision (2016)",
+      ],
+    },
+    {
+      slug: "cell-fate-homeostasis",
+      title: "Cell fate and adaptive homeostasis",
+      summary: "We investigate how p53-isoform balance influences apoptosis, senescence, proliferation, DNA repair and tissue regeneration.",
+      question: "How does isoform balance translate cellular stress into distinct cell-fate decisions?",
+      body: [
+        "This research connects p53-isoform expression with replicative senescence, proliferation, apoptosis, DNA repair, development and regeneration.",
+        "The broader concept is adaptive homeostasis: cells and organisms continually adjust to stress while preserving function. Ageing, chronic damage and disease can disturb this balance.",
+      ],
+      methods: [
+        "Cell-fate and senescence assays",
+        "DNA-damage response models",
+        "Isoform-ratio perturbation",
+        "Organismal and tissue-regeneration models",
+      ],
+      papers: [
+        "Δ133p53 and p53β regulate replicative cellular senescence (2009)",
+        "Adaptive homeostasis and the p53 isoform network (2021)",
+        "Alterations in the p53 isoform ratio govern breast cancer cell fate (2022)",
+      ],
+    },
+    {
+      slug: "cancer-stratification",
+      title: "Cancer behaviour and patient stratification",
+      summary: "We examine how altered p53-isoform expression affects tumour invasion, treatment response and patient outcome.",
+      question: "Can p53-isoform profiles explain tumour invasion, treatment response and patient outcome?",
+      body: [
+        "Tumours sharing the same TP53 mutation status can behave differently. The lab investigates how altered expression of specific isoforms changes cancer-cell behaviour.",
+        "This work supports a more complete way of stratifying patients by combining mutation status with the isoform repertoire, its ratios and functional consequences.",
+      ],
+      methods: [
+        "Patient-cohort biomarker analysis",
+        "Cancer invasion and treatment-response models",
+        "Isoform-resolved expression profiling",
+        "Familial cancer genetics",
+      ],
+      papers: [
+        "TP53 drives invasion through its Δ133p53β variant (2016)",
+        "Elevated p53β variants and survival in melanoma (2023)",
+        "Germline variant affecting p53β isoforms predisposes to familial cancer (2024)",
+      ],
+    },
+    {
+      slug: "translation",
+      title: "Diagnostics and therapeutic translation",
+      summary: "We develop isoform-specific tools and apply them to cancer predisposition, biomarker development and therapeutic strategies.",
+      question: "How can isoform-specific tools improve diagnosis, disease modelling and therapeutic design?",
+      body: [
+        "This programme develops the enabling technologies for isoform-resolved p53 biology, including antibodies, experimental protocols and defined models.",
+        "Translational directions include broader cancer genetics, liquid-biopsy concepts and strategies that use p53-isoform biology to improve engineered antitumour T cells.",
+      ],
+      methods: [
+        "Isoform-specific antibody development",
+        "Liquid-biopsy concepts",
+        "Engineered immune-cell models",
+        "Translational assay development",
+      ],
+      papers: [
+        "Δ133p53α enhances TCR-engineered T-cell fitness (2021)",
+        "p53 isoforms and DNA-damage tolerance (2021)",
+        "Germline variant affecting p53β isoforms predisposes to familial cancer (2024)",
+      ],
+    },
+  ],
+  team: [{ name: "Dr Jean-Christophe Bourdon", role: "Principal Investigator" }],
+  members: [
+    {
+      name: "Dr Jean-Christophe Bourdon",
+      role: "Principal Investigator",
+      bio: "Senior Lecturer in Cancer Research and leader of the Molecular Oncology laboratory. His work established the human p53-isoform network and its relevance to cell fate and cancer.",
+      image: "https://www.dundee.ac.uk/sites/default/files/styles/card_portrait/public/2024-02/Jean-Christophe-Bourdon.jpg.webp?h=3b8e1bb9&itok=7txRTipm",
+      href: "https://www.dundee.ac.uk/people/jean-christophe-bourdon",
+    },
+  ],
+  publications: [
+    { year: "2024", title: "Germline variant affecting p53β isoforms predisposes to familial cancer", journal: "Nature Communications", href: "https://pubmed.ncbi.nlm.nih.gov/39294166/" },
+    { year: "2024", title: "Mutant mice lacking alternatively spliced p53 isoforms unveil Ackr4 as a male-specific prognostic factor in Myc-driven B-cell lymphomas", journal: "eLife", href: "https://pubmed.ncbi.nlm.nih.gov/39298333/" },
+    { year: "2023", title: "It is not all about the alpha: elevated expression of p53β variants is associated with lower survival in melanoma", journal: "Cancer Cell International", href: "https://pubmed.ncbi.nlm.nih.gov/37794430/" },
+    { year: "2022", title: "Alterations in the p53 isoform ratio govern breast cancer cell fate in response to DNA damage", journal: "Cell Death & Disease", href: "https://pubmed.ncbi.nlm.nih.gov/36307393/" },
+    { year: "2021", title: "Adaptive homeostasis and the p53 isoform network", journal: "EMBO Reports", href: "https://discovery.dundee.ac.uk/en/publications/adaptive-homeostasis-and-the-p53-isoform-network/" },
+    { year: "2021", title: "p53 isoforms differentially impact on the POLι-dependent DNA damage tolerance pathway", journal: "Cell Death & Disease", href: "https://doi.org/10.1038/s41419-021-04224-3" },
+    { year: "2021", title: "Δ133p53α enhances metabolic and cellular fitness of TCR-engineered T cells and promotes superior antitumour immunity", journal: "Journal for ImmunoTherapy of Cancer", href: "https://discovery.dundee.ac.uk/en/publications/%CE%B4133p53%CE%B1-enhances-metabolic-and-cellular-fitness-of-tcr-engineere/" },
+    { year: "2016", title: "TP53 drives invasion through expression of its Δ133p53β variant", journal: "eLife", href: "https://pubmed.ncbi.nlm.nih.gov/27630122/" },
+    { year: "2016", title: "p53 Isoforms: Key Regulators of the Cell Fate Decision", journal: "Cold Spring Harbor Perspectives in Medicine", href: "https://pubmed.ncbi.nlm.nih.gov/26801896/" },
+    { year: "2010", title: "p53 isoforms through evolution: from identification to biological function", journal: "Cell Death & Differentiation", href: "https://pubmed.ncbi.nlm.nih.gov/21151028/" },
+    { year: "2009", title: "p53 isoforms Δ133p53 and p53β are endogenous regulators of replicative cellular senescence", journal: "Nature Cell Biology", href: "https://pubmed.ncbi.nlm.nih.gov/19701195/" },
+    { year: "2005", title: "p53 isoforms can regulate p53 transcriptional activity", journal: "Genes & Development", href: "https://pubmed.ncbi.nlm.nih.gov/16131611/" },
+  ],
+  opportunities: [
+    {
+      title: "Postgraduate study",
+      status: "University routes",
+      description: "PhD and research-degree opportunities are normally advertised through the University of Dundee. Applicants should consult current university listings and funding routes.",
+      linkLabel: "Explore research degrees",
+      href: "https://www.dundee.ac.uk/postgraduate/research",
+    },
+    {
+      title: "Postdoctoral research",
+      status: "Enquiries welcome",
+      description: "Researchers with a strong scientific fit may contact the laboratory about suitable fellowships and future opportunities.",
+      linkLabel: "View university vacancies",
+      href: "https://www.dundee.ac.uk/corporate-information/jobs",
+    },
+    {
+      title: "Collaborate with us",
+      status: "Open to collaboration",
+      description: "We welcome aligned collaborations spanning p53 biology, cancer genetics, biomarkers, immunotherapy and isoform-specific technologies.",
+      linkLabel: "Start a conversation",
+      href: "mailto:j.bourdon@dundee.ac.uk?subject=Research%20collaboration%20enquiry",
+    },
+  ],
+  theme: {
+    background: "#f8f8f5",
+    surface: "#ffffff",
+    foreground: "#132d3a",
+    muted: "#647178",
+    accent: "#117b79",
+  },
+};
+
+const defaults = createDefaultBourdonPages(core);
+
+export const recoveredBourdonSite: LabSite = {
+  ...core,
+  pages: {
+    ...defaults,
+    home: {
+      ...defaults.home,
+      footerNote: "Molecular Oncology · University of Dundee",
+      topPortrait: "https://www.dundee.ac.uk/sites/default/files/styles/card_portrait/public/2024-02/Jean-Christophe-Bourdon.jpg.webp?h=3b8e1bb9&itok=7txRTipm",
+      homepageImage: "https://www.dundee.ac.uk/sites/default/files/styles/card_portrait/public/2024-02/Jean-Christophe-Bourdon.jpg.webp?h=3b8e1bb9&itok=7txRTipm",
+      piImage: "https://www.dundee.ac.uk/sites/default/files/styles/card_portrait/public/2024-02/Jean-Christophe-Bourdon.jpg.webp?h=3b8e1bb9&itok=7txRTipm",
+    },
+    contact: {
+      ...defaults.contact,
+      piImage: "https://www.dundee.ac.uk/sites/default/files/styles/card_portrait/public/2024-02/Jean-Christophe-Bourdon.jpg.webp?h=3b8e1bb9&itok=7txRTipm",
+      locationName: "University of Dundee",
+      locationSuffix: "Dundee · Scotland · UK",
+    },
+  },
+};
