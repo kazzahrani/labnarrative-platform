@@ -8,6 +8,7 @@ const PLATFORM_ALIAS_HOSTS = new Set([
 ]);
 const LEGACY_PLATFORM_HOST = "platform.labnarrative.com";
 const SCIENTIFIC_SITE_HOSTS = new Set(["labnarrative.site", "www.labnarrative.site"]);
+const SCIENTIFIC_PUBLIC_ROOT = "labnarrative.site";
 const REFERRAL_PENDING_COOKIE = "ln_referral_pending_v1";
 const WEBSITE_ADMIN_SEGMENTS = new Set([
   "sites",
@@ -33,6 +34,28 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
   const pathname = request.nextUrl.pathname;
+
+  // Scientific client sites now live on <slug>.labnarrative.site.
+  if (host.endsWith(`.${SCIENTIFIC_PUBLIC_ROOT}`) && !SCIENTIFIC_SITE_HOSTS.has(host)) {
+    const subdomain = host.slice(0, -(SCIENTIFIC_PUBLIC_ROOT.length + 1)).split(".")[0];
+    if (!subdomain || RESERVED_SUBDOMAINS.has(subdomain)) {
+      return NextResponse.next();
+    }
+
+    const url = request.nextUrl.clone();
+    const internalPrefix = `/sites/${subdomain}`;
+    const publicPath = url.pathname === internalPrefix
+      ? "/"
+      : url.pathname.startsWith(`${internalPrefix}/`)
+        ? url.pathname.slice(internalPrefix.length)
+        : url.pathname;
+    const suffix = publicPath === "/" ? "" : publicPath;
+    url.pathname = `${internalPrefix}${suffix}`;
+
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-labnarrative-public-subdomain", subdomain);
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
 
   // Separate scientific-websites surface on labnarrative.site. This intentionally
   // shares the deployment while keeping the trading product on labnarrative.com.
@@ -65,6 +88,14 @@ export function proxy(request: NextRequest) {
       status: 404,
       headers: { "X-Robots-Tag": "noindex, nofollow" },
     });
+  }
+
+  if (host === "bourdon.labnarrative.com") {
+    const target = request.nextUrl.clone();
+    target.protocol = "https:";
+    target.hostname = "bourdon.labnarrative.site";
+    target.port = "";
+    return NextResponse.redirect(target, 308);
   }
 
   // Keep the historic Bourdon proposal/process links useful after labnarrative.com
