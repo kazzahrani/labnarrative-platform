@@ -6,7 +6,7 @@ const PLATFORM_ALIAS_HOSTS = new Set([
   "labnarrative-platform-lab-narrative.vercel.app",
   "labnarrative-platform-git-main-lab-narrative.vercel.app",
 ]);
-const LEGACY_PLATFORM_HOST = "platform.labnarrative.com";
+const LEGACY_PLATFORM_HOST = "platform.labnarrative.com";\nconst SCIENTIFIC_SITE_HOSTS = new Set(["labnarrative.site", "www.labnarrative.site"]);
 const REFERRAL_PENDING_COOKIE = "ln_referral_pending_v1";
 const WEBSITE_ADMIN_SEGMENTS = new Set([
   "sites",
@@ -31,6 +31,49 @@ function normalizeReferralCode(value: string | null) {
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0].toLowerCase() ?? "";
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "labnarrative.com";
+  const pathname = request.nextUrl.pathname;
+
+  // Separate scientific-websites surface on labnarrative.site. This intentionally
+  // shares the deployment while keeping the trading product on labnarrative.com.
+  if (SCIENTIFIC_SITE_HOSTS.has(host)) {
+    const scientificUrl = request.nextUrl.clone();
+    const staticRoutes = new Map<string, string>([
+      ["/", "/scientific-site/index.html"],
+      ["/styles.css", "/scientific-site/styles.css"],
+      ["/process", "/scientific-site/process/index.html"],
+      ["/process/", "/scientific-site/process/index.html"],
+      ["/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3", "/scientific-site/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/index.html"],
+      ["/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/", "/scientific-site/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/index.html"],
+      ["/clients/bourdon-a660d7d9", "/scientific-site/clients/bourdon-a660d7d9/index.html"],
+      ["/clients/bourdon-a660d7d9/", "/scientific-site/clients/bourdon-a660d7d9/index.html"],
+    ]);
+    const target = staticRoutes.get(pathname);
+    if (target) {
+      scientificUrl.pathname = target;
+      return NextResponse.rewrite(scientificUrl);
+    }
+    return new NextResponse("Not Found", {
+      status: 404,
+      headers: { "X-Robots-Tag": "noindex, nofollow" },
+    });
+  }
+
+  // Keep the historic Bourdon proposal/process links useful after labnarrative.com
+  // became the trading product.
+  if (host === rootDomain || host === `www.${rootDomain}`) {
+    if (
+      pathname === "/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3" ||
+      pathname === "/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/"
+    ) {
+      return NextResponse.redirect(
+        new URL("https://labnarrative.site/proposal/a660d7d9-8c6c-4813-b21c-e72ac2fa14e3/"),
+        308,
+      );
+    }
+    if (pathname === "/process" || pathname === "/process/") {
+      return NextResponse.redirect(new URL("https://labnarrative.site/process/"), 308);
+    }
+  }
   const isAdminHost =
     host === rootDomain ||
     host === `www.${rootDomain}` ||
