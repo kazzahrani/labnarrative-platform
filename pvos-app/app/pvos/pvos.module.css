@@ -95,3 +95,41 @@
 .light .sidebar + .main{background:#f5f7f8}
 
 @media(max-width:650px){.modalBackdrop{padding:12px}.modalCard{padding:16px;max-height:calc(100vh - 24px)}}
+
+
+/* RMP portfolio: preserve QPPV workbook structure without losing orientation in a wide table. */
+.rmpTable{min-width:2280px;table-layout:fixed}
+.rmpTable th,.rmpTable td{vertical-align:middle}
+.rmpTable thead th{white-space:normal;line-height:1.25}
+.rmpGroupRow th{background:#f7f9fa;border-bottom:1px solid #dfe5e9}
+.rmpFieldRow th{background:#fbfcfc}
+.rmpInitialGroup{background:#f3f7ed!important;border-left:2px solid #d7e2be!important;border-right:2px solid #d7e2be!important;text-align:center!important}
+.rmpSubsequentGroup{background:#f3f6f8!important;border-left:2px solid #d8e0e5!important;border-right:2px solid #d8e0e5!important;text-align:center!important}
+.rmpInitialCell{background:#fcfdf9;border-left-color:#eef2e5!important}
+.rmpSubsequentCell{background:#fbfcfd;border-left-color:#edf1f3!important}
+.rmpTable th:nth-child(4),.rmpTable td:nth-child(4){width:105px}
+.rmpTable th:nth-child(5),.rmpTable td:nth-child(5){width:100px}
+.rmpDue{width:150px;background:#fffdf7!important;border-left:2px solid #eee2b8!important;border-right:2px solid #eee2b8!important}
+.rmpAction{width:86px}
+.rmpSticky{position:sticky;z-index:2;background:#fff!important}
+.rmpTable thead .rmpSticky{z-index:5;background:#f7f9fa!important}
+.rmpCompany{left:0;width:150px;min-width:150px;max-width:150px}
+.rmpProduct{left:150px;width:120px;min-width:120px;max-width:120px}
+.rmpMolecule{left:270px;width:130px;min-width:130px;max-width:130px;box-shadow:5px 0 8px -7px rgba(32,48,58,.45)}
+.rmpTable tbody tr:hover td{background:#f8fafb}
+.rmpTable tbody tr:hover .rmpSticky{background:#f8fafb!important}
+.rmpTable tbody td{line-height:1.35}
+.rmpTable th:nth-child(n+6):nth-child(-n+11),.rmpTable td:nth-child(n+6):nth-child(-n+11){min-width:135px}
+.rmpTable th:nth-child(n+13):nth-child(-n+18),.rmpTable td:nth-child(n+13):nth-child(-n+18){min-width:135px}
+.rmpTable th:nth-child(11),.rmpTable td:nth-child(11),.rmpTable th:nth-child(18),.rmpTable td:nth-child(18){min-width:190px}
+.root:not(.light) .rmpGroupRow th{background:#151d24;border-bottom-color:#26313a}
+.root:not(.light) .rmpFieldRow th{background:#12191f}
+.root:not(.light) .rmpInitialGroup{background:#182016!important;border-color:#344429!important}
+.root:not(.light) .rmpSubsequentGroup{background:#171e24!important;border-color:#2d3942!important}
+.root:not(.light) .rmpInitialCell{background:#111813}
+.root:not(.light) .rmpSubsequentCell{background:#11171c}
+.root:not(.light) .rmpDue{background:#1b1810!important;border-color:#4b4020!important}
+.root:not(.light) .rmpSticky{background:#10161c!important}
+.root:not(.light) .rmpTable thead .rmpSticky{background:#151d24!important}
+.root:not(.light) .rmpTable tbody tr:hover td{background:#151d24}
+.root:not(.light) .rmpTable tbody tr:hover .rmpSticky{background:#151d24!important}
