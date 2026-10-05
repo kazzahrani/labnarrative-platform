@@ -42,7 +42,7 @@
 .light .brand small{color:#70808c}
 .light .mark{background:transparent;border:0;box-shadow:none}
 .light .nav a{color:#586874}
-.light .nav a:hover{background:#eef3f5;color:#162027}
+.light .nav a:hover{background:#eef3f5;color:#162027}.light .nav a.navActive{background:#eef3f5;color:#162027;font-weight:500}
 .light .foot{background:#fbfcfc;border-color:#dfe5e9;color:#71808b}
 .light .userEmail{color:#2b3740}
 .light .signOut{color:#667783}.light .signOut:hover{color:#111a20}
