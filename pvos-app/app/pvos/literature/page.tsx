@@ -53,9 +53,11 @@ export default function LiteraturePage(){
   const [companies,setCompanies]=useState<any[]>([]);
   const [products,setProducts]=useState<any[]>([]);
   const [followups,setFollowups]=useState<any[]>([]);
+  const [records,setRecords]=useState<any[]>([]);
   const [loading,setLoading]=useState(true);
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
+  const [selectedRun,setSelectedRun]=useState<any|null>(null);
   const [busy,setBusy]=useState(false);
   const [analyzing,setAnalyzing]=useState(false);
   const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"saudi"|"reviewed"|"all">("open");
@@ -67,12 +69,13 @@ export default function LiteraturePage(){
   async function load(){
     if(!organizationId)return;
     setLoading(true);
-    const [s,r,i,c,f]=await Promise.all([
+    const [s,r,i,c,f,rec]=await Promise.all([
       pvosSupabase.from("pvos_literature_sources").select("*").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_literature_runs").select("*").eq("organization_id",organizationId).order("period_end",{ascending:false}),
       pvosSupabase.from("pvos_literature_items").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
       pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name"),
-      pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false})
+      pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
+      pvosSupabase.from("pvos_literature_screening_records").select("*").eq("organization_id",organizationId).order("completed_at",{ascending:false})
     ]);
     const cs=c.data||[];
     let ps:any[]=[];
@@ -86,6 +89,7 @@ export default function LiteraturePage(){
     setCompanies(cs);
     setProducts(ps);
     setFollowups(f.data||[]);
+    setRecords(rec.data||[]);
     setRunForm(v=>({...v,companyId:v.companyId||cs[0]?.id||""}));
     setLoading(false);
   }
@@ -122,6 +126,27 @@ export default function LiteraturePage(){
     return true;
   }),[sortedItems,queueFilter,productFilter]);
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
+  const recordMap=useMemo(()=>Object.fromEntries(records.map(x=>[x.run_id,x])),[records]);
+  const runItems=(runId:string)=>items.filter(x=>x.run_id===runId);
+  const runFollowups=(runId:string)=>{
+    const ids=new Set(runItems(runId).map(x=>x.id));
+    return followups.filter(x=>ids.has(x.literature_item_id));
+  };
+  const statsForRun=(run:any)=>{
+    const xs=runItems(run.id);
+    const fs=runFollowups(run.id);
+    const reviewed=xs.filter(x=>x.review_status==="relevant"||x.review_status==="not_relevant");
+    return {
+      total:xs.length,
+      reviewed:reviewed.length,
+      open:xs.filter(x=>x.review_status==="unreviewed"||x.review_status==="needs_review").length,
+      relevant:xs.filter(x=>x.review_status==="relevant").length,
+      notRelevant:xs.filter(x=>x.review_status==="not_relevant").length,
+      saudi:xs.filter(x=>x.metadata?.urgent_saudi).length,
+      signal:fs.filter(x=>x.destination==="signal_review"&&x.status!=="dismissed").length,
+      psur:fs.filter(x=>x.destination==="psur_evidence"&&x.status!=="dismissed").length
+    };
+  };
   const psurEvidence=followups
     .filter(x=>x.destination==="psur_evidence"&&x.status!=="dismissed")
     .map(x=>({followup:x,item:items.find(i=>i.id===x.literature_item_id),product:productMap[x.product_id]}))
@@ -234,7 +259,7 @@ export default function LiteraturePage(){
         pvosSupabase.from("pvos_literature_runs").update({
           status:"review",
           result_count:payload.length,
-          metadata:{v0:true,scope:"all_company_products",connectors:["pubmed"],pubmed_results:payload.length}
+          metadata:{v0:true,scope:"all_company_products",connectors:["pubmed"],pubmed_results:payload.length,searches:result.searches||[]}
         }).eq("id",run.id)
       ]);
 
@@ -318,6 +343,113 @@ export default function LiteraturePage(){
     if(error){setMessage(error.message);return;}
     setMessage("Added to "+label+".");
     await load();
+  }
+
+  async function completeScreening(run:any){
+    if(!organizationId||!session)return;
+    const xs=runItems(run.id);
+    const stats=statsForRun(run);
+    if(stats.open>0){
+      setMessage("Cannot complete screening: "+stats.open+" article(s) still need a final QPPV decision.");
+      return;
+    }
+    setBusy(true);setMessage("");
+    try{
+      const sourceIds=[...new Set(xs.map(x=>x.source_id).filter(Boolean))];
+      const sourceSnapshot=sources.filter(x=>sourceIds.includes(x.id)).map(x=>({
+        id:x.id,name:x.name,url:x.url,method:x.method,language:x.language
+      }));
+      const scopedProducts=products.filter(x=>x.company_id===run.company_id).map(x=>({
+        id:x.id,brand_name:x.brand_name,active_ingredient:x.active_ingredient
+      }));
+      const searchSnapshot=(run.metadata?.searches?.length?run.metadata.searches:scopedProducts.map(p=>{
+        const sample=xs.find(x=>x.product_id===p.id);
+        return {product_id:p.id,brand_name:p.brand_name,active_ingredient:p.active_ingredient,terms:sample?.metadata?.search_terms||[]};
+      }));
+      const decisions=xs.map(x=>({
+        literature_item_id:x.id,
+        product_id:x.product_id,
+        product:productMap[x.product_id]?.brand_name||null,
+        title:x.title,
+        pmid:x.metadata?.pmid||null,
+        doi:x.doi||null,
+        article_url:x.article_url,
+        relevance:x.relevance,
+        review_status:x.review_status,
+        reviewer_user_id:x.reviewer_user_id,
+        reviewed_at:x.reviewed_at,
+        saudi_alert:!!x.metadata?.urgent_saudi
+      }));
+      const downstream=runFollowups(run.id).map(x=>({
+        literature_item_id:x.literature_item_id,
+        destination:x.destination,
+        status:x.status,
+        created_at:x.created_at
+      }));
+      const completedAt=new Date().toISOString();
+      const {error:recordError}=await pvosSupabase.from("pvos_literature_screening_records").upsert({
+        organization_id:organizationId,
+        run_id:run.id,
+        company_id:run.company_id,
+        period_start:run.period_start,
+        period_end:run.period_end,
+        source_snapshot:sourceSnapshot,
+        product_snapshot:scopedProducts,
+        search_snapshot:searchSnapshot,
+        metrics:stats,
+        decision_snapshot:decisions,
+        downstream_snapshot:downstream,
+        completed_by:session.user.id,
+        completed_at:completedAt,
+        metadata:{record_version:"v1",review_model:"QPPV final decision",generated_by:"PVOS"}
+      },{onConflict:"run_id"});
+      if(recordError)throw recordError;
+      const {error:runError}=await pvosSupabase.from("pvos_literature_runs").update({
+        status:"complete",
+        completed_by:session.user.id,
+        completed_at:completedAt,
+        reviewed_count:stats.reviewed
+      }).eq("id",run.id);
+      if(runError)throw runError;
+      setMessage("Screening completed. Inspection-ready evidence record created.");
+      await load();
+      setSelectedRun({...run,status:"complete",completed_at:completedAt});
+    }catch(e:any){
+      setMessage(e?.message||"Could not complete screening.");
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  function exportScreeningRecord(run:any){
+    const record=recordMap[run.id];
+    if(!record)return;
+    const lines:string[]=[];
+    const add=(k:string,v:any)=>lines.push('"'+String(k).replaceAll('"','""')+'","'+String(v??"").replaceAll('"','""')+'"');
+    add("PVOS Literature Screening Record","v1");
+    add("Company",companyMap[run.company_id]||"");
+    add("Period",run.period_start+" to "+run.period_end);
+    add("Completed at",record.completed_at);
+    add("Sources",(record.source_snapshot||[]).map((x:any)=>x.name).join("; "));
+    add("Products",(record.product_snapshot||[]).map((x:any)=>x.brand_name+" — "+(x.active_ingredient||"")).join("; "));
+    const m=record.metrics||{};
+    add("Total results",m.total);
+    add("Reviewed",m.reviewed);
+    add("Relevant",m.relevant);
+    add("Not relevant",m.notRelevant);
+    add("Saudi alerts",m.saudi);
+    add("Signal escalations",m.signal);
+    add("PSUR selections",m.psur);
+    lines.push("");
+    lines.push('"Article","Product","PMID","Safety priority","QPPV decision","Saudi alert","Reviewed at"');
+    for(const d of record.decision_snapshot||[]){
+      lines.push([d.title,d.product,d.pmid,d.relevance,d.review_status,d.saudi_alert?"Yes":"No",d.reviewed_at].map((v:any)=>'"'+String(v??"").replaceAll('"','""')+'"').join(","));
+    }
+    const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="PVOS-literature-screening-"+run.period_end+".csv";
+    document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
 
   return <>
@@ -446,7 +578,7 @@ export default function LiteraturePage(){
           <span className={styles.muted}>One auditable record per screening period</span>
         </div>
         {loading?<div className={styles.empty}>Loading screening runs…</div>:runs.length?<div className={styles.tableWrap}><table className={styles.table}>
-          <thead><tr><th>Period</th><th>Company</th><th>Sources</th><th>Products</th><th>Results</th><th>Reviewed</th><th>Status</th></tr></thead>
+          <thead><tr><th>Period</th><th>Company</th><th>Sources</th><th>Products</th><th>Results</th><th>Reviewed</th><th>Status</th><th></th></tr></thead>
           <tbody>{runs.map(r=>{
             const counts=runCounts[r.id]||{total:r.result_count||0,reviewed:r.reviewed_count||0};
             return <tr key={r.id}>
@@ -456,7 +588,8 @@ export default function LiteraturePage(){
               <td>{r.product_count}</td>
               <td>{counts.total}</td>
               <td>{counts.reviewed}</td>
-              <td><Badge tone={r.status==="complete"?"green":r.status==="review"?"amber":"default"}>{String(r.status).replace("_"," ")}</Badge></td>
+              <td><Badge tone={recordMap[r.id]?"green":r.status==="review"?"amber":"default"}>{recordMap[r.id]?"Complete":String(r.status).replace("_"," ")}</Badge></td>
+              <td><button className={styles.buttonGhost} onClick={()=>{setSelectedRun(r);setMessage("")}}>Open</button></td>
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No screening runs yet. Create one for a historical or current screening period.</div>}
@@ -489,6 +622,41 @@ export default function LiteraturePage(){
         </table></div>:<div className={styles.empty}>No literature findings have been selected for PSUR evidence yet.</div>}
       </>:null}
     </section>
+
+    {selectedRun?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedRun(null)}}>
+      <div className={styles.modalCard}>
+        <div className={styles.modalHeader}>
+          <div>
+            <div className={styles.eyebrow}>Screening evidence</div>
+            <h2>{dateLabel(selectedRun.period_start)} – {dateLabel(selectedRun.period_end)}</h2>
+            <div className={styles.muted} style={{marginTop:5}}>{companyMap[selectedRun.company_id]||"Company"}</div>
+          </div>
+          <button className={styles.modalClose} onClick={()=>setSelectedRun(null)}>×</button>
+        </div>
+        {(()=>{
+          const s=statsForRun(selectedRun);
+          const rec=recordMap[selectedRun.id];
+          return <>
+            <div className={styles.info}>
+              <div className={styles.kv}><span>Results retrieved</span><span>{s.total}</span></div>
+              <div className={styles.kv}><span>Final decisions</span><span>{s.reviewed} / {s.total}</span></div>
+              <div className={styles.kv}><span>Still open</span><span>{s.open}</span></div>
+              <div className={styles.kv}><span>Relevant</span><span>{s.relevant}</span></div>
+              <div className={styles.kv}><span>Not relevant</span><span>{s.notRelevant}</span></div>
+              <div className={styles.kv}><span>Saudi alerts</span><span>{s.saudi}</span></div>
+              <div className={styles.kv}><span>Signal escalations</span><span>{s.signal}</span></div>
+              <div className={styles.kv}><span>PSUR selections</span><span>{s.psur}</span></div>
+            </div>
+            <div className={s.open?styles.notice:styles.successBox} style={{marginTop:14}}>
+              {rec?"This screening run is complete and its evidence snapshot is locked in the inspection record.":s.open?String(s.open)+" article(s) still require a final Relevant / Not relevant decision before the run can be completed.":"All retrieved articles have a final QPPV decision. The run is ready to complete."}
+            </div>
+            <div className={styles.modalActions}>
+              {rec?<button className={styles.button} onClick={()=>exportScreeningRecord(selectedRun)}>Export screening record</button>:<button className={styles.button} disabled={busy||s.open>0} onClick={()=>completeScreening(selectedRun)}>{busy?"Creating record…":"Complete screening & create evidence"}</button>}
+            </div>
+          </>;
+        })()}
+      </div>
+    </div>:null}
 
     {showSource?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setShowSource(false)}}>
       <form className={styles.modalCard} onSubmit={addSource}>
