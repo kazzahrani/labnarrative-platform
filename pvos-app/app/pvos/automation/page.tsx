@@ -177,7 +177,7 @@ export default function AutomationPage(){
       <div style={{padding:14,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:12}}>
         {PV_TEMPLATES.map(t=><div key={t.id} className={styles.info} style={{margin:0}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}><div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}><h3 style={{margin:0}}>{t.title}</h3><HoverInfo text={t.description+(t.cadence==="event"?" This is event-driven, so no automatic deadline is created until the event or product-specific schedule is confirmed.":"")}/></div><Badge>{t.cadence==="event"?"Event":t.cadence}</Badge></div>
-          {t.cadence!=="event"?<label style={{display:"block",marginTop:14,fontSize:13,fontWeight:650}}>First due date<input className={styles.input} type="date" value={dates[t.id]||""} onChange={e=>setDates(v=>({...v,[t.id]:e.target.value}))}/></label>:null}
+          {t.cadence!=="event"?<label style={{display:"block",marginTop:14,fontSize:13,fontWeight:400}}>First due date<input className={styles.input} style={{fontWeight:400}} type="date" value={dates[t.id]||""} onChange={e=>setDates(v=>({...v,[t.id]:e.target.value}))}/></label>:null}
           <div className={styles.inlineActions}><button className={added.has(t.id)?styles.buttonGhost:styles.button} disabled={!companyId||!!busy||added.has(t.id)} onClick={()=>addTemplate(t)}>{added.has(t.id)?"Added":busy===t.id?"Adding…":"Add template"}</button></div>
         </div>)}
       </div>
@@ -188,8 +188,8 @@ export default function AutomationPage(){
       <div style={{padding:14}}>
         <div className={styles.inlineActions} style={{marginTop:0,flexWrap:"wrap"}}>{(["companies","products","obligations","tasks"] as ImportKind[]).map(k=><button key={k} className={kind===k?styles.button:styles.buttonGhost} onClick={()=>changeKind(k)}>{k[0].toUpperCase()+k.slice(1)}</button>)}</div>
         <div className={styles.formGrid} style={{marginTop:14}}>
-          <label className={styles.full}>CSV file<input className={styles.input} type="file" accept=".csv,text/csv" onChange={fileChanged}/></label>
-          <label className={styles.full}>CSV preview<textarea className={styles.input} style={{minHeight:210,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace"}} value={csv} onChange={e=>setCsv(e.target.value)}/></label>
+          <label className={styles.full}>CSV file<input className={styles.input} style={{fontWeight:400}} type="file" accept=".csv,text/csv" onChange={fileChanged}/></label>
+          <label className={styles.full}>CSV preview<textarea className={styles.input} style={{minHeight:210,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:400}} value={csv} onChange={e=>setCsv(e.target.value)}/></label>
         </div>
         {importMessage?<div className={importMessage.toLowerCase().includes("failed")?styles.errorBox:styles.successBox} style={{marginTop:12}}>{importMessage}</div>:null}
         <div className={styles.inlineActions}><button className={styles.button} disabled={importing} onClick={runImport}>{importing?"Importing…":"Import "+kind}</button></div>
