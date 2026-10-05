@@ -104,7 +104,7 @@ export default function RmpPage(){
 
     <div style={{padding:"14px 20px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
       <button className={tab==="overview"?styles.button:styles.buttonGhost} onClick={()=>setTab("overview")}>Overview</button>
-      <button className={tab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setTab("initial")}>Information regarding Initial RMP</button>
+      <button className={tab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setTab("initial")}>Initial RMP</button>
       <button className={tab==="updates"?styles.button:styles.buttonGhost} onClick={()=>setTab("updates")}>Subsequent RMP ({r.versions.filter(v=>v.type==="subsequent").length})</button>
     </div>
 
@@ -127,7 +127,7 @@ export default function RmpPage(){
     </div>:null}
 
     {tab==="initial"?<div style={{padding:20}}>
-      <h3 style={{margin:"0 0 14px",fontSize:15}}>Information regarding Initial RMP</h3>
+      <h3 style={{margin:"0 0 14px",fontSize:15}}>Initial RMP</h3>
       <div className={styles.formGrid}>
         <label>DLP<input className={styles.input} value={initial.dlp} onChange={e=>setInitial({...initial,dlp:e.target.value})} placeholder="Date or NA"/></label>
         <label>Date of submission<input className={styles.input} type="date" value={initial.submission_date} onChange={e=>setInitial({...initial,submission_date:e.target.value})}/></label>
@@ -146,7 +146,7 @@ export default function RmpPage(){
 
     {tab==="updates"?<div style={{padding:20}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
-        <div><h3 style={{margin:0,fontSize:15}}>Information regarding subsequent RMP</h3><div className={styles.muted} style={{marginTop:4}}>Newest submission first. Open a record to see the Information Submitted and update details.</div></div>
+        <div><h3 style={{margin:0,fontSize:15}}>Subsequent RMP</h3><div className={styles.muted} style={{marginTop:4}}>Newest submission first. Open a record to see the Information Submitted and update details.</div></div>
         <button className={styles.button} onClick={()=>setAddOpen(true)}>+ Add subsequent RMP</button>
       </div>
 
@@ -174,7 +174,7 @@ export default function RmpPage(){
    {addOpen?<div className={styles.modalBackdrop} style={{zIndex:1200}} onMouseDown={e=>{if(e.target===e.currentTarget)setAddOpen(false)}}>
       <form onSubmit={add} className={styles.modalCard} style={{width:"min(760px,100%)"}}>
         <div className={styles.modalHeader}>
-          <div><div className={styles.eyebrow}>{sel.brand_name}</div><h2>Information regarding subsequent RMP</h2><div className={styles.muted}>Add a new subsequent RMP record without changing previous submissions.</div></div>
+          <div><div className={styles.eyebrow}>{sel.brand_name}</div><h2>Subsequent RMP</h2><div className={styles.muted}>Add a new subsequent RMP record without changing previous submissions.</div></div>
           <button type="button" className={styles.modalClose} onClick={()=>setAddOpen(false)}>×</button>
         </div>
         <div className={styles.formGrid}>
