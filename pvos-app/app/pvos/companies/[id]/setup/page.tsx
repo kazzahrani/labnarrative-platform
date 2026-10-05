@@ -17,7 +17,7 @@ export default function CompanySetupPage(){
   const params=useParams<{id:string}>(); const router=useRouter(); const {session}=usePVOS();
   const [company,setCompany]=useState<any|null>(null);
   const [productName,setProductName]=useState(""); const [ingredient,setIngredient]=useState(""); const [rmp,setRmp]=useState("Routine");
-  const [obligationTitle,setObligationTitle]=useState(""); const [activity,setActivity]=useState("Literature"); const [cadence,setCadence]=useState("weekly"); const [nextDue,setNextDue]=useState(localInput(7));
+  const [obligationTitle,setObligationTitle]=useState(""); const [activity,setActivity]=useState("Literature"); const [cadence,setCadence]=useState("weekly"); const [nextDue,setNextDue]=useState(localInput(7)); const [responsibility,setResponsibility]=useState("organization");
   const [routeName,setRouteName]=useState(""); const [routeActivity,setRouteActivity]=useState("General"); const [routeRoles,setRouteRoles]=useState("QPPV, Quality, Manager, Client");
   const [routes,setRoutes]=useState<any[]>([]);
   const [message,setMessage]=useState<string|null>(null); const [busy,setBusy]=useState(false);
@@ -41,7 +41,7 @@ export default function CompanySetupPage(){
   async function addObligation(e:FormEvent){
     e.preventDefault();if(!company||!session)return;setBusy(true);setMessage(null);
     const {error}=await pvosSupabase.from("pvos_obligations").insert({
-      company_id:company.id,title:obligationTitle.trim()||activity+" obligation",activity_type:activity,cadence,owner_user_id:session.user.id,responsibility:"organization",evidence_required:true,next_due_at:cadence==="event"?null:new Date(nextDue).toISOString()
+      company_id:company.id,title:obligationTitle.trim()||activity+" obligation",activity_type:activity,cadence,owner_user_id:session.user.id,responsibility,evidence_required:true,next_due_at:cadence==="event"?null:new Date(nextDue).toISOString()
     });
     if(!error) await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
     setBusy(false); if(error){setMessage(error.message);return;} setObligationTitle("");setMessage(cadence==="event"?"Event-triggered obligation added.":"Recurring obligation added and upcoming tasks generated.");
@@ -74,7 +74,7 @@ export default function CompanySetupPage(){
         <label>Activity<select className={styles.input} value={activity} onChange={e=>setActivity(e.target.value)}>{["Literature","Signal","PSSF","RMP","PSUR/PBRER","Training","Reconciliation","SOP","CAPA","Other"].map(x=><option key={x}>{x}</option>)}</select></label>
         <label>Title<input className={styles.input} value={obligationTitle} onChange={e=>setObligationTitle(e.target.value)} placeholder="e.g. Monthly authority review"/></label>
         <label>Frequency<select className={styles.input} value={cadence} onChange={e=>setCadence(e.target.value)}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Every 6 months</option><option value="annual">Annual</option><option value="event">Event-triggered</option></select></label>
-        {cadence!=="event"?<label>Next due date<input className={styles.input} type="datetime-local" value={nextDue} onChange={e=>setNextDue(e.target.value)} required/></label>:null}
+        <label>Responsibility<select className={styles.input} value={responsibility} onChange={e=>setResponsibility(e.target.value)}><option value="organization">Our organization</option><option value="client">Client</option><option value="shared">Shared</option></select></label>{cadence!=="event"?<label>Next due date<input className={styles.input} type="datetime-local" value={nextDue} onChange={e=>setNextDue(e.target.value)} required/></label>:null}
       </div><div className={styles.inlineActions}><button className={styles.button} disabled={busy}>Add obligation</button></div></form>
     </div>
 
