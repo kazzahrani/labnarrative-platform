@@ -1,6 +1,7 @@
 export function dueLabel(dueAt:string|null|undefined, status?:string) {
   if (status === "complete") return "Complete";
-  if (status === "awaiting_review" || status === "awaiting_external") return "Awaiting approval";
+  if (status === "awaiting_review") return "Awaiting approval";
+  if (status === "awaiting_external") return "Awaiting external";
   if (status === "in_progress") return "In progress";
   if (!dueAt) return "No deadline";
   const due = new Date(dueAt);
