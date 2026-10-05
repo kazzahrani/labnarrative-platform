@@ -128,21 +128,92 @@ export default function LiteraturePage(){
     if(!organizationId||!session||!runForm.companyId||!runForm.start||!runForm.end)return;
     if(runForm.end<runForm.start){setMessage("Period end must be on or after the start date.");return;}
     const companyProducts=products.filter(x=>x.company_id===runForm.companyId);
+    if(!companyProducts.length){setMessage("This company has no products to screen.");return;}
+
     setBusy(true);setMessage("");
-    const {error}=await pvosSupabase.from("pvos_literature_runs").insert({
-      organization_id:organizationId,
-      company_id:runForm.companyId,
-      period_start:runForm.start,
-      period_end:runForm.end,
-      status:"draft",
-      started_by:session.user.id,
-      source_count:activeSources.length,
-      product_count:companyProducts.length,
-      metadata:{v0:true,scope:"all_company_products"}
-    });
-    setBusy(false);
-    if(error){setMessage(error.message);return;}
-    setShowRun(false);setTab("runs");setMessage("Screening run created. Source automation will populate its screening queue.");await load();
+    let runId:string|undefined;
+    try{
+      const {data:source,error:sourceError}=await pvosSupabase.from("pvos_literature_sources").upsert({
+        organization_id:organizationId,
+        name:"PubMed",
+        url:"https://pubmed.ncbi.nlm.nih.gov/",
+        language:"English",
+        screening_frequency:"weekly",
+        method:"api",
+        active:true,
+        next_due_at:nextDue("weekly"),
+        metadata:{system_source:true,connector:"pubmed"}
+      },{onConflict:"organization_id,name"}).select("*").single();
+      if(sourceError)throw sourceError;
+
+      const {data:run,error:runError}=await pvosSupabase.from("pvos_literature_runs").insert({
+        organization_id:organizationId,
+        company_id:runForm.companyId,
+        period_start:runForm.start,
+        period_end:runForm.end,
+        status:"running",
+        started_by:session.user.id,
+        source_count:1,
+        product_count:companyProducts.length,
+        metadata:{v0:true,scope:"all_company_products",connectors:["pubmed"]}
+      }).select("*").single();
+      if(runError||!run)throw runError||new Error("Could not create screening run.");
+      runId=run.id;
+
+      const response=await fetch("/api/pvos/literature/pubmed",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer "+session.access_token
+        },
+        body:JSON.stringify({
+          periodStart:runForm.start,
+          periodEnd:runForm.end,
+          products:companyProducts.map(p=>({
+            id:p.id,
+            brand_name:p.brand_name,
+            active_ingredient:p.active_ingredient
+          }))
+        })
+      });
+      const result=await response.json();
+      if(!response.ok)throw new Error(result?.error||"PubMed screening failed.");
+
+      const payload=(result.items||[]).map((x:any)=>({
+        ...x,
+        organization_id:organizationId,
+        run_id:run.id,
+        source_id:source.id,
+        company_id:runForm.companyId
+      }));
+      if(payload.length){
+        const {error:itemError}=await pvosSupabase.from("pvos_literature_items").insert(payload);
+        if(itemError)throw itemError;
+      }
+
+      const now=new Date().toISOString();
+      await Promise.all([
+        pvosSupabase.from("pvos_literature_sources").update({
+          last_checked_at:now,
+          next_due_at:nextDue("weekly")
+        }).eq("id",source.id),
+        pvosSupabase.from("pvos_literature_runs").update({
+          status:"review",
+          result_count:payload.length,
+          metadata:{v0:true,scope:"all_company_products",connectors:["pubmed"],pubmed_results:payload.length}
+        }).eq("id",run.id)
+      ]);
+
+      setShowRun(false);
+      setTab("queue");
+      setMessage("Screening run created: PubMed searched "+companyProducts.length+" products and returned "+payload.length+" articles for QPPV review.");
+      await load();
+    }catch(e:any){
+      if(runId)await pvosSupabase.from("pvos_literature_runs").update({status:"draft",metadata:{v0:true,error:e?.message||"Screening failed"}}).eq("id",runId);
+      setMessage(e?.message||"Screening failed.");
+    }finally{
+      setBusy(false);
+    }
   }
 
   async function setReview(item:any,status:ReviewStatus){
@@ -238,7 +309,7 @@ export default function LiteraturePage(){
               </td>
             </tr>
           })}</tbody>
-        </table></div>:<div className={styles.empty}>No articles yet. Once source automation is connected, retrieved articles will appear here for QPPV review rather than being silently discarded.</div>}
+        </table></div>:<div className={styles.empty}>No articles yet. Run a screening period to retrieve PubMed results for the company products. Local journals will be connected as Reema provides the required source list.</div>}
       </>:null}
 
       {tab==="runs"?<>
@@ -284,7 +355,7 @@ export default function LiteraturePage(){
     {showRun?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setShowRun(false)}}>
       <form className={styles.modalCard} onSubmit={createRun}>
         <div className={styles.modalHeader}>
-          <div><div className={styles.eyebrow}>Literature screening</div><h2>New screening run</h2><div className={styles.muted} style={{marginTop:5}}>V0 records the screening scope and review trail. Automated retrieval will be connected source-by-source.</div></div>
+          <div><div className={styles.eyebrow}>Literature screening</div><h2>New screening run</h2><div className={styles.muted} style={{marginTop:5}}>This first live connector searches PubMed for every product in the selected company and sends every retrieved result to the QPPV review queue.</div></div>
           <button type="button" className={styles.modalClose} onClick={()=>setShowRun(false)}>×</button>
         </div>
         <div className={styles.formGrid}>
@@ -293,11 +364,11 @@ export default function LiteraturePage(){
           <label>Period end<input className={styles.input} type="date" value={runForm.end} onChange={e=>setRunForm({...runForm,end:e.target.value})} required/></label>
         </div>
         <div className={styles.info} style={{marginTop:16}}>
-          <div className={styles.kv}><span>Active sources</span><span>{activeSources.length}</span></div>
+          <div className={styles.kv}><span>Connected now</span><span>PubMed API</span></div>
           <div className={styles.kv}><span>Products</span><span>{products.filter(x=>x.company_id===runForm.companyId).length}</span></div>
           <div className={styles.kv}><span>Review model</span><span>Automation prioritizes · QPPV decides</span></div>
         </div>
-        <div className={styles.modalActions}><button type="button" className={styles.buttonGhost} onClick={()=>setShowRun(false)}>Cancel</button><button className={styles.button} disabled={busy}>{busy?"Creating…":"Create run"}</button></div>
+        <div className={styles.modalActions}><button type="button" className={styles.buttonGhost} onClick={()=>setShowRun(false)}>Cancel</button><button className={styles.button} disabled={busy}>{busy?"Searching PubMed…":"Run screening"}</button></div>
       </form>
     </div>:null}
   </>;
