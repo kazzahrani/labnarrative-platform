@@ -56,6 +56,7 @@ export default function LiteraturePage(){
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
   const [busy,setBusy]=useState(false);
+  const [analyzing,setAnalyzing]=useState(false);
   const [message,setMessage]=useState("");
   const [sourceForm,setSourceForm]=useState({name:"",url:"",language:"English",frequency:"weekly",notes:""});
   const [runForm,setRunForm]=useState({companyId:"",start:daysAgo(7),end:today()});
@@ -92,6 +93,21 @@ export default function LiteraturePage(){
   const activeSources=sources.filter(x=>x.active);
   const openItems=items.filter(x=>x.review_status==="unreviewed"||x.review_status==="needs_review");
   const reviewed=items.filter(x=>x.review_status==="relevant"||x.review_status==="not_relevant");
+  const priorityItems=items.filter(x=>x.relevance==="likely_relevant"&&(x.review_status==="unreviewed"||x.review_status==="needs_review"));
+  const saudiAlerts=items.filter(x=>x.metadata?.urgent_saudi&&(x.review_status==="unreviewed"||x.review_status==="needs_review"));
+  const sortedItems=useMemo(()=>items.slice().sort((a,b)=>{
+    const score=(x:any)=>{
+      let n=0;
+      if(x.metadata?.urgent_saudi)n+=100;
+      if(x.relevance==="likely_relevant")n+=50;
+      else if(x.relevance==="possible")n+=30;
+      else if(x.relevance==="unscored")n+=20;
+      else n+=10;
+      if(x.review_status==="relevant"||x.review_status==="not_relevant")n-=25;
+      return n;
+    };
+    return score(b)-score(a);
+  }),[items]);
   const runCounts=useMemo(()=>{
     const out:Record<string,{total:number;reviewed:number}>={};
     for(const x of items){
@@ -216,6 +232,37 @@ export default function LiteraturePage(){
     }
   }
 
+  async function analyzeQueue(){
+    if(!session)return;
+    const candidates=items.filter(x=>x.metadata?.connector==="pubmed"&&x.metadata?.pmid&&(!x.abstract||x.relevance==="unscored"));
+    if(!candidates.length){setMessage("Queue analysis is already complete for the available PubMed items.");return;}
+    setAnalyzing(true);setMessage("");
+    try{
+      const body=candidates.map(x=>({
+        id:x.id,
+        title:x.title,
+        pmid:String(x.metadata.pmid),
+        metadata:x.metadata||{},
+        product:productMap[x.product_id]||{id:x.product_id}
+      }));
+      const response=await fetch("/api/pvos/literature/pubmed/enrich",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+        body:JSON.stringify({items:body})
+      });
+      const result=await response.json();
+      if(!response.ok)throw new Error(result?.error||"Queue analysis failed.");
+      const {data,error}=await pvosSupabase.rpc("pvos_apply_literature_enrichment",{updates:result.updates||[]});
+      if(error)throw error;
+      setMessage("Prioritization complete: "+String(data||0)+" articles enriched with abstracts; "+String(result.priority||0)+" high-priority and "+String(result.saudi_alerts||0)+" potential Saudi case/context alerts.");
+      await load();
+    }catch(e:any){
+      setMessage(e?.message||"Queue analysis failed.");
+    }finally{
+      setAnalyzing(false);
+    }
+  }
+
   async function setReview(item:any,status:ReviewStatus){
     if(!session)return;
     setBusy(true);setMessage("");
@@ -245,11 +292,11 @@ export default function LiteraturePage(){
       <div className={styles.card}><span>Active sources</span><strong>{activeSources.length}</strong></div>
       <div className={styles.card}><span>Products in scope</span><strong>{products.length}</strong></div>
       <div className={[styles.card,openItems.length?styles.warning:""].join(" ")}><span>Open articles</span><strong>{openItems.length}</strong></div>
-      <div className={styles.card}><span>Reviewed</span><strong>{reviewed.length}</strong></div>
-      <div className={styles.card}><span>Screening runs</span><strong>{runs.length}</strong></div>
+      <div className={[styles.card,priorityItems.length?styles.warning:""].join(" ")}><span>Priority review</span><strong>{priorityItems.length}</strong></div>
+      <div className={[styles.card,saudiAlerts.length?styles.danger:""].join(" ")}><span>Saudi alerts</span><strong>{saudiAlerts.length}</strong></div>
     </section>
 
-    {message?<div className={message.includes("added")||message.includes("created")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
+    {message?<div className={message.includes("added")||message.includes("created")||message.includes("complete")||message.includes("returned")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
 
     <section className={styles.panel}>
       <div style={{padding:"12px 14px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -282,23 +329,37 @@ export default function LiteraturePage(){
 
       {tab==="queue"?<>
         <div className={styles.panelHeader} style={{marginTop:12}}>
-          <h2>Screening queue</h2>
-          <span className={styles.muted}>{openItems.length} awaiting a final QPPV decision</span>
+          <div>
+            <h2>Screening queue</h2>
+            <div className={styles.muted} style={{marginTop:4}}>{openItems.length} awaiting final QPPV decision · {reviewed.length} reviewed</div>
+          </div>
+          <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
         </div>
         {loading?<div className={styles.empty}>Loading screening queue…</div>:items.length?<div className={styles.tableWrap}><table className={styles.table} style={{minWidth:1180}}>
-          <thead><tr><th>Article</th><th>Product</th><th>Source</th><th>Published</th><th>Matched terms</th><th>AI relevance</th><th>QPPV review</th></tr></thead>
-          <tbody>{items.map(x=>{
+          <thead><tr><th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Matched terms</th><th>Safety priority</th><th>QPPV review</th></tr></thead>
+          <tbody>{sortedItems.map(x=>{
             const p=productMap[x.product_id];
             return <tr key={x.id}>
-              <td style={{minWidth:290}}>
+              <td style={{minWidth:340}}>
+                {x.metadata?.urgent_saudi?<div style={{marginBottom:7}}><Badge tone="red">⚠ Potential Saudi case / context</Badge></div>:null}
                 {x.article_url?<a href={x.article_url} target="_blank" rel="noreferrer">{x.title}</a>:<strong>{x.title}</strong>}
-                {x.ai_reason?<div className={styles.muted} style={{marginTop:5,maxWidth:430}}>{x.ai_reason}</div>:null}
+                {x.abstract?<div className={styles.muted} style={{marginTop:6,maxWidth:500,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{x.abstract}</div>:null}
+                {x.ai_reason?<div style={{marginTop:6,fontSize:11,lineHeight:1.45}}>{x.ai_reason}</div>:null}
               </td>
               <td>{p?<><strong>{p.brand_name}</strong><div className={styles.muted} style={{marginTop:3}}>{p.active_ingredient||"—"}</div></>:"—"}</td>
               <td>{sourceMap[x.source_id]?.name||x.journal||"—"}</td>
-              <td>{dateLabel(x.publication_date)}</td>
-              <td>{(x.matched_terms||[]).length?(x.matched_terms||[]).join(", "):"—"}</td>
-              <td><Badge tone={relevanceTone(x.relevance)}>{relevanceLabel(x.relevance)}</Badge></td>
+              <td>
+                <strong>{dateLabel(x.publication_date)}</strong>
+                {x.metadata?.issue_date&&x.metadata.issue_date!==x.publication_date?<div className={styles.muted} style={{marginTop:3}}>Issue: {dateLabel(x.metadata.issue_date)}</div>:null}
+              </td>
+              <td>
+                {(x.matched_terms||[]).length?(x.matched_terms||[]).join(", "):"—"}
+                {x.metadata?.match_locations?.length?<div className={styles.muted} style={{marginTop:4}}>Matched in: {x.metadata.match_locations.join(" · ")}</div>:null}
+              </td>
+              <td>
+                <Badge tone={relevanceTone(x.relevance)}>{relevanceLabel(x.relevance)}</Badge>
+                {x.metadata?.safety_hits?.length?<div className={styles.muted} style={{marginTop:5,maxWidth:190}}>{x.metadata.safety_hits.slice(0,3).join(", ")}</div>:null}
+              </td>
               <td style={{minWidth:275}}>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   <button disabled={busy} className={x.review_status==="relevant"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"relevant")}>Relevant</button>
@@ -309,7 +370,7 @@ export default function LiteraturePage(){
               </td>
             </tr>
           })}</tbody>
-        </table></div>:<div className={styles.empty}>No articles yet. Run a screening period to retrieve PubMed results for the company products. Local journals will be connected as Reema provides the required source list.</div>}
+        </table></div>:<div className={styles.empty}>No articles yet. Run a screening period to retrieve PubMed results for the company products. Every result remains visible; automated prioritization only changes review order.</div>}
       </>:null}
 
       {tab==="runs"?<>
