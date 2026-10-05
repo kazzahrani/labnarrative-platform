@@ -61,11 +61,12 @@ export default function Inspection(){
   const [evidence,setEvidence]=useState<any[]>([]);
   const [companies,setCompanies]=useState<any[]>([]);
   const [audit,setAudit]=useState<any[]>([]);
+  const [companyFilter,setCompanyFilter]=useState("all");
 
   useEffect(()=>{if(!organizationId)return;(async()=>{
     const [t,c,a]=await Promise.all([
       pvosSupabase.from("pvos_tasks").select("*").eq("organization_id",organizationId).neq("status","cancelled"),
-      pvosSupabase.from("pvos_companies").select("*").eq("organization_id",organizationId),
+      pvosSupabase.from("pvos_companies").select("*").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_audit_events").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}).limit(2000)
     ]);
     const taskRows=t.data??[];setTasks(taskRows);setCompanies(c.data??[]);setAudit(a.data??[]);
