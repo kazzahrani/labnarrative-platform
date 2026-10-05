@@ -43,12 +43,14 @@ export async function POST(req:NextRequest){
     if(days<0||days>366)return NextResponse.json({error:"Screening period must be between 0 and 366 days."},{status:400});
 
     const items:any[]=[];
+    const searches:any[]=[];
     let requestCount=0;
 
     for(const product of products){
       const terms=productTerms(product);
       if(!terms.length)continue;
       const query=terms.map(t=>`"${t.replace(/"/g,"")}"[Title/Abstract]`).join(" OR ");
+      searches.push({product_id:product.id,brand_name:product.brand_name||null,active_ingredient:product.active_ingredient||null,terms,query});
 
       if(requestCount)await sleep(360);
       const search=await ncbiJson("esearch.fcgi",new URLSearchParams({
@@ -132,6 +134,7 @@ export async function POST(req:NextRequest){
       results:deduped.length,
       priority,
       saudi_alerts:saudi,
+      searches,
       items:deduped
     });
   }catch(e:any){
