@@ -52,11 +52,14 @@ export default function LiteraturePage(){
   const [items,setItems]=useState<any[]>([]);
   const [companies,setCompanies]=useState<any[]>([]);
   const [products,setProducts]=useState<any[]>([]);
+  const [followups,setFollowups]=useState<any[]>([]);
   const [loading,setLoading]=useState(true);
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
   const [busy,setBusy]=useState(false);
   const [analyzing,setAnalyzing]=useState(false);
+  const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"saudi"|"reviewed"|"all">("open");
+  const [productFilter,setProductFilter]=useState("");
   const [message,setMessage]=useState("");
   const [sourceForm,setSourceForm]=useState({name:"",url:"",language:"English",frequency:"weekly",notes:""});
   const [runForm,setRunForm]=useState({companyId:"",start:daysAgo(7),end:today()});
