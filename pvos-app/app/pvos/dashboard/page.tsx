@@ -53,13 +53,18 @@ export default function Dashboard(){
   const counts={
     overdue:labels.filter(t=>t.displayStatus==="Overdue").length,
     today:labels.filter(t=>t.displayStatus==="Due today").length,
-    week:labels.filter(t=>["Overdue","Due today","Due soon"].includes(t.displayStatus)).length,
-    waiting:labels.filter(t=>t.displayStatus==="Awaiting approval").length,
+    week:labels.filter(t=>{
+      if(t.status==="complete"||!t.due_at)return false;
+      const due=new Date(t.due_at); due.setHours(0,0,0,0);
+      const now=new Date(); now.setHours(0,0,0,0);
+      return due.getTime()<=now.getTime()+7*86400000;
+    }).length,
+    waiting:labels.filter(t=>["awaiting_review","awaiting_external"].includes(t.status)).length,
     complete:labels.filter(t=>t.status==="complete").length,
   };
 
   return <>
-    <Header eyebrow="My PV operation" title="What needs attention now?" sub="See what needs attention across all companies — overdue work, upcoming deadlines, approvals and active PV tasks. Use the filters to focus on a company, activity type or status." action={<button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button>}/>
+    <Header eyebrow="My PV operation" title="What needs attention now?" sub="See what needs attention across all companies — overdue work, upcoming deadlines, approvals and active PV tasks. Use the filters to focus on a company, activity type or status." action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href="/pvos/automation">Import / automate</Link><button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button></div>}/>
     <section className={styles.cards}>
       <div className={[styles.card,styles.danger].join(" ")}><span>Overdue</span><strong>{counts.overdue}</strong></div>
       <div className={[styles.card,styles.warning].join(" ")}><span>Due today</span><strong>{counts.today}</strong></div>
