@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureDemoWorkspace } from "./_seed";
 
-async function requireOk(label:string, promise:Promise<any>){
+async function requireOk(label:string, promise:PromiseLike<any>){
   const res=await promise;
   if(res?.error) throw new Error(label+": "+res.error.message);
   return res;
