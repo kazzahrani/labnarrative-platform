@@ -24,6 +24,17 @@ export function AppShell({children}:{children:ReactNode}) {
   }
 
   const rootClass=[styles.root,theme==="light"?styles.light:styles.dark].join(" ");
+  const navItems=[
+    ["/pvos/dashboard","Dashboard"],
+    ["/pvos/companies","Companies"],
+    ["/pvos/tasks","Tasks"],
+    ["/pvos/automation","Automation"],
+    ["/pvos/rmp","RMP Tracker"],
+    ["/pvos/approvals","Approvals"],
+    ["/pvos/handover","Handover"],
+    ["/pvos/inspection","Inspection"],
+  ] as const;
+  const isActive=(href:string)=>pathname===href || (href!=="/pvos/dashboard" && pathname.startsWith(href+"/"));
 
   if(pathname==="/pvos/login") return <div className={rootClass}>{children}</div>;
 
@@ -35,14 +46,7 @@ export function AppShell({children}:{children:ReactNode}) {
     <aside className={styles.sidebar}>
       <div className={styles.brand}><img className={styles.mark} src="/pvos-mark.svg" alt="" aria-hidden="true"/><div>PVOS</div></div>
       <nav className={styles.nav}>
-        <Link href="/pvos/dashboard">Dashboard</Link>
-        <Link href="/pvos/companies">Companies</Link>
-        <Link href="/pvos/tasks">Tasks</Link>
-        <Link href="/pvos/automation">Automation</Link>
-        <Link href="/pvos/rmp">RMP Tracker</Link>
-        <Link href="/pvos/approvals">Approvals</Link>
-        <Link href="/pvos/handover">Handover</Link>
-        <Link href="/pvos/inspection">Inspection</Link>
+        {navItems.map(([href,label])=><Link key={href} href={href} className={isActive(href)?styles.navActive:undefined} aria-current={isActive(href)?"page":undefined}>{label}</Link>)}
       </nav>
       <div className={styles.foot}>
         <div className={styles.userEmail}>{session.user.email}</div>
