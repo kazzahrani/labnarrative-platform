@@ -52,6 +52,14 @@ function auditLabel(a:any){
     if(!before.qppv_handback_acknowledged_at && after.qppv_handback_acknowledged_at) return "QPPV acknowledged company handback";
     return "Company handover updated";
   }
+  if(a.entity_type==="literature_screening_record"){
+    if(a.event_type==="insert") return "Literature screening evidence record created";
+    return "Literature screening evidence record updated";
+  }
+  if(a.entity_type==="signal_review"){
+    if(a.event_type==="insert") return "Signal review created from literature";
+    return "Signal review updated";
+  }
   return niceStatus(a.event_type);
 }
 
@@ -61,15 +69,17 @@ export default function Inspection(){
   const [evidence,setEvidence]=useState<any[]>([]);
   const [companies,setCompanies]=useState<any[]>([]);
   const [audit,setAudit]=useState<any[]>([]);
+  const [literatureRecords,setLiteratureRecords]=useState<any[]>([]);
   const [companyFilter,setCompanyFilter]=useState("all");
 
   useEffect(()=>{if(!organizationId)return;(async()=>{
-    const [t,c,a]=await Promise.all([
+    const [t,c,a,l]=await Promise.all([
       pvosSupabase.from("pvos_tasks").select("*").eq("organization_id",organizationId).neq("status","cancelled"),
       pvosSupabase.from("pvos_companies").select("*").eq("organization_id",organizationId).order("name"),
-      pvosSupabase.from("pvos_audit_events").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}).limit(2000)
+      pvosSupabase.from("pvos_audit_events").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}).limit(2000),
+      pvosSupabase.from("pvos_literature_screening_records").select("*").eq("organization_id",organizationId).order("completed_at",{ascending:false})
     ]);
-    const taskRows=t.data??[];setTasks(taskRows);setCompanies(c.data??[]);setAudit(a.data??[]);
+    const taskRows=t.data??[];setTasks(taskRows);setCompanies(c.data??[]);setAudit(a.data??[]);setLiteratureRecords(l.data??[]);
     if(taskRows.length){
       const {data:e}=await pvosSupabase.from("pvos_task_evidence").select("*").in("task_id",taskRows.map(x=>x.id)).is("archived_at",null);
       setEvidence(e??[]);
@@ -114,6 +124,23 @@ export default function Inspection(){
       ];
     });
 
+    const literatureHeader=["Completed at","Company","Period start","Period end","Sources","Products","Results","Reviewed","Relevant","Not relevant","Saudi alerts","Signal escalations","PSUR selections"];
+    const literatureRows=literatureRecords.map(r=>[
+      r.completed_at,
+      companyBy[r.company_id]?.name??"",
+      r.period_start,
+      r.period_end,
+      (r.source_snapshot??[]).map((x:any)=>x.name).join("; "),
+      (r.product_snapshot??[]).map((x:any)=>x.brand_name).join("; "),
+      r.metrics?.total??0,
+      r.metrics?.reviewed??0,
+      r.metrics?.relevant??0,
+      r.metrics?.notRelevant??0,
+      r.metrics?.saudi??0,
+      r.metrics?.signal??0,
+      r.metrics?.psur??0
+    ]);
+
     const auditHeader=["Audit timestamp","Company / scope","Record","Action"];
     const auditRows=audit.map(a=>[
       a.created_at,
@@ -130,6 +157,10 @@ export default function Inspection(){
       "# PVOS EVIDENCE REGISTER",
       evidenceHeader.map(csvCell).join(","),
       ...evidenceRows.map(r=>r.map(csvCell).join(",")),
+      "",
+      "# PVOS LITERATURE SCREENING RECORDS",
+      literatureHeader.map(csvCell).join(","),
+      ...literatureRows.map(r=>r.map(csvCell).join(",")),
       "",
       "# PVOS AUDIT HISTORY",
       auditHeader.map(csvCell).join(","),
@@ -154,7 +185,25 @@ export default function Inspection(){
       <div className={styles.metricRow}><span>Completed tasks missing evidence</span><strong className={metrics.missing?styles.bad:styles.good}>{metrics.missing}</strong></div>
       <div className={styles.metricRow}><span>Overdue active tasks</span><strong className={metrics.overdue?styles.warn:styles.good}>{metrics.overdue}</strong></div>
       <div className={styles.metricRow}><span>Evidence records retained</span><strong className={styles.good}>{evidence.length}</strong></div>
+      <div className={styles.metricRow}><span>Completed literature screening records</span><strong className={styles.good}>{literatureRecords.length}</strong></div>
       <div className={styles.metricRow}><span>Audit events retained</span><strong className={styles.good}>{audit.length}</strong></div>
     </div></section>
+    <section className={styles.panel}>
+      <div className={styles.panelHeader}><h2>Literature screening evidence</h2><span className={styles.muted}>{literatureRecords.length} completed record(s)</span></div>
+      {literatureRecords.length?<div className={styles.tableWrap}><table className={styles.table}>
+        <thead><tr><th>Completed</th><th>Company</th><th>Period</th><th>Sources</th><th>Results</th><th>Reviewed</th><th>Relevant</th><th>Signal</th><th>PSUR</th></tr></thead>
+        <tbody>{literatureRecords.map(r=><tr key={r.id}>
+          <td>{r.completed_at?new Date(r.completed_at).toLocaleString():"—"}</td>
+          <td>{companyBy[r.company_id]?.name??"—"}</td>
+          <td>{r.period_start} → {r.period_end}</td>
+          <td>{(r.source_snapshot??[]).map((x:any)=>x.name).join(", ")||"—"}</td>
+          <td>{r.metrics?.total??0}</td>
+          <td>{r.metrics?.reviewed??0}</td>
+          <td>{r.metrics?.relevant??0}</td>
+          <td>{r.metrics?.signal??0}</td>
+          <td>{r.metrics?.psur??0}</td>
+        </tr>)}</tbody>
+      </table></div>:<div className={styles.empty}>No completed literature screening records yet.</div>}
+    </section>
   </>;
 }
