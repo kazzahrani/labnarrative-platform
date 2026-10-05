@@ -12,6 +12,16 @@ export async function prepareReviewerDemoWorkspace(
   organizationId:string,
   userId:string
 ){
+  const {data:org,error:orgError}=await supabase
+    .from("pvos_organizations")
+    .select("id,name")
+    .eq("id",organizationId)
+    .single();
+  if(orgError) throw orgError;
+  if(org?.name!=="PVOS Demo Workspace"){
+    return {skipped:true,reason:"not_demo_workspace"};
+  }
+
   const {data:companies,error:companiesError}=await supabase
     .from("pvos_companies")
     .select("*")
