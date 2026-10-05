@@ -175,6 +175,7 @@ export default function LiteraturePage(){
       <div className={styles.card}><span>Products in scope</span><strong>{products.length}</strong></div>
       <div className={[styles.card,openItems.length?styles.warning:""].join(" ")}><span>Open articles</span><strong>{openItems.length}</strong></div>
       <div className={styles.card}><span>Reviewed</span><strong>{reviewed.length}</strong></div>
+      <div className={styles.card}><span>Screening runs</span><strong>{runs.length}</strong></div>
     </section>
 
     {message?<div className={message.includes("added")||message.includes("created")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
