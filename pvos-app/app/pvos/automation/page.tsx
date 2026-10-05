@@ -29,8 +29,8 @@ function parseCsv(text:string):Row[]{
 }
 function toIso(v:string){if(!v)return null;const d=new Date(/^\d{4}-\d{2}-\d{2}$/.test(v)?v+"T17:00:00":v);return Number.isNaN(d.getTime())?null:d.toISOString();}
 function yes(v:string){return !v||["1","true","yes","y"].includes(v.toLowerCase());}
-function download(kind:ImportKind){
-  const url=URL.createObjectURL(new Blob([SAMPLES[kind]],{type:"text/csv;charset=utf-8"}));
+function downloadCsv(kind:ImportKind,content:string){
+  const url=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"}));
   const a=document.createElement("a");a.href=url;a.download="pvos-"+kind+"-template.csv";a.click();URL.revokeObjectURL(url);
 }
 
@@ -74,6 +74,15 @@ export default function AutomationPage(){
   const companyMap=useMemo(()=>new Map(companies.map(c=>[String(c.name).toLowerCase(),c])),[companies]);
   const productMap=useMemo(()=>new Map(products.map(p=>[p.company_id+"|"+String(p.brand_name).toLowerCase(),p])),[products]);
   const currentCompany=companies.find(c=>c.id===companyId);
+
+  function templateFor(kind:ImportKind){
+    const companyName=currentCompany?.name||companies[0]?.name||"Your Company";
+    if(kind==="companies") return SAMPLES.companies;
+    if(kind==="products") return "company,brand_name,active_ingredient,registration_status,sfda_registration_number,rmp_status\n"+companyName+",Example Brand,example ingredient,Registered,SFDA-DEMO-001,Routine";
+    if(kind==="obligations") return "company,product,title,activity_type,cadence,first_due,responsibility,evidence_required\n"+companyName+",,Weekly literature review,Literature,weekly,2026-10-12,organization,true";
+    return "company,product,title,activity_type,due_at,priority,status\n"+companyName+",,SFDA safety inquiry response,SFDA Inquiry,2026-10-09,high,not_started";
+  }
+
   const added=new Set(obligations.filter(o=>o.company_id===companyId&&o.source_type==="template").map(o=>o.source_reference));
   const recurring=obligations.filter(o=>o.cadence!=="event").length;
 
@@ -123,8 +132,11 @@ export default function AutomationPage(){
         if(payload.length){const {error}=await pvosSupabase.from("pvos_companies").insert(payload);if(error)throw error;count=payload.length;}
       }
       if(kind==="products"){
-        const payload=rows.flatMap((r,i)=>{const c=companyMap.get((r.company||"").toLowerCase());if(!c||!r.brand_name){skipped.push("row "+(i+2)+": company or brand not found");return[]}
-          return[{company_id:c.id,brand_name:r.brand_name,active_ingredient:r.active_ingredient||null,registration_status:r.registration_status||null,sfda_registration_number:r.sfda_registration_number||null,rmp_status:r.rmp_status||null}]});
+        const payload=rows.flatMap((r,i)=>{const companyName=(r.company||"").trim();const c=companyMap.get(companyName.toLowerCase());
+          if(!companyName){skipped.push("row "+(i+2)+": company is required");return[]}
+          if(!c){skipped.push("row "+(i+2)+": company not found: "+companyName);return[]}
+          if(!r.brand_name?.trim()){skipped.push("row "+(i+2)+": brand_name is required");return[]}
+          return[{company_id:c.id,brand_name:r.brand_name.trim(),active_ingredient:r.active_ingredient||null,registration_status:r.registration_status||null,sfda_registration_number:r.sfda_registration_number||null,rmp_status:r.rmp_status||null}]});
         if(payload.length){const {error}=await pvosSupabase.from("pvos_products").insert(payload);if(error)throw error;count=payload.length;}
       }
       if(kind==="obligations"){
@@ -172,7 +184,7 @@ export default function AutomationPage(){
     </section>
 
     <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:10}}>
-      <div className={styles.panelHeader}><SectionTitle title="Bulk import" info="Export the current Excel tracker as CSV, match the template headers, then import instead of retyping. Recommended order: Companies → Products → Obligations / Tasks."/><button className={styles.buttonGhost} onClick={()=>download(kind)}>Download CSV template</button></div>
+      <div className={styles.panelHeader}><SectionTitle title="Bulk import" info="Export the current Excel tracker as CSV, match the template headers, then import instead of retyping. Recommended order: Companies → Products → Obligations / Tasks."/><button className={styles.buttonGhost} onClick={()=>downloadCsv(kind,templateFor(kind))}>Download CSV template</button></div>
       <div style={{padding:14}}>
         <div className={styles.inlineActions} style={{marginTop:0,flexWrap:"wrap"}}>{(["companies","products","obligations","tasks"] as ImportKind[]).map(k=><button key={k} className={kind===k?styles.button:styles.buttonGhost} onClick={()=>changeKind(k)}>{k[0].toUpperCase()+k.slice(1)}</button>)}</div>
         <div className={styles.formGrid} style={{marginTop:14}}>
