@@ -116,8 +116,8 @@
 .rmpCompany{left:0;width:150px;min-width:150px;max-width:150px}
 .rmpProduct{left:150px;width:120px;min-width:120px;max-width:120px}
 .rmpMolecule{left:auto;width:130px;min-width:130px;max-width:130px;box-shadow:none}
-.rmpTable tbody tr:hover td{background:#f8fafb}
-.rmpTable tbody tr:hover .rmpSticky{background:inherit!important}
+.rmpTable tbody tr:hover td{background:#f8fafb!important}
+
 .rmpTable tbody td{line-height:1.35}
 .rmpTable th:nth-child(n+6):nth-child(-n+11),.rmpTable td:nth-child(n+6):nth-child(-n+11){min-width:135px}
 .rmpTable th:nth-child(n+13):nth-child(-n+18),.rmpTable td:nth-child(n+13):nth-child(-n+18){min-width:135px}
@@ -131,5 +131,5 @@
 .root:not(.light) .rmpDue{background:#1b1810!important;border-color:#4b4020!important}
 .root:not(.light) .rmpSticky{background:inherit!important}
 .root:not(.light) .rmpTable thead .rmpSticky{background:inherit!important}
-.root:not(.light) .rmpTable tbody tr:hover td{background:#151d24}
-.root:not(.light) .rmpTable tbody tr:hover .rmpSticky{background:inherit!important}
+.root:not(.light) .rmpTable tbody tr:hover td{background:#151d24!important}
+
