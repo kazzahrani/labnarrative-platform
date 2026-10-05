@@ -1,11 +1,10 @@
 "use client";
 
-import {FormEvent,useEffect,useMemo,useRef,useState} from "react";
+import {FormEvent,useEffect,useMemo,useState} from "react";
 import {Header,Badge} from "../_components";
 import {usePVOS} from "../_provider";
 import {pvosSupabase} from "../_pvos-supabase";
 import {RmpExcelImport} from "../_rmp-excel-import";
-import {prepareReviewerDemoWorkspace} from "../_demo-cleanup";
 import styles from "../pvos.module.css";
 
 type V={id:string,type:"initial"|"subsequent",dlp:string,submission_date:string,identified_risks:string,potential_risks:string,missing_information:string,comments_reason:string,additional_rmm:string,created_at:string};
@@ -23,23 +22,6 @@ export default function RmpPage(){
  const [r,setR]=useState<R>({...blank}),[initial,setInitial]=useState<V|null>(null),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false),[tab,setTab]=useState<"overview"|"initial"|"updates">("overview");
  const [addOpen,setAddOpen]=useState(false),[expanded,setExpanded]=useState<string|null>(null),[portfolioTab,setPortfolioTab]=useState<"initial"|"subsequent">("initial");
  const [u,setU]=useState<V>({id:"",type:"subsequent",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:""});
- const cleanupRef=useRef(false);
- const [cleanupMessage,setCleanupMessage]=useState("");
- useEffect(()=>{
-   const email=session?.user.email?.toLowerCase();
-   const key=organizationId?"pvos-reviewer-demo-clean-v1-"+organizationId:"";
-   if(!organizationId||!session?.user.id||email!=="khaledaliazzahrani@gmail.com"||cleanupRef.current)return;
-   if(typeof window!=="undefined"&&window.localStorage.getItem(key)==="done")return;
-   cleanupRef.current=true;
-   prepareReviewerDemoWorkspace(pvosSupabase,organizationId,session.user.id)
-     .then(async()=>{
-       if(typeof window!=="undefined")window.localStorage.setItem(key,"done");
-       setCleanupMessage("Reviewer demo workspace cleaned: 1 company · 3 products · 1 realistic RMP.");
-       await load();
-     })
-     .catch((e:any)=>{cleanupRef.current=false;setCleanupMessage("Demo cleanup failed: "+(e?.message||"unknown error"));});
- // eslint-disable-next-line react-hooks/exhaustive-deps
- },[organizationId,session?.user.id,session?.user.email]);
 
  async function load(){if(!organizationId)return;const {data:c}=await pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name");const cs=c||[];setCompanies(cs);if(!cs.length)return setProducts([]);const {data:p}=await pvosSupabase.from("pvos_products").select("*").in("company_id",cs.map(x=>x.id)).order("brand_name");setProducts(p||[])}
  useEffect(()=>{load()},[organizationId]);
@@ -55,7 +37,6 @@ export default function RmpPage(){
 
  return <>
   <Header eyebrow="Product safety" title="RMP Tracker" sub="Track initial and subsequent RMP submissions, identified and potential risks, missing information, additional risk minimization measures, and the next DLP/update due date."/>
-  {cleanupMessage?<div className={cleanupMessage.startsWith("Demo cleanup failed")?styles.errorBox:styles.successBox} style={{marginBottom:14}}>{cleanupMessage}</div>:null}
   <section className={styles.cards}><div className={styles.card}><span>RMPs tracked</span><strong>{tracked.length}</strong></div><div className={styles.card}><span>Due in 30 days</span><strong>{dueSoon}</strong></div><div className={[styles.card,overdue?styles.danger:""].join(" ")}><span>Overdue</span><strong>{overdue}</strong></div><div className={styles.card}><span>With Additional Risk Minimization Measure</span><strong>{withArmm}</strong></div></section>
   <section className={styles.panel}>
   <div className={styles.panelHeader}>
