@@ -65,11 +65,11 @@ export async function ensureDemoWorkspace(supabase:SupabaseClient, organizationI
       },
       {
         company_id:companyId,seed_key:"demo-oncora",brand_name:"Oncora",
-        active_ingredient:"osimertinib",registration_status:"Registered",rmp_status:"Active"
+        active_ingredient:"osimertinib",registration_status:"Registered",rmp_status:"Active",metadata:{}
       },
       {
         company_id:companyId,seed_key:"demo-cardiovex",brand_name:"Cardiovex",
-        active_ingredient:"apixaban",registration_status:"Registered",rmp_status:"Routine"
+        active_ingredient:"apixaban",registration_status:"Registered",rmp_status:"Routine",metadata:{}
       },
     ],
     "company_id,seed_key","seed_key",
