@@ -60,15 +60,15 @@ export default function RmpPage(){
         <th>Molecule</th>
         <th>Submitted to</th><th>Frequency</th><th>DLP</th><th>Date of submission</th>
         <th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
-        <th>Additional Risk Minimization Measure</th><th>Next DLP/Update due date</th><th></th>
+        <th className={styles.rmpArmmCol}>Additional Risk Minimization Measure</th><th className={styles.rmpNextDueCol}>Next DLP/Update due date</th><th></th>
       </tr></thead>
       <tbody>{products.map(p=>{const x=rv(p),ini=x.versions.find(v=>v.type==="initial"),tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
         <td>{cm[p.company_id]||"—"}</td>
         <td><strong>{p.brand_name}</strong></td>
         <td>{p.active_ingredient||"—"}</td>
         <td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td><td>{ini?.dlp||"—"}</td><td>{fmt(ini?.submission_date)}</td>
-        <td>{ini?.identified_risks||"—"}</td><td>{ini?.potential_risks||"—"}</td><td>{ini?.missing_information||"—"}</td><td>{ini?.additional_rmm||"—"}</td>
-        <td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
+        <td>{ini?.identified_risks||"—"}</td><td>{ini?.potential_risks||"—"}</td><td>{ini?.missing_information||"—"}</td><td className={styles.rmpArmmCol}>{ini?.additional_rmm||"—"}</td>
+        <td className={styles.rmpNextDueCol}>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
         <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
       </tr>})}</tbody>
     </table>
@@ -81,14 +81,14 @@ export default function RmpPage(){
         <th>Product</th>
         <th>Molecule</th>
         <th>Date of submission</th><th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
-        <th>Comments/Reason for update</th><th>Additional Risk Minimization Measure</th><th>Next DLP/Update due date</th><th></th>
+        <th className={styles.rmpCommentsCol}>Comments/Reason for update</th><th className={styles.rmpArmmCol}>Additional Risk Minimization Measure</th><th className={styles.rmpNextDueCol}>Next DLP/Update due date</th><th></th>
       </tr></thead>
       <tbody>{products.map(p=>{const x=rv(p),sub=x.versions.filter(v=>v.type==="subsequent"),l=sub[sub.length-1],tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
         <td>{cm[p.company_id]||"—"}</td>
         <td><strong>{p.brand_name}</strong></td>
         <td>{p.active_ingredient||"—"}</td>
         <td>{fmt(l?.submission_date)}</td><td>{l?.identified_risks||"—"}</td><td>{l?.potential_risks||"—"}</td><td>{l?.missing_information||"—"}</td>
-        <td>{l?.comments_reason||"—"}</td><td>{l?.additional_rmm||"—"}</td>
+        <td className={styles.rmpCommentsCol}>{l?.comments_reason||"—"}</td><td className={styles.rmpArmmCol}>{l?.additional_rmm||"—"}</td>
         <td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
         <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
       </tr>})}</tbody>
