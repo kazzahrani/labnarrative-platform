@@ -35,9 +35,31 @@ export default function RmpPage(){
 
  return <>
   <Header eyebrow="Product safety" title="RMP Tracker" sub="Track initial and subsequent RMP submissions, identified and potential risks, missing information, additional risk minimization measures, and the next DLP/update due date."/>
-  <section className={styles.cards}><div className={styles.card}><span>RMPs tracked</span><strong>{tracked.length}</strong></div><div className={styles.card}><span>Due in 30 days</span><strong>{dueSoon}</strong></div><div className={[styles.card,overdue?styles.danger:""].join(" ")}><span>Overdue</span><strong>{overdue}</strong></div><div className={styles.card}><span>With additional RMM</span><strong>{withArmm}</strong></div></section>
-  <section className={styles.panel}><div className={styles.panelHeader}><h2>RMP portfolio</h2><span className={styles.muted}>{products.length} products</span></div><div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Product</th><th>Molecule</th><th>Submitted to</th><th>Frequency</th><th>Latest submission</th><th>Next DLP / update</th><th>aRMM</th><th></th></tr></thead><tbody>
-  {products.map(p=>{const x=rv(p),l=last(x),tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}><td>{cm[p.company_id]||"—"}</td><td><strong>{p.brand_name}</strong></td><td>{p.active_ingredient||"—"}</td><td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td><td>{tr?fmt(l?.submission_date):"—"}</td><td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td><td>{tr?(arm(l)?<Badge tone="amber">Yes</Badge>:<Badge>No</Badge>):"—"}</td><td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td></tr>})}
+  <section className={styles.cards}><div className={styles.card}><span>RMPs tracked</span><strong>{tracked.length}</strong></div><div className={styles.card}><span>Due in 30 days</span><strong>{dueSoon}</strong></div><div className={[styles.card,overdue?styles.danger:""].join(" ")}><span>Overdue</span><strong>{overdue}</strong></div><div className={styles.card}><span>With Additional Risk Minimization Measure</span><strong>{withArmm}</strong></div></section>
+  <section className={styles.panel}><div className={styles.panelHeader}><h2>RMP portfolio</h2><span className={styles.muted}>{products.length} products</span></div><div className={styles.tableWrap}><table className={styles.table} style={{minWidth:2450}}><thead>
+  <tr>
+    <th rowSpan={3}>Company</th><th rowSpan={3}>Product</th><th rowSpan={3}>Molecule</th><th rowSpan={3}>Submitted to</th><th rowSpan={3}>Frequency</th>
+    <th colSpan={6} style={{textAlign:"center"}}>Information regarding Initial RMP</th>
+    <th rowSpan={3}>Next DLP/Update due date</th>
+    <th colSpan={6} style={{textAlign:"center"}}>Information regarding subsequent RMP</th>
+    <th rowSpan={3}></th>
+  </tr>
+  <tr>
+    <th rowSpan={2}>DLP</th><th rowSpan={2}>Date of submission</th><th colSpan={3} style={{textAlign:"center"}}>Information Submitted</th><th rowSpan={2}>Additional Risk Minimization Measure</th>
+    <th rowSpan={2}>Date of submission</th><th colSpan={3} style={{textAlign:"center"}}>Information Submitted</th><th rowSpan={2}>Comments/Reason for update</th><th rowSpan={2}>Additional Risk Minimization Measure</th>
+  </tr>
+  <tr>
+    <th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
+    <th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
+  </tr>
+  </thead><tbody>
+  {products.map(p=>{const x=rv(p),ini=x.versions.find(v=>v.type==="initial"),sub=x.versions.filter(v=>v.type==="subsequent"),l=sub[sub.length-1],tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
+    <td>{cm[p.company_id]||"—"}</td><td><strong>{p.brand_name}</strong></td><td>{p.active_ingredient||"—"}</td><td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td>
+    <td>{ini?.dlp||"—"}</td><td>{fmt(ini?.submission_date)}</td><td>{ini?.identified_risks||"—"}</td><td>{ini?.potential_risks||"—"}</td><td>{ini?.missing_information||"—"}</td><td>{ini?.additional_rmm||"—"}</td>
+    <td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
+    <td>{fmt(l?.submission_date)}</td><td>{l?.identified_risks||"—"}</td><td>{l?.potential_risks||"—"}</td><td>{l?.missing_information||"—"}</td><td>{l?.comments_reason||"—"}</td><td>{l?.additional_rmm||"—"}</td>
+    <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
+  </tr>})}
   </tbody></table></div></section>
 
   {sel&&initial?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSel(null)}}>
@@ -49,8 +71,8 @@ export default function RmpPage(){
 
     <div style={{padding:"14px 20px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
       <button className={tab==="overview"?styles.button:styles.buttonGhost} onClick={()=>setTab("overview")}>Overview</button>
-      <button className={tab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setTab("initial")}>Initial RMP</button>
-      <button className={tab==="updates"?styles.button:styles.buttonGhost} onClick={()=>setTab("updates")}>Update History ({r.versions.filter(v=>v.type==="subsequent").length})</button>
+      <button className={tab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setTab("initial")}>Information regarding Initial RMP</button>
+      <button className={tab==="updates"?styles.button:styles.buttonGhost} onClick={()=>setTab("updates")}>Information regarding subsequent RMP ({r.versions.filter(v=>v.type==="subsequent").length})</button>
     </div>
 
     {msg?<div className={msg.includes("saved")||msg.includes("added")?styles.successBox:styles.errorBox} style={{margin:"14px 20px 0"}}>{msg}</div>:null}
@@ -64,29 +86,35 @@ export default function RmpPage(){
       </div>
       <div className={styles.info} style={{marginTop:16}}>
         <h3>Current RMP snapshot</h3>
-        <div className={styles.kv}><span>Initial submission</span><span>{fmt(initial.submission_date)}</span></div>
-        <div className={styles.kv}><span>Latest update</span><span>{fmt(last(r)?.submission_date)} {r.versions.some(v=>v.type==="subsequent")?<button style={{marginLeft:8,border:0,background:"transparent",padding:0,color:"inherit",textDecoration:"underline",cursor:"pointer",fontSize:12}} onClick={()=>setTab("updates")}>View full history ({r.versions.filter(v=>v.type==="subsequent").length})</button>:null}</span></div>
-        <div className={styles.kv}><span>Additional RMM</span><span>{arm(last(r)||initial)?"Yes":"No"}</span></div>
+        <div className={styles.kv}><span>Initial RMP — Date of submission</span><span>{fmt(initial.submission_date)}</span></div>
+        <div className={styles.kv}><span>Subsequent RMP — Date of submission</span><span>{fmt(r.versions.filter(v=>v.type==="subsequent").slice(-1)[0]?.submission_date)} {r.versions.some(v=>v.type==="subsequent")?<button style={{marginLeft:8,border:0,background:"transparent",padding:0,color:"inherit",textDecoration:"underline",cursor:"pointer",fontSize:12}} onClick={()=>setTab("updates")}>View full history ({r.versions.filter(v=>v.type==="subsequent").length})</button>:null}</span></div>
+        <div className={styles.kv}><span>Additional Risk Minimization Measure</span><span>{arm(r.versions.filter(v=>v.type==="subsequent").slice(-1)[0]||initial)?"Yes":"No"}</span></div>
       </div>
       <div className={styles.inlineActions}><button className={styles.button} onClick={save} disabled={busy}>{busy?"Saving…":"Save overview"}</button></div>
     </div>:null}
 
     {tab==="initial"?<div style={{padding:20}}>
+      <h3 style={{margin:"0 0 14px",fontSize:15}}>Information regarding Initial RMP</h3>
       <div className={styles.formGrid}>
         <label>DLP<input className={styles.input} value={initial.dlp} onChange={e=>setInitial({...initial,dlp:e.target.value})} placeholder="Date or NA"/></label>
-        <label>Initial submission date<input className={styles.input} type="date" value={initial.submission_date} onChange={e=>setInitial({...initial,submission_date:e.target.value})}/></label>
-        <label className={styles.full}>RMP identified risks<textarea className={styles.input} style={{minHeight:78}} value={initial.identified_risks} onChange={e=>setInitial({...initial,identified_risks:e.target.value})}/></label>
-        <label className={styles.full}>RMP potential risks<textarea className={styles.input} style={{minHeight:78}} value={initial.potential_risks} onChange={e=>setInitial({...initial,potential_risks:e.target.value})}/></label>
-        <label className={styles.full}>Missing information<textarea className={styles.input} style={{minHeight:68}} value={initial.missing_information} onChange={e=>setInitial({...initial,missing_information:e.target.value})}/></label>
-        <label className={styles.full}>Additional Risk Minimization Measure<textarea className={styles.input} style={{minHeight:68}} value={initial.additional_rmm} onChange={e=>setInitial({...initial,additional_rmm:e.target.value})}/></label>
+        <label>Date of submission<input className={styles.input} type="date" value={initial.submission_date} onChange={e=>setInitial({...initial,submission_date:e.target.value})}/></label>
       </div>
-      <div className={styles.inlineActions}><button className={styles.button} onClick={save} disabled={busy}>{busy?"Saving…":"Save initial RMP"}</button></div>
+      <div className={styles.info} style={{marginTop:16}}>
+        <h3>Information Submitted</h3>
+        <div className={styles.formGrid}>
+          <label className={styles.full}>RMP Identified<textarea className={styles.input} style={{minHeight:78}} value={initial.identified_risks} onChange={e=>setInitial({...initial,identified_risks:e.target.value})}/></label>
+          <label className={styles.full}>RMP Potential<textarea className={styles.input} style={{minHeight:78}} value={initial.potential_risks} onChange={e=>setInitial({...initial,potential_risks:e.target.value})}/></label>
+          <label className={styles.full}>Missing Info<textarea className={styles.input} style={{minHeight:68}} value={initial.missing_information} onChange={e=>setInitial({...initial,missing_information:e.target.value})}/></label>
+        </div>
+      </div>
+      <div style={{marginTop:16}}><label className={styles.full} style={{display:"grid",gap:7,fontSize:12,fontWeight:700}}>Additional Risk Minimization Measure<textarea className={styles.input} style={{minHeight:68}} value={initial.additional_rmm} onChange={e=>setInitial({...initial,additional_rmm:e.target.value})}/></label></div>
+      <div className={styles.inlineActions}><button className={styles.button} onClick={save} disabled={busy}>{busy?"Saving…":"Save Initial RMP"}</button></div>
     </div>:null}
 
     {tab==="updates"?<div style={{padding:20}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
-        <div><h3 style={{margin:0,fontSize:15}}>Update history</h3><div className={styles.muted} style={{marginTop:4}}>Newest submission first. Open a record only when you need the full safety details.</div></div>
-        <button className={styles.button} onClick={()=>setAddOpen(true)}>+ Add RMP update</button>
+        <div><h3 style={{margin:0,fontSize:15}}>Information regarding subsequent RMP</h3><div className={styles.muted} style={{marginTop:4}}>Newest submission first. Open a record to see the Information Submitted and update details.</div></div>
+        <button className={styles.button} onClick={()=>setAddOpen(true)}>+ Add subsequent RMP</button>
       </div>
 
       {r.versions.filter(v=>v.type==="subsequent").length?<div style={{display:"grid",gap:10}}>
@@ -95,17 +123,17 @@ export default function RmpPage(){
           return <div key={v.id} className={styles.info} style={{padding:0,overflow:"hidden"}}>
             <button onClick={()=>setExpanded(isOpen?null:v.id)} style={{width:"100%",border:0,background:"transparent",padding:"14px 16px",display:"grid",gridTemplateColumns:"150px 90px minmax(180px,1fr) 100px auto",gap:12,alignItems:"center",textAlign:"left",cursor:"pointer",color:"inherit"}}>
               <strong style={{fontSize:13}}>{fmt(v.submission_date)}</strong>
-              <span className={styles.muted}>DLP {v.dlp||"—"}</span>
+              <span className={styles.muted}>{v.dlp?"DLP "+v.dlp:"DLP —"}</span>
               <span style={{fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.comments_reason||"No reason recorded"}</span>
-              <span>{arm(v)?<Badge tone="amber">aRMM</Badge>:<Badge>No aRMM</Badge>}</span>
+              <span>{arm(v)?<Badge tone="amber">Additional RMM</Badge>:<Badge>No Additional RMM</Badge>}</span>
               <span className={styles.muted}>{isOpen?"Hide":"View details"} ▾</span>
             </button>
             {isOpen?<div style={{padding:"0 16px 16px",borderTop:"1px solid #e8edef"}}>
-              <div className={styles.kv}><span>Identified risks</span><span>{v.identified_risks||"—"}</span></div>
-              <div className={styles.kv}><span>Potential risks</span><span>{v.potential_risks||"—"}</span></div>
-              <div className={styles.kv}><span>Missing information</span><span>{v.missing_information||"—"}</span></div>
-              <div className={styles.kv}><span>Reason for update</span><span>{v.comments_reason||"—"}</span></div>
-              <div className={styles.kv}><span>Additional RMM</span><span>{v.additional_rmm||"—"}</span></div>
+              <div className={styles.kv}><span>RMP Identified</span><span>{v.identified_risks||"—"}</span></div>
+              <div className={styles.kv}><span>RMP Potential</span><span>{v.potential_risks||"—"}</span></div>
+              <div className={styles.kv}><span>Missing Info</span><span>{v.missing_information||"—"}</span></div>
+              <div className={styles.kv}><span>Comments/Reason for update</span><span>{v.comments_reason||"—"}</span></div>
+              <div className={styles.kv}><span>Additional Risk Minimization Measure</span><span>{v.additional_rmm||"—"}</span></div>
             </div>:null}
           </div>
         })}
@@ -114,19 +142,19 @@ export default function RmpPage(){
    {addOpen?<div className={styles.modalBackdrop} style={{zIndex:1200}} onMouseDown={e=>{if(e.target===e.currentTarget)setAddOpen(false)}}>
       <form onSubmit={add} className={styles.modalCard} style={{width:"min(760px,100%)"}}>
         <div className={styles.modalHeader}>
-          <div><div className={styles.eyebrow}>{sel.brand_name}</div><h2>Add RMP update</h2><div className={styles.muted}>Add the new submission without changing previous records.</div></div>
+          <div><div className={styles.eyebrow}>{sel.brand_name}</div><h2>Information regarding subsequent RMP</h2><div className={styles.muted}>Add a new subsequent RMP record without changing previous submissions.</div></div>
           <button type="button" className={styles.modalClose} onClick={()=>setAddOpen(false)}>×</button>
         </div>
         <div className={styles.formGrid}>
           <label>DLP<input className={styles.input} value={u.dlp} onChange={e=>setU({...u,dlp:e.target.value})} placeholder="Date or NA"/></label>
           <label>Date of submission<input className={styles.input} type="date" value={u.submission_date} onChange={e=>setU({...u,submission_date:e.target.value})} required/></label>
-          <label className={styles.full}>RMP identified risks<textarea className={styles.input} style={{minHeight:72}} value={u.identified_risks} onChange={e=>setU({...u,identified_risks:e.target.value})}/></label>
-          <label className={styles.full}>RMP potential risks<textarea className={styles.input} style={{minHeight:72}} value={u.potential_risks} onChange={e=>setU({...u,potential_risks:e.target.value})}/></label>
-          <label className={styles.full}>Missing information<textarea className={styles.input} style={{minHeight:64}} value={u.missing_information} onChange={e=>setU({...u,missing_information:e.target.value})}/></label>
-          <label className={styles.full}>Comments / reason for update<textarea className={styles.input} style={{minHeight:64}} value={u.comments_reason} onChange={e=>setU({...u,comments_reason:e.target.value})}/></label>
+          <label className={styles.full}>RMP Identified<textarea className={styles.input} style={{minHeight:72}} value={u.identified_risks} onChange={e=>setU({...u,identified_risks:e.target.value})}/></label>
+          <label className={styles.full}>RMP Potential<textarea className={styles.input} style={{minHeight:72}} value={u.potential_risks} onChange={e=>setU({...u,potential_risks:e.target.value})}/></label>
+          <label className={styles.full}>Missing Info<textarea className={styles.input} style={{minHeight:64}} value={u.missing_information} onChange={e=>setU({...u,missing_information:e.target.value})}/></label>
+          <label className={styles.full}>Comments/Reason for update<textarea className={styles.input} style={{minHeight:64}} value={u.comments_reason} onChange={e=>setU({...u,comments_reason:e.target.value})}/></label>
           <label className={styles.full}>Additional Risk Minimization Measure<textarea className={styles.input} style={{minHeight:64}} value={u.additional_rmm} onChange={e=>setU({...u,additional_rmm:e.target.value})}/></label>
         </div>
-        <div className={styles.modalActions}><button type="button" className={styles.buttonGhost} onClick={()=>setAddOpen(false)}>Cancel</button><button className={styles.button} disabled={busy}>{busy?"Adding…":"Add update"}</button></div>
+        <div className={styles.modalActions}><button type="button" className={styles.buttonGhost} onClick={()=>setAddOpen(false)}>Cancel</button><button className={styles.button} disabled={busy}>{busy?"Adding…":"Add subsequent RMP"}</button></div>
       </form>
     </div>:null}
    </div>
