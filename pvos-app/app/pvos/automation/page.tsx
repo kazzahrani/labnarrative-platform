@@ -33,6 +33,14 @@ function download(kind:ImportKind){
   const a=document.createElement("a");a.href=url;a.download="pvos-"+kind+"-template.csv";a.click();URL.revokeObjectURL(url);
 }
 
+function HoverInfo({text}:{text:string}){
+  return <span className={styles.infoTip} style={{marginTop:0,flex:"0 0 auto"}} tabIndex={0} aria-label={text}>i<span className={styles.tooltip} role="tooltip">{text}</span></span>;
+}
+
+function SectionTitle({title,info}:{title:string,info:string}){
+  return <div style={{display:"flex",alignItems:"center",gap:8}}><h2>{title}</h2><HoverInfo text={info}/></div>;
+}
+
 export default function AutomationPage(){
   const {organizationId,session,refresh}=usePVOS();
   const [companies,setCompanies]=useState<any[]>([]);
@@ -135,29 +143,28 @@ export default function AutomationPage(){
     </section>
 
     <section className={styles.panel} style={{marginBottom:16}}>
-      <div className={styles.panelHeader}><div><h2>Recurring task engine</h2><div className={styles.muted}>Create an obligation once. PVOS creates the individual task instances and preserves every previous cycle.</div></div><button className={styles.button} onClick={generate}>Generate next 60 days</button></div>
-      <div className={styles.notice} style={{margin:14}}>Automatic generation already runs when the workspace loads. Use this after changing schedules or importing obligations.</div>
+      <div className={styles.panelHeader}><SectionTitle title="Recurring task engine" info="Create an obligation once and PVOS creates the individual task instances while preserving every previous cycle. Automatic generation runs when the workspace loads; use Generate next 60 days after changing schedules or importing obligations."/><button className={styles.button} onClick={generate}>Generate next 60 days</button></div>
       {message?<div className={styles.successBox} style={{margin:"0 14px 14px"}}>{message}</div>:null}
     </section>
 
     <section className={styles.panel} style={{marginBottom:16}}>
-      <div className={styles.panelHeader}><div><h2>PV template library</h2><div className={styles.muted}>Templates reduce setup, but the first due date must still match the real contract, SOP and regulatory schedule.</div></div><select className={styles.input} style={{maxWidth:260}} value={companyId} onChange={e=>setCompanyId(e.target.value)}><option value="">Select company</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+      <div className={styles.panelHeader}><SectionTitle title="PV template library" info="Use a template to avoid rebuilding common PV workflows from scratch. The first due date must still match the real contract, SOP and regulatory schedule."/><select className={styles.input} style={{maxWidth:260}} value={companyId} onChange={e=>setCompanyId(e.target.value)}><option value="">Select company</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
       <div style={{padding:14,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:12}}>
         {PV_TEMPLATES.map(t=><div key={t.id} className={styles.info} style={{margin:0}}>
-          <div style={{display:"flex",justifyContent:"space-between",gap:10}}><div><h3 style={{marginTop:0}}>{t.title}</h3><div className={styles.muted}>{t.description}</div></div><Badge>{t.cadence==="event"?"Event":t.cadence}</Badge></div>
-          {t.cadence!=="event"?<label style={{display:"block",marginTop:12}}>First due date<input className={styles.input} type="date" value={dates[t.id]||""} onChange={e=>setDates(v=>({...v,[t.id]:e.target.value}))}/></label>:<div className={styles.notice} style={{marginTop:12}}>No automatic deadline until the event or product-specific schedule is confirmed.</div>}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}><div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}><h3 style={{margin:0}}>{t.title}</h3><HoverInfo text={t.description+(t.cadence==="event"?" This is event-driven, so no automatic deadline is created until the event or product-specific schedule is confirmed.":"")}/></div><Badge>{t.cadence==="event"?"Event":t.cadence}</Badge></div>
+          {t.cadence!=="event"?<label style={{display:"block",marginTop:14}}>First due date<input className={styles.input} type="date" value={dates[t.id]||""} onChange={e=>setDates(v=>({...v,[t.id]:e.target.value}))}/></label>:null}
           <div className={styles.inlineActions}><button className={added.has(t.id)?styles.buttonGhost:styles.button} disabled={!companyId||!!busy||added.has(t.id)} onClick={()=>addTemplate(t)}>{added.has(t.id)?"Added":busy===t.id?"Adding…":"Add template"}</button></div>
         </div>)}
       </div>
     </section>
 
     <section className={styles.panel} style={{marginBottom:16}}>
-      <div className={styles.panelHeader}><div><h2>Bulk import</h2><div className={styles.muted}>Export the current Excel tracker as CSV, match these headers, then import instead of retyping.</div></div><button className={styles.buttonGhost} onClick={()=>download(kind)}>Download CSV template</button></div>
+      <div className={styles.panelHeader}><SectionTitle title="Bulk import" info="Export the current Excel tracker as CSV, match the template headers, then import instead of retyping. Recommended order: Companies → Products → Obligations / Tasks."/><button className={styles.buttonGhost} onClick={()=>download(kind)}>Download CSV template</button></div>
       <div style={{padding:14}}>
         <div className={styles.inlineActions} style={{marginTop:0,flexWrap:"wrap"}}>{(["companies","products","obligations","tasks"] as ImportKind[]).map(k=><button key={k} className={kind===k?styles.button:styles.buttonGhost} onClick={()=>changeKind(k)}>{k[0].toUpperCase()+k.slice(1)}</button>)}</div>
         <div className={styles.formGrid} style={{marginTop:14}}>
           <label>CSV file<input className={styles.input} type="file" accept=".csv,text/csv" onChange={fileChanged}/></label>
-          <div><strong>Recommended order</strong><div className={styles.muted} style={{marginTop:8}}>Companies → Products → Obligations / Tasks.</div></div>
+          <div></div>
           <label className={styles.full}>CSV preview<textarea className={styles.input} style={{minHeight:210,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace"}} value={csv} onChange={e=>setCsv(e.target.value)}/></label>
         </div>
         {importMessage?<div className={importMessage.toLowerCase().includes("failed")?styles.errorBox:styles.successBox} style={{marginTop:12}}>{importMessage}</div>:null}
@@ -166,8 +173,7 @@ export default function AutomationPage(){
     </section>
 
     <section className={styles.panel}>
-      <div className={styles.panelHeader}><div><h2>Microsoft 365 integration</h2><div className={styles.muted}>Next layer after the migration and recurring-workflow path are validated.</div></div><Badge>Planned</Badge></div>
-      <div className={styles.notice} style={{margin:14}}>Outlook can later turn selected regulatory emails into suggested tasks and deadlines. SharePoint / OneDrive can link controlled documents instead of duplicating them. The QPPV remains the final reviewer.</div>
+      <div className={styles.panelHeader}><SectionTitle title="Microsoft 365 integration" info="Planned next layer: Outlook can turn selected regulatory emails into suggested tasks and deadlines, while SharePoint / OneDrive can link controlled documents instead of duplicating them. The QPPV remains the final reviewer."/><Badge>Planned</Badge></div>
     </section>
   </>;
 }
