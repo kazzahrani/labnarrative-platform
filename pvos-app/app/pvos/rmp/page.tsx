@@ -36,29 +36,41 @@ export default function RmpPage(){
  return <>
   <Header eyebrow="Product safety" title="RMP Tracker" sub="Track initial and subsequent RMP submissions, identified and potential risks, missing information, additional risk minimization measures, and the next DLP/update due date."/>
   <section className={styles.cards}><div className={styles.card}><span>RMPs tracked</span><strong>{tracked.length}</strong></div><div className={styles.card}><span>Due in 30 days</span><strong>{dueSoon}</strong></div><div className={[styles.card,overdue?styles.danger:""].join(" ")}><span>Overdue</span><strong>{overdue}</strong></div><div className={styles.card}><span>With Additional Risk Minimization Measure</span><strong>{withArmm}</strong></div></section>
-  <section className={styles.panel}><div className={styles.panelHeader}><h2>RMP portfolio</h2><span className={styles.muted}>{products.length} products</span></div><div className={styles.tableWrap}><table className={styles.table} style={{minWidth:2450}}><thead>
-  <tr>
-    <th rowSpan={3}>Company</th><th rowSpan={3}>Product</th><th rowSpan={3}>Molecule</th><th rowSpan={3}>Submitted to</th><th rowSpan={3}>Frequency</th>
-    <th colSpan={6} style={{textAlign:"center"}}>Information regarding Initial RMP</th>
-    <th rowSpan={3}>Next DLP/Update due date</th>
-    <th colSpan={6} style={{textAlign:"center"}}>Information regarding subsequent RMP</th>
-    <th rowSpan={3}></th>
+  <section className={styles.panel}><div className={styles.panelHeader}><h2>RMP portfolio</h2><span className={styles.muted}>{products.length} products</span></div><div className={styles.tableWrap}><table className={`${styles.table} ${styles.rmpTable}`}><thead>
+  <tr className={styles.rmpGroupRow}>
+    <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpCompany}`}>Company</th>
+    <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpProduct}`}>Product</th>
+    <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>Molecule</th>
+    <th rowSpan={2}>Submitted to</th><th rowSpan={2}>Frequency</th>
+    <th colSpan={6} className={styles.rmpInitialGroup}>Information regarding Initial RMP</th>
+    <th rowSpan={2} className={styles.rmpDue}>Next DLP/Update due date</th>
+    <th colSpan={6} className={styles.rmpSubsequentGroup}>Information regarding subsequent RMP</th>
+    <th rowSpan={2} className={styles.rmpAction}></th>
   </tr>
-  <tr>
-    <th rowSpan={2}>DLP</th><th rowSpan={2}>Date of submission</th><th colSpan={3} style={{textAlign:"center"}}>Information Submitted</th><th rowSpan={2}>Additional Risk Minimization Measure</th>
-    <th rowSpan={2}>Date of submission</th><th colSpan={3} style={{textAlign:"center"}}>Information Submitted</th><th rowSpan={2}>Comments/Reason for update</th><th rowSpan={2}>Additional Risk Minimization Measure</th>
-  </tr>
-  <tr>
-    <th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
-    <th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
+  <tr className={styles.rmpFieldRow}>
+    <th className={styles.rmpInitialCell}>DLP</th>
+    <th className={styles.rmpInitialCell}>Date of submission</th>
+    <th className={styles.rmpInitialCell}>RMP Identified</th>
+    <th className={styles.rmpInitialCell}>RMP Potential</th>
+    <th className={styles.rmpInitialCell}>Missing Info</th>
+    <th className={styles.rmpInitialCell}>Additional Risk Minimization Measure</th>
+    <th className={styles.rmpSubsequentCell}>Date of submission</th>
+    <th className={styles.rmpSubsequentCell}>RMP Identified</th>
+    <th className={styles.rmpSubsequentCell}>RMP Potential</th>
+    <th className={styles.rmpSubsequentCell}>Missing Info</th>
+    <th className={styles.rmpSubsequentCell}>Comments/Reason for update</th>
+    <th className={styles.rmpSubsequentCell}>Additional Risk Minimization Measure</th>
   </tr>
   </thead><tbody>
   {products.map(p=>{const x=rv(p),ini=x.versions.find(v=>v.type==="initial"),sub=x.versions.filter(v=>v.type==="subsequent"),l=sub[sub.length-1],tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
-    <td>{cm[p.company_id]||"—"}</td><td><strong>{p.brand_name}</strong></td><td>{p.active_ingredient||"—"}</td><td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td>
-    <td>{ini?.dlp||"—"}</td><td>{fmt(ini?.submission_date)}</td><td>{ini?.identified_risks||"—"}</td><td>{ini?.potential_risks||"—"}</td><td>{ini?.missing_information||"—"}</td><td>{ini?.additional_rmm||"—"}</td>
-    <td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
-    <td>{fmt(l?.submission_date)}</td><td>{l?.identified_risks||"—"}</td><td>{l?.potential_risks||"—"}</td><td>{l?.missing_information||"—"}</td><td>{l?.comments_reason||"—"}</td><td>{l?.additional_rmm||"—"}</td>
-    <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
+    <td className={`${styles.rmpSticky} ${styles.rmpCompany}`}>{cm[p.company_id]||"—"}</td>
+    <td className={`${styles.rmpSticky} ${styles.rmpProduct}`}><strong>{p.brand_name}</strong></td>
+    <td className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>{p.active_ingredient||"—"}</td>
+    <td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td>
+    <td className={styles.rmpInitialCell}>{ini?.dlp||"—"}</td><td className={styles.rmpInitialCell}>{fmt(ini?.submission_date)}</td><td className={styles.rmpInitialCell}>{ini?.identified_risks||"—"}</td><td className={styles.rmpInitialCell}>{ini?.potential_risks||"—"}</td><td className={styles.rmpInitialCell}>{ini?.missing_information||"—"}</td><td className={styles.rmpInitialCell}>{ini?.additional_rmm||"—"}</td>
+    <td className={styles.rmpDue}>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
+    <td className={styles.rmpSubsequentCell}>{fmt(l?.submission_date)}</td><td className={styles.rmpSubsequentCell}>{l?.identified_risks||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.potential_risks||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.missing_information||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.comments_reason||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.additional_rmm||"—"}</td>
+    <td className={styles.rmpAction}><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
   </tr>})}
   </tbody></table></div></section>
 
