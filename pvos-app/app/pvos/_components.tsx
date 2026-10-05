@@ -39,6 +39,7 @@ export function AppShell({children}:{children:ReactNode}) {
         <Link href="/pvos/companies">Companies</Link>
         <Link href="/pvos/tasks">Tasks</Link>
         <Link href="/pvos/automation">Automation</Link>
+        <Link href="/pvos/rmp">RMP Tracker</Link>
         <Link href="/pvos/approvals">Approvals</Link>
         <Link href="/pvos/handover">Handover</Link>
         <Link href="/pvos/inspection">Inspection</Link>
