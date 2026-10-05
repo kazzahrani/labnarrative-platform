@@ -163,8 +163,7 @@ export default function AutomationPage(){
       <div style={{padding:14}}>
         <div className={styles.inlineActions} style={{marginTop:0,flexWrap:"wrap"}}>{(["companies","products","obligations","tasks"] as ImportKind[]).map(k=><button key={k} className={kind===k?styles.button:styles.buttonGhost} onClick={()=>changeKind(k)}>{k[0].toUpperCase()+k.slice(1)}</button>)}</div>
         <div className={styles.formGrid} style={{marginTop:14}}>
-          <label>CSV file<input className={styles.input} type="file" accept=".csv,text/csv" onChange={fileChanged}/></label>
-          <div></div>
+          <label className={styles.full}>CSV file<input className={styles.input} type="file" accept=".csv,text/csv" onChange={fileChanged}/></label>
           <label className={styles.full}>CSV preview<textarea className={styles.input} style={{minHeight:210,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace"}} value={csv} onChange={e=>setCsv(e.target.value)}/></label>
         </div>
         {importMessage?<div className={importMessage.toLowerCase().includes("failed")?styles.errorBox:styles.successBox} style={{marginTop:12}}>{importMessage}</div>:null}
