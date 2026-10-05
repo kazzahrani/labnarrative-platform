@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Header, Badge } from "../_components";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
@@ -50,6 +51,7 @@ export default function AutomationPage(){
   const [dates,setDates]=useState<Record<string,string>>(()=>Object.fromEntries(PV_TEMPLATES.map(t=>[t.id,suggestedDueDate(t)])));
   const [busy,setBusy]=useState<string|null>(null);
   const [message,setMessage]=useState<string|null>(null);
+  const [showTasksLink,setShowTasksLink]=useState(false);
   const [kind,setKind]=useState<ImportKind>("products");
   const [csv,setCsv]=useState(SAMPLES.products);
   const [importing,setImporting]=useState(false);
@@ -85,14 +87,25 @@ export default function AutomationPage(){
   async function addTemplate(t:PVTemplate){
     if(!companyId||!session)return;
     if(t.cadence!=="event"&&!dates[t.id]){setMessage("Choose the first due date.");return;}
-    setBusy(t.id);setMessage(null);
+    setBusy(t.id);setMessage(null);setShowTasksLink(false);
     const {error}=await pvosSupabase.from("pvos_obligations").insert({
       company_id:companyId,title:t.title,activity_type:t.activityType,cadence:t.cadence,
       responsibility:"organization",owner_user_id:session.user.id,evidence_required:true,
       next_due_at:t.cadence==="event"?null:toIso(dates[t.id]),source_type:"template",source_reference:t.id
     });
-    if(!error&&t.cadence!=="event")await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:60});
-    setBusy(null);setMessage(error?error.message:t.title+" added to "+(currentCompany?.name||"company")+".");
+    let generated=0;
+    if(!error&&t.cadence!=="event"){
+      const {data,error:materializeError}=await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:60});
+      if(materializeError){setBusy(null);setMessage(materializeError.message);refresh();await load();return;}
+      generated=Number(data||0);
+    }
+    setBusy(null);
+    if(error)setMessage(error.message);
+    else if(t.cadence==="event")setMessage(t.title+" added to "+(currentCompany?.name||"company")+". It will appear in Tasks when the event is triggered.");
+    else {
+      setMessage(t.title+" added to "+(currentCompany?.name||"company")+". "+(generated>0?generated+" upcoming task"+(generated===1?" was":"s were")+" created.":"PVOS will create its upcoming task instances automatically."));
+      setShowTasksLink(true);
+    }
     refresh();await load();
   }
 
@@ -144,7 +157,7 @@ export default function AutomationPage(){
 
     <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:30}}>
       <div className={styles.panelHeader}><SectionTitle title="Recurring task engine" info="Create an obligation once and PVOS creates the individual task instances while preserving every previous cycle. Automatic generation runs when the workspace loads; use Generate next 60 days after changing schedules or importing obligations."/><button className={styles.button} onClick={generate}>Generate next 60 days</button></div>
-      {message?<div className={styles.successBox} style={{margin:"0 14px 14px"}}>{message}</div>:null}
+      {message?<div className={styles.successBox} style={{margin:"0 14px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><span>{message}</span>{showTasksLink?<Link className={styles.buttonGhost} href="/pvos/tasks">View tasks →</Link>:null}</div>:null}
     </section>
 
     <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:20}}>
