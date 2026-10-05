@@ -58,6 +58,11 @@ export default function LiteraturePage(){
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
   const [selectedRun,setSelectedRun]=useState<any|null>(null);
+  const [rapidOpen,setRapidOpen]=useState(false);
+  const [rapidItemId,setRapidItemId]=useState<string|null>(null);
+  const [rapidSeen,setRapidSeen]=useState<string[]>([]);
+  const [rapidTotal,setRapidTotal]=useState(0);
+  const [rapidReviewed,setRapidReviewed]=useState(0);
   const [busy,setBusy]=useState(false);
   const [analyzing,setAnalyzing]=useState(false);
   const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"saudi"|"reviewed"|"all">("open");
@@ -125,6 +130,12 @@ export default function LiteraturePage(){
     if(queueFilter==="reviewed")return x.review_status==="relevant"||x.review_status==="not_relevant";
     return true;
   }),[sortedItems,queueFilter,productFilter]);
+  const rapidCandidates=useMemo(()=>sortedItems.filter(x=>{
+    if(productFilter&&x.product_id!==productFilter)return false;
+    if(rapidSeen.includes(x.id))return false;
+    return x.review_status==="unreviewed"||x.review_status==="needs_review";
+  }),[sortedItems,productFilter,rapidSeen]);
+  const rapidItem=rapidItemId?items.find(x=>x.id===rapidItemId)||null:null;
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
   const recordMap=useMemo(()=>Object.fromEntries(records.map(x=>[x.run_id,x])),[records]);
   const runItems=(runId:string)=>items.filter(x=>x.run_id===runId);
@@ -320,6 +331,71 @@ export default function LiteraturePage(){
     await load();
   }
 
+  function startRapidReview(){
+    const candidates=sortedItems.filter(x=>
+      (!productFilter||x.product_id===productFilter) &&
+      (x.review_status==="unreviewed"||x.review_status==="needs_review")
+    );
+    if(!candidates.length){
+      setMessage("No open articles are available for rapid review.");
+      return;
+    }
+    setQueueFilter("open");
+    setRapidSeen([]);
+    setRapidReviewed(0);
+    setRapidTotal(candidates.length);
+    setRapidItemId(candidates[0].id);
+    setRapidOpen(true);
+    setMessage("");
+  }
+
+  function skipRapid(){
+    if(!rapidItem)return;
+    const seen=[...rapidSeen,rapidItem.id];
+    const next=sortedItems.find(x=>
+      x.id!==rapidItem.id &&
+      !seen.includes(x.id) &&
+      (!productFilter||x.product_id===productFilter) &&
+      (x.review_status==="unreviewed"||x.review_status==="needs_review")
+    );
+    setRapidSeen(seen);
+    if(next)setRapidItemId(next.id);
+    else{setRapidOpen(false);setRapidItemId(null);}
+  }
+
+  async function rapidDecision(status:ReviewStatus){
+    if(!session||!rapidItem||busy)return;
+    const current=rapidItem;
+    const seen=[...rapidSeen,current.id];
+    const next=sortedItems.find(x=>
+      x.id!==current.id &&
+      !seen.includes(x.id) &&
+      (!productFilter||x.product_id===productFilter) &&
+      (x.review_status==="unreviewed"||x.review_status==="needs_review")
+    );
+    setBusy(true);setMessage("");
+    const final=status==="relevant"||status==="not_relevant";
+    const reviewedAt=final?new Date().toISOString():null;
+    const {error}=await pvosSupabase.from("pvos_literature_items").update({
+      review_status:status,
+      reviewer_user_id:session.user.id,
+      reviewed_at:reviewedAt
+    }).eq("id",current.id);
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    setItems(prev=>prev.map(x=>x.id===current.id?{
+      ...x,review_status:status,reviewer_user_id:session.user.id,reviewed_at:reviewedAt
+    }:x));
+    setRapidSeen(seen);
+    setRapidReviewed(v=>v+1);
+    if(next)setRapidItemId(next.id);
+    else{
+      setRapidOpen(false);
+      setRapidItemId(null);
+      setMessage("Rapid review pass complete.");
+    }
+  }
+
   async function queueFollowup(item:any,destination:"signal_review"|"psur_evidence"){
     if(!organizationId||!session)return;
     setBusy(true);setMessage("");
@@ -452,6 +528,22 @@ export default function LiteraturePage(){
     document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
 
+  useEffect(()=>{
+    if(!rapidOpen||!rapidItemId)return;
+    const onKey=(e:KeyboardEvent)=>{
+      const tag=(document.activeElement?.tagName||"").toLowerCase();
+      if(tag==="input"||tag==="textarea"||tag==="select")return;
+      const key=e.key.toLowerCase();
+      if(key==="r"){e.preventDefault();rapidDecision("relevant");}
+      else if(key==="n"){e.preventDefault();rapidDecision("not_relevant");}
+      else if(key==="m"){e.preventDefault();rapidDecision("needs_review");}
+      else if(key==="s"){e.preventDefault();skipRapid();}
+      else if(key==="escape"){setRapidOpen(false);setRapidItemId(null);}
+    };
+    window.addEventListener("keydown",onKey);
+    return ()=>window.removeEventListener("keydown",onKey);
+  },[rapidOpen,rapidItemId,busy,rapidSeen,productFilter,sortedItems]);
+
   return <>
     <Header
       eyebrow="Safety intelligence"
@@ -509,7 +601,10 @@ export default function LiteraturePage(){
             <h2>Screening queue</h2>
             <div className={styles.muted} style={{marginTop:4}}>{openItems.length} awaiting final QPPV decision · {reviewed.length} reviewed</div>
           </div>
-          <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
+            <button className={styles.button} onClick={startRapidReview} disabled={!openItems.length}>Rapid review</button>
+          </div>
         </div>
         <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -622,6 +717,65 @@ export default function LiteraturePage(){
         </table></div>:<div className={styles.empty}>No literature findings have been selected for PSUR evidence yet.</div>}
       </>:null}
     </section>
+
+    {rapidOpen&&rapidItem?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget){setRapidOpen(false);setRapidItemId(null)}}}>
+      <div className={styles.modalCard} style={{width:"min(960px,100%)"}}>
+        <div className={styles.modalHeader}>
+          <div>
+            <div className={styles.eyebrow}>Rapid literature review</div>
+            <h2>{productMap[rapidItem.product_id]?.brand_name||"Article review"}</h2>
+            <div className={styles.muted} style={{marginTop:6}}>
+              {rapidReviewed} of {rapidTotal} processed this pass · {Math.max(0,rapidTotal-rapidReviewed)} remaining
+            </div>
+          </div>
+          <button className={styles.modalClose} onClick={()=>{setRapidOpen(false);setRapidItemId(null)}}>×</button>
+        </div>
+
+        <div className={styles.progress} style={{marginBottom:18}}>
+          <span style={{width:(rapidTotal?Math.round((rapidReviewed/rapidTotal)*100):0)+"%"}}></span>
+        </div>
+
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+          {rapidItem.metadata?.urgent_saudi?<Badge tone="red">⚠ Potential Saudi case / context</Badge>:null}
+          <Badge tone={relevanceTone(rapidItem.relevance)}>{relevanceLabel(rapidItem.relevance)}</Badge>
+          <Badge>{sourceMap[rapidItem.source_id]?.name||rapidItem.journal||"PubMed"}</Badge>
+          <Badge>{dateLabel(rapidItem.publication_date)}</Badge>
+        </div>
+
+        <div className={styles.info}>
+          <h3 style={{fontSize:17,lineHeight:1.4,marginBottom:10}}>
+            {rapidItem.article_url?<a href={rapidItem.article_url} target="_blank" rel="noreferrer">{rapidItem.title} ↗</a>:rapidItem.title}
+          </h3>
+          <div className={styles.kv}><span>Product</span><span>{productMap[rapidItem.product_id]?.brand_name||"—"} · {productMap[rapidItem.product_id]?.active_ingredient||"—"}</span></div>
+          <div className={styles.kv}><span>Matched terms</span><span>{rapidItem.matched_terms?.length?rapidItem.matched_terms.join(", "):"—"}</span></div>
+          <div className={styles.kv}><span>Matched in</span><span>{rapidItem.metadata?.match_locations?.length?rapidItem.metadata.match_locations.join(" · "):"—"}</span></div>
+          <div className={styles.kv}><span>Safety terms</span><span>{rapidItem.metadata?.safety_hits?.length?rapidItem.metadata.safety_hits.join(", "):"—"}</span></div>
+          <div className={styles.kv}><span>Automation note</span><span>{rapidItem.ai_reason||"—"}</span></div>
+        </div>
+
+        <div className={styles.notice} style={{marginTop:14,maxHeight:300,overflow:"auto"}}>
+          <strong>Abstract</strong>
+          <div style={{marginTop:8,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{rapidItem.abstract||"No abstract available from PubMed."}</div>
+        </div>
+
+        <div style={{marginTop:14,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          <span className={styles.muted}>Keyboard:</span>
+          <Badge>R · Relevant</Badge>
+          <Badge>N · Not relevant</Badge>
+          <Badge>M · Needs review</Badge>
+          <Badge>S · Skip</Badge>
+        </div>
+
+        <div className={styles.modalActions} style={{justifyContent:"space-between",flexWrap:"wrap"}}>
+          <button className={styles.buttonGhost} disabled={busy} onClick={skipRapid}>Skip</button>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button className={styles.buttonGhost} disabled={busy} onClick={()=>rapidDecision("needs_review")}>Needs review</button>
+            <button className={styles.buttonGhost} disabled={busy} onClick={()=>rapidDecision("not_relevant")}>Not relevant</button>
+            <button className={styles.button} disabled={busy} onClick={()=>rapidDecision("relevant")}>Relevant</button>
+          </div>
+        </div>
+      </div>
+    </div>:null}
 
     {selectedRun?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedRun(null)}}>
       <div className={styles.modalCard}>
