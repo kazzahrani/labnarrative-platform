@@ -37,6 +37,14 @@ export function NewTaskModal({open,onClose,onCreated}:{open:boolean,onClose:()=>
     setRouteId("");
   })()},[open,companyId]);
 
+  useEffect(()=>{
+    if(!open||!routes.length)return;
+    const current=routes.find(r=>r.id===routeId);
+    if(current && (!current.activity_type||current.activity_type===type))return;
+    const matching=routes.filter(r=>!r.activity_type||r.activity_type===type);
+    setRouteId(matching.length===1?matching[0].id:"");
+  },[open,type,routes]);
+
   function reset(){
     setTitle("");setType("Literature");setPriority("medium");setDue("");setProductId("");setRouteId("");setError(null);
   }
