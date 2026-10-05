@@ -121,10 +121,9 @@ export default function RmpPage(){
         {r.versions.filter(v=>v.type==="subsequent").slice().reverse().map(v=>{
           const isOpen=expanded===v.id;
           return <div key={v.id} className={styles.info} style={{padding:0,overflow:"hidden"}}>
-            <button onClick={()=>setExpanded(isOpen?null:v.id)} style={{width:"100%",border:0,background:"transparent",padding:"14px 16px",display:"grid",gridTemplateColumns:"150px 90px minmax(180px,1fr) 100px auto",gap:12,alignItems:"center",textAlign:"left",cursor:"pointer",color:"inherit"}}>
+            <button onClick={()=>setExpanded(isOpen?null:v.id)} style={{width:"100%",border:0,background:"transparent",padding:"14px 16px",display:"grid",gridTemplateColumns:"150px minmax(220px,1fr) 140px auto",gap:12,alignItems:"center",textAlign:"left",cursor:"pointer",color:"inherit"}}>
               <strong style={{fontSize:13}}>{fmt(v.submission_date)}</strong>
-              <span className={styles.muted}>{v.dlp?"DLP "+v.dlp:"DLP —"}</span>
-              <span style={{fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.comments_reason||"No reason recorded"}</span>
+              <span style={{fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.comments_reason||"No Comments/Reason for update recorded"}</span>
               <span>{arm(v)?<Badge tone="amber">Additional RMM</Badge>:<Badge>No Additional RMM</Badge>}</span>
               <span className={styles.muted}>{isOpen?"Hide":"View details"} ▾</span>
             </button>
@@ -146,8 +145,7 @@ export default function RmpPage(){
           <button type="button" className={styles.modalClose} onClick={()=>setAddOpen(false)}>×</button>
         </div>
         <div className={styles.formGrid}>
-          <label>DLP<input className={styles.input} value={u.dlp} onChange={e=>setU({...u,dlp:e.target.value})} placeholder="Date or NA"/></label>
-          <label>Date of submission<input className={styles.input} type="date" value={u.submission_date} onChange={e=>setU({...u,submission_date:e.target.value})} required/></label>
+          <label className={styles.full}>Date of submission<input className={styles.input} type="date" value={u.submission_date} onChange={e=>setU({...u,submission_date:e.target.value})} required/></label>
           <label className={styles.full}>RMP Identified<textarea className={styles.input} style={{minHeight:72}} value={u.identified_risks} onChange={e=>setU({...u,identified_risks:e.target.value})}/></label>
           <label className={styles.full}>RMP Potential<textarea className={styles.input} style={{minHeight:72}} value={u.potential_risks} onChange={e=>setU({...u,potential_risks:e.target.value})}/></label>
           <label className={styles.full}>Missing Info<textarea className={styles.input} style={{minHeight:64}} value={u.missing_information} onChange={e=>setU({...u,missing_information:e.target.value})}/></label>
