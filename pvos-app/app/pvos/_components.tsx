@@ -30,6 +30,7 @@ export function AppShell({children}:{children:ReactNode}) {
     ["/pvos/tasks","Tasks"],
     ["/pvos/automation","Automation & Import"],
     ["/pvos/literature","Literature"],
+    ["/pvos/signal","Signal Review"],
     ["/pvos/rmp","RMP Tracker"],
     ["/pvos/approvals","Approvals"],
     ["/pvos/handover","Handover"],
