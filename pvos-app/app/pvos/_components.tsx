@@ -28,7 +28,7 @@ export function AppShell({children}:{children:ReactNode}) {
     ["/pvos/dashboard","Dashboard"],
     ["/pvos/companies","Companies"],
     ["/pvos/tasks","Tasks"],
-    ["/pvos/automation","Automation"],
+    ["/pvos/automation","Automation & Import"],
     ["/pvos/rmp","RMP Tracker"],
     ["/pvos/approvals","Approvals"],
     ["/pvos/handover","Handover"],
