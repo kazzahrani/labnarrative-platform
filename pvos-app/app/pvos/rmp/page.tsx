@@ -31,7 +31,26 @@ export default function RmpPage(){
  const dueSoon=tracked.filter(p=>{const d=rv(p).next_due_date;if(!d)return false;const x=new Date(d+"T00:00:00");return x>=today&&x<=soon}).length;
  const withArmm=tracked.filter(p=>arm(last(rv(p)))).length;
  function open(p:any){const x=rv(p),i=x.versions.find(v=>v.type==="initial")||{id:id(),type:"initial",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:new Date().toISOString()} as V;setSel(p);setR(x);setInitial(i);setMsg("");setTab("overview");setAddOpen(false);setExpanded(null)}
- async function task(next:string){if(!sel||!organizationId||!next)return;const {data}=await pvosSupabase.from("pvos_tasks").select("*").eq("product_id",sel.id).eq("activity_type","RMP").in("status",["not_started","in_progress","awaiting_review","awaiting_external"]);const ex=(data||[]).find((x:any)=>x.metadata?.rmp_tracker);const due_at=new Date(next+"T17:00:00").toISOString();if(ex)await pvosSupabase.from("pvos_tasks").update({due_at,title:"RMP update — "+sel.brand_name}).eq("id",ex.id);else await pvosSupabase.from("pvos_tasks").insert({organization_id:organizationId,company_id:sel.company_id,product_id:sel.id,title:"RMP update — "+sel.brand_name,activity_type:"RMP",source:"system",status:"not_started",priority:"medium",owner_user_id:session?.user.id||null,due_at,metadata:{rmp_tracker:true}})}
+ async function task(next:string){
+  if(!sel||!organizationId||!next)return;
+  const {data}=await pvosSupabase.from("pvos_tasks").select("*").eq("product_id",sel.id).eq("activity_type","RMP").in("status",["not_started","in_progress","awaiting_review","awaiting_external"]);
+  const ex=(data||[]).find((x:any)=>x.metadata?.rmp_tracker);
+  const due_at=new Date(next+"T17:00:00").toISOString();
+  let taskId=ex?.id as string|undefined;
+  if(ex) await pvosSupabase.from("pvos_tasks").update({due_at,title:"RMP update — "+sel.brand_name}).eq("id",ex.id);
+  else {
+    const {data:created}=await pvosSupabase.from("pvos_tasks").insert({organization_id:organizationId,company_id:sel.company_id,product_id:sel.id,title:"RMP update — "+sel.brand_name,activity_type:"RMP",source:"system",status:"not_started",priority:"medium",owner_user_id:session?.user.id||null,due_at,metadata:{rmp_tracker:true}}).select("id").single();
+    taskId=created?.id;
+  }
+  if(!taskId)return;
+  const {data:existingApprovals}=await pvosSupabase.from("pvos_task_approvals").select("id").eq("task_id",taskId).limit(1);
+  if(existingApprovals?.length)return;
+  const {data:routes}=await pvosSupabase.from("pvos_approval_routes").select("id").eq("company_id",sel.company_id).eq("active",true).eq("activity_type","RMP").order("created_at").limit(1);
+  const routeId=routes?.[0]?.id;
+  if(!routeId)return;
+  const {data:steps}=await pvosSupabase.from("pvos_approval_steps").select("*").eq("route_id",routeId).order("position");
+  if(steps?.length) await pvosSupabase.from("pvos_task_approvals").insert(steps.map((x:any)=>({task_id:taskId,route_id:routeId,step_position:x.position,assigned_user_id:x.assignee_user_id,status:"pending"})));
+ }
  async function save(){if(!sel||!initial)return;setBusy(true);let vs=[...r.versions],i=vs.findIndex(v=>v.type==="initial");if(i>=0)vs[i]=initial;else vs.unshift(initial);const next={...r,versions:vs},metadata={...(sel.metadata||{}),rmp:next};const {error}=await pvosSupabase.from("pvos_products").update({metadata,rmp_status:r.status}).eq("id",sel.id);if(!error&&r.next_due_date)await task(r.next_due_date);setBusy(false);setMsg(error?error.message:"RMP tracker saved"+(r.next_due_date?" and next update added to Tasks.":"."));setR(next);await load()}
  async function add(e:FormEvent){e.preventDefault();if(!sel||!u.submission_date)return;setBusy(true);const v={...u,id:id(),created_at:new Date().toISOString()},next={...r,versions:[...r.versions,v]},metadata={...(sel.metadata||{}),rmp:next};const {error}=await pvosSupabase.from("pvos_products").update({metadata,rmp_status:r.status}).eq("id",sel.id);if(!error&&r.next_due_date)await task(r.next_due_date);setBusy(false);if(error)return setMsg(error.message);setR(next);setU({...u,id:"",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:""});setExpanded(v.id);setAddOpen(false);setMsg("Subsequent RMP update added.");await load()}
 
