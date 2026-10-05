@@ -2,9 +2,11 @@
 
 import { FormEvent, useState } from "react";
 import { pvosSupabase } from "../_pvos-supabase";
+import { usePVOS } from "../_provider";
 import styles from "../pvos.module.css";
 
 export default function LoginPage(){
+  const {error:workspaceError}=usePVOS();
   const [mode,setMode] = useState<"signin"|"signup">("signin");
   const [email,setEmail] = useState("");
   const [password,setPassword] = useState("");
@@ -42,7 +44,7 @@ export default function LoginPage(){
       <form onSubmit={submit} className={styles.form}>
         <label>Email<input className={styles.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} required /></label>
         <label>Password<input className={styles.input} type="password" minLength={8} value={password} onChange={e=>setPassword(e.target.value)} required /></label>
-        {error?<div className={styles.errorBox}>{error}</div>:null}
+        {(error||workspaceError)?<div className={styles.errorBox}>{error||workspaceError}</div>:null}
         {message?<div className={styles.successBox}>{message}</div>:null}
         <button className={styles.button} disabled={busy}>{busy?"Please wait…":mode==="signin"?"Sign in":"Create account"}</button>
       </form>
