@@ -60,7 +60,7 @@ export default function CompanySetupPage(){
 
   if(!company)return <div className={styles.empty}>Loading company setup…</div>;
   return <>
-    <Header eyebrow="PV configuration" title={company.name+" setup"} sub="Configure products, recurring PV obligations and company-specific approval workflows."/>
+    <Header eyebrow="PV configuration" title={company.name+" setup"} sub="Configure products, recurring PV obligations and company-specific approval workflows." action={<Link className={styles.buttonGhost} href="/pvos/automation">Automation & import</Link>}/>
     {message?<div className={message.toLowerCase().includes("added")?styles.successBox:styles.errorBox} style={{marginBottom:16}}>{message}</div>:null}
     <div className={styles.grid2}>
       <form className={styles.info} onSubmit={addProduct}><h3>Add product</h3><div className={styles.form}>
