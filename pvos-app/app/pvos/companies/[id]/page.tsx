@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Header, Badge, statusTone } from "../../_components";
 import { usePVOS } from "../../_provider";
 import { pvosSupabase } from "../../_pvos-supabase";
-import { dueLabel, formatDue } from "../../_utils";
+import { dueLabel, formatDue, niceStatus } from "../../_utils";
 import styles from "../../pvos.module.css";
 
 export default function CompanyPage(){
@@ -41,7 +41,7 @@ export default function CompanyPage(){
       </section>
       <aside className={styles.stack}>
         <div className={styles.info}><h3>Coverage</h3><div className={styles.kv}><span>QPPV</span><span>{company.qppv_user_id===session?.user.id?"Me":company.qppv_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Deputy</span><span>{company.deputy_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Contract scope</span><span>{company.contract_scope??"—"}</span></div></div>
-        <div className={styles.info}><h3>Recurring obligations</h3>{obligations.length?obligations.map(o=><div className={styles.kv} key={o.id}><span>{o.activity_type}</span><span>{o.cadence}</span></div>):<div className={styles.muted}>No recurring obligations configured yet.</div>}<div className={styles.inlineActions}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Add product / obligation</Link></div></div>
+        <div className={styles.info}><h3>Recurring obligations</h3>{obligations.length?obligations.map(o=><div className={styles.kv} key={o.id}><span>{o.activity_type}</span><span>{niceStatus(o.cadence)} · {o.responsibility==="organization"?"Our organization":niceStatus(o.responsibility)}</span></div>):<div className={styles.muted}>No recurring obligations configured yet.</div>}<div className={styles.inlineActions}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Add product / obligation</Link></div></div>
       </aside>
     </div>
   </>;
