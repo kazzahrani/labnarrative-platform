@@ -33,9 +33,11 @@ export default function Approvals(){
   const taskBy=useMemo(()=>Object.fromEntries(tasks.map(t=>[t.id,t])),[tasks]);
   const companyBy=useMemo(()=>Object.fromEntries(companies.map(c=>[c.id,c])),[companies]);
   const stepBy=useMemo(()=>Object.fromEntries(steps.map(s=>[s.route_id+"|"+s.position,s])),[steps]);
-  const active=approvals.filter(a=>a.status!=="approved"&&a.status!=="skipped");
+  const active=approvals.filter(a=>a.status==="in_review");
+  const queued=approvals.filter(a=>a.status==="pending");
 
   async function approve(a:any){
+    if(a.status!=="in_review")return;
     setBusy(a.id);
     await pvosSupabase.from("pvos_task_approvals").update({status:"approved",completed_at:new Date().toISOString()}).eq("id",a.id);
     const allForTask=approvals.filter(x=>x.task_id===a.task_id);
@@ -46,8 +48,11 @@ export default function Approvals(){
   }
 
   return <>
-    <Header eyebrow="Accountability" title="Approval tracking" sub="Track documents and tasks through each approval step. See who currently has it, how long it has been waiting, and the full approval history."/>
+    <Header eyebrow="Accountability" title="Approval tracking" sub="Track documents and tasks through each approval step. Only the current step can be approved; later steps remain queued until the previous reviewer finishes."/>
     <section className={styles.panel}><div className={styles.panelHeader}><h2>Currently waiting</h2><span className={styles.muted}>{active.length} active approval step(s)</span></div>
-    {active.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Task</th><th>Step</th><th>Status</th><th>Waiting since</th><th></th></tr></thead><tbody>{active.map(a=>{const t=taskBy[a.task_id];const s=stepBy[a.route_id+"|"+a.step_position];return <tr key={a.id}><td>{companyBy[t?.company_id]?.name??"—"}</td><td>{t?.title??"Task"}</td><td>{s?.role??("Step "+a.step_position)}</td><td><Badge tone={a.status==="in_review"?"amber":"default"}>{niceStatus(a.status)}</Badge></td><td>{new Date(a.received_at).toLocaleString()}</td><td>{["in_review","pending"].includes(a.status)?<button className={styles.buttonGhost} disabled={busy===a.id} onClick={()=>approve(a)}>{busy===a.id?"Saving…":"Approve"}</button>:null}</td></tr>})}</tbody></table></div>:<div className={styles.empty}>Nothing is waiting for approval.</div>}</section>
+    {active.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Task</th><th>Step</th><th>Status</th><th>Waiting since</th><th></th></tr></thead><tbody>{active.map(a=>{const t=taskBy[a.task_id];const s=stepBy[a.route_id+"|"+a.step_position];return <tr key={a.id}><td>{companyBy[t?.company_id]?.name??"—"}</td><td>{t?.title??"Task"}</td><td>{s?.role??("Step "+a.step_position)}</td><td><Badge tone="amber">{niceStatus(a.status)}</Badge></td><td>{a.received_at?new Date(a.received_at).toLocaleString():"—"}</td><td><button className={styles.buttonGhost} disabled={busy===a.id} onClick={()=>approve(a)}>{busy===a.id?"Saving…":"Approve"}</button></td></tr>})}</tbody></table></div>:<div className={styles.empty}>Nothing is waiting for approval.</div>}</section>
+
+    <section className={styles.panel}><div className={styles.panelHeader}><h2>Queued approval steps</h2><span className={styles.muted}>{queued.length} waiting for a previous step</span></div>
+    {queued.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Task</th><th>Future step</th><th>Status</th></tr></thead><tbody>{queued.map(a=>{const t=taskBy[a.task_id];const s=stepBy[a.route_id+"|"+a.step_position];return <tr key={a.id}><td>{companyBy[t?.company_id]?.name??"—"}</td><td>{t?.title??"Task"}</td><td>{s?.role??("Step "+a.step_position)}</td><td><Badge>Queued</Badge></td></tr>})}</tbody></table></div>:<div className={styles.empty}>No queued approval steps.</div>}</section>
   </>;
 }
