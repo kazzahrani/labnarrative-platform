@@ -153,9 +153,19 @@ const SAFETY_TERMS=[
   "suicidal","suicide","interaction","withdrawal","off-label","off label","misuse","abuse"
 ];
 
-function hits(text:string,terms:string[]){
+function escapeRegExp(v:string){return v.replace(/[.*+?^\\${}()|[\\]\\\\]/g,"\\\\function hits(text:string,terms:string[]){
   const l=text.toLowerCase();
   return terms.filter(t=>l.includes(t));
+}")}
+function phrasePresent(text:string,term:string){
+  const normalized=text.toLowerCase();
+  const t=term.toLowerCase().trim();
+  if(!t)return false;
+  const pattern=escapeRegExp(t).replace(/\\\\s+/g,"\\\\s+");
+  return new RegExp("(^|[^a-z0-9])"+pattern+"(?=$|[^a-z0-9])","i").test(normalized);
+}
+function hits(text:string,terms:string[]){
+  return terms.filter(t=>phrasePresent(text,t));
 }
 
 export function analyzeArticle(title:string,abstract:string,keywords:string[],terms:string[]){
