@@ -6,7 +6,7 @@ import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import styles from "../pvos.module.css";
 
-type Tab="sources"|"queue"|"runs";
+type Tab="sources"|"queue"|"runs"|"psur";
 type ReviewStatus="unreviewed"|"relevant"|"not_relevant"|"needs_review";
 
 const today=()=>new Date().toISOString().slice(0,10);
@@ -122,6 +122,10 @@ export default function LiteraturePage(){
     return true;
   }),[sortedItems,queueFilter,productFilter]);
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
+  const psurEvidence=followups
+    .filter(x=>x.destination==="psur_evidence"&&x.status!=="dismissed")
+    .map(x=>({followup:x,item:items.find(i=>i.id===x.literature_item_id),product:productMap[x.product_id]}))
+    .filter(x=>x.item);
   const runCounts=useMemo(()=>{
     const out:Record<string,{total:number;reviewed:number}>={};
     for(const x of items){
@@ -342,6 +346,7 @@ export default function LiteraturePage(){
         <button className={tab==="sources"?styles.button:styles.buttonGhost} onClick={()=>setTab("sources")}>Sources</button>
         <button className={tab==="queue"?styles.button:styles.buttonGhost} onClick={()=>setTab("queue")}>Screening Queue {openItems.length?"("+openItems.length+")":""}</button>
         <button className={tab==="runs"?styles.button:styles.buttonGhost} onClick={()=>setTab("runs")}>Screening Runs</button>
+        <button className={tab==="psur"?styles.button:styles.buttonGhost} onClick={()=>setTab("psur")}>PSUR Evidence {psurEvidence.length?"("+psurEvidence.length+")":""}</button>
       </div>
 
       {tab==="sources"?<>
@@ -455,6 +460,33 @@ export default function LiteraturePage(){
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No screening runs yet. Create one for a historical or current screening period.</div>}
+      </>:null}
+
+      {tab==="psur"?<>
+        <div className={styles.panelHeader} style={{marginTop:12}}>
+          <div>
+            <h2>PSUR evidence pool</h2>
+            <div className={styles.muted} style={{marginTop:4}}>Relevant literature findings selected by the QPPV for downstream aggregate reporting.</div>
+          </div>
+          <span className={styles.muted}>{psurEvidence.length} selected</span>
+        </div>
+        {loading?<div className={styles.empty}>Loading PSUR evidence…</div>:psurEvidence.length?<div className={styles.tableWrap}><table className={styles.table}>
+          <thead><tr><th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Safety priority</th><th>Evidence status</th></tr></thead>
+          <tbody>{psurEvidence.map(row=>{
+            const x=row.item;
+            return <tr key={row.followup.id}>
+              <td style={{minWidth:360}}>
+                {x.article_url?<a href={x.article_url} target="_blank" rel="noreferrer">{x.title}</a>:<strong>{x.title}</strong>}
+                {x.abstract?<div className={styles.muted} style={{marginTop:6,maxWidth:520,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{x.abstract}</div>:null}
+              </td>
+              <td>{row.product?<><strong>{row.product.brand_name}</strong><div className={styles.muted} style={{marginTop:3}}>{row.product.active_ingredient||"—"}</div></>:"—"}</td>
+              <td>{x.journal||"PubMed"}</td>
+              <td>{dateLabel(x.publication_date)}</td>
+              <td><Badge tone={relevanceTone(x.relevance)}>{relevanceLabel(x.relevance)}</Badge></td>
+              <td><Badge tone="green">Selected for PSUR evidence</Badge></td>
+            </tr>
+          })}</tbody>
+        </table></div>:<div className={styles.empty}>No literature findings have been selected for PSUR evidence yet.</div>}
       </>:null}
     </section>
 
