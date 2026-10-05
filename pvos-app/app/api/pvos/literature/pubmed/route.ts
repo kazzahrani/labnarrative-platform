@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { analyzeArticle, fetchPubMedDetails, ncbiJson, productTerms, sleep, type ProductInput, ymd } from "../_pubmed";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL ?? "https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
-const EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
-
-type ProductInput = {
-  id: string;
-  brand_name?: string | null;
-  active_ingredient?: string | null;
-};
 
 type SummaryDoc = {
   uid?: string;
@@ -21,42 +15,6 @@ type SummaryDoc = {
   articleids?: Array<{idtype?: string; value?: string}>;
 };
 
-const sleep = (ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
-
-function normalizeTerm(v:string){
-  return v.replace(/\s+/g," ").trim();
-}
-
-function productTerms(p:ProductInput){
-  const out = new Set<string>();
-  const brand = normalizeTerm(p.brand_name ?? "");
-  if(brand) out.add(brand);
-
-  const ingredient = normalizeTerm(p.active_ingredient ?? "");
-  if(ingredient){
-    out.add(ingredient);
-    const parts = ingredient.split(/\s*(?:&|\+|\/|;|,)\s*/).map(normalizeTerm).filter(Boolean);
-    for(const part of parts){
-      out.add(part);
-      const base = part.replace(/\s+(hydrochloride|sodium|potassium|calcium|mesylate|maleate|succinate|tartrate|phosphate|acetate|citrate|fumarate|besylate)$/i,"").trim();
-      if(base && base !== part) out.add(base);
-    }
-  }
-  return [...out].filter(x=>x.length>=3).slice(0,12);
-}
-
-function ymd(v?:string){
-  if(!v)return null;
-  const m=v.match(/(\d{4})[-\s\/]([A-Za-z]{3}|\d{1,2})[-\s\/](\d{1,2})/);
-  if(m){
-    const months:Record<string,string>={Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
-    const month=/^\d+$/.test(m[2])?String(Number(m[2])).padStart(2,"0"):months[m[2].slice(0,3)] ?? "01";
-    return `${m[1]}-${month}-${String(Number(m[3])).padStart(2,"0")}`;
-  }
-  const year=v.match(/\b(19|20)\d{2}\b/)?.[0];
-  return year ? year+"-01-01" : null;
-}
-
 async function requireUser(req:NextRequest){
   const auth=req.headers.get("authorization") ?? "";
   const token=auth.startsWith("Bearer ")?auth.slice(7):"";
@@ -65,14 +23,6 @@ async function requireUser(req:NextRequest){
   const {data,error}=await supabase.auth.getUser(token);
   if(error||!data.user)return null;
   return data.user;
-}
-
-async function ncbiJson(path:string,params:URLSearchParams){
-  params.set("tool","PVOS");
-  const url=EUTILS+"/"+path+"?"+params.toString();
-  const res=await fetch(url,{headers:{"User-Agent":"PVOS literature screening prototype"}});
-  if(!res.ok)throw new Error("PubMed request failed ("+res.status+").");
-  return res.json();
 }
 
 export async function POST(req:NextRequest){
@@ -115,29 +65,52 @@ export async function POST(req:NextRequest){
       }));
       requestCount++;
 
+      await sleep(360);
+      const detailMap=await fetchPubMedDetails(ids);
+      requestCount++;
+
       const uids=(summary?.result?.uids ?? []) as string[];
       for(const uid of uids){
         const doc=(summary?.result?.[uid] ?? {}) as SummaryDoc;
         const title=String(doc.title ?? "").replace(/<[^>]+>/g,"").trim();
         if(!title)continue;
-        const titleLower=title.toLowerCase();
-        const matched=terms.filter(t=>titleLower.includes(t.toLowerCase()));
+
+        const detail=detailMap[uid];
+        const abstract=detail?.abstract ?? "";
+        const keywords=detail?.keywords ?? [];
+        const analysis=analyzeArticle(title,abstract,keywords,terms);
         const doi=doc.articleids?.find(x=>x.idtype==="doi")?.value ?? null;
+        const primaryDate=detail?.online_date || detail?.pubmed_date || ymd(doc.sortpubdate || doc.pubdate);
+        const issueDate=detail?.issue_date || ymd(doc.sortpubdate || doc.pubdate);
+
         items.push({
           product_id:product.id,
           title,
           journal:doc.fulljournalname || doc.source || "PubMed",
-          publication_date:ymd(doc.sortpubdate || doc.pubdate),
+          publication_date:primaryDate,
           article_url:"https://pubmed.ncbi.nlm.nih.gov/"+uid+"/",
           doi,
-          matched_terms:matched.length?matched:terms,
-          relevance:"unscored",
+          abstract:abstract||null,
+          matched_terms:analysis.matchedTerms,
+          relevance:analysis.relevance,
+          ai_reason:analysis.reason,
           review_status:"unreviewed",
           metadata:{
             connector:"pubmed",
             pmid:uid,
             search_terms:terms,
-            retrieved_at:new Date().toISOString()
+            retrieved_at:new Date().toISOString(),
+            keywords,
+            match_locations:analysis.matchLocations,
+            matched_term_locations:analysis.termLocations,
+            urgent_saudi:analysis.urgentSaudi,
+            saudi_hits:analysis.saudiHits,
+            safety_hits:analysis.safetyHits,
+            case_hits:analysis.caseHits,
+            online_date:detail?.online_date ?? null,
+            issue_date:issueDate,
+            pubmed_date:detail?.pubmed_date ?? null,
+            date_display_basis:detail?.online_date?"online":detail?.pubmed_date?"pubmed":"issue"
           }
         });
       }
@@ -150,10 +123,15 @@ export async function POST(req:NextRequest){
       seen.add(key);return true;
     });
 
+    const priority=deduped.filter(x=>x.relevance==="likely_relevant").length;
+    const saudi=deduped.filter(x=>x.metadata?.urgent_saudi).length;
+
     return NextResponse.json({
       source:"PubMed",
       products_searched:products.length,
       results:deduped.length,
+      priority,
+      saudi_alerts:saudi,
       items:deduped
     });
   }catch(e:any){
