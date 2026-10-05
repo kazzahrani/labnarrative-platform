@@ -153,15 +153,25 @@ const SAFETY_TERMS=[
   "suicidal","suicide","interaction","withdrawal","off-label","off label","misuse","abuse"
 ];
 
-function escapeRegExp(v:string){
-  return v.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\\\$&");
+function isWordChar(v:string){
+  if(!v)return false;
+  const n=v.toLowerCase().charCodeAt(0);
+  return (n>=97&&n<=122)||(n>=48&&n<=57);
 }
 function phrasePresent(text:string,term:string){
-  const normalized=text.toLowerCase();
-  const t=term.toLowerCase().trim();
-  if(!t)return false;
-  const pattern=escapeRegExp(t).replace(/\\s+/g,"\\\\s+");
-  return new RegExp("(^|[^a-z0-9])"+pattern+"(?=$|[^a-z0-9])","i").test(normalized);
+  const hay=text.toLowerCase();
+  const needle=term.toLowerCase().trim();
+  if(!needle)return false;
+  let from=0;
+  while(from<hay.length){
+    const i=hay.indexOf(needle,from);
+    if(i<0)return false;
+    const before=i>0?hay[i-1]:"";
+    const after=i+needle.length<hay.length?hay[i+needle.length]:"";
+    if(!isWordChar(before)&&!isWordChar(after))return true;
+    from=i+1;
+  }
+  return false;
 }
 function hits(text:string,terms:string[]){
   return terms.filter(t=>phrasePresent(text,t));
