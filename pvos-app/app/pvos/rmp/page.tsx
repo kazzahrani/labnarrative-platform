@@ -47,8 +47,8 @@ export default function RmpPage(){
   </div>
 
   <div style={{padding:"12px 14px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
-    <button className={portfolioTab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("initial")}>Information regarding Initial RMP</button>
-    <button className={portfolioTab==="subsequent"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("subsequent")}>Information regarding subsequent RMP</button>
+    <button className={portfolioTab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("initial")}>Initial RMP</button>
+    <button className={portfolioTab==="subsequent"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("subsequent")}>Subsequent RMP</button>
   </div>
 
   {portfolioTab==="initial"?<div className={styles.tableWrap} style={{marginTop:12}}>
@@ -105,7 +105,7 @@ export default function RmpPage(){
     <div style={{padding:"14px 20px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
       <button className={tab==="overview"?styles.button:styles.buttonGhost} onClick={()=>setTab("overview")}>Overview</button>
       <button className={tab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setTab("initial")}>Information regarding Initial RMP</button>
-      <button className={tab==="updates"?styles.button:styles.buttonGhost} onClick={()=>setTab("updates")}>Information regarding subsequent RMP ({r.versions.filter(v=>v.type==="subsequent").length})</button>
+      <button className={tab==="updates"?styles.button:styles.buttonGhost} onClick={()=>setTab("updates")}>Subsequent RMP ({r.versions.filter(v=>v.type==="subsequent").length})</button>
     </div>
 
     {msg?<div className={msg.includes("saved")||msg.includes("added")?styles.successBox:styles.errorBox} style={{margin:"14px 20px 0"}}>{msg}</div>:null}
