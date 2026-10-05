@@ -142,23 +142,23 @@ export default function AutomationPage(){
       <div className={styles.card}><span>Products</span><strong>{products.length}</strong></div>
     </section>
 
-    <section className={styles.panel} style={{marginBottom:16}}>
+    <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:30}}>
       <div className={styles.panelHeader}><SectionTitle title="Recurring task engine" info="Create an obligation once and PVOS creates the individual task instances while preserving every previous cycle. Automatic generation runs when the workspace loads; use Generate next 60 days after changing schedules or importing obligations."/><button className={styles.button} onClick={generate}>Generate next 60 days</button></div>
       {message?<div className={styles.successBox} style={{margin:"0 14px 14px"}}>{message}</div>:null}
     </section>
 
-    <section className={styles.panel} style={{marginBottom:16}}>
+    <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:20}}>
       <div className={styles.panelHeader}><SectionTitle title="PV template library" info="Use a template to avoid rebuilding common PV workflows from scratch. The first due date must still match the real contract, SOP and regulatory schedule."/><select className={styles.input} style={{maxWidth:260}} value={companyId} onChange={e=>setCompanyId(e.target.value)}><option value="">Select company</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
       <div style={{padding:14,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:12}}>
         {PV_TEMPLATES.map(t=><div key={t.id} className={styles.info} style={{margin:0}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}><div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}><h3 style={{margin:0}}>{t.title}</h3><HoverInfo text={t.description+(t.cadence==="event"?" This is event-driven, so no automatic deadline is created until the event or product-specific schedule is confirmed.":"")}/></div><Badge>{t.cadence==="event"?"Event":t.cadence}</Badge></div>
-          {t.cadence!=="event"?<label style={{display:"block",marginTop:14}}>First due date<input className={styles.input} type="date" value={dates[t.id]||""} onChange={e=>setDates(v=>({...v,[t.id]:e.target.value}))}/></label>:null}
+          {t.cadence!=="event"?<label style={{display:"block",marginTop:14,fontSize:13,fontWeight:650}}>First due date<input className={styles.input} type="date" value={dates[t.id]||""} onChange={e=>setDates(v=>({...v,[t.id]:e.target.value}))}/></label>:null}
           <div className={styles.inlineActions}><button className={added.has(t.id)?styles.buttonGhost:styles.button} disabled={!companyId||!!busy||added.has(t.id)} onClick={()=>addTemplate(t)}>{added.has(t.id)?"Added":busy===t.id?"Adding…":"Add template"}</button></div>
         </div>)}
       </div>
     </section>
 
-    <section className={styles.panel} style={{marginBottom:16}}>
+    <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:10}}>
       <div className={styles.panelHeader}><SectionTitle title="Bulk import" info="Export the current Excel tracker as CSV, match the template headers, then import instead of retyping. Recommended order: Companies → Products → Obligations / Tasks."/><button className={styles.buttonGhost} onClick={()=>download(kind)}>Download CSV template</button></div>
       <div style={{padding:14}}>
         <div className={styles.inlineActions} style={{marginTop:0,flexWrap:"wrap"}}>{(["companies","products","obligations","tasks"] as ImportKind[]).map(k=><button key={k} className={kind===k?styles.button:styles.buttonGhost} onClick={()=>changeKind(k)}>{k[0].toUpperCase()+k.slice(1)}</button>)}</div>
@@ -171,7 +171,7 @@ export default function AutomationPage(){
       </div>
     </section>
 
-    <section className={styles.panel}>
+    <section className={styles.panel} style={{overflow:"visible",position:"relative",zIndex:5}}>
       <div className={styles.panelHeader}><SectionTitle title="Microsoft 365 integration" info="Planned next layer: Outlook can turn selected regulatory emails into suggested tasks and deadlines, while SharePoint / OneDrive can link controlled documents instead of duplicating them. The QPPV remains the final reviewer."/><Badge>Planned</Badge></div>
     </section>
   </>;
