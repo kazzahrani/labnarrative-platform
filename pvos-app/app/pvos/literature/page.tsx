@@ -67,11 +67,12 @@ export default function LiteraturePage(){
   async function load(){
     if(!organizationId)return;
     setLoading(true);
-    const [s,r,i,c]=await Promise.all([
+    const [s,r,i,c,f]=await Promise.all([
       pvosSupabase.from("pvos_literature_sources").select("*").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_literature_runs").select("*").eq("organization_id",organizationId).order("period_end",{ascending:false}),
       pvosSupabase.from("pvos_literature_items").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
-      pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name")
+      pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name"),
+      pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false})
     ]);
     const cs=c.data||[];
     let ps:any[]=[];
@@ -84,6 +85,7 @@ export default function LiteraturePage(){
     setItems(i.data||[]);
     setCompanies(cs);
     setProducts(ps);
+    setFollowups(f.data||[]);
     setRunForm(v=>({...v,companyId:v.companyId||cs[0]?.id||""}));
     setLoading(false);
   }
@@ -111,6 +113,15 @@ export default function LiteraturePage(){
     };
     return score(b)-score(a);
   }),[items]);
+  const visibleItems=useMemo(()=>sortedItems.filter(x=>{
+    if(productFilter&&x.product_id!==productFilter)return false;
+    if(queueFilter==="open")return x.review_status==="unreviewed"||x.review_status==="needs_review";
+    if(queueFilter==="priority")return x.relevance==="likely_relevant"&&(x.review_status==="unreviewed"||x.review_status==="needs_review");
+    if(queueFilter==="saudi")return !!x.metadata?.urgent_saudi&&(x.review_status==="unreviewed"||x.review_status==="needs_review");
+    if(queueFilter==="reviewed")return x.review_status==="relevant"||x.review_status==="not_relevant";
+    return true;
+  }),[sortedItems,queueFilter,productFilter]);
+  const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
   const runCounts=useMemo(()=>{
     const out:Record<string,{total:number;reviewed:number}>={};
     for(const x of items){
@@ -280,6 +291,31 @@ export default function LiteraturePage(){
     await load();
   }
 
+  async function queueFollowup(item:any,destination:"signal_review"|"psur_evidence"){
+    if(!organizationId||!session)return;
+    setBusy(true);setMessage("");
+    const label=destination==="signal_review"?"Signal Review":"PSUR evidence";
+    const {error}=await pvosSupabase.from("pvos_literature_followups").upsert({
+      organization_id:organizationId,
+      company_id:item.company_id,
+      product_id:item.product_id,
+      literature_item_id:item.id,
+      destination,
+      status:"queued",
+      created_by:session.user.id,
+      metadata:{
+        article_title:item.title,
+        article_url:item.article_url,
+        pmid:item.metadata?.pmid||null,
+        source:item.journal||"PubMed"
+      }
+    },{onConflict:"literature_item_id,destination"});
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    setMessage("Added to "+label+".");
+    await load();
+  }
+
   return <>
     <Header
       eyebrow="Safety intelligence"
@@ -338,9 +374,25 @@ export default function LiteraturePage(){
           </div>
           <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
         </div>
+        <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            <button className={queueFilter==="open"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("open")}>Open ({openItems.length})</button>
+            <button className={queueFilter==="priority"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("priority")}>Priority ({priorityItems.length})</button>
+            <button className={queueFilter==="saudi"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("saudi")}>Saudi alerts ({saudiAlerts.length})</button>
+            <button className={queueFilter==="reviewed"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("reviewed")}>Reviewed ({reviewed.length})</button>
+            <button className={queueFilter==="all"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("all")}>All ({items.length})</button>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <select className={styles.input} style={{width:210}} value={productFilter} onChange={e=>setProductFilter(e.target.value)}>
+              <option value="">All products</option>
+              {products.map(p=><option key={p.id} value={p.id}>{p.brand_name}</option>)}
+            </select>
+            <span className={styles.muted}>Showing {visibleItems.length}</span>
+          </div>
+        </div>
         {loading?<div className={styles.empty}>Loading screening queue…</div>:items.length?<div className={styles.tableWrap}><table className={styles.table} style={{minWidth:1180}}>
           <thead><tr><th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Matched terms</th><th>Safety priority</th><th>QPPV review</th></tr></thead>
-          <tbody>{sortedItems.map(x=>{
+          <tbody>{visibleItems.map(x=>{
             const p=productMap[x.product_id];
             return <tr key={x.id}>
               <td style={{minWidth:340}}>
@@ -370,6 +422,13 @@ export default function LiteraturePage(){
                   <button disabled={busy} className={x.review_status==="needs_review"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"needs_review")}>Needs review</button>
                 </div>
                 <div className={styles.muted} style={{marginTop:6}}>{reviewLabel(x.review_status)}</div>
+                {x.review_status==="relevant"?<div style={{marginTop:10,paddingTop:9,borderTop:"1px solid rgba(148,163,184,.16)"}}>
+                  <div className={styles.muted} style={{marginBottom:6}}>Downstream</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    <button disabled={busy||hasFollowup(x.id,"signal_review")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"signal_review")}>{hasFollowup(x.id,"signal_review")?"Signal queued":"Add to Signal Review"}</button>
+                    <button disabled={busy||hasFollowup(x.id,"psur_evidence")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"psur_evidence")}>{hasFollowup(x.id,"psur_evidence")?"PSUR included":"Include in PSUR evidence"}</button>
+                  </div>
+                </div>:null}
               </td>
             </tr>
           })}</tbody>
