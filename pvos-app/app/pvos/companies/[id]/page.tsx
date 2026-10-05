@@ -31,7 +31,7 @@ export default function CompanyPage(){
 
   if(loading||!company) return <div className={styles.empty}>Loading company workspace…</div>;
   return <>
-    <Header eyebrow="Company workspace" title={company.name} sub={company.contract_scope??"PV responsibility scope"} action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Configure</Link><Link className={styles.button} href="/pvos/handover">Start handover</Link></div>}/>
+    <Header eyebrow="Company workspace" title={company.name} sub={company.contract_scope??"PV responsibility scope"} action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Configure</Link><Link className={styles.buttonGhost} href="/pvos/rmp">RMP Tracker</Link><Link className={styles.button} href="/pvos/handover">Start handover</Link></div>}/>
     <div className={styles.grid2}>
       <section>
         <div className={styles.panel}><div className={styles.panelHeader}><h2>Current work</h2><span className={styles.muted}>{tasks.filter(t=>t.status!=="complete").length} active items</span></div>
