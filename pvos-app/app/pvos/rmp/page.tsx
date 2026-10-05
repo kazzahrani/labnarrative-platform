@@ -4,6 +4,7 @@ import {FormEvent,useEffect,useMemo,useState} from "react";
 import {Header,Badge} from "../_components";
 import {usePVOS} from "../_provider";
 import {pvosSupabase} from "../_pvos-supabase";
+import {RmpExcelImport} from "../_rmp-excel-import";
 import styles from "../pvos.module.css";
 
 type V={id:string,type:"initial"|"subsequent",dlp:string,submission_date:string,identified_risks:string,potential_risks:string,missing_information:string,comments_reason:string,additional_rmm:string,created_at:string};
@@ -36,7 +37,7 @@ export default function RmpPage(){
  return <>
   <Header eyebrow="Product safety" title="RMP Tracker" sub="Track initial and subsequent RMP submissions, identified and potential risks, missing information, additional risk minimization measures, and the next DLP/update due date."/>
   <section className={styles.cards}><div className={styles.card}><span>RMPs tracked</span><strong>{tracked.length}</strong></div><div className={styles.card}><span>Due in 30 days</span><strong>{dueSoon}</strong></div><div className={[styles.card,overdue?styles.danger:""].join(" ")}><span>Overdue</span><strong>{overdue}</strong></div><div className={styles.card}><span>With Additional Risk Minimization Measure</span><strong>{withArmm}</strong></div></section>
-  <section className={styles.panel}><div className={styles.panelHeader}><h2>RMP portfolio</h2><span className={styles.muted}>{products.length} products</span></div><div className={styles.tableWrap}><table className={`${styles.table} ${styles.rmpTable}`}><thead>
+  <section className={styles.panel}><div className={styles.panelHeader}><h2>RMP portfolio</h2><div className={styles.inlineActions} style={{marginTop:0}}><span className={styles.muted}>{products.length} products</span><RmpExcelImport organizationId={organizationId} userId={session?.user.id} companies={companies} products={products} onImported={load}/></div></div><div className={styles.tableWrap}><table className={`${styles.table} ${styles.rmpTable}`}><thead>
   <tr className={styles.rmpGroupRow}>
     <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpCompany}`}>Company</th>
     <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpProduct}`}>Product</th>
