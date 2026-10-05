@@ -20,7 +20,7 @@ export default function RmpPage(){
  const {organizationId,session}=usePVOS();
  const [companies,setCompanies]=useState<any[]>([]),[products,setProducts]=useState<any[]>([]),[sel,setSel]=useState<any|null>(null);
  const [r,setR]=useState<R>({...blank}),[initial,setInitial]=useState<V|null>(null),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false),[tab,setTab]=useState<"overview"|"initial"|"updates">("overview");
- const [addOpen,setAddOpen]=useState(false),[expanded,setExpanded]=useState<string|null>(null);
+ const [addOpen,setAddOpen]=useState(false),[expanded,setExpanded]=useState<string|null>(null),[portfolioTab,setPortfolioTab]=useState<"initial"|"subsequent">("initial");
  const [u,setU]=useState<V>({id:"",type:"subsequent",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:""});
  async function load(){if(!organizationId)return;const {data:c}=await pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name");const cs=c||[];setCompanies(cs);if(!cs.length)return setProducts([]);const {data:p}=await pvosSupabase.from("pvos_products").select("*").in("company_id",cs.map(x=>x.id)).order("brand_name");setProducts(p||[])}
  useEffect(()=>{load()},[organizationId]);
@@ -37,43 +37,63 @@ export default function RmpPage(){
  return <>
   <Header eyebrow="Product safety" title="RMP Tracker" sub="Track initial and subsequent RMP submissions, identified and potential risks, missing information, additional risk minimization measures, and the next DLP/update due date."/>
   <section className={styles.cards}><div className={styles.card}><span>RMPs tracked</span><strong>{tracked.length}</strong></div><div className={styles.card}><span>Due in 30 days</span><strong>{dueSoon}</strong></div><div className={[styles.card,overdue?styles.danger:""].join(" ")}><span>Overdue</span><strong>{overdue}</strong></div><div className={styles.card}><span>With Additional Risk Minimization Measure</span><strong>{withArmm}</strong></div></section>
-  <section className={styles.panel}><div className={styles.panelHeader}><h2>RMP portfolio</h2><div className={styles.inlineActions} style={{marginTop:0}}><span className={styles.muted}>{products.length} products</span><RmpExcelImport organizationId={organizationId} userId={session?.user.id} companies={companies} products={products} onImported={load}/></div></div><div className={styles.tableWrap}><table className={`${styles.table} ${styles.rmpTable}`}><thead>
-  <tr className={styles.rmpGroupRow}>
-    <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpCompany}`}>Company</th>
-    <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpProduct}`}>Product</th>
-    <th rowSpan={2} className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>Molecule</th>
-    <th rowSpan={2}>Submitted to</th><th rowSpan={2}>Frequency</th>
-    <th colSpan={6} className={styles.rmpInitialGroup}>Information regarding Initial RMP</th>
-    <th rowSpan={2} className={styles.rmpDue}>Next DLP/Update due date</th>
-    <th colSpan={6} className={styles.rmpSubsequentGroup}>Information regarding subsequent RMP</th>
-    <th rowSpan={2} className={styles.rmpAction}></th>
-  </tr>
-  <tr className={styles.rmpFieldRow}>
-    <th className={styles.rmpInitialCell}>DLP</th>
-    <th className={styles.rmpInitialCell}>Date of submission</th>
-    <th className={styles.rmpInitialCell}>RMP Identified</th>
-    <th className={styles.rmpInitialCell}>RMP Potential</th>
-    <th className={styles.rmpInitialCell}>Missing Info</th>
-    <th className={styles.rmpInitialCell}>Additional Risk Minimization Measure</th>
-    <th className={styles.rmpSubsequentCell}>Date of submission</th>
-    <th className={styles.rmpSubsequentCell}>RMP Identified</th>
-    <th className={styles.rmpSubsequentCell}>RMP Potential</th>
-    <th className={styles.rmpSubsequentCell}>Missing Info</th>
-    <th className={styles.rmpSubsequentCell}>Comments/Reason for update</th>
-    <th className={styles.rmpSubsequentCell}>Additional Risk Minimization Measure</th>
-  </tr>
-  </thead><tbody>
-  {products.map(p=>{const x=rv(p),ini=x.versions.find(v=>v.type==="initial"),sub=x.versions.filter(v=>v.type==="subsequent"),l=sub[sub.length-1],tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
-    <td className={`${styles.rmpSticky} ${styles.rmpCompany}`}>{cm[p.company_id]||"—"}</td>
-    <td className={`${styles.rmpSticky} ${styles.rmpProduct}`}><strong>{p.brand_name}</strong></td>
-    <td className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>{p.active_ingredient||"—"}</td>
-    <td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td>
-    <td className={styles.rmpInitialCell}>{ini?.dlp||"—"}</td><td className={styles.rmpInitialCell}>{fmt(ini?.submission_date)}</td><td className={styles.rmpInitialCell}>{ini?.identified_risks||"—"}</td><td className={styles.rmpInitialCell}>{ini?.potential_risks||"—"}</td><td className={styles.rmpInitialCell}>{ini?.missing_information||"—"}</td><td className={styles.rmpInitialCell}>{ini?.additional_rmm||"—"}</td>
-    <td className={styles.rmpDue}>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
-    <td className={styles.rmpSubsequentCell}>{fmt(l?.submission_date)}</td><td className={styles.rmpSubsequentCell}>{l?.identified_risks||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.potential_risks||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.missing_information||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.comments_reason||"—"}</td><td className={styles.rmpSubsequentCell}>{l?.additional_rmm||"—"}</td>
-    <td className={styles.rmpAction}><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
-  </tr>})}
-  </tbody></table></div></section>
+  <section className={styles.panel}>
+  <div className={styles.panelHeader}>
+    <h2>RMP portfolio</h2>
+    <div className={styles.inlineActions} style={{marginTop:0}}>
+      <span className={styles.muted}>{products.length} products</span>
+      <RmpExcelImport organizationId={organizationId} userId={session?.user.id} companies={companies} products={products} onImported={load}/>
+    </div>
+  </div>
+
+  <div style={{padding:"12px 14px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
+    <button className={portfolioTab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("initial")}>Information regarding Initial RMP</button>
+    <button className={portfolioTab==="subsequent"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("subsequent")}>Information regarding subsequent RMP</button>
+  </div>
+
+  {portfolioTab==="initial"?<div className={styles.tableWrap} style={{marginTop:12}}>
+    <table className={`${styles.table} ${styles.rmpTable}`} style={{minWidth:1450}}>
+      <thead><tr>
+        <th className={`${styles.rmpSticky} ${styles.rmpCompany}`}>Company</th>
+        <th className={`${styles.rmpSticky} ${styles.rmpProduct}`}>Product</th>
+        <th className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>Molecule</th>
+        <th>Submitted to</th><th>Frequency</th><th>DLP</th><th>Date of submission</th>
+        <th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
+        <th>Additional Risk Minimization Measure</th><th>Next DLP/Update due date</th><th></th>
+      </tr></thead>
+      <tbody>{products.map(p=>{const x=rv(p),ini=x.versions.find(v=>v.type==="initial"),tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
+        <td className={`${styles.rmpSticky} ${styles.rmpCompany}`}>{cm[p.company_id]||"—"}</td>
+        <td className={`${styles.rmpSticky} ${styles.rmpProduct}`}><strong>{p.brand_name}</strong></td>
+        <td className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>{p.active_ingredient||"—"}</td>
+        <td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td><td>{ini?.dlp||"—"}</td><td>{fmt(ini?.submission_date)}</td>
+        <td>{ini?.identified_risks||"—"}</td><td>{ini?.potential_risks||"—"}</td><td>{ini?.missing_information||"—"}</td><td>{ini?.additional_rmm||"—"}</td>
+        <td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
+        <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
+      </tr>})}</tbody>
+    </table>
+  </div>:null}
+
+  {portfolioTab==="subsequent"?<div className={styles.tableWrap} style={{marginTop:12}}>
+    <table className={`${styles.table} ${styles.rmpTable}`} style={{minWidth:1320}}>
+      <thead><tr>
+        <th className={`${styles.rmpSticky} ${styles.rmpCompany}`}>Company</th>
+        <th className={`${styles.rmpSticky} ${styles.rmpProduct}`}>Product</th>
+        <th className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>Molecule</th>
+        <th>Date of submission</th><th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
+        <th>Comments/Reason for update</th><th>Additional Risk Minimization Measure</th><th>Next DLP/Update due date</th><th></th>
+      </tr></thead>
+      <tbody>{products.map(p=>{const x=rv(p),sub=x.versions.filter(v=>v.type==="subsequent"),l=sub[sub.length-1],tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
+        <td className={`${styles.rmpSticky} ${styles.rmpCompany}`}>{cm[p.company_id]||"—"}</td>
+        <td className={`${styles.rmpSticky} ${styles.rmpProduct}`}><strong>{p.brand_name}</strong></td>
+        <td className={`${styles.rmpSticky} ${styles.rmpMolecule}`}>{p.active_ingredient||"—"}</td>
+        <td>{fmt(l?.submission_date)}</td><td>{l?.identified_risks||"—"}</td><td>{l?.potential_risks||"—"}</td><td>{l?.missing_information||"—"}</td>
+        <td>{l?.comments_reason||"—"}</td><td>{l?.additional_rmm||"—"}</td>
+        <td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
+        <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
+      </tr>})}</tbody>
+    </table>
+  </div>:null}
+</section>
 
   {sel&&initial?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSel(null)}}>
    <div className={styles.modalCard} style={{width:"min(1080px,100%)",maxHeight:"calc(100vh - 40px)",padding:0}}>
