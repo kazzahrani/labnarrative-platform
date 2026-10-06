@@ -81,6 +81,7 @@ export default function LiteraturePage(){
   const [pendingRelevantId,setPendingRelevantId]=useState<string|null>(null);
   const [secondReviewerId,setSecondReviewerId]=useState("");
   const [secondReviewNote,setSecondReviewNote]=useState("");
+  const [reviewerEmail,setReviewerEmail]=useState("");
   const [message,setMessage]=useState("");
   const [sourceForm,setSourceForm]=useState({name:"",url:"",language:"English",frequency:"weekly",notes:""});
   const [runForm,setRunForm]=useState({companyId:"",start:daysAgo(7),end:today()});
@@ -482,6 +483,24 @@ export default function LiteraturePage(){
     setBatchSelected([]);
     setBatchPinned([]);
     setMessage("Batch review closed. Your decisions are saved.");
+  }
+
+  async function addReviewerByEmail(){
+    if(!organizationId||!reviewerEmail.trim())return;
+    setBusy(true);setMessage("");
+    const {data,error}=await pvosSupabase.rpc("pvos_invite_workspace_member",{
+      p_organization_id:organizationId,
+      p_email:reviewerEmail.trim(),
+      p_role:"reviewer"
+    });
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    const status=(data as any)?.status;
+    setReviewerEmail("");
+    setMessage(status==="member_added"
+      ?"Reviewer added to this workspace. You can now assign the second review."
+      :"Reviewer email authorized. When they first sign in to PVOS with that email, they will join this workspace.");
+    await load();
   }
 
   async function assignSecondReviewer(run:any){
@@ -1092,7 +1111,15 @@ export default function LiteraturePage(){
                   {otherMembers.map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}
                 </select>
                 <button className={styles.button} disabled={busy||!secondReviewerId} onClick={()=>assignSecondReviewer(selectedRun)}>{busy?"Sending…":"Send for second review"}</button>
-              </div>:<div className={styles.muted} style={{marginTop:10}}>No other workspace member is available yet. Add another member before assigning a second reviewer.</div>}
+              </div>:<div className={styles.muted} style={{marginTop:10}}>No other workspace member is available yet.</div>}
+              <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(148,163,184,.18)"}}>
+                <div className={styles.muted} style={{marginBottom:7}}>Add reviewer by email</div>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <input className={styles.input} style={{minWidth:260}} type="email" value={reviewerEmail} onChange={e=>setReviewerEmail(e.target.value)} placeholder="reviewer@company.com"/>
+                  <button className={styles.buttonGhost} disabled={busy||!reviewerEmail.trim()} onClick={addReviewerByEmail}>Add reviewer</button>
+                </div>
+                <div className={styles.muted} style={{marginTop:6,fontSize:11}}>Existing PVOS accounts are added immediately. A new reviewer joins this workspace when they first sign in using the same email.</div>
+              </div>
             </div>:null}
 
             {!rec&&second?.status==="pending"&&second.assigned_to===session?.user.id?<div className={styles.notice} style={{marginTop:14}}>
