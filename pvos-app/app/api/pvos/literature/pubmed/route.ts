@@ -228,6 +228,7 @@ export async function POST(req:NextRequest){
     });
 
     const priority=deduped.filter(x=>x.relevance==="likely_relevant").length;
+    const fullTextRequired=deduped.filter(x=>x.metadata?.full_text_required).length;
     const saudi=deduped.filter(x=>x.metadata?.urgent_saudi).length;
 
     return NextResponse.json({
@@ -235,6 +236,7 @@ export async function POST(req:NextRequest){
       products_searched:products.length,
       results:deduped.length,
       priority,
+      full_text_required:fullTextRequired,
       saudi_alerts:saudi,
       retrieval_complete:searches.every(x=>x.complete),
       searches,
