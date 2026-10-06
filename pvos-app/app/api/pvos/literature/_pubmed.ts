@@ -151,9 +151,9 @@ const SAFETY_TERMS=[
   "adverse event","adverse events","adverse reaction","adverse reactions","toxicity","toxicities",
   "side effect","side effects","drug-induced","drug induced","hospitalization","hospitalisation",
   "death","fatal","died","overdose","medication error","pregnancy","foetal","fetal","teratogenic",
-  "anaphylaxis","hypersensitivity","bleeding","hemorrhage","haemorrhage","liver injury","hepatotoxic",
+  "anaphylaxis","hypersensitivity","bleeding","hemorrhage","hemorrhages","haemorrhage","haemorrhages","liver injury","hepatotoxic",
   "kidney injury","renal injury","renal failure","cardiac arrest","arrhythmia","thrombosis",
-  "thromboembolism","venous thromboembolism","ischemic stroke","stroke","intracranial hemorrhage",
+  "thromboembolism","thromboembolic event","thromboembolic events","venous thromboembolism","ischemic stroke","ischemic strokes","stroke","strokes","intracranial hemorrhage","intracranial hemorrhages",
   "suicidal","suicide","interaction","drug-drug interaction","withdrawal","off-label","off label",
   "misuse","abuse","treatment failure","lack of efficacy","breakthrough"
 ];
@@ -199,13 +199,13 @@ function unique(values:string[]){
   return [...new Set(values)];
 }
 function sentences(v:string){
-  return (v.replace(/\s+/g," ").match(/[^.!?]+[.!?]?/g)||[]).map(x=>x.trim()).filter(Boolean);
+  return v.replace(/\s+/g," ").split(/(?<=[.!?])\s+(?=[A-Z])/).map(x=>x.trim()).filter(Boolean);
 }
 function hasAnyProductTerm(text:string,terms:string[]){
   return terms.some(t=>phrasePresent(text,t));
 }
 function hasQuantifiedFinding(text:string){
-  return /\b\d+(?:\.\d+)?\s*%|\b(?:OR|HR|RR)\s*[=:]?\s*\d|95\s*%\s*CI|above[- ]range|significantly\s+(?:higher|lower|increased|decreased)|\b(?:higher|lower|increased|decreased)\s+(?:risk|odds|rate|level|levels|concentration|concentrations|exposure)/i.test(text);
+  return /\b\d+(?:\.\d+)?\s*%|\b(?:OR|HR|RR)\s*[=:]?\s*\d|\bhazard ratio\s*\d|\b(?:odds|risk|rate) ratio\s*\d|95\s*%\s*(?:CI|confidence interval)|above[- ]range|significantly\s+(?:higher|lower|increased|decreased|more|fewer)|\b(?:higher|lower|increased|decreased)\s+(?:risk|odds|rate|level|levels|concentration|concentrations|exposure)/i.test(text);
 }
 function hasBreakthroughPattern(text:string,terms:string[]){
   const lower=text.toLowerCase();
@@ -329,7 +329,7 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
     highSignalTitle,
     treatmentOnly,
     score,
-    analysisVersion:"v2.1"
+    analysisVersion:"v2.2"
   };
 }
 
