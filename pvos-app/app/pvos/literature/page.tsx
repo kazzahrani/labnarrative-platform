@@ -67,6 +67,7 @@ export default function LiteraturePage(){
   const [analyzing,setAnalyzing]=useState(false);
   const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"saudi"|"reviewed"|"all">("open");
   const [productFilter,setProductFilter]=useState("");
+  const [pendingRelevantId,setPendingRelevantId]=useState<string|null>(null);
   const [message,setMessage]=useState("");
   const [sourceForm,setSourceForm]=useState({name:"",url:"",language:"English",frequency:"weekly",notes:""});
   const [runForm,setRunForm]=useState({companyId:"",start:daysAgo(7),end:today()});
@@ -117,19 +118,20 @@ export default function LiteraturePage(){
       else if(x.relevance==="possible")n+=30;
       else if(x.relevance==="unscored")n+=20;
       else n+=10;
-      if(x.review_status==="relevant"||x.review_status==="not_relevant")n-=25;
       return n;
     };
     return score(b)-score(a);
   }),[items]);
   const visibleItems=useMemo(()=>sortedItems.filter(x=>{
     if(productFilter&&x.product_id!==productFilter)return false;
-    if(queueFilter==="open")return x.review_status==="unreviewed"||x.review_status==="needs_review";
-    if(queueFilter==="priority")return x.relevance==="likely_relevant"&&(x.review_status==="unreviewed"||x.review_status==="needs_review");
-    if(queueFilter==="saudi")return !!x.metadata?.urgent_saudi&&(x.review_status==="unreviewed"||x.review_status==="needs_review");
+    const open=x.review_status==="unreviewed"||x.review_status==="needs_review";
+    const keepRelevantHere=x.id===pendingRelevantId&&x.review_status==="relevant";
+    if(queueFilter==="open")return open||keepRelevantHere;
+    if(queueFilter==="priority")return x.relevance==="likely_relevant"&&(open||keepRelevantHere);
+    if(queueFilter==="saudi")return !!x.metadata?.urgent_saudi&&(open||keepRelevantHere);
     if(queueFilter==="reviewed")return x.review_status==="relevant"||x.review_status==="not_relevant";
     return true;
-  }),[sortedItems,queueFilter,productFilter]);
+  }),[sortedItems,queueFilter,productFilter,pendingRelevantId]);
   const rapidCandidates=useMemo(()=>sortedItems.filter(x=>{
     if(productFilter&&x.product_id!==productFilter)return false;
     if(rapidSeen.includes(x.id))return false;
@@ -319,16 +321,24 @@ export default function LiteraturePage(){
 
   async function setReview(item:any,status:ReviewStatus){
     if(!session)return;
-    setBusy(true);setMessage("");
+    setBusy(true);
     const reviewedNow=status==="relevant"||status==="not_relevant";
+    const reviewedAt=reviewedNow?new Date().toISOString():null;
     const {error}=await pvosSupabase.from("pvos_literature_items").update({
       review_status:status,
       reviewer_user_id:session.user.id,
-      reviewed_at:reviewedNow?new Date().toISOString():null
+      reviewed_at:reviewedAt
     }).eq("id",item.id);
     setBusy(false);
     if(error){setMessage(error.message);return;}
-    await load();
+    setItems(prev=>prev.map(x=>x.id===item.id?{
+      ...x,
+      review_status:status,
+      reviewer_user_id:session.user.id,
+      reviewed_at:reviewedAt
+    }:x));
+    if(status==="relevant")setPendingRelevantId(item.id);
+    else if(pendingRelevantId===item.id)setPendingRelevantId(null);
   }
 
   function startRapidReview(){
@@ -398,9 +408,8 @@ export default function LiteraturePage(){
 
   async function queueFollowup(item:any,destination:"signal_review"|"psur_evidence"){
     if(!organizationId||!session)return;
-    setBusy(true);setMessage("");
-    const label=destination==="signal_review"?"Signal Review":"PSUR evidence";
-    const {error}=await pvosSupabase.from("pvos_literature_followups").upsert({
+    setBusy(true);
+    const {data,error}=await pvosSupabase.from("pvos_literature_followups").upsert({
       organization_id:organizationId,
       company_id:item.company_id,
       product_id:item.product_id,
@@ -414,11 +423,13 @@ export default function LiteraturePage(){
         pmid:item.metadata?.pmid||null,
         source:item.journal||"PubMed"
       }
-    },{onConflict:"literature_item_id,destination"});
+    },{onConflict:"literature_item_id,destination"}).select("*").single();
     setBusy(false);
     if(error){setMessage(error.message);return;}
-    setMessage("Added to "+label+".");
-    await load();
+    if(data)setFollowups(prev=>[
+      data,
+      ...prev.filter(x=>!(x.literature_item_id===item.id&&x.destination===destination))
+    ]);
   }
 
   async function completeScreening(run:any){
@@ -655,10 +666,11 @@ export default function LiteraturePage(){
                 </div>
                 <div className={styles.muted} style={{marginTop:6}}>{reviewLabel(x.review_status)}</div>
                 {x.review_status==="relevant"?<div style={{marginTop:10,paddingTop:9,borderTop:"1px solid rgba(148,163,184,.16)"}}>
-                  <div className={styles.muted} style={{marginBottom:6}}>Downstream</div>
+                  {pendingRelevantId===x.id?<div className={styles.muted} style={{marginBottom:7}}>Decision saved. Add any downstream actions now, then continue.</div>:<div className={styles.muted} style={{marginBottom:6}}>Downstream</div>}
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     <button disabled={busy||hasFollowup(x.id,"signal_review")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"signal_review")}>{hasFollowup(x.id,"signal_review")?"Signal queued":"Add to Signal Review"}</button>
                     <button disabled={busy||hasFollowup(x.id,"psur_evidence")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"psur_evidence")}>{hasFollowup(x.id,"psur_evidence")?"PSUR included":"Include in PSUR evidence"}</button>
+                    {pendingRelevantId===x.id?<button disabled={busy} className={styles.button} onClick={()=>setPendingRelevantId(null)}>Done</button>:null}
                   </div>
                 </div>:null}
               </td>
