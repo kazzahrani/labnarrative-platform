@@ -15,9 +15,10 @@ type ItemInput = {
   product:ProductInput;
 };
 
-async function requireUser(req:NextRequest){
+async function requireUser(req:NextRequest,bodyToken?:string){
   const auth=req.headers.get("authorization") ?? "";
-  const token=auth.startsWith("Bearer ")?auth.slice(7):"";
+  const headerToken=auth.startsWith("Bearer ")?auth.slice(7):"";
+  const token=headerToken||String(bodyToken||"");
   if(!token)return null;
   const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data,error}=await supabase.auth.getUser(token);
@@ -27,10 +28,9 @@ async function requireUser(req:NextRequest){
 
 export async function POST(req:NextRequest){
   try{
-    const user=await requireUser(req);
-    if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
-
     const body=await req.json();
+    const user=await requireUser(req,body?.accessToken);
+    if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});
     const items=(Array.isArray(body?.items)?body.items:[]) as ItemInput[];
     if(!items.length||items.length>300)return NextResponse.json({error:"Choose between 1 and 300 PubMed items."},{status:400});
 
