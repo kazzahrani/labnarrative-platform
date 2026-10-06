@@ -368,7 +368,8 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
   const directLackEfficacy=productLackEfficacyHits.length>0||breakthrough;
   const directInteraction=productInteractionHits.length>0 &&
     (productExposureHits.length>0||productAssociationHits.length>0||directSafety);
-  const directClinicalFinding=directSafety||directSpecial||directLackEfficacy||directInteraction||directOutcomeStatement;
+  const directAssociation=productAssociationHits.length>0;
+  const directClinicalFinding=directSafety||directSpecial||directLackEfficacy||directInteraction||directAssociation||directOutcomeStatement;
 
   const reviewMechanismConcern=reviewArticle&&productMentionCount>0&&(
     phrasePresent(combined,"tolerability")||
@@ -422,6 +423,9 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
   }else if(urgentSaudi){
     relevance="likely_relevant";
     reason="Priority review: Saudi human clinical context with product-linked safety, case, special-situation, or efficacy concern.";
+  }else if(reviewArticle&&directLackEfficacy&&!productInTitle){
+    relevance="possible";
+    reason="Review-level resistance or lack-of-efficacy evidence involving the monitored product requires QPPV assessment.";
   }else if(humanClinical&&productRole==="subject"&&directClinicalFinding){
     const strongEvidence=productInTitle||directOutcomeStatement||quantifiedProductEvidence||
       caseReportHits.length>0||directSpecial||directLackEfficacy||directInteraction;
@@ -462,6 +466,7 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
   if(directSpecial)findingTypes.push("special_situation");
   if(directLackEfficacy)findingTypes.push("lack_of_efficacy");
   if(directInteraction)findingTypes.push("interaction");
+  if(directAssociation)findingTypes.push("association");
   if(productExposureHits.length)findingTypes.push("exposure_pk");
   if(quantifiedProductEvidence)findingTypes.push("quantified");
   if(!findingTypes.length&&efficacyPattern)findingTypes.push("efficacy_only");
