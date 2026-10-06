@@ -396,6 +396,11 @@ export default function LiteraturePage(){
       setMessage("Create a screening run before starting batch review.");
       return;
     }
+    const second=secondReviewMap[targetRun];
+    if(second&&(second.status==="pending"||second.status==="approved")){
+      setMessage("This screening run is locked while second review is pending or approved. Return it first to change QPPV decisions.");
+      return;
+    }
     setRunFilter(targetRun);
     setQueueFilter("open");
     setBatchSelected([]);
@@ -410,6 +415,11 @@ export default function LiteraturePage(){
 
   async function saveBatchRelevant(){
     if(!session||!runFilter||!batchSelected.length)return;
+    const second=secondReviewMap[runFilter];
+    if(second&&(second.status==="pending"||second.status==="approved")){
+      setMessage("This screening run is locked for second review.");
+      return;
+    }
     setBusy(true);setMessage("");
     const ids=[...batchSelected];
     const {data,error}=await pvosSupabase.rpc("pvos_mark_literature_relevant",{
@@ -429,6 +439,11 @@ export default function LiteraturePage(){
 
   async function markBatchRemainingNotRelevant(){
     if(!session||!runFilter)return;
+    const second=secondReviewMap[runFilter];
+    if(second&&(second.status==="pending"||second.status==="approved")){
+      setMessage("This screening run is locked for second review.");
+      return;
+    }
     const count=batchRemainingEligible.length;
     if(!count){
       setMessage("No eligible unreviewed articles remain in this screening run.");
@@ -855,7 +870,9 @@ export default function LiteraturePage(){
           <thead><tr>{batchMode?<th style={{width:74}}>Relevant?</th>:null}<th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Matched terms</th><th>Safety priority</th><th>QPPV review</th></tr></thead>
           <tbody>{visibleItems.map(x=>{
             const p=productMap[x.product_id];
-            const batchEligible=x.run_id===runFilter&&(x.review_status==="unreviewed"||x.review_status==="needs_review")&&!x.metadata?.full_text_required;
+            const second=secondReviewMap[x.run_id];
+            const reviewLocked=!!second&&(second.status==="pending"||second.status==="approved");
+            const batchEligible=!reviewLocked&&x.run_id===runFilter&&(x.review_status==="unreviewed"||x.review_status==="needs_review")&&!x.metadata?.full_text_required;
             return <tr key={x.id}>
               {batchMode?<td style={{textAlign:"center",verticalAlign:"top"}}>
                 {batchEligible?<input type="checkbox" aria-label={"Mark "+x.title+" as relevant"} checked={batchSelected.includes(x.id)} onChange={()=>toggleBatchSelected(x.id)} style={{width:18,height:18,cursor:"pointer"}}/>:x.metadata?.full_text_required?<Badge tone="amber">Full text</Badge>:x.review_status==="relevant"?<Badge tone="green">Relevant</Badge>:null}
@@ -883,12 +900,13 @@ export default function LiteraturePage(){
               </td>
               <td style={{minWidth:275}}>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  <button disabled={busy} className={x.review_status==="relevant"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"relevant")}>Relevant</button>
-                  <button disabled={busy} className={x.review_status==="not_relevant"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"not_relevant")}>Not relevant</button>
-                  <button disabled={busy} className={x.review_status==="needs_review"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"needs_review")}>Needs review</button>
+                  <button disabled={busy||reviewLocked} className={x.review_status==="relevant"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"relevant")}>Relevant</button>
+                  <button disabled={busy||reviewLocked} className={x.review_status==="not_relevant"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"not_relevant")}>Not relevant</button>
+                  <button disabled={busy||reviewLocked} className={x.review_status==="needs_review"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"needs_review")}>Needs review</button>
                 </div>
                 <div className={styles.muted} style={{marginTop:6}}>{reviewLabel(x.review_status)}</div>
                 {x.reviewer_user_id?<div className={styles.muted} style={{marginTop:3,fontSize:11}}>Reviewed by {memberMap[x.reviewer_user_id]?.email||"workspace member"}{x.reviewed_at?" · "+dateLabel(x.reviewed_at):""}</div>:null}
+                {reviewLocked?<div className={styles.muted} style={{marginTop:4,fontSize:11}}>Locked for second review</div>:null}
                 {x.review_status==="relevant"?<div style={{marginTop:10,paddingTop:9,borderTop:"1px solid rgba(148,163,184,.16)"}}>
                   {pendingRelevantId===x.id?<div className={styles.muted} style={{marginBottom:7}}>Decision saved. Add any downstream actions now, then continue.</div>:<div className={styles.muted} style={{marginBottom:6}}>Downstream</div>}
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
