@@ -204,6 +204,9 @@ export default function LiteraturePage(){
   }
   const batchRunItems=useMemo(()=>runFilter?items.filter(x=>x.run_id===runFilter):[],[items,runFilter]);
   const batchRemainingEligible=batchRunItems.filter(x=>x.review_status==="unreviewed"&&!x.metadata?.full_text_required);
+  const batchLikelyOpen=batchRunItems.filter(x=>x.review_status==="unreviewed"&&x.relevance==="likely_relevant"&&!x.metadata?.full_text_required);
+  const batchPossibleOpen=batchRunItems.filter(x=>x.review_status==="unreviewed"&&x.relevance==="possible"&&!x.metadata?.full_text_required);
+  const batchUnlikelyOpen=batchRunItems.filter(x=>x.review_status==="unreviewed"&&x.relevance==="unlikely"&&!x.metadata?.full_text_required&&!x.metadata?.urgent_saudi);
   const batchFullTextOpen=batchRunItems.filter(x=>(x.review_status==="unreviewed"||x.review_status==="needs_review")&&x.metadata?.full_text_required);
   const batchNeedsReview=batchRunItems.filter(x=>x.review_status==="needs_review"&&!x.metadata?.full_text_required);
   const runItems=(runId:string)=>items.filter(x=>x.run_id===runId);
@@ -474,6 +477,39 @@ export default function LiteraturePage(){
     setBatchPinned(prev=>[...new Set([...prev,...ids])]);
     setBatchSelected([]);
     setMessage(String(data||ids.length)+" selected article(s) marked Relevant. Add Signal/PSUR actions if needed, then mark the remaining articles Not relevant.");
+  }
+
+  async function confirmUnlikelyNotRelevant(){
+    if(!session||!runFilter)return;
+    const second=secondReviewMap[runFilter];
+    if(second&&(second.status==="pending"||second.status==="approved")){
+      setMessage("This screening run is locked for second review.");
+      return;
+    }
+    const count=batchUnlikelyOpen.length;
+    if(!count){
+      setMessage("There are no open PVOS Unlikely articles in this screening run.");
+      return;
+    }
+    const ok=window.confirm(
+      "Confirm "+count+" PVOS Unlikely article(s) as Not relevant? Full-text items and Saudi alerts are excluded. This is recorded as your QPPV batch decision."
+    );
+    if(!ok)return;
+    setBusy(true);setMessage("");
+    const {data,error}=await pvosSupabase.rpc("pvos_confirm_unlikely_not_relevant",{p_run_id:runFilter});
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    const reviewedAt=new Date().toISOString();
+    setItems(prev=>prev.map(x=>
+      x.run_id===runFilter&&
+      x.review_status==="unreviewed"&&
+      x.relevance==="unlikely"&&
+      !x.metadata?.full_text_required&&
+      !x.metadata?.urgent_saudi
+        ?{...x,review_status:"not_relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt,decision_note:"Bulk confirmed Not relevant from PVOS Unlikely triage"}
+        :x
+    ));
+    setMessage(String(data||count)+" PVOS Unlikely article(s) confirmed Not relevant. Likely, Possible, Full-text, and Saudi-alert articles remain open for review.");
   }
 
   async function markBatchRemainingNotRelevant(){
@@ -919,15 +955,16 @@ export default function LiteraturePage(){
             <div>
               <strong>Batch review · {selectedQueueRun?dateLabel(selectedQueueRun.period_start)+" – "+dateLabel(selectedQueueRun.period_end):"Select one screening run"}</strong>
               <div className={styles.muted} style={{marginTop:5}}>
-                Check only the articles you consider Relevant. Save them first, add Signal/PSUR actions if needed, then mark the remaining eligible articles Not relevant.
+                You do not need to inspect every article. First confirm the low-risk PVOS Unlikely group in one action, then review only the smaller Likely / Possible / Full-text set.
               </div>
               <div className={styles.muted} style={{marginTop:5}}>
-                {batchSelected.length} selected · {batchRemainingEligible.length} unreviewed eligible · {batchFullTextOpen.length} full-text protected · {batchNeedsReview.length} Needs review protected
+                {batchLikelyOpen.length} Likely · {batchPossibleOpen.length} Possible · {batchUnlikelyOpen.length} Unlikely · {batchFullTextOpen.length} Full text · {batchSelected.length} selected
               </div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className={styles.button} disabled={busy||!batchUnlikelyOpen.length||!runFilter} onClick={confirmUnlikelyNotRelevant}>Confirm Unlikely → Not relevant ({batchUnlikelyOpen.length})</button>
               <button className={styles.buttonGhost} disabled={busy||!batchSelected.length||!runFilter} onClick={saveBatchRelevant}>Save selected as Relevant ({batchSelected.length})</button>
-              <button className={styles.button} disabled={busy||!!batchSelected.length||!batchRemainingEligible.length||!runFilter} onClick={markBatchRemainingNotRelevant}>Mark remaining Not relevant ({batchRemainingEligible.length})</button>
+              <button className={styles.buttonGhost} disabled={busy||!!batchSelected.length||!batchRemainingEligible.length||!runFilter} onClick={markBatchRemainingNotRelevant}>Mark all other eligible Not relevant ({batchRemainingEligible.length})</button>
             </div>
           </div>
         </div>:null}
