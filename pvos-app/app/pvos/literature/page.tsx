@@ -602,8 +602,13 @@ export default function LiteraturePage(){
     if(!organizationId||!session)return;
     const xs=runItems(run.id);
     const stats=statsForRun(run);
+    const secondReview=secondReviewMap[run.id];
     if(stats.open>0){
       setMessage("Cannot complete screening: "+stats.open+" article(s) still need a final QPPV decision.");
+      return;
+    }
+    if(secondReview&&secondReview.status!=="approved"){
+      setMessage("Cannot complete screening until the assigned second review is approved.");
       return;
     }
     setBusy(true);setMessage("");
@@ -659,7 +664,21 @@ export default function LiteraturePage(){
         downstream_snapshot:downstream,
         completed_by:session.user.id,
         completed_at:completedAt,
-        metadata:{record_version:"v1",review_model:"QPPV final decision",generated_by:"PVOS"}
+        metadata:{
+          record_version:"v2",
+          review_model:secondReview?"QPPV first review + second reviewer":"QPPV final decision",
+          generated_by:"PVOS",
+          second_review:secondReview?{
+            id:secondReview.id,
+            status:secondReview.status,
+            assigned_to:secondReview.assigned_to,
+            assigned_by:secondReview.assigned_by,
+            assigned_at:secondReview.assigned_at,
+            reviewed_by:secondReview.reviewed_by,
+            reviewed_at:secondReview.reviewed_at,
+            note:secondReview.note
+          }:null
+        }
       },{onConflict:"run_id"});
       if(recordError)throw recordError;
       const {error:runError}=await pvosSupabase.from("pvos_literature_runs").update({
@@ -698,6 +717,11 @@ export default function LiteraturePage(){
     add("Saudi alerts",m.saudi);
     add("Signal escalations",m.signal);
     add("PSUR selections",m.psur);
+    const second=record.metadata?.second_review;
+    add("Second review status",second?.status||"Not assigned");
+    add("Second reviewer",second?.reviewed_by?memberMap[second.reviewed_by]?.email||second.reviewed_by:second?.assigned_to?memberMap[second.assigned_to]?.email||second.assigned_to:"");
+    add("Second reviewed at",second?.reviewed_at||"");
+    add("Second review note",second?.note||"");
     lines.push("");
     lines.push('"Article","Product","PMID","Safety priority","QPPV decision","Saudi alert","Reviewed at"');
     for(const d of record.decision_snapshot||[]){
@@ -885,7 +909,7 @@ export default function LiteraturePage(){
           <span className={styles.muted}>One auditable record per screening period</span>
         </div>
         {loading?<div className={styles.empty}>Loading screening runs…</div>:runs.length?<div className={styles.tableWrap}><table className={styles.table}>
-          <thead><tr><th>Period</th><th>Company</th><th>Sources</th><th>Products</th><th>Results</th><th>Reviewed</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Period</th><th>Company</th><th>Sources</th><th>Products</th><th>Results</th><th>Reviewed</th><th>Second review</th><th>Status</th><th></th></tr></thead>
           <tbody>{runs.map(r=>{
             const counts=runCounts[r.id]||{total:r.result_count||0,reviewed:r.reviewed_count||0};
             return <tr key={r.id}>
@@ -895,6 +919,7 @@ export default function LiteraturePage(){
               <td>{r.product_count}</td>
               <td>{counts.total}</td>
               <td>{counts.reviewed}</td>
+              <td>{secondReviewMap[r.id]?<Badge tone={secondReviewMap[r.id].status==="approved"?"green":secondReviewMap[r.id].status==="returned"?"red":"amber"}>{String(secondReviewMap[r.id].status).replace("_"," ")}</Badge>:<span className={styles.muted}>Not assigned</span>}</td>
               <td><Badge tone={recordMap[r.id]?"green":r.status==="review"?"amber":"default"}>{recordMap[r.id]?"Complete":String(r.status).replace("_"," ")}</Badge></td>
               <td><button className={styles.buttonGhost} onClick={()=>{setSelectedRun(r);setMessage("")}}>Open</button></td>
             </tr>
