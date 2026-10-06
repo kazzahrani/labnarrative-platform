@@ -150,26 +150,74 @@ const CASE_REPORT_TERMS=[
 const SAFETY_TERMS=[
   "adverse event","adverse events","adverse reaction","adverse reactions","toxicity","toxicities",
   "side effect","side effects","drug-induced","drug induced","hospitalization","hospitalisation",
-  "death","fatal","died","overdose","medication error","pregnancy","foetal","fetal","teratogenic",
-  "anaphylaxis","hypersensitivity","bleeding","hemorrhage","hemorrhages","haemorrhage","haemorrhages","liver injury","hepatotoxic",
+  "death","fatal","died","overdose","medication error","anaphylaxis","hypersensitivity",
+  "bleeding","hemorrhage","hemorrhages","haemorrhage","haemorrhages","liver injury","hepatotoxic",
   "kidney injury","renal injury","renal failure","cardiac arrest","arrhythmia","thrombosis",
-  "thromboembolism","thromboembolic event","thromboembolic events","venous thromboembolism","ischemic stroke","ischemic strokes","stroke","strokes","intracranial hemorrhage","intracranial hemorrhages",
-  "suicidal","suicide","interaction","drug-drug interaction","withdrawal","off-label","off label",
-  "misuse","abuse","treatment failure","lack of efficacy","breakthrough"
+  "thromboembolism","thromboembolic event","thromboembolic events","venous thromboembolism",
+  "ischemic stroke","ischemic strokes","stroke","strokes","intracranial hemorrhage","intracranial hemorrhages",
+  "suicidal ideation","suicide","tolerability","safety"
+];
+const SPECIAL_SITUATION_TERMS=[
+  "pregnancy","pregnant","maternal","fetal","foetal","neonatal","breastfeeding","breast-feeding",
+  "lactation","overdose","medication error","off-label","off label","misuse","abuse",
+  "occupational exposure","teratogenic"
+];
+const LACK_EFFICACY_TERMS=[
+  "treatment failure","lack of efficacy","breakthrough","resistance","resistant","refractory",
+  "disease progression","progression","recurrence","recurrent","relapse","nonresponse","non-response",
+  "poor response","poorer response","loss of response"
 ];
 const EXPOSURE_TERMS=[
   "above range","above-range","plasma level","plasma levels","drug level","drug levels",
   "concentration","concentrations","exposure","cyp3a4","p-glycoprotein","p glycoprotein",
   "pharmacokinetic","pharmacokinetics","auc","clearance"
 ];
-const ASSOCIATION_TERMS=[
-  "associated with","increased risk","higher risk","elevated risk","caused by","induced by",
-  "attributed to","related to","adverse effect","adverse event","adverse reaction"
+const INTERACTION_TERMS=[
+  "drug-drug interaction","drug drug interaction","interaction","interactions",
+  "cyp3a4","p-glycoprotein","p glycoprotein","inhibitor","inducer"
 ];
-const HIGH_SIGNAL_TITLE_TERMS=[
-  "signal","signals","risk","safety","bleeding","hemorrhage","hemorrhages","haemorrhage","haemorrhages",
-  "adverse event","adverse events","adverse reaction","adverse reactions","interaction","interactions",
-  "drug-drug interaction","drug-drug interactions","toxicity","toxicities"
+const ASSOCIATION_TERMS=[
+  "associated with","increased risk","higher risk","elevated risk","lower risk","reduced risk",
+  "risk factor","caused by","induced by","attributed to","related to",
+  "adverse effect","adverse event","adverse reaction"
+];
+const COMPARISON_TERMS=[
+  "compared with","compared to","versus"," vs ","relative to","than with","than placebo"
+];
+const EFFICACY_VERBS=[
+  "improved","improves","reduced","reduces","prevented","prevents","attenuated","attenuates",
+  "mitigated","mitigates","protected","protects","suppressed","suppresses","inhibited","inhibits",
+  "restored","restores","effective","efficacy","benefit","beneficial","response rate"
+];
+const HUMAN_TERMS=[
+  "patient","patients","participant","participants","adult","adults","women","men","children",
+  "cohort","clinical trial","randomized trial","randomised trial","retrospective","prospective",
+  "medical records","electronic health records","hospital","multicenter","multi-center"
+];
+const NONHUMAN_TERMS=[
+  "mouse","mice","rat","rats","rabbit","rabbits","murine","animal model","cell line","cell lines",
+  "cultured cells","in vitro","in vivo rat","in vivo mouse","xenograft"
+];
+const ENVIRONMENTAL_TERMS=[
+  "wastewater","aquatic","soil","adsorption","adsorbent","phytotoxicity","agricultural",
+  "agronomic","ecosystem","nontarget organisms","non-target organisms","water treatment",
+  "environmental contaminant","pollutant","removal from water"
+];
+const ANALYTICAL_FORMULATION_TERMS=[
+  "3d-printed","3d printed","formulation","drug delivery","delivery system","tablet","tablets",
+  "lc-ms/ms","chromatography","analytical method","method validation","quantitative determination",
+  "dried plasma spot","bioanalytical","pbpk model","pbpk models","physiologically-based pk",
+  "physiologically based pk","pharmacokinetic model","pharmacokinetic models"
+];
+const ECONOMIC_TERMS=[
+  "cost-utility","cost utility","cost-effectiveness","cost effectiveness","qaly","qalys","icer",
+  "reimbursement","markov model","willingness-to-pay","willingness to pay"
+];
+const REVIEW_TERMS=[
+  "review","narrative review","systematic review","meta-analysis","meta analysis"
+];
+const FULL_TEXT_TITLE_TERMS=[
+  "correction to","corrigendum","comment on","response to the letter","letter to the editor","editorial"
 ];
 
 function isWordChar(v:string){
@@ -207,19 +255,26 @@ function hasAnyProductTerm(text:string,terms:string[]){
 function hasQuantifiedFinding(text:string){
   return /\b\d+(?:\.\d+)?\s*%|\b(?:OR|HR|RR)\s*[=:]?\s*\d|\bhazard ratio\s*\d|\b(?:odds|risk|rate) ratio\s*\d|95\s*%\s*(?:CI|confidence interval)|above[- ]range|significantly\s+(?:higher|lower|increased|decreased|more|fewer)|\b(?:higher|lower|increased|decreased)\s+(?:risk|odds|rate|level|levels|concentration|concentrations|exposure)/i.test(text);
 }
-function hasBreakthroughPattern(text:string,terms:string[]){
+function hasComparison(text:string){
+  const lower=" "+text.toLowerCase()+" ";
+  return COMPARISON_TERMS.some(t=>lower.includes(t));
+}
+function hasBackgroundPattern(text:string,terms:string[]){
   const lower=text.toLowerCase();
-  if(!hasAnyProductTerm(text,terms))return false;
-  if(/\b(?:breakthrough|treatment failure|lack of efficacy)\b/i.test(text))return true;
   return terms.some(term=>{
     const t=term.toLowerCase();
-    return lower.includes("while on "+t)||
-      lower.includes("while taking "+t)||
-      lower.includes("despite "+t)||
-      lower.includes("despite treatment with "+t);
+    return lower.includes("previously treated with "+t)||
+      lower.includes("prior "+t)||
+      lower.includes("prior treatment with "+t)||
+      lower.includes("history of "+t)||
+      lower.includes("after progression on "+t)||
+      lower.includes("progression on "+t)||
+      lower.includes("after surgery, she received "+t)||
+      lower.includes("after surgery, he received "+t)||
+      lower.includes("standard treatment")&&lower.includes(t);
   });
 }
-function hasTreatmentOnlyPattern(text:string,terms:string[]){
+function hasTreatmentPattern(text:string,terms:string[]){
   const lower=text.toLowerCase();
   return terms.some(term=>{
     const t=term.toLowerCase();
@@ -230,7 +285,20 @@ function hasTreatmentOnlyPattern(text:string,terms:string[]){
       lower.includes("started on "+t)||
       lower.includes("started on oral "+t)||
       lower.includes("initiated "+t)||
-      lower.includes("treated with "+t);
+      lower.includes("treated with "+t)||
+      lower.includes("followed by "+t);
+  });
+}
+function hasBreakthroughPattern(text:string,terms:string[]){
+  const lower=text.toLowerCase();
+  if(!hasAnyProductTerm(text,terms))return false;
+  if(hits(text,LACK_EFFICACY_TERMS).length)return true;
+  return terms.some(term=>{
+    const t=term.toLowerCase();
+    return lower.includes("while on "+t)||
+      lower.includes("while taking "+t)||
+      lower.includes("despite "+t)||
+      lower.includes("despite treatment with "+t);
   });
 }
 
@@ -255,60 +323,148 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
   const allSentences=[title,...sentences(abstract),...keywords];
   const productContexts=allSentences.filter(s=>hasAnyProductTerm(s,terms));
   const productInTitle=hasAnyProductTerm(title,terms);
+  const productMentionCount=productContexts.length;
+
   const saudiHits=hits(combined,SAUDI_TERMS);
   const caseHits=hits(combined,CASE_TERMS);
   const caseReportHits=hits(combined,CASE_REPORT_TERMS);
   const safetyHits=hits(combined,SAFETY_TERMS);
+  const specialHits=hits(combined,SPECIAL_SITUATION_TERMS);
+  const lackEfficacyHits=hits(combined,LACK_EFFICACY_TERMS);
   const exposureHits=hits(combined,EXPOSURE_TERMS);
-  const productSafetyHits=unique(productContexts.flatMap(s=>hits(s,SAFETY_TERMS)));
-  const productExposureHits=unique(productContexts.flatMap(s=>hits(s,EXPOSURE_TERMS)));
-  const productAssociationHits=unique(productContexts.flatMap(s=>hits(s,ASSOCIATION_TERMS)));
-  const quantifiedProductEvidence=productContexts.some(hasQuantifiedFinding);
-  const highSignalTitle=hits(title,HIGH_SIGNAL_TITLE_TERMS).length>0;
-  const breakthrough=productContexts.some(s=>hasBreakthroughPattern(s,terms));
-  const localSafetyEvidence=productSafetyHits.length>0||productExposureHits.length>0||productAssociationHits.length>0;
-  const genericSafetyEvidence=safetyHits.length>0||exposureHits.length>0;
-  const treatmentOnly=productContexts.length>0 &&
-    productContexts.some(s=>hasTreatmentOnlyPattern(s,terms)) &&
-    !localSafetyEvidence &&
-    !breakthrough;
-  const caseLike=caseHits.length>0;
-  const caseReportLike=caseReportHits.length>0;
-  const urgentSaudi=saudiHits.length>0 && (caseLike||genericSafetyEvidence);
+  const interactionHits=hits(combined,INTERACTION_TERMS);
 
-  let score=0;
-  if(productInTitle)score+=3;
-  if(localSafetyEvidence)score+=2;
-  if(productAssociationHits.length)score+=2;
-  if(quantifiedProductEvidence&&localSafetyEvidence)score+=2;
-  if(quantifiedProductEvidence&&highSignalTitle)score+=4;
-  if(genericSafetyEvidence)score+=1;
-  if(productInTitle&&genericSafetyEvidence)score+=1;
-  if(caseReportLike&&localSafetyEvidence)score+=1;
-  if(breakthrough)score+=1;
-  if(treatmentOnly)score-=2;
+  const productSafetyHits=unique(productContexts.flatMap(s=>hits(s,SAFETY_TERMS)));
+  const productSpecialHits=unique(productContexts.flatMap(s=>hits(s,SPECIAL_SITUATION_TERMS)));
+  const productLackEfficacyHits=unique(productContexts.flatMap(s=>hits(s,LACK_EFFICACY_TERMS)));
+  const productExposureHits=unique(productContexts.flatMap(s=>hits(s,EXPOSURE_TERMS)));
+  const productInteractionHits=unique(productContexts.flatMap(s=>hits(s,INTERACTION_TERMS)));
+  const productAssociationHits=unique(productContexts.flatMap(s=>hits(s,ASSOCIATION_TERMS)));
+
+  const quantifiedProductEvidence=productContexts.some(hasQuantifiedFinding);
+  const directOutcomeStatement=productContexts.some(s=>
+    (hasQuantifiedFinding(s)||hasComparison(s)) &&
+    (hits(s,SAFETY_TERMS).length||hits(s,SPECIAL_SITUATION_TERMS).length||
+     hits(s,LACK_EFFICACY_TERMS).length||hits(s,ASSOCIATION_TERMS).length)
+  );
+  const breakthrough=productContexts.some(s=>hasBreakthroughPattern(s,terms));
+  const backgroundPattern=productContexts.some(s=>hasBackgroundPattern(s,terms));
+  const treatmentPattern=productContexts.some(s=>hasTreatmentPattern(s,terms));
+  const efficacyPattern=productContexts.some(s=>hits(s,EFFICACY_VERBS).length>0);
+  const comparatorPattern=productContexts.some(hasComparison);
+
+  const environmental=hits(combined,ENVIRONMENTAL_TERMS).length>=2||hits(title,ENVIRONMENTAL_TERMS).length>0;
+  const economic=hits(combined,ECONOMIC_TERMS).length>=2||hits(title,ECONOMIC_TERMS).length>0;
+  const analyticalOrFormulation=hits(title,ANALYTICAL_FORMULATION_TERMS).length>0||
+    (hits(combined,ANALYTICAL_FORMULATION_TERMS).length>=2 && !hits(combined,SAFETY_TERMS).length);
+  const humanClinical=hits(combined,HUMAN_TERMS).length>0;
+  const nonHuman=hits(combined,NONHUMAN_TERMS).length>0&&!humanClinical;
+  const reviewArticle=hits(title,REVIEW_TERMS).length>0||/^review\b/i.test(abstract.trim());
+  const correctionLike=hits(title,FULL_TEXT_TITLE_TERMS).length>0;
+  const fullTextRequired=!abstract.trim();
+
+  const directSafety=productSafetyHits.length>0;
+  const directSpecial=productSpecialHits.length>0;
+  const directLackEfficacy=productLackEfficacyHits.length>0||breakthrough;
+  const directInteraction=productInteractionHits.length>0 &&
+    (productExposureHits.length>0||productAssociationHits.length>0||directSafety);
+  const directClinicalFinding=directSafety||directSpecial||directLackEfficacy||directInteraction||directOutcomeStatement;
+
+  const reviewMechanismConcern=reviewArticle&&productMentionCount>0&&(
+    phrasePresent(combined,"tolerability")||
+    phrasePresent(combined,"drug inactivation")||
+    phrasePresent(combined,"biotransformation")||
+    phrasePresent(combined,"interindividual variability")||
+    directLackEfficacy||
+    directInteraction
+  );
+
+  let productRole:"subject"|"comparator"|"background"|"intervention"|"mentioned"="mentioned";
+  if(directClinicalFinding||productInTitle)productRole="subject";
+  else if(comparatorPattern)productRole="comparator";
+  else if(backgroundPattern||productMentionCount===1)productRole="background";
+  else if(treatmentPattern||efficacyPattern)productRole="intervention";
+
+  if(productRole==="subject"&&!directClinicalFinding&&comparatorPattern&&!productInTitle)productRole="comparator";
+  if(productRole==="subject"&&!directClinicalFinding&&treatmentPattern&&!productInTitle)productRole="intervention";
+
+  const urgentSaudi=saudiHits.length>0&&humanClinical&&(
+    directClinicalFinding||caseHits.length>0||safetyHits.length>0||specialHits.length>0
+  );
 
   let relevance:"likely_relevant"|"possible"|"unlikely"="unlikely";
-  let reason="Product mention found without clear product-linked safety, interaction, exposure, or case evidence.";
+  let reason="The monitored product is mentioned without a product-linked safety, special-situation, interaction, or lack-of-efficacy finding.";
+  let assessmentState:"standard"|"full_text_required"="standard";
 
-  if(urgentSaudi){
-    relevance="likely_relevant";
-    reason="Priority review: Saudi context plus clinical case or safety evidence detected. Human review remains required.";
-  }else if(score>=5){
-    relevance="likely_relevant";
-    reason="Product-linked safety, interaction, exposure, or quantified outcome evidence detected.";
-  }else if(breakthrough){
+  if(fullTextRequired){
     relevance="possible";
-    reason="Possible breakthrough or lack-of-efficacy event while on the monitored product; QPPV assessment required.";
-  }else if((genericSafetyEvidence||caseReportLike)&&!treatmentOnly){
-    relevance="possible";
-    reason=localSafetyEvidence
-      ?"Possible product-linked safety relevance detected; attribution is not strong enough for high-priority classification."
-      :"Safety-relevant article mentions the monitored product, but product-specific attribution is unclear from the abstract.";
-  }else if(treatmentOnly){
+    assessmentState="full_text_required";
+    reason=correctionLike
+      ?"Full text/source review required: PubMed does not provide an abstract for this correction, comment, or letter."
+      :"Full text review required: PubMed does not provide enough abstract information for a safe automated relevance decision.";
+  }else if(environmental){
     relevance="unlikely";
-    reason="The monitored product appears to be background or treatment context without a product-linked safety finding.";
+    reason="Environmental or agricultural research was detected; no human pharmacovigilance finding is evident.";
+  }else if(economic){
+    relevance="unlikely";
+    reason="Health-economic or cost-utility research was detected without a product safety finding.";
+  }else if(analyticalOrFormulation&&!directClinicalFinding){
+    relevance="unlikely";
+    reason="Analytical, formulation, delivery, or PK-model research was detected without a product-linked safety finding.";
+  }else if(nonHuman){
+    if(directSafety||directSpecial){
+      relevance="possible";
+      reason="Non-human safety or special-situation evidence detected; human QPPV review is required before use.";
+    }else{
+      relevance="unlikely";
+      reason="Preclinical/non-human efficacy or mechanistic research without a product-linked safety finding.";
+    }
+  }else if(urgentSaudi){
+    relevance="likely_relevant";
+    reason="Priority review: Saudi human clinical context with product-linked safety, case, special-situation, or efficacy concern.";
+  }else if(humanClinical&&productRole==="subject"&&directClinicalFinding){
+    const strongEvidence=productInTitle||directOutcomeStatement||quantifiedProductEvidence||
+      caseReportHits.length>0||directSpecial||directLackEfficacy||directInteraction;
+    relevance=strongEvidence?"likely_relevant":"possible";
+    reason=strongEvidence
+      ?"Human product-linked safety, special-situation, interaction, or lack-of-efficacy evidence detected."
+      :"Possible human product-linked safety finding; attribution is not strong enough for high-priority classification.";
+  }else if(humanClinical&&productRole==="comparator"&&(directClinicalFinding||quantifiedProductEvidence)){
+    relevance="possible";
+    reason="The monitored product is a comparator in a human clinical outcome analysis; QPPV relevance requires review.";
+  }else if(reviewMechanismConcern){
+    relevance="possible";
+    reason="Review-level evidence discusses product response, tolerability, interaction, or resistance mechanisms that may warrant QPPV review.";
+  }else if(directLackEfficacy){
+    relevance="possible";
+    reason="Possible resistance, progression, breakthrough, or lack-of-efficacy evidence involving the monitored product.";
+  }else if(productRole==="background"){
+    relevance="unlikely";
+    reason="The monitored product appears to be prior/background therapy rather than the subject of the reported finding.";
+  }else if(treatmentPattern&&!directClinicalFinding){
+    relevance="unlikely";
+    reason="The monitored product appears to be treatment/intervention context without a product-linked safety finding.";
+  }else if(efficacyPattern&&!directClinicalFinding){
+    relevance="unlikely";
+    reason="Efficacy or beneficial-effect evidence was detected without a pharmacovigilance safety concern.";
   }
+
+  const publicationContext=fullTextRequired?"abstract_missing":
+    environmental?"environmental":
+    economic?"health_economic":
+    analyticalOrFormulation?"analytical_or_formulation":
+    nonHuman?"preclinical":
+    humanClinical?"human_clinical":
+    reviewArticle?"review":"other";
+
+  const findingTypes:string[]=[];
+  if(directSafety)findingTypes.push("safety");
+  if(directSpecial)findingTypes.push("special_situation");
+  if(directLackEfficacy)findingTypes.push("lack_of_efficacy");
+  if(directInteraction)findingTypes.push("interaction");
+  if(productExposureHits.length)findingTypes.push("exposure_pk");
+  if(quantifiedProductEvidence)findingTypes.push("quantified");
+  if(!findingTypes.length&&efficacyPattern)findingTypes.push("efficacy_only");
 
   return {
     matchedTerms,
@@ -316,20 +472,36 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
     termLocations,
     relevance,
     reason,
+    assessmentState,
+    fullTextRequired,
+    publicationContext,
+    productRole,
+    findingTypes:unique(findingTypes),
     urgentSaudi,
     saudiHits:unique(saudiHits).slice(0,8),
     safetyHits:unique(safetyHits).slice(0,12),
+    specialHits:unique(specialHits).slice(0,10),
+    lackEfficacyHits:unique(lackEfficacyHits).slice(0,10),
+    interactionHits:unique(interactionHits).slice(0,10),
     caseHits:unique(caseHits).slice(0,8),
     productSafetyHits:productSafetyHits.slice(0,10),
+    productSpecialHits:productSpecialHits.slice(0,10),
+    productLackEfficacyHits:productLackEfficacyHits.slice(0,10),
     exposureHits:unique(exposureHits).slice(0,10),
     productExposureHits:productExposureHits.slice(0,10),
+    productInteractionHits:productInteractionHits.slice(0,10),
     productAssociationHits:productAssociationHits.slice(0,8),
     breakthrough,
     quantifiedProductEvidence,
-    highSignalTitle,
-    treatmentOnly,
-    score,
-    analysisVersion:"v2.2"
+    directOutcomeStatement,
+    environmental,
+    economic,
+    analyticalOrFormulation,
+    humanClinical,
+    nonHuman,
+    reviewArticle,
+    treatmentPattern,
+    analysisVersion:"v3"
   };
 }
 
