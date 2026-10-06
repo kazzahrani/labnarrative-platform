@@ -71,7 +71,7 @@ export async function POST(req:NextRequest){
           pubmed_date:detail.pubmed_date,
           date_display_basis:detail.online_date?"online":detail.pubmed_date?"pubmed":"issue",
           enriched_at:new Date().toISOString(),
-          enrichment_version:"v2"
+          enrichment_version:"v2.1"
         }
       }];
     });
