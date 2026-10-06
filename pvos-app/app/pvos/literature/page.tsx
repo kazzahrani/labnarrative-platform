@@ -389,8 +389,123 @@ export default function LiteraturePage(){
     else if(pendingRelevantId===item.id)setPendingRelevantId(null);
   }
 
+  function startBatchReview(){
+    const targetRun=runFilter||runs.find(r=>!recordMap[r.id]&&r.status==="review")?.id||runs[0]?.id||"";
+    if(!targetRun){
+      setMessage("Create a screening run before starting batch review.");
+      return;
+    }
+    setRunFilter(targetRun);
+    setQueueFilter("open");
+    setBatchSelected([]);
+    setBatchPinned([]);
+    setBatchMode(true);
+    setMessage("");
+  }
+
+  function toggleBatchSelected(id:string){
+    setBatchSelected(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  }
+
+  async function saveBatchRelevant(){
+    if(!session||!runFilter||!batchSelected.length)return;
+    setBusy(true);setMessage("");
+    const ids=[...batchSelected];
+    const {data,error}=await pvosSupabase.rpc("pvos_mark_literature_relevant",{
+      p_run_id:runFilter,
+      p_item_ids:ids
+    });
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    const reviewedAt=new Date().toISOString();
+    setItems(prev=>prev.map(x=>ids.includes(x.id)?{
+      ...x,review_status:"relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt
+    }:x));
+    setBatchPinned(prev=>[...new Set([...prev,...ids])]);
+    setBatchSelected([]);
+    setMessage(String(data||ids.length)+" selected article(s) marked Relevant. Add Signal/PSUR actions if needed, then mark the remaining articles Not relevant.");
+  }
+
+  async function markBatchRemainingNotRelevant(){
+    if(!session||!runFilter)return;
+    const count=batchRemainingEligible.length;
+    if(!count){
+      setMessage("No eligible unreviewed articles remain in this screening run.");
+      return;
+    }
+    const excluded=batchFullTextOpen.length+batchNeedsReview.length;
+    const ok=window.confirm(
+      "Mark "+count+" remaining unreviewed article(s) in this screening run as Not relevant?"+
+      (excluded?" "+excluded+" Full text / Needs review item(s) will stay open.":"")
+    );
+    if(!ok)return;
+    setBusy(true);setMessage("");
+    const {data,error}=await pvosSupabase.rpc("pvos_mark_literature_remaining_not_relevant",{p_run_id:runFilter});
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    const reviewedAt=new Date().toISOString();
+    setItems(prev=>prev.map(x=>
+      x.run_id===runFilter&&x.review_status==="unreviewed"&&!x.metadata?.full_text_required
+        ?{...x,review_status:"not_relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt}
+        :x
+    ));
+    setMessage(String(data||count)+" remaining article(s) marked Not relevant. Full-text and Needs review items were preserved.");
+  }
+
+  function finishBatchReview(){
+    setBatchMode(false);
+    setBatchSelected([]);
+    setBatchPinned([]);
+    setMessage("Batch review closed. Your decisions are saved.");
+  }
+
+  async function assignSecondReviewer(run:any){
+    if(!secondReviewerId){setMessage("Choose a second reviewer.");return;}
+    setBusy(true);setMessage("");
+    const {error}=await pvosSupabase.rpc("pvos_assign_literature_second_review",{
+      p_run_id:run.id,
+      p_assigned_to:secondReviewerId
+    });
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    setSecondReviewerId("");
+    setSecondReviewNote("");
+    setMessage("Screening run sent to the second reviewer.");
+    await load();
+  }
+
+  async function decideSecondReview(run:any,decision:"approved"|"returned"){
+    if(decision==="returned"&&!secondReviewNote.trim()){
+      setMessage("Add a note explaining what needs to be changed before returning the screening.");
+      return;
+    }
+    setBusy(true);setMessage("");
+    const {error}=await pvosSupabase.rpc("pvos_decide_literature_second_review",{
+      p_run_id:run.id,
+      p_decision:decision,
+      p_note:secondReviewNote.trim()||null
+    });
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    setSecondReviewNote("");
+    setMessage(decision==="approved"?"Second review approved with reviewer and timestamp recorded.":"Screening returned to the first reviewer with a review note.");
+    await load();
+  }
+
+  function openRunDecisions(run:any){
+    setSelectedRun(null);
+    setRunFilter(run.id);
+    setProductFilter("");
+    setQueueFilter("reviewed");
+    setBatchMode(false);
+    setBatchSelected([]);
+    setBatchPinned([]);
+    setTab("queue");
+  }
+
   function startRapidReview(){
     const candidates=sortedItems.filter(x=>
+      (!runFilter||x.run_id===runFilter) &&
       (!productFilter||x.product_id===productFilter) &&
       (x.review_status==="unreviewed"||x.review_status==="needs_review")
     );
@@ -413,6 +528,7 @@ export default function LiteraturePage(){
     const next=sortedItems.find(x=>
       x.id!==rapidItem.id &&
       !seen.includes(x.id) &&
+      (!runFilter||x.run_id===runFilter) &&
       (!productFilter||x.product_id===productFilter) &&
       (x.review_status==="unreviewed"||x.review_status==="needs_review")
     );
@@ -428,6 +544,7 @@ export default function LiteraturePage(){
     const next=sortedItems.find(x=>
       x.id!==current.id &&
       !seen.includes(x.id) &&
+      (!runFilter||x.run_id===runFilter) &&
       (!productFilter||x.product_id===productFilter) &&
       (x.review_status==="unreviewed"||x.review_status==="needs_review")
     );
