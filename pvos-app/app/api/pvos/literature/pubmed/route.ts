@@ -5,6 +5,10 @@ import { analyzeArticle, fetchPubMedDetails, ncbiJson, productTerms, sleep, type
 const SUPABASE_URL = process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL ?? "https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
 
+const SEARCH_PAGE_SIZE=500;
+const SUMMARY_CHUNK_SIZE=200;
+const MAX_RESULTS_PER_PRODUCT=5000;
+
 type SummaryDoc = {
   uid?: string;
   title?: string;
@@ -46,34 +50,91 @@ export async function POST(req:NextRequest){
     const searches:any[]=[];
     let requestCount=0;
 
+    const pacedJson=async(path:string,params:URLSearchParams)=>{
+      if(requestCount)await sleep(360);
+      const result=await ncbiJson(path,params);
+      requestCount++;
+      return result;
+    };
+
     for(const product of products){
       const terms=productTerms(product);
       if(!terms.length)continue;
-      const query=terms.map(t=>`"${t.replace(/"/g,"")}"[Title/Abstract]`).join(" OR ");
-      searches.push({product_id:product.id,brand_name:product.brand_name||null,active_ingredient:product.active_ingredient||null,terms,query});
+      const query=terms.map(t=>'"'+t.replace(/"/g,"")+'"[Title/Abstract]').join(" OR ");
 
-      if(requestCount)await sleep(360);
-      const search=await ncbiJson("esearch.fcgi",new URLSearchParams({
-        db:"pubmed",retmode:"json",retmax:"100",sort:"pub date",
-        term:"("+query+")",datetype:"pdat",mindate:periodStart,maxdate:periodEnd
-      }));
-      requestCount++;
-      const ids=(search?.esearchresult?.idlist ?? []) as string[];
+      const ids:string[]=[];
+      const seenIds=new Set<string>();
+      let totalCount=0;
+      let pages=0;
+
+      while(true){
+        const search=await pacedJson("esearch.fcgi",new URLSearchParams({
+          db:"pubmed",
+          retmode:"json",
+          retmax:String(SEARCH_PAGE_SIZE),
+          retstart:String(ids.length),
+          sort:"pub date",
+          term:"("+query+")",
+          datetype:"pdat",
+          mindate:periodStart,
+          maxdate:periodEnd
+        }));
+
+        const result=search?.esearchresult ?? {};
+        totalCount=Number(result.count ?? 0);
+        if(!Number.isFinite(totalCount)||totalCount<0)totalCount=0;
+
+        if(totalCount>MAX_RESULTS_PER_PRODUCT){
+          throw new Error(
+            "PubMed returned "+totalCount+" results for "+(product.brand_name||product.active_ingredient||"a product")+
+            ". PVOS will not silently truncate literature results. Narrow the screening period and run again."
+          );
+        }
+
+        const pageIds=((result.idlist ?? []) as string[]).filter(Boolean);
+        for(const id of pageIds){
+          if(!seenIds.has(id)){
+            seenIds.add(id);
+            ids.push(id);
+          }
+        }
+        pages++;
+
+        if(!pageIds.length||ids.length>=totalCount)break;
+      }
+
+      searches.push({
+        product_id:product.id,
+        brand_name:product.brand_name||null,
+        active_ingredient:product.active_ingredient||null,
+        terms,
+        query,
+        pubmed_count:totalCount,
+        retrieved_count:ids.length,
+        pagination_pages:pages,
+        complete:ids.length===totalCount
+      });
+
       if(!ids.length)continue;
 
-      await sleep(360);
-      const summary=await ncbiJson("esummary.fcgi",new URLSearchParams({
-        db:"pubmed",retmode:"json",id:ids.join(",")
-      }));
-      requestCount++;
+      const summaryDocs:Record<string,SummaryDoc>={};
+      for(let i=0;i<ids.length;i+=SUMMARY_CHUNK_SIZE){
+        const chunk=ids.slice(i,i+SUMMARY_CHUNK_SIZE);
+        const summary=await pacedJson("esummary.fcgi",new URLSearchParams({
+          db:"pubmed",retmode:"json",id:chunk.join(",")
+        }));
+        const uids=(summary?.result?.uids ?? []) as string[];
+        for(const uid of uids){
+          summaryDocs[uid]=(summary?.result?.[uid] ?? {}) as SummaryDoc;
+        }
+      }
 
-      await sleep(360);
+      if(requestCount)await sleep(360);
       const detailMap=await fetchPubMedDetails(ids);
       requestCount++;
 
-      const uids=(summary?.result?.uids ?? []) as string[];
-      for(const uid of uids){
-        const doc=(summary?.result?.[uid] ?? {}) as SummaryDoc;
+      for(const uid of ids){
+        const doc=summaryDocs[uid] ?? {};
         const title=String(doc.title ?? "").replace(/<[^>]+>/g,"").trim();
         if(!title)continue;
 
@@ -109,6 +170,15 @@ export async function POST(req:NextRequest){
             saudi_hits:analysis.saudiHits,
             safety_hits:analysis.safetyHits,
             case_hits:analysis.caseHits,
+            product_safety_hits:analysis.productSafetyHits,
+            exposure_hits:analysis.exposureHits,
+            product_exposure_hits:analysis.productExposureHits,
+            product_association_hits:analysis.productAssociationHits,
+            breakthrough:analysis.breakthrough,
+            quantified_product_evidence:analysis.quantifiedProductEvidence,
+            treatment_only:analysis.treatmentOnly,
+            prioritization_score:analysis.score,
+            prioritization_version:analysis.analysisVersion,
             online_date:detail?.online_date ?? null,
             issue_date:issueDate,
             pubmed_date:detail?.pubmed_date ?? null,
@@ -134,6 +204,7 @@ export async function POST(req:NextRequest){
       results:deduped.length,
       priority,
       saudi_alerts:saudi,
+      retrieval_complete:searches.every(x=>x.complete),
       searches,
       items:deduped
     });
