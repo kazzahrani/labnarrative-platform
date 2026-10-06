@@ -48,6 +48,68 @@ function reviewLabel(v:string){
   if(v==="needs_review")return "Needs review";
   return "Unreviewed";
 }
+type SecondPassDecision="relevant"|"not_relevant"|"needs_review"|"full_text";
+function secondPassSuggestion(x:any):SecondPassDecision{
+  if(x.metadata?.full_text_required)return "full_text";
+  const text=((x.title||"")+" "+(x.abstract||"")).toLowerCase();
+  const role=x.metadata?.product_role||"";
+  const context=x.metadata?.publication_context||"";
+  const types:Array<string>=Array.isArray(x.metadata?.finding_types)?x.metadata.finding_types:[];
+
+  if(x.metadata?.urgent_saudi)return "needs_review";
+
+  if(
+    text.includes("withheld")||
+    text.includes("discontinuation")||
+    text.includes("stopping anticoagulation")||
+    text.includes("perioperative interruption")
+  )return "needs_review";
+
+  const directSafety=
+    types.includes("safety")||
+    types.includes("special_situation")||
+    types.includes("interaction")||
+    types.includes("lack_of_efficacy");
+
+  if(
+    text.includes("pharmacovigilance")||
+    text.includes("faers")||
+    text.includes("adverse event reporting system")||
+    text.includes("drug-drug interaction signal")||
+    text.includes("interaction signals")||
+    (text.includes("resistance")&&role==="subject")||
+    (text.includes("fertility")&&text.includes("negative impact")&&role==="subject")
+  )return "relevant";
+
+  if(role==="subject"&&directSafety&&context==="human_clinical")return "relevant";
+
+  if(
+    role==="comparator"&&
+    directSafety&&
+    (text.includes("bleeding")||text.includes("adverse event")||text.includes("pharmacovigilance"))
+  )return "relevant";
+
+  if(
+    role==="comparator"||
+    ["preclinical","health_economic","environmental","analytical_or_formulation"].includes(context)||
+    text.includes("positive control metformin")||
+    text.includes("protective effect")||
+    text.includes("associated with lower")||
+    text.includes("significant reduction in")||
+    text.includes("unexpected breast cancer regression")||
+    text.includes("clinical benefits of metformin")||
+    text.includes("pharmacologic cancer prevention")
+  )return "not_relevant";
+
+  if(
+    text.includes("review")||
+    text.includes("meta-analysis")||
+    text.includes("meta analysis")||
+    text.includes("top 20 research studies")
+  )return directSafety?"needs_review":"not_relevant";
+
+  return "needs_review";
+}
 
 export default function LiteraturePage(){
   const {organizationId,session}=usePVOS();
@@ -229,6 +291,15 @@ export default function LiteraturePage(){
   const batchUnlikelyOpen=batchRunItems.filter(x=>x.review_status==="unreviewed"&&x.relevance==="unlikely"&&!x.metadata?.full_text_required&&!x.metadata?.urgent_saudi);
   const batchFullTextOpen=batchRunItems.filter(x=>(x.review_status==="unreviewed"||x.review_status==="needs_review")&&x.metadata?.full_text_required);
   const batchNeedsReview=batchRunItems.filter(x=>x.review_status==="needs_review"&&!x.metadata?.full_text_required);
+  const batchSecondPass=useMemo(()=>{
+    const out={relevant:[] as any[],not_relevant:[] as any[],needs_review:[] as any[],full_text:[] as any[]};
+    for(const x of batchRunItems){
+      if(x.review_status!=="unreviewed")continue;
+      const decision=secondPassSuggestion(x);
+      out[decision].push(x);
+    }
+    return out;
+  },[batchRunItems]);
   const runItems=(runId:string)=>items.filter(x=>x.run_id===runId);
   const runFollowups=(runId:string)=>{
     const ids=new Set(runItems(runId).map(x=>x.id));
@@ -497,6 +568,48 @@ export default function LiteraturePage(){
     setBatchPinned(prev=>[...new Set([...prev,...ids])]);
     setBatchSelected([]);
     setMessage(String(data||ids.length)+" selected article(s) marked Relevant. Add Signal/PSUR actions if needed, then mark the remaining articles Not relevant.");
+  }
+
+  async function applySecondPassSuggestions(){
+    if(!session||!runFilter)return;
+    const relevant=batchSecondPass.relevant.map(x=>x.id);
+    const notRelevant=batchSecondPass.not_relevant.map(x=>x.id);
+    const needsReview=batchSecondPass.needs_review.map(x=>x.id);
+    const total=relevant.length+notRelevant.length+needsReview.length;
+    if(!total){
+      setMessage("There are no abstract-available articles left for PVOS second-pass review.");
+      return;
+    }
+    const ok=window.confirm(
+      "Apply PVOS second-pass suggestions to "+total+" article(s)? "+
+      relevant.length+" will be marked Relevant, "+
+      notRelevant.length+" Not relevant, and "+
+      needsReview.length+" Needs review. "+
+      batchSecondPass.full_text.length+" Full-text article(s) will remain untouched."
+    );
+    if(!ok)return;
+    setBusy(true);setMessage("");
+    const {data,error}=await pvosSupabase.rpc("pvos_apply_literature_second_pass",{
+      p_run_id:runFilter,
+      p_relevant_ids:relevant,
+      p_not_relevant_ids:notRelevant,
+      p_needs_review_ids:needsReview
+    });
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    const reviewedAt=new Date().toISOString();
+    setItems(prev=>prev.map(x=>{
+      if(relevant.includes(x.id))return {...x,review_status:"relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt,decision_note:"Batch accepted from PVOS second-pass Relevant suggestion"};
+      if(notRelevant.includes(x.id))return {...x,review_status:"not_relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt,decision_note:"Batch accepted from PVOS second-pass Not relevant suggestion"};
+      if(needsReview.includes(x.id))return {...x,review_status:"needs_review",reviewer_user_id:session.user.id,reviewed_at:reviewedAt,decision_note:"PVOS second-pass suggestion: manual QPPV review required"};
+      return x;
+    }));
+    setBatchPinned(prev=>[...new Set([...prev,...relevant])]);
+    setMessage(
+      "Second pass applied: "+String((data as any)?.relevant??relevant.length)+" Relevant · "+
+      String((data as any)?.not_relevant??notRelevant.length)+" Not relevant · "+
+      String((data as any)?.needs_review??needsReview.length)+" Needs review. Full-text items stayed open."
+    );
   }
 
   async function acceptHighConfidenceRelevant(){
@@ -1024,8 +1137,12 @@ export default function LiteraturePage(){
               <div className={styles.muted} style={{marginTop:5}}>
                 PVOS suggestions: {batchHighConfidenceRelevant.length} high-confidence Relevant · {batchLowRiskPossible.length} low-risk Possible
               </div>
+              <div className={styles.muted} style={{marginTop:5}}>
+                Second pass: {batchSecondPass.relevant.length} Relevant · {batchSecondPass.not_relevant.length} Not relevant · {batchSecondPass.needs_review.length} Needs review · {batchSecondPass.full_text.length} Full text untouched
+              </div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className={styles.button} disabled={busy||!(batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length)||!runFilter} onClick={applySecondPassSuggestions}>Apply second-pass suggestions ({batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length})</button>
               <button className={styles.button} disabled={busy||!batchUnlikelyOpen.length||!runFilter} onClick={confirmUnlikelyNotRelevant}>Confirm Unlikely → Not relevant ({batchUnlikelyOpen.length})</button>
               <button className={styles.button} disabled={busy||!batchHighConfidenceRelevant.length||!runFilter} onClick={acceptHighConfidenceRelevant}>Accept high-confidence Relevant ({batchHighConfidenceRelevant.length})</button>
               <button className={styles.buttonGhost} disabled={busy||!batchLowRiskPossible.length||!runFilter} onClick={confirmLowRiskPossibleNotRelevant}>Confirm low-risk Possible → Not relevant ({batchLowRiskPossible.length})</button>
