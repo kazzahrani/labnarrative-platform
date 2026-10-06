@@ -206,6 +206,26 @@ export default function LiteraturePage(){
   const batchRemainingEligible=batchRunItems.filter(x=>x.review_status==="unreviewed"&&!x.metadata?.full_text_required);
   const batchLikelyOpen=batchRunItems.filter(x=>x.review_status==="unreviewed"&&x.relevance==="likely_relevant"&&!x.metadata?.full_text_required);
   const batchPossibleOpen=batchRunItems.filter(x=>x.review_status==="unreviewed"&&x.relevance==="possible"&&!x.metadata?.full_text_required);
+  const batchHighConfidenceRelevant=batchRunItems.filter(x=>
+    x.review_status==="unreviewed"&&
+    x.relevance==="likely_relevant"&&
+    x.metadata?.product_role==="subject"&&
+    x.metadata?.publication_context==="human_clinical"&&
+    Array.isArray(x.metadata?.finding_types)&&
+    x.metadata.finding_types.some((v:string)=>["safety","special_situation","lack_of_efficacy","interaction"].includes(v))
+  );
+  const batchLowRiskPossible=batchRunItems.filter(x=>{
+    const types=Array.isArray(x.metadata?.finding_types)?x.metadata.finding_types:[];
+    return x.review_status==="unreviewed"&&
+      x.relevance==="possible"&&
+      !x.metadata?.full_text_required&&
+      x.metadata?.product_role==="comparator"&&
+      (
+        ["health_economic","preclinical"].includes(x.metadata?.publication_context)||
+        types.length===0||
+        (types.length===1&&types[0]==="quantified")
+      );
+  });
   const batchUnlikelyOpen=batchRunItems.filter(x=>x.review_status==="unreviewed"&&x.relevance==="unlikely"&&!x.metadata?.full_text_required&&!x.metadata?.urgent_saudi);
   const batchFullTextOpen=batchRunItems.filter(x=>(x.review_status==="unreviewed"||x.review_status==="needs_review")&&x.metadata?.full_text_required);
   const batchNeedsReview=batchRunItems.filter(x=>x.review_status==="needs_review"&&!x.metadata?.full_text_required);
@@ -477,6 +497,47 @@ export default function LiteraturePage(){
     setBatchPinned(prev=>[...new Set([...prev,...ids])]);
     setBatchSelected([]);
     setMessage(String(data||ids.length)+" selected article(s) marked Relevant. Add Signal/PSUR actions if needed, then mark the remaining articles Not relevant.");
+  }
+
+  async function acceptHighConfidenceRelevant(){
+    if(!session||!runFilter)return;
+    const count=batchHighConfidenceRelevant.length;
+    if(!count){setMessage("There are no open high-confidence Relevant suggestions in this run.");return;}
+    const ok=window.confirm(
+      "Accept "+count+" high-confidence PVOS suggestions as Relevant? These are human-clinical articles where the monitored product is the subject and a direct safety, special-situation, interaction, or lack-of-efficacy finding was detected. This records your QPPV batch decision."
+    );
+    if(!ok)return;
+    setBusy(true);setMessage("");
+    const {data,error}=await pvosSupabase.rpc("pvos_accept_high_confidence_relevant",{p_run_id:runFilter});
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    const reviewedAt=new Date().toISOString();
+    setItems(prev=>prev.map(x=>batchHighConfidenceRelevant.some(y=>y.id===x.id)
+      ?{...x,review_status:"relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt,decision_note:"Batch accepted from PVOS high-confidence Relevant suggestion"}
+      :x
+    ));
+    setBatchPinned(prev=>[...new Set([...prev,...batchHighConfidenceRelevant.map(x=>x.id)])]);
+    setMessage(String(data||count)+" high-confidence article(s) accepted as Relevant. Add Signal/PSUR actions to any of these where needed.");
+  }
+
+  async function confirmLowRiskPossibleNotRelevant(){
+    if(!session||!runFilter)return;
+    const count=batchLowRiskPossible.length;
+    if(!count){setMessage("There are no open low-risk Possible suggestions in this run.");return;}
+    const ok=window.confirm(
+      "Confirm "+count+" low-risk Possible article(s) as Not relevant? These are comparator-led, preclinical/economic, or quantified-only papers without a direct PV finding. Full-text items are excluded. This records your QPPV batch decision."
+    );
+    if(!ok)return;
+    setBusy(true);setMessage("");
+    const {data,error}=await pvosSupabase.rpc("pvos_confirm_low_risk_possible_not_relevant",{p_run_id:runFilter});
+    setBusy(false);
+    if(error){setMessage(error.message);return;}
+    const reviewedAt=new Date().toISOString();
+    setItems(prev=>prev.map(x=>batchLowRiskPossible.some(y=>y.id===x.id)
+      ?{...x,review_status:"not_relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt,decision_note:"Batch confirmed Not relevant from PVOS low-risk Possible suggestion"}
+      :x
+    ));
+    setMessage(String(data||count)+" low-risk Possible article(s) confirmed Not relevant.");
   }
 
   async function confirmUnlikelyNotRelevant(){
@@ -960,9 +1021,14 @@ export default function LiteraturePage(){
               <div className={styles.muted} style={{marginTop:5}}>
                 {batchLikelyOpen.length} Likely · {batchPossibleOpen.length} Possible · {batchUnlikelyOpen.length} Unlikely · {batchFullTextOpen.length} Full text · {batchSelected.length} selected
               </div>
+              <div className={styles.muted} style={{marginTop:5}}>
+                PVOS suggestions: {batchHighConfidenceRelevant.length} high-confidence Relevant · {batchLowRiskPossible.length} low-risk Possible
+              </div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button className={styles.button} disabled={busy||!batchUnlikelyOpen.length||!runFilter} onClick={confirmUnlikelyNotRelevant}>Confirm Unlikely → Not relevant ({batchUnlikelyOpen.length})</button>
+              <button className={styles.button} disabled={busy||!batchHighConfidenceRelevant.length||!runFilter} onClick={acceptHighConfidenceRelevant}>Accept high-confidence Relevant ({batchHighConfidenceRelevant.length})</button>
+              <button className={styles.buttonGhost} disabled={busy||!batchLowRiskPossible.length||!runFilter} onClick={confirmLowRiskPossibleNotRelevant}>Confirm low-risk Possible → Not relevant ({batchLowRiskPossible.length})</button>
               <button className={styles.buttonGhost} disabled={busy||!batchSelected.length||!runFilter} onClick={saveBatchRelevant}>Save selected as Relevant ({batchSelected.length})</button>
               <button className={styles.buttonGhost} disabled={busy||!!batchSelected.length||!batchRemainingEligible.length||!runFilter} onClick={markBatchRemainingNotRelevant}>Mark all other eligible Not relevant ({batchRemainingEligible.length})</button>
             </div>
