@@ -166,6 +166,11 @@ const ASSOCIATION_TERMS=[
   "associated with","increased risk","higher risk","elevated risk","caused by","induced by",
   "attributed to","related to","adverse effect","adverse event","adverse reaction"
 ];
+const HIGH_SIGNAL_TITLE_TERMS=[
+  "signal","signals","risk","safety","bleeding","hemorrhage","hemorrhages","haemorrhage","haemorrhages",
+  "adverse event","adverse events","adverse reaction","adverse reactions","interaction","interactions",
+  "drug-drug interaction","drug-drug interactions","toxicity","toxicities"
+];
 
 function isWordChar(v:string){
   if(!v)return false;
@@ -219,8 +224,11 @@ function hasTreatmentOnlyPattern(text:string,terms:string[]){
   return terms.some(term=>{
     const t=term.toLowerCase();
     return lower.includes("transitioned to "+t)||
+      lower.includes("transitioned to oral "+t)||
       lower.includes("switched to "+t)||
+      lower.includes("switched to oral "+t)||
       lower.includes("started on "+t)||
+      lower.includes("started on oral "+t)||
       lower.includes("initiated "+t)||
       lower.includes("treated with "+t);
   });
@@ -256,6 +264,7 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
   const productExposureHits=unique(productContexts.flatMap(s=>hits(s,EXPOSURE_TERMS)));
   const productAssociationHits=unique(productContexts.flatMap(s=>hits(s,ASSOCIATION_TERMS)));
   const quantifiedProductEvidence=productContexts.some(hasQuantifiedFinding);
+  const highSignalTitle=hits(title,HIGH_SIGNAL_TITLE_TERMS).length>0;
   const breakthrough=productContexts.some(s=>hasBreakthroughPattern(s,terms));
   const localSafetyEvidence=productSafetyHits.length>0||productExposureHits.length>0||productAssociationHits.length>0;
   const genericSafetyEvidence=safetyHits.length>0||exposureHits.length>0;
@@ -272,6 +281,7 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
   if(localSafetyEvidence)score+=2;
   if(productAssociationHits.length)score+=2;
   if(quantifiedProductEvidence&&localSafetyEvidence)score+=2;
+  if(quantifiedProductEvidence&&highSignalTitle)score+=4;
   if(genericSafetyEvidence)score+=1;
   if(productInTitle&&genericSafetyEvidence)score+=1;
   if(caseReportLike&&localSafetyEvidence)score+=1;
@@ -316,9 +326,10 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
     productAssociationHits:productAssociationHits.slice(0,8),
     breakthrough,
     quantifiedProductEvidence,
+    highSignalTitle,
     treatmentOnly,
     score,
-    analysisVersion:"v2"
+    analysisVersion:"v2.1"
   };
 }
 
