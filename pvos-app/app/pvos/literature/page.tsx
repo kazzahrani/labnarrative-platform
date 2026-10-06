@@ -294,7 +294,6 @@ export default function LiteraturePage(){
   async function analyzeQueue(){
     if(!session)return;
     const candidates=items.filter(x=>x.metadata?.connector==="pubmed"&&x.metadata?.pmid&&(
-      !x.abstract||
       x.relevance==="unscored"||
       x.metadata?.prioritization_version!=="v3"
     ));
@@ -317,6 +316,7 @@ export default function LiteraturePage(){
           id:x.id,
           title:x.title,
           pmid:String(x.metadata.pmid),
+          abstract:x.abstract||"",
           metadata:x.metadata||{},
           product:productMap[x.product_id]||{id:x.product_id}
         }));
