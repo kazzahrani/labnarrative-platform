@@ -460,8 +460,12 @@ export default function LiteraturePage(){
       return;
     }
     const excluded=batchFullTextOpen.length+batchNeedsReview.length;
+    const priorityRemaining=batchRemainingEligible.filter(x=>x.relevance==="likely_relevant").length;
+    const saudiRemaining=batchRemainingEligible.filter(x=>x.metadata?.urgent_saudi).length;
     const ok=window.confirm(
       "Mark "+count+" remaining unreviewed article(s) in this screening run as Not relevant?"+
+      (priorityRemaining?" This includes "+priorityRemaining+" Priority article(s).":"")+
+      (saudiRemaining?" This includes "+saudiRemaining+" Saudi alert(s).":"")+
       (excluded?" "+excluded+" Full text / Needs review item(s) will stay open.":"")
     );
     if(!ok)return;
