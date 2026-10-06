@@ -301,26 +301,47 @@ export default function LiteraturePage(){
     if(!candidates.length){setMessage("Queue analysis is already complete for the available PubMed items.");return;}
     setAnalyzing(true);setMessage("");
     try{
-      const body=candidates.map(x=>({
-        id:x.id,
-        title:x.title,
-        pmid:String(x.metadata.pmid),
-        metadata:x.metadata||{},
-        product:productMap[x.product_id]||{id:x.product_id}
-      }));
-      const response=await fetch("/api/pvos/literature/pubmed/enrich",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
-        body:JSON.stringify({items:body})
-      });
-      const result=await response.json();
-      if(!response.ok)throw new Error(result?.error||"Queue analysis failed.");
-      const {data,error}=await pvosSupabase.rpc("pvos_apply_literature_enrichment",{updates:result.updates||[]});
-      if(error)throw error;
-      setMessage("Prioritization v3 complete: "+String(data||0)+" articles analyzed; "+String(result.priority||0)+" high-priority, "+String(result.full_text_required||0)+" full-text review, and "+String(result.saudi_alerts||0)+" potential Saudi case/context alerts.");
+      const BATCH_SIZE=250;
+      let appliedTotal=0;
+      let priorityTotal=0;
+      let fullTextTotal=0;
+      let saudiTotal=0;
+      const batches=Math.ceil(candidates.length/BATCH_SIZE);
+
+      for(let i=0;i<candidates.length;i+=BATCH_SIZE){
+        const batch=candidates.slice(i,i+BATCH_SIZE);
+        const batchNumber=Math.floor(i/BATCH_SIZE)+1;
+        setMessage("Analyzing literature batch "+batchNumber+" of "+batches+"…");
+
+        const body=batch.map(x=>({
+          id:x.id,
+          title:x.title,
+          pmid:String(x.metadata.pmid),
+          metadata:x.metadata||{},
+          product:productMap[x.product_id]||{id:x.product_id}
+        }));
+
+        const response=await fetch("/api/pvos/literature/pubmed/enrich",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+          body:JSON.stringify({items:body})
+        });
+        const result=await response.json();
+        if(!response.ok)throw new Error(result?.error||("Queue analysis failed in batch "+batchNumber+"."));
+
+        const {data,error}=await pvosSupabase.rpc("pvos_apply_literature_enrichment",{updates:result.updates||[]});
+        if(error)throw error;
+
+        appliedTotal+=Number(data||0);
+        priorityTotal+=Number(result.priority||0);
+        fullTextTotal+=Number(result.full_text_required||0);
+        saudiTotal+=Number(result.saudi_alerts||0);
+      }
+
+      setMessage("Prioritization v3 complete: "+appliedTotal+" articles analyzed; "+priorityTotal+" high-priority, "+fullTextTotal+" full-text review, and "+saudiTotal+" potential Saudi case/context alerts.");
       await load();
     }catch(e:any){
-      setMessage(e?.message||"Queue analysis failed.");
+      setMessage((e?.message||"Queue analysis failed.")+" Any completed batches were saved; click Analyze & prioritize again to resume.");
     }finally{
       setAnalyzing(false);
     }
