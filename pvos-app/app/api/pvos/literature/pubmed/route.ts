@@ -66,13 +66,14 @@ export async function POST(req:NextRequest){
       const seenIds=new Set<string>();
       let totalCount=0;
       let pages=0;
+      let retstart=0;
 
       while(true){
         const search=await pacedJson("esearch.fcgi",new URLSearchParams({
           db:"pubmed",
           retmode:"json",
           retmax:String(SEARCH_PAGE_SIZE),
-          retstart:String(ids.length),
+          retstart:String(retstart),
           sort:"pub date",
           term:"("+query+")",
           datetype:"pdat",
@@ -99,8 +100,22 @@ export async function POST(req:NextRequest){
           }
         }
         pages++;
+        retstart+=pageIds.length;
 
-        if(!pageIds.length||ids.length>=totalCount)break;
+        if(!pageIds.length){
+          if(ids.length<totalCount){
+            throw new Error("PubMed pagination stopped before all results were retrieved. No screening record was created.");
+          }
+          break;
+        }
+        if(ids.length>=totalCount)break;
+      }
+
+      if(ids.length!==totalCount){
+        throw new Error(
+          "PubMed reported "+totalCount+" results but PVOS retrieved "+ids.length+
+          ". No screening record was created because retrieval completeness could not be confirmed."
+        );
       }
 
       searches.push({
