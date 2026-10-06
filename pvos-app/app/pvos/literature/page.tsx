@@ -166,6 +166,33 @@ export default function LiteraturePage(){
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
   const recordMap=useMemo(()=>Object.fromEntries(records.map(x=>[x.run_id,x])),[records]);
   const selectedQueueRun=useMemo(()=>runs.find(x=>x.id===runFilter)||null,[runs,runFilter]);
+
+  async function freshAccessToken(){
+    const {data:{session:current}}=await pvosSupabase.auth.getSession();
+    const now=Math.floor(Date.now()/1000);
+    if(current?.access_token && (!current.expires_at || current.expires_at-now>60))return current.access_token;
+    const {data,error}=await pvosSupabase.auth.refreshSession();
+    if(error||!data.session?.access_token)throw new Error("Your PVOS session expired. Please sign in again.");
+    return data.session.access_token;
+  }
+
+  async function authorizedFetch(input:string,init:RequestInit){
+    let token=await freshAccessToken();
+    let response=await fetch(input,{
+      ...init,
+      headers:{...(init.headers||{}),"Authorization":"Bearer "+token}
+    });
+    if(response.status===401){
+      const {data,error}=await pvosSupabase.auth.refreshSession();
+      if(error||!data.session?.access_token)return response;
+      token=data.session.access_token;
+      response=await fetch(input,{
+        ...init,
+        headers:{...(init.headers||{}),"Authorization":"Bearer "+token}
+      });
+    }
+    return response;
+  }
   const batchRunItems=useMemo(()=>runFilter?items.filter(x=>x.run_id===runFilter):[],[items,runFilter]);
   const batchRemainingEligible=batchRunItems.filter(x=>x.review_status==="unreviewed"&&!x.metadata?.full_text_required);
   const batchFullTextOpen=batchRunItems.filter(x=>(x.review_status==="unreviewed"||x.review_status==="needs_review")&&x.metadata?.full_text_required);
@@ -262,12 +289,9 @@ export default function LiteraturePage(){
       if(runError||!run)throw runError||new Error("Could not create screening run.");
       runId=run.id;
 
-      const response=await fetch("/api/pvos/literature/pubmed",{
+      const response=await authorizedFetch("/api/pvos/literature/pubmed",{
         method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":"Bearer "+session.access_token
-        },
+        headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           periodStart:runForm.start,
           periodEnd:runForm.end,
@@ -348,9 +372,9 @@ export default function LiteraturePage(){
           product:productMap[x.product_id]||{id:x.product_id}
         }));
 
-        const response=await fetch("/api/pvos/literature/pubmed/enrich",{
+        const response=await authorizedFetch("/api/pvos/literature/pubmed/enrich",{
           method:"POST",
-          headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+          headers:{"Content-Type":"application/json"},
           body:JSON.stringify({items:body})
         });
         const result=await response.json();
