@@ -121,6 +121,17 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(target, 308);
   }
 
+  // Retired Scientific onboarding review links should open the new .site admin.
+  if (host === rootDomain || host === `www.${rootDomain}`) {
+    const onboardingReview = pathname.match(/^\/admin\/sales\/([0-9a-f-]{36})\/onboarding\/?$/i);
+    if (onboardingReview) {
+      return NextResponse.redirect(
+        new URL(`https://labnarrative.site/admin/clients/${onboardingReview[1]}/onboarding`),
+        307,
+      );
+    }
+  }
+
   // Keep the historic Bourdon proposal/process links useful after labnarrative.com
   // became the trading product.
   if (host === rootDomain || host === `www.${rootDomain}`) {
