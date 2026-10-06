@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, productTerms, type ProductInput } from "../../_pubmed";
 import { refineRanking } from "../../_rank";
-import { fetchPmcArticle, fetchPmcIdsForPmids } from "../../_pmc";
+import { fetchPmcArticles, fetchPmcIdsForPmids } from "../../_pmc";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL??"https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -42,7 +42,8 @@ export async function POST(req:NextRequest){
     if(!pmids.length)return NextResponse.json({error:"No PubMed IDs were found."},{status:400});
 
     const pmcMap=await fetchPmcIdsForPmids(pmids);
-    const articleCache:Record<string,Awaited<ReturnType<typeof fetchPmcArticle>>>= {};
+    const uniquePmcids=[...new Set(Object.values(pmcMap).filter((x):x is string=>!!x))];
+    const articleCache=uniquePmcids.length?await fetchPmcArticles(uniquePmcids):{};
     const updates:any[]=[];
     let retrieved=0;
     let unavailable=0;
@@ -66,11 +67,7 @@ export async function POST(req:NextRequest){
         continue;
       }
 
-      let pmc=articleCache[pmcid];
-      if(pmc===undefined){
-        pmc=await fetchPmcArticle(pmcid);
-        articleCache[pmcid]=pmc;
-      }
+      const pmc=articleCache[pmcid.toUpperCase()]||null;
 
       if(!pmc?.fullText&&!pmc?.abstract){
         unavailable++;
