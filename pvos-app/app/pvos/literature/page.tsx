@@ -159,6 +159,7 @@ export default function LiteraturePage(){
   const rapidItem=rapidItemId?items.find(x=>x.id===rapidItemId)||null:null;
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
   const recordMap=useMemo(()=>Object.fromEntries(records.map(x=>[x.run_id,x])),[records]);
+  const selectedQueueRun=useMemo(()=>runs.find(x=>x.id===runFilter)||null,[runs,runFilter]);
   const batchRunItems=useMemo(()=>runFilter?items.filter(x=>x.run_id===runFilter):[],[items,runFilter]);
   const batchRemainingEligible=batchRunItems.filter(x=>x.review_status==="unreviewed"&&!x.metadata?.full_text_required);
   const batchFullTextOpen=batchRunItems.filter(x=>(x.review_status==="unreviewed"||x.review_status==="needs_review")&&x.metadata?.full_text_required);
@@ -784,6 +785,7 @@ export default function LiteraturePage(){
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
+            <button className={batchMode?styles.button:styles.buttonGhost} onClick={batchMode?finishBatchReview:startBatchReview} disabled={!openItems.length}>{batchMode?"Exit batch review":"Batch review"}</button>
             <button className={styles.button} onClick={startRapidReview} disabled={!openItems.length}>Rapid review</button>
           </div>
         </div>
@@ -796,7 +798,11 @@ export default function LiteraturePage(){
             <button className={queueFilter==="reviewed"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("reviewed")}>Reviewed ({reviewed.length})</button>
             <button className={queueFilter==="all"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("all")}>All ({items.length})</button>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <select className={styles.input} style={{width:245}} value={runFilter} onChange={e=>{setRunFilter(e.target.value);setBatchSelected([]);setBatchPinned([])}}>
+              <option value="">All screening runs</option>
+              {runs.map(r=><option key={r.id} value={r.id}>{dateLabel(r.period_start)} – {dateLabel(r.period_end)} · {companyMap[r.company_id]||"Company"}</option>)}
+            </select>
             <select className={styles.input} style={{width:210}} value={productFilter} onChange={e=>setProductFilter(e.target.value)}>
               <option value="">All products</option>
               {products.map(p=><option key={p.id} value={p.id}>{p.brand_name}</option>)}
@@ -804,11 +810,32 @@ export default function LiteraturePage(){
             <span className={styles.muted}>Showing {visibleItems.length}</span>
           </div>
         </div>
+        {batchMode?<div className={styles.notice} style={{margin:"0 14px 12px",padding:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+            <div>
+              <strong>Batch review · {selectedQueueRun?dateLabel(selectedQueueRun.period_start)+" – "+dateLabel(selectedQueueRun.period_end):"Select one screening run"}</strong>
+              <div className={styles.muted} style={{marginTop:5}}>
+                Check only the articles you consider Relevant. Save them first, add Signal/PSUR actions if needed, then mark the remaining eligible articles Not relevant.
+              </div>
+              <div className={styles.muted} style={{marginTop:5}}>
+                {batchSelected.length} selected · {batchRemainingEligible.length} unreviewed eligible · {batchFullTextOpen.length} full-text protected · {batchNeedsReview.length} Needs review protected
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className={styles.buttonGhost} disabled={busy||!batchSelected.length||!runFilter} onClick={saveBatchRelevant}>Save selected as Relevant ({batchSelected.length})</button>
+              <button className={styles.button} disabled={busy||!batchRemainingEligible.length||!runFilter} onClick={markBatchRemainingNotRelevant}>Mark remaining Not relevant ({batchRemainingEligible.length})</button>
+            </div>
+          </div>
+        </div>:null}
         {loading?<div className={styles.empty}>Loading screening queue…</div>:items.length?<div className={styles.tableWrap}><table className={styles.table} style={{minWidth:1180}}>
-          <thead><tr><th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Matched terms</th><th>Safety priority</th><th>QPPV review</th></tr></thead>
+          <thead><tr>{batchMode?<th style={{width:74}}>Relevant?</th>:null}<th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Matched terms</th><th>Safety priority</th><th>QPPV review</th></tr></thead>
           <tbody>{visibleItems.map(x=>{
             const p=productMap[x.product_id];
+            const batchEligible=x.run_id===runFilter&&(x.review_status==="unreviewed"||x.review_status==="needs_review")&&!x.metadata?.full_text_required;
             return <tr key={x.id}>
+              {batchMode?<td style={{textAlign:"center",verticalAlign:"top"}}>
+                {batchEligible?<input type="checkbox" aria-label={"Mark "+x.title+" as relevant"} checked={batchSelected.includes(x.id)} onChange={()=>toggleBatchSelected(x.id)} style={{width:18,height:18,cursor:"pointer"}}/>:x.metadata?.full_text_required?<Badge tone="amber">Full text</Badge>:x.review_status==="relevant"?<Badge tone="green">Relevant</Badge>:null}
+              </td>:null}
               <td style={{minWidth:340}}>
                 {x.metadata?.urgent_saudi?<div style={{marginBottom:7}}><Badge tone="red">⚠ Potential Saudi case / context</Badge></div>:null}
                 {x.article_url?<a href={x.article_url} target="_blank" rel="noreferrer">{x.title}</a>:<strong>{x.title}</strong>}
@@ -837,6 +864,7 @@ export default function LiteraturePage(){
                   <button disabled={busy} className={x.review_status==="needs_review"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"needs_review")}>Needs review</button>
                 </div>
                 <div className={styles.muted} style={{marginTop:6}}>{reviewLabel(x.review_status)}</div>
+                {x.reviewer_user_id?<div className={styles.muted} style={{marginTop:3,fontSize:11}}>Reviewed by {memberMap[x.reviewer_user_id]?.email||"workspace member"}{x.reviewed_at?" · "+dateLabel(x.reviewed_at):""}</div>:null}
                 {x.review_status==="relevant"?<div style={{marginTop:10,paddingTop:9,borderTop:"1px solid rgba(148,163,184,.16)"}}>
                   {pendingRelevantId===x.id?<div className={styles.muted} style={{marginBottom:7}}>Decision saved. Add any downstream actions now, then continue.</div>:<div className={styles.muted} style={{marginBottom:6}}>Downstream</div>}
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
