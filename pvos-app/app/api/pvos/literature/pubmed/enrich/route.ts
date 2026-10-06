@@ -57,12 +57,21 @@ export async function POST(req:NextRequest){
           saudi_hits:analysis.saudiHits,
           safety_hits:analysis.safetyHits,
           case_hits:analysis.caseHits,
+          product_safety_hits:analysis.productSafetyHits,
+          exposure_hits:analysis.exposureHits,
+          product_exposure_hits:analysis.productExposureHits,
+          product_association_hits:analysis.productAssociationHits,
+          breakthrough:analysis.breakthrough,
+          quantified_product_evidence:analysis.quantifiedProductEvidence,
+          treatment_only:analysis.treatmentOnly,
+          prioritization_score:analysis.score,
+          prioritization_version:analysis.analysisVersion,
           online_date:detail.online_date,
           issue_date:detail.issue_date,
           pubmed_date:detail.pubmed_date,
           date_display_basis:detail.online_date?"online":detail.pubmed_date?"pubmed":"issue",
           enriched_at:new Date().toISOString(),
-          enrichment_version:"v1"
+          enrichment_version:"v2"
         }
       }];
     });
