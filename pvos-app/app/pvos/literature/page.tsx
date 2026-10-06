@@ -1048,6 +1048,8 @@ export default function LiteraturePage(){
         {(()=>{
           const s=statsForRun(selectedRun);
           const rec=recordMap[selectedRun.id];
+          const second=secondReviewMap[selectedRun.id];
+          const otherMembers=members.filter(m=>m.user_id!==session?.user.id);
           return <>
             <div className={styles.info}>
               <div className={styles.kv}><span>Results retrieved</span><span>{s.total}</span></div>
@@ -1060,10 +1062,46 @@ export default function LiteraturePage(){
               <div className={styles.kv}><span>PSUR selections</span><span>{s.psur}</span></div>
             </div>
             <div className={s.open?styles.notice:styles.successBox} style={{marginTop:14}}>
-              {rec?"This screening run is complete and its evidence snapshot is locked in the inspection record.":s.open?String(s.open)+" article(s) still require a final Relevant / Not relevant decision before the run can be completed.":"All retrieved articles have a final QPPV decision. The run is ready to complete."}
+              {rec?"This screening run is complete and its evidence snapshot is locked in the inspection record.":s.open?String(s.open)+" article(s) still require a final Relevant / Not relevant decision before the run can be completed.":"All retrieved articles have a final first-review decision."}
             </div>
-            <div className={styles.modalActions}>
-              {rec?<button className={styles.button} onClick={()=>exportScreeningRecord(selectedRun)}>Export screening record</button>:<button className={styles.button} disabled={busy||s.open>0} onClick={()=>completeScreening(selectedRun)}>{busy?"Creating record…":"Complete screening & create evidence"}</button>}
+
+            {!rec?<div className={styles.info} style={{marginTop:14}}>
+              <div className={styles.kv}><span>Second review</span><span>{second?String(second.status).replace("_"," "):"Not assigned"}</span></div>
+              {second?.assigned_to?<div className={styles.kv}><span>Assigned to</span><span>{memberMap[second.assigned_to]?.email||"Workspace member"}</span></div>:null}
+              {second?.assigned_at?<div className={styles.kv}><span>Assigned at</span><span>{dateLabel(second.assigned_at)}</span></div>:null}
+              {second?.reviewed_by?<div className={styles.kv}><span>Reviewed by</span><span>{memberMap[second.reviewed_by]?.email||"Workspace member"}</span></div>:null}
+              {second?.reviewed_at?<div className={styles.kv}><span>Reviewed at</span><span>{dateLabel(second.reviewed_at)}</span></div>:null}
+              {second?.note?<div className={styles.kv}><span>Review note</span><span>{second.note}</span></div>:null}
+            </div>:null}
+
+            {!rec&&s.open===0&&(!second||second.status==="returned")?<div className={styles.notice} style={{marginTop:14}}>
+              <strong>{second?.status==="returned"?"Resend for second review":"Send to second reviewer"}</strong>
+              <div className={styles.muted} style={{marginTop:5}}>The second reviewer can inspect the first-review decisions, then approve or return the screening. Reviewer identity and timestamp are preserved.</div>
+              {otherMembers.length?<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:10}}>
+                <select className={styles.input} style={{minWidth:260}} value={secondReviewerId} onChange={e=>setSecondReviewerId(e.target.value)}>
+                  <option value="">Choose workspace member</option>
+                  {otherMembers.map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}
+                </select>
+                <button className={styles.button} disabled={busy||!secondReviewerId} onClick={()=>assignSecondReviewer(selectedRun)}>{busy?"Sending…":"Send for second review"}</button>
+              </div>:<div className={styles.muted} style={{marginTop:10}}>No other workspace member is available yet. Add another member before assigning a second reviewer.</div>}
+            </div>:null}
+
+            {!rec&&second?.status==="pending"&&second.assigned_to===session?.user.id?<div className={styles.notice} style={{marginTop:14}}>
+              <strong>Second-review decision</strong>
+              <div className={styles.muted} style={{marginTop:5}}>Review the first-review decisions. Approve to lock the dual-review record, or return it with a note.</div>
+              <textarea className={styles.input} style={{minHeight:76,marginTop:10}} value={secondReviewNote} onChange={e=>setSecondReviewNote(e.target.value)} placeholder="Return note (required only when returning)…"/>
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,flexWrap:"wrap"}}>
+                <button className={styles.buttonGhost} disabled={busy} onClick={()=>decideSecondReview(selectedRun,"returned")}>Return to first reviewer</button>
+                <button className={styles.button} disabled={busy} onClick={()=>decideSecondReview(selectedRun,"approved")}>Approve second review</button>
+              </div>
+            </div>:null}
+
+            {!rec&&second?.status==="pending"&&second.assigned_to!==session?.user.id?<div className={styles.notice} style={{marginTop:14}}>Pending second review by <strong>{memberMap[second.assigned_to]?.email||"assigned reviewer"}</strong>.</div>:null}
+            {!rec&&second?.status==="approved"?<div className={styles.successBox} style={{marginTop:14}}>Second review approved by {memberMap[second.reviewed_by]?.email||"the assigned reviewer"}{second.reviewed_at?" on "+dateLabel(second.reviewed_at):""}. The screening can now be completed.</div>:null}
+
+            <div className={styles.modalActions} style={{justifyContent:"space-between",flexWrap:"wrap"}}>
+              <button className={styles.buttonGhost} onClick={()=>openRunDecisions(selectedRun)}>Review decisions</button>
+              {rec?<button className={styles.button} onClick={()=>exportScreeningRecord(selectedRun)}>Export screening record</button>:<button className={styles.button} disabled={busy||s.open>0||(!!second&&second.status!=="approved")} onClick={()=>completeScreening(selectedRun)}>{busy?"Creating record…":"Complete screening & create evidence"}</button>}
             </div>
           </>;
         })()}
