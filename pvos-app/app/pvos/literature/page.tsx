@@ -25,6 +25,11 @@ function dateLabel(v?:string|null){
   const d=new Date(v.length===10?v+"T00:00:00":v);
   return Number.isNaN(d.getTime())?"—":d.toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"});
 }
+function dateTimeLabel(v?:string|null){
+  if(!v)return "—";
+  const d=new Date(v);
+  return Number.isNaN(d.getTime())?"—":d.toLocaleString(undefined,{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
 function relevanceLabel(v:string){
   if(v==="likely_relevant")return "Likely relevant";
   if(v==="possible")return "Possible";
@@ -442,6 +447,10 @@ export default function LiteraturePage(){
     const second=secondReviewMap[runFilter];
     if(second&&(second.status==="pending"||second.status==="approved")){
       setMessage("This screening run is locked for second review.");
+      return;
+    }
+    if(batchSelected.length){
+      setMessage("Save the selected Relevant articles first, then mark the remaining articles Not relevant.");
       return;
     }
     const count=batchRemainingEligible.length;
@@ -862,7 +871,7 @@ export default function LiteraturePage(){
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button className={styles.buttonGhost} disabled={busy||!batchSelected.length||!runFilter} onClick={saveBatchRelevant}>Save selected as Relevant ({batchSelected.length})</button>
-              <button className={styles.button} disabled={busy||!batchRemainingEligible.length||!runFilter} onClick={markBatchRemainingNotRelevant}>Mark remaining Not relevant ({batchRemainingEligible.length})</button>
+              <button className={styles.button} disabled={busy||!!batchSelected.length||!batchRemainingEligible.length||!runFilter} onClick={markBatchRemainingNotRelevant}>Mark remaining Not relevant ({batchRemainingEligible.length})</button>
             </div>
           </div>
         </div>:null}
@@ -905,7 +914,7 @@ export default function LiteraturePage(){
                   <button disabled={busy||reviewLocked} className={x.review_status==="needs_review"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"needs_review")}>Needs review</button>
                 </div>
                 <div className={styles.muted} style={{marginTop:6}}>{reviewLabel(x.review_status)}</div>
-                {x.reviewer_user_id?<div className={styles.muted} style={{marginTop:3,fontSize:11}}>Reviewed by {memberMap[x.reviewer_user_id]?.email||"workspace member"}{x.reviewed_at?" · "+dateLabel(x.reviewed_at):""}</div>:null}
+                {x.reviewer_user_id?<div className={styles.muted} style={{marginTop:3,fontSize:11}}>Reviewed by {memberMap[x.reviewer_user_id]?.email||"workspace member"}{x.reviewed_at?" · "+dateTimeLabel(x.reviewed_at):""}</div>:null}
                 {reviewLocked?<div className={styles.muted} style={{marginTop:4,fontSize:11}}>Locked for second review</div>:null}
                 {x.review_status==="relevant"?<div style={{marginTop:10,paddingTop:9,borderTop:"1px solid rgba(148,163,184,.16)"}}>
                   {pendingRelevantId===x.id?<div className={styles.muted} style={{marginBottom:7}}>Decision saved. Add any downstream actions now, then continue.</div>:<div className={styles.muted} style={{marginBottom:6}}>Downstream</div>}
@@ -1068,9 +1077,9 @@ export default function LiteraturePage(){
             {!rec?<div className={styles.info} style={{marginTop:14}}>
               <div className={styles.kv}><span>Second review</span><span>{second?String(second.status).replace("_"," "):"Not assigned"}</span></div>
               {second?.assigned_to?<div className={styles.kv}><span>Assigned to</span><span>{memberMap[second.assigned_to]?.email||"Workspace member"}</span></div>:null}
-              {second?.assigned_at?<div className={styles.kv}><span>Assigned at</span><span>{dateLabel(second.assigned_at)}</span></div>:null}
+              {second?.assigned_at?<div className={styles.kv}><span>Assigned at</span><span>{dateTimeLabel(second.assigned_at)}</span></div>:null}
               {second?.reviewed_by?<div className={styles.kv}><span>Reviewed by</span><span>{memberMap[second.reviewed_by]?.email||"Workspace member"}</span></div>:null}
-              {second?.reviewed_at?<div className={styles.kv}><span>Reviewed at</span><span>{dateLabel(second.reviewed_at)}</span></div>:null}
+              {second?.reviewed_at?<div className={styles.kv}><span>Reviewed at</span><span>{dateTimeLabel(second.reviewed_at)}</span></div>:null}
               {second?.note?<div className={styles.kv}><span>Review note</span><span>{second.note}</span></div>:null}
             </div>:null}
 
@@ -1097,7 +1106,7 @@ export default function LiteraturePage(){
             </div>:null}
 
             {!rec&&second?.status==="pending"&&second.assigned_to!==session?.user.id?<div className={styles.notice} style={{marginTop:14}}>Pending second review by <strong>{memberMap[second.assigned_to]?.email||"assigned reviewer"}</strong>.</div>:null}
-            {!rec&&second?.status==="approved"?<div className={styles.successBox} style={{marginTop:14}}>Second review approved by {memberMap[second.reviewed_by]?.email||"the assigned reviewer"}{second.reviewed_at?" on "+dateLabel(second.reviewed_at):""}. The screening can now be completed.</div>:null}
+            {!rec&&second?.status==="approved"?<div className={styles.successBox} style={{marginTop:14}}>Second review approved by {memberMap[second.reviewed_by]?.email||"the assigned reviewer"}{second.reviewed_at?" on "+dateTimeLabel(second.reviewed_at):""}. The screening can now be completed.</div>:null}
 
             <div className={styles.modalActions} style={{justifyContent:"space-between",flexWrap:"wrap"}}>
               <button className={styles.buttonGhost} onClick={()=>openRunDecisions(selectedRun)}>Review decisions</button>
