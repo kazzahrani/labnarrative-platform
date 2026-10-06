@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, fetchPubMedDetails, ncbiJson, productTerms, sleep, type ProductInput, ymd } from "../_pubmed";
+import { refineRanking } from "../_rank";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL ?? "https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -156,7 +157,7 @@ export async function POST(req:NextRequest){
         const detail=detailMap[uid];
         const abstract=detail?.abstract ?? "";
         const keywords=detail?.keywords ?? [];
-        const analysis=analyzeArticle(title,abstract,keywords,terms);
+        const analysis=refineRanking(analyzeArticle(title,abstract,keywords,terms),title,abstract,terms);
         const doi=doc.articleids?.find(x=>x.idtype==="doi")?.value ?? null;
         const primaryDate=detail?.online_date || detail?.pubmed_date || ymd(doc.sortpubdate || doc.pubdate);
         const issueDate=detail?.issue_date || ymd(doc.sortpubdate || doc.pubdate);
