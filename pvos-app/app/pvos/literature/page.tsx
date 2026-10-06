@@ -65,7 +65,7 @@ export default function LiteraturePage(){
   const [rapidReviewed,setRapidReviewed]=useState(0);
   const [busy,setBusy]=useState(false);
   const [analyzing,setAnalyzing]=useState(false);
-  const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"saudi"|"reviewed"|"all">("open");
+  const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"fulltext"|"saudi"|"reviewed"|"all">("open");
   const [productFilter,setProductFilter]=useState("");
   const [pendingRelevantId,setPendingRelevantId]=useState<string|null>(null);
   const [message,setMessage]=useState("");
@@ -109,11 +109,13 @@ export default function LiteraturePage(){
   const openItems=items.filter(x=>x.review_status==="unreviewed"||x.review_status==="needs_review");
   const reviewed=items.filter(x=>x.review_status==="relevant"||x.review_status==="not_relevant");
   const priorityItems=items.filter(x=>x.relevance==="likely_relevant"&&(x.review_status==="unreviewed"||x.review_status==="needs_review"));
+  const fullTextItems=items.filter(x=>x.metadata?.full_text_required&&(x.review_status==="unreviewed"||x.review_status==="needs_review"));
   const saudiAlerts=items.filter(x=>x.metadata?.urgent_saudi&&(x.review_status==="unreviewed"||x.review_status==="needs_review"));
   const sortedItems=useMemo(()=>items.slice().sort((a,b)=>{
     const score=(x:any)=>{
       let n=0;
       if(x.metadata?.urgent_saudi)n+=100;
+      if(x.metadata?.full_text_required)n+=45;
       if(x.relevance==="likely_relevant")n+=50;
       else if(x.relevance==="possible")n+=30;
       else if(x.relevance==="unscored")n+=20;
@@ -128,6 +130,7 @@ export default function LiteraturePage(){
     const keepRelevantHere=x.id===pendingRelevantId&&x.review_status==="relevant";
     if(queueFilter==="open")return open||keepRelevantHere;
     if(queueFilter==="priority")return x.relevance==="likely_relevant"&&(open||keepRelevantHere);
+    if(queueFilter==="fulltext")return !!x.metadata?.full_text_required&&(open||keepRelevantHere);
     if(queueFilter==="saudi")return !!x.metadata?.urgent_saudi&&(open||keepRelevantHere);
     if(queueFilter==="reviewed")return x.review_status==="relevant"||x.review_status==="not_relevant";
     return true;
@@ -293,7 +296,7 @@ export default function LiteraturePage(){
     const candidates=items.filter(x=>x.metadata?.connector==="pubmed"&&x.metadata?.pmid&&(
       !x.abstract||
       x.relevance==="unscored"||
-      x.metadata?.prioritization_version!=="v2.2"
+      x.metadata?.prioritization_version!=="v3"
     ));
     if(!candidates.length){setMessage("Queue analysis is already complete for the available PubMed items.");return;}
     setAnalyzing(true);setMessage("");
@@ -314,7 +317,7 @@ export default function LiteraturePage(){
       if(!response.ok)throw new Error(result?.error||"Queue analysis failed.");
       const {data,error}=await pvosSupabase.rpc("pvos_apply_literature_enrichment",{updates:result.updates||[]});
       if(error)throw error;
-      setMessage("Prioritization v2.2 complete: "+String(data||0)+" articles analyzed; "+String(result.priority||0)+" high-priority and "+String(result.saudi_alerts||0)+" potential Saudi case/context alerts.");
+      setMessage("Prioritization v3 complete: "+String(data||0)+" articles analyzed; "+String(result.priority||0)+" high-priority, "+String(result.full_text_required||0)+" full-text review, and "+String(result.saudi_alerts||0)+" potential Saudi case/context alerts.");
       await load();
     }catch(e:any){
       setMessage(e?.message||"Queue analysis failed.");
@@ -469,7 +472,12 @@ export default function LiteraturePage(){
         review_status:x.review_status,
         reviewer_user_id:x.reviewer_user_id,
         reviewed_at:x.reviewed_at,
-        saudi_alert:!!x.metadata?.urgent_saudi
+        saudi_alert:!!x.metadata?.urgent_saudi,
+        assessment_state:x.metadata?.assessment_state||"standard",
+        full_text_required:!!x.metadata?.full_text_required,
+        product_role:x.metadata?.product_role||null,
+        publication_context:x.metadata?.publication_context||null,
+        finding_types:x.metadata?.finding_types||[]
       }));
       const downstream=runFollowups(run.id).map(x=>({
         literature_item_id:x.literature_item_id,
@@ -625,6 +633,7 @@ export default function LiteraturePage(){
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             <button className={queueFilter==="open"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("open")}>Open ({openItems.length})</button>
             <button className={queueFilter==="priority"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("priority")}>Priority ({priorityItems.length})</button>
+            <button className={queueFilter==="fulltext"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("fulltext")}>Full text ({fullTextItems.length})</button>
             <button className={queueFilter==="saudi"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("saudi")}>Saudi alerts ({saudiAlerts.length})</button>
             <button className={queueFilter==="reviewed"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("reviewed")}>Reviewed ({reviewed.length})</button>
             <button className={queueFilter==="all"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("all")}>All ({items.length})</button>
@@ -659,8 +668,9 @@ export default function LiteraturePage(){
                 {x.metadata?.match_locations?.length?<div className={styles.muted} style={{marginTop:4}}>Matched in: {x.metadata.match_locations.join(" · ")}</div>:null}
               </td>
               <td>
-                <Badge tone={relevanceTone(x.relevance)}>{relevanceLabel(x.relevance)}</Badge>
-                {x.metadata?.safety_hits?.length?<div className={styles.muted} style={{marginTop:5,maxWidth:190}}>{x.metadata.safety_hits.slice(0,3).join(", ")}</div>:null}
+                {x.metadata?.full_text_required?<Badge tone="amber">Full text required</Badge>:<Badge tone={relevanceTone(x.relevance)}>{relevanceLabel(x.relevance)}</Badge>}
+                {x.metadata?.product_role?<div className={styles.muted} style={{marginTop:5}}>Role: {String(x.metadata.product_role).replaceAll("_"," ")}</div>:null}
+                {x.metadata?.finding_types?.length?<div className={styles.muted} style={{marginTop:3,maxWidth:190}}>{x.metadata.finding_types.slice(0,3).map((v:string)=>v.replaceAll("_"," ")).join(" · ")}</div>:x.metadata?.safety_hits?.length?<div className={styles.muted} style={{marginTop:3,maxWidth:190}}>{x.metadata.safety_hits.slice(0,3).join(", ")}</div>:null}
               </td>
               <td style={{minWidth:275}}>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -753,7 +763,7 @@ export default function LiteraturePage(){
 
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
           {rapidItem.metadata?.urgent_saudi?<Badge tone="red">⚠ Potential Saudi case / context</Badge>:null}
-          <Badge tone={relevanceTone(rapidItem.relevance)}>{relevanceLabel(rapidItem.relevance)}</Badge>
+          {rapidItem.metadata?.full_text_required?<Badge tone="amber">Full text required</Badge>:<Badge tone={relevanceTone(rapidItem.relevance)}>{relevanceLabel(rapidItem.relevance)}</Badge>}
           <Badge>{sourceMap[rapidItem.source_id]?.name||rapidItem.journal||"PubMed"}</Badge>
           <Badge>{dateLabel(rapidItem.publication_date)}</Badge>
         </div>
@@ -765,6 +775,9 @@ export default function LiteraturePage(){
           <div className={styles.kv}><span>Product</span><span>{productMap[rapidItem.product_id]?.brand_name||"—"} · {productMap[rapidItem.product_id]?.active_ingredient||"—"}</span></div>
           <div className={styles.kv}><span>Matched terms</span><span>{rapidItem.matched_terms?.length?rapidItem.matched_terms.join(", "):"—"}</span></div>
           <div className={styles.kv}><span>Matched in</span><span>{rapidItem.metadata?.match_locations?.length?rapidItem.metadata.match_locations.join(" · "):"—"}</span></div>
+          <div className={styles.kv}><span>Product role</span><span>{rapidItem.metadata?.product_role?String(rapidItem.metadata.product_role).replaceAll("_"," "):"—"}</span></div>
+          <div className={styles.kv}><span>Evidence context</span><span>{rapidItem.metadata?.publication_context?String(rapidItem.metadata.publication_context).replaceAll("_"," "):"—"}</span></div>
+          <div className={styles.kv}><span>Finding type</span><span>{rapidItem.metadata?.finding_types?.length?rapidItem.metadata.finding_types.map((v:string)=>v.replaceAll("_"," ")).join(" · "):"—"}</span></div>
           <div className={styles.kv}><span>Safety terms</span><span>{rapidItem.metadata?.safety_hits?.length?rapidItem.metadata.safety_hits.join(", "):"—"}</span></div>
           <div className={styles.kv}><span>Automation note</span><span>{rapidItem.ai_reason||"—"}</span></div>
         </div>
