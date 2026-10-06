@@ -9,6 +9,7 @@ type ItemInput = {
   id:string;
   title:string;
   pmid:string;
+  abstract?:string|null;
   metadata?:Record<string,any>;
   product:ProductInput;
 };
