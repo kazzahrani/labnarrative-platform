@@ -177,19 +177,28 @@ export default function LiteraturePage(){
   }
 
   async function authorizedFetch(input:string,init:RequestInit){
+    const requestWithToken=async(token:string)=>{
+      let body=init.body;
+      if(typeof body==="string"){
+        try{
+          const parsed=JSON.parse(body);
+          body=JSON.stringify({...parsed,accessToken:token});
+        }catch{}
+      }
+      return fetch(input,{
+        ...init,
+        body,
+        headers:{...(init.headers||{}),"Authorization":"Bearer "+token}
+      });
+    };
+
     let token=await freshAccessToken();
-    let response=await fetch(input,{
-      ...init,
-      headers:{...(init.headers||{}),"Authorization":"Bearer "+token}
-    });
+    let response=await requestWithToken(token);
     if(response.status===401){
       const {data,error}=await pvosSupabase.auth.refreshSession();
       if(error||!data.session?.access_token)return response;
       token=data.session.access_token;
-      response=await fetch(input,{
-        ...init,
-        headers:{...(init.headers||{}),"Authorization":"Bearer "+token}
-      });
+      response=await requestWithToken(token);
     }
     return response;
   }
