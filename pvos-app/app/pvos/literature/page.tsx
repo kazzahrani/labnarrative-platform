@@ -570,6 +570,46 @@ export default function LiteraturePage(){
     setMessage(String(data||ids.length)+" selected article(s) marked Relevant. Add Signal/PSUR actions if needed, then mark the remaining articles Not relevant.");
   }
 
+  async function retrieveAvailableFullText(){
+    if(!session||!runFilter)return;
+    const candidates=batchFullTextOpen.filter(x=>x.metadata?.pmid);
+    if(!candidates.length){
+      setMessage("There are no PubMed full-text items to retrieve in this screening run.");
+      return;
+    }
+    setBusy(true);setMessage("Checking PubMed Central for available full text…");
+    try{
+      const body=candidates.map(x=>({
+        id:x.id,
+        title:x.title,
+        pmid:String(x.metadata.pmid),
+        abstract:x.abstract||"",
+        metadata:x.metadata||{},
+        product:productMap[x.product_id]||{id:x.product_id}
+      }));
+      const response=await authorizedFetch("/api/pvos/literature/pubmed/fulltext",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({items:body})
+      });
+      const result=await response.json();
+      if(!response.ok)throw new Error(result?.error||"Full-text retrieval failed.");
+
+      const {data,error}=await pvosSupabase.rpc("pvos_apply_literature_fulltext_updates",{updates:result.updates||[]});
+      if(error)throw error;
+
+      setMessage(
+        "Full-text lookup complete: "+String(result.retrieved||0)+" retrieved from PubMed Central · "+
+        String(result.unavailable||0)+" still require external full text."
+      );
+      await load();
+    }catch(e:any){
+      setMessage(e?.message||"Full-text retrieval failed.");
+    }finally{
+      setBusy(false);
+    }
+  }
+
   async function applySecondPassSuggestions(){
     if(!session||!runFilter)return;
     const relevant=batchSecondPass.relevant.map(x=>x.id);
@@ -1142,6 +1182,7 @@ export default function LiteraturePage(){
               </div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className={styles.buttonGhost} disabled={busy||!batchFullTextOpen.length||!runFilter} onClick={retrieveAvailableFullText}>Retrieve available full text ({batchFullTextOpen.length})</button>
               <button className={styles.button} disabled={busy||!(batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length)||!runFilter} onClick={applySecondPassSuggestions}>Apply second-pass suggestions ({batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length})</button>
               <button className={styles.button} disabled={busy||!batchUnlikelyOpen.length||!runFilter} onClick={confirmUnlikelyNotRelevant}>Confirm Unlikely → Not relevant ({batchUnlikelyOpen.length})</button>
               <button className={styles.button} disabled={busy||!batchHighConfidenceRelevant.length||!runFilter} onClick={acceptHighConfidenceRelevant}>Accept high-confidence Relevant ({batchHighConfidenceRelevant.length})</button>
