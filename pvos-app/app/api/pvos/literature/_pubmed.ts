@@ -160,7 +160,7 @@ const SAFETY_TERMS=[
 const EXPOSURE_TERMS=[
   "above range","above-range","plasma level","plasma levels","drug level","drug levels",
   "concentration","concentrations","exposure","cyp3a4","p-glycoprotein","p glycoprotein",
-  "pharmacokinetic","pharmacokinetics","auc","clearance","inhibitor","inhibitors"
+  "pharmacokinetic","pharmacokinetics","auc","clearance"
 ];
 const ASSOCIATION_TERMS=[
   "associated with","increased risk","higher risk","elevated risk","caused by","induced by",
