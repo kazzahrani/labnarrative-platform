@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, fetchPubMedDetails, productTerms, type ProductInput } from "../../_pubmed";
+import { refineRanking } from "../../_rank";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL ?? "https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -37,21 +38,22 @@ export async function POST(req:NextRequest){
     if(!ids.length)return NextResponse.json({error:"No PubMed IDs were found."},{status:400});
     const details=await fetchPubMedDetails(ids);
 
-    const updates=items.flatMap(item=>{
+    const updates=items.map(item=>{
       const detail=details[item.pmid];
-      if(!detail)return [];
+      const abstract=detail?.abstract||item.abstract||"";
+      const keywords=detail?.keywords||(Array.isArray(item.metadata?.keywords)?item.metadata.keywords:[]);
       const terms=productTerms(item.product);
-      const analysis=analyzeArticle(item.title,detail.abstract,detail.keywords,terms);
-      const primaryDate=detail.online_date||detail.pubmed_date||detail.issue_date||null;
-      return [{
+      const analysis=refineRanking(analyzeArticle(item.title,abstract,keywords,terms),item.title,abstract,terms);
+      const primaryDate=detail?.online_date||detail?.pubmed_date||detail?.issue_date||item.metadata?.online_date||item.metadata?.pubmed_date||item.metadata?.issue_date||null;
+      return {
         id:item.id,
-        abstract:detail.abstract||null,
+        abstract:abstract||null,
         matched_terms:analysis.matchedTerms,
         relevance:analysis.relevance,
         ai_reason:analysis.reason,
         publication_date:primaryDate,
         metadata:{
-          keywords:detail.keywords,
+          keywords,
           match_locations:analysis.matchLocations,
           matched_term_locations:analysis.termLocations,
           urgent_saudi:analysis.urgentSaudi,
@@ -84,14 +86,14 @@ export async function POST(req:NextRequest){
           review_article:analysis.reviewArticle,
           treatment_pattern:analysis.treatmentPattern,
           prioritization_version:analysis.analysisVersion,
-          online_date:detail.online_date,
-          issue_date:detail.issue_date,
-          pubmed_date:detail.pubmed_date,
-          date_display_basis:detail.online_date?"online":detail.pubmed_date?"pubmed":"issue",
+          online_date:detail?.online_date??item.metadata?.online_date??null,
+          issue_date:detail?.issue_date??item.metadata?.issue_date??null,
+          pubmed_date:detail?.pubmed_date??item.metadata?.pubmed_date??null,
+          date_display_basis:detail?.online_date?"online":detail?.pubmed_date?"pubmed":item.metadata?.date_display_basis||"issue",
           enriched_at:new Date().toISOString(),
-          enrichment_version:"v3"
+          enrichment_version:"v3.1"
         }
-      }];
+      };
     });
 
     return NextResponse.json({
