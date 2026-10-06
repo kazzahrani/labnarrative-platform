@@ -54,6 +54,8 @@ export default function LiteraturePage(){
   const [products,setProducts]=useState<any[]>([]);
   const [followups,setFollowups]=useState<any[]>([]);
   const [records,setRecords]=useState<any[]>([]);
+  const [secondReviews,setSecondReviews]=useState<any[]>([]);
+  const [members,setMembers]=useState<any[]>([]);
   const [loading,setLoading]=useState(true);
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
@@ -67,7 +69,13 @@ export default function LiteraturePage(){
   const [analyzing,setAnalyzing]=useState(false);
   const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"fulltext"|"saudi"|"reviewed"|"all">("open");
   const [productFilter,setProductFilter]=useState("");
+  const [runFilter,setRunFilter]=useState("");
+  const [batchMode,setBatchMode]=useState(false);
+  const [batchSelected,setBatchSelected]=useState<string[]>([]);
+  const [batchPinned,setBatchPinned]=useState<string[]>([]);
   const [pendingRelevantId,setPendingRelevantId]=useState<string|null>(null);
+  const [secondReviewerId,setSecondReviewerId]=useState("");
+  const [secondReviewNote,setSecondReviewNote]=useState("");
   const [message,setMessage]=useState("");
   const [sourceForm,setSourceForm]=useState({name:"",url:"",language:"English",frequency:"weekly",notes:""});
   const [runForm,setRunForm]=useState({companyId:"",start:daysAgo(7),end:today()});
@@ -75,13 +83,15 @@ export default function LiteraturePage(){
   async function load(){
     if(!organizationId)return;
     setLoading(true);
-    const [s,r,i,c,f,rec]=await Promise.all([
+    const [s,r,i,c,f,rec,sr,mem]=await Promise.all([
       pvosSupabase.from("pvos_literature_sources").select("*").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_literature_runs").select("*").eq("organization_id",organizationId).order("period_end",{ascending:false}),
       pvosSupabase.from("pvos_literature_items").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
       pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
-      pvosSupabase.from("pvos_literature_screening_records").select("*").eq("organization_id",organizationId).order("completed_at",{ascending:false})
+      pvosSupabase.from("pvos_literature_screening_records").select("*").eq("organization_id",organizationId).order("completed_at",{ascending:false}),
+      pvosSupabase.from("pvos_literature_second_reviews").select("*").eq("organization_id",organizationId).order("assigned_at",{ascending:false}),
+      pvosSupabase.rpc("pvos_member_directory",{p_organization_id:organizationId})
     ]);
     const cs=c.data||[];
     let ps:any[]=[];
@@ -96,6 +106,8 @@ export default function LiteraturePage(){
     setProducts(ps);
     setFollowups(f.data||[]);
     setRecords(rec.data||[]);
+    setSecondReviews(sr.data||[]);
+    setMembers(mem.data||[]);
     setRunForm(v=>({...v,companyId:v.companyId||cs[0]?.id||""}));
     setLoading(false);
   }
@@ -105,6 +117,8 @@ export default function LiteraturePage(){
   const companyMap=useMemo(()=>Object.fromEntries(companies.map(x=>[x.id,x.name])),[companies]);
   const productMap=useMemo(()=>Object.fromEntries(products.map(x=>[x.id,x])),[products]);
   const sourceMap=useMemo(()=>Object.fromEntries(sources.map(x=>[x.id,x])),[sources]);
+  const memberMap=useMemo(()=>Object.fromEntries(members.map(x=>[x.user_id,x])),[members]);
+  const secondReviewMap=useMemo(()=>Object.fromEntries(secondReviews.map(x=>[x.run_id,x])),[secondReviews]);
   const activeSources=sources.filter(x=>x.active);
   const openItems=items.filter(x=>x.review_status==="unreviewed"||x.review_status==="needs_review");
   const reviewed=items.filter(x=>x.review_status==="relevant"||x.review_status==="not_relevant");
@@ -125,24 +139,30 @@ export default function LiteraturePage(){
     return score(b)-score(a);
   }),[items]);
   const visibleItems=useMemo(()=>sortedItems.filter(x=>{
+    if(runFilter&&x.run_id!==runFilter)return false;
     if(productFilter&&x.product_id!==productFilter)return false;
     const open=x.review_status==="unreviewed"||x.review_status==="needs_review";
-    const keepRelevantHere=x.id===pendingRelevantId&&x.review_status==="relevant";
+    const keepRelevantHere=(x.id===pendingRelevantId||batchPinned.includes(x.id))&&x.review_status==="relevant";
     if(queueFilter==="open")return open||keepRelevantHere;
     if(queueFilter==="priority")return x.relevance==="likely_relevant"&&(open||keepRelevantHere);
     if(queueFilter==="fulltext")return !!x.metadata?.full_text_required&&(open||keepRelevantHere);
     if(queueFilter==="saudi")return !!x.metadata?.urgent_saudi&&(open||keepRelevantHere);
     if(queueFilter==="reviewed")return x.review_status==="relevant"||x.review_status==="not_relevant";
     return true;
-  }),[sortedItems,queueFilter,productFilter,pendingRelevantId]);
+  }),[sortedItems,queueFilter,productFilter,runFilter,pendingRelevantId,batchPinned]);
   const rapidCandidates=useMemo(()=>sortedItems.filter(x=>{
+    if(runFilter&&x.run_id!==runFilter)return false;
     if(productFilter&&x.product_id!==productFilter)return false;
     if(rapidSeen.includes(x.id))return false;
     return x.review_status==="unreviewed"||x.review_status==="needs_review";
-  }),[sortedItems,productFilter,rapidSeen]);
+  }),[sortedItems,productFilter,runFilter,rapidSeen]);
   const rapidItem=rapidItemId?items.find(x=>x.id===rapidItemId)||null:null;
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
   const recordMap=useMemo(()=>Object.fromEntries(records.map(x=>[x.run_id,x])),[records]);
+  const batchRunItems=useMemo(()=>runFilter?items.filter(x=>x.run_id===runFilter):[],[items,runFilter]);
+  const batchRemainingEligible=batchRunItems.filter(x=>x.review_status==="unreviewed"&&!x.metadata?.full_text_required);
+  const batchFullTextOpen=batchRunItems.filter(x=>(x.review_status==="unreviewed"||x.review_status==="needs_review")&&x.metadata?.full_text_required);
+  const batchNeedsReview=batchRunItems.filter(x=>x.review_status==="needs_review"&&!x.metadata?.full_text_required);
   const runItems=(runId:string)=>items.filter(x=>x.run_id===runId);
   const runFollowups=(runId:string)=>{
     const ids=new Set(runItems(runId).map(x=>x.id));
