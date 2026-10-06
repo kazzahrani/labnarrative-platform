@@ -97,6 +97,7 @@ export async function POST(req:NextRequest){
       updates,
       analyzed:updates.length,
       priority:updates.filter(x=>x.relevance==="likely_relevant").length,
+      full_text_required:updates.filter(x=>x.metadata.full_text_required).length,
       saudi_alerts:updates.filter(x=>x.metadata.urgent_saudi).length
     });
   }catch(e:any){
