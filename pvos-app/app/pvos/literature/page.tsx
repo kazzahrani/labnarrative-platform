@@ -295,7 +295,7 @@ export default function LiteraturePage(){
     if(!session)return;
     const candidates=items.filter(x=>x.metadata?.connector==="pubmed"&&x.metadata?.pmid&&(
       x.relevance==="unscored"||
-      x.metadata?.prioritization_version!=="v3"
+      x.metadata?.prioritization_version!=="v3.1"
     ));
     if(!candidates.length){setMessage("Queue analysis is already complete for the available PubMed items.");return;}
     setAnalyzing(true);setMessage("");
@@ -338,7 +338,7 @@ export default function LiteraturePage(){
         saudiTotal+=Number(result.saudi_alerts||0);
       }
 
-      setMessage("Prioritization v3 complete: "+appliedTotal+" articles analyzed; "+priorityTotal+" high-priority, "+fullTextTotal+" full-text review, and "+saudiTotal+" potential Saudi case/context alerts.");
+      setMessage("Prioritization v3.1 complete: "+appliedTotal+" articles analyzed; "+priorityTotal+" high-priority, "+fullTextTotal+" full-text review, and "+saudiTotal+" potential Saudi case/context alerts.");
       await load();
     }catch(e:any){
       setMessage((e?.message||"Queue analysis failed.")+" Any completed batches were saved; click Analyze & prioritize again to resume.");
