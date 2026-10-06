@@ -293,7 +293,7 @@ export default function LiteraturePage(){
     const candidates=items.filter(x=>x.metadata?.connector==="pubmed"&&x.metadata?.pmid&&(
       !x.abstract||
       x.relevance==="unscored"||
-      x.metadata?.prioritization_version!=="v2"
+      x.metadata?.prioritization_version!=="v2.1"
     ));
     if(!candidates.length){setMessage("Queue analysis is already complete for the available PubMed items.");return;}
     setAnalyzing(true);setMessage("");
@@ -314,7 +314,7 @@ export default function LiteraturePage(){
       if(!response.ok)throw new Error(result?.error||"Queue analysis failed.");
       const {data,error}=await pvosSupabase.rpc("pvos_apply_literature_enrichment",{updates:result.updates||[]});
       if(error)throw error;
-      setMessage("Prioritization v2 complete: "+String(data||0)+" articles analyzed; "+String(result.priority||0)+" high-priority and "+String(result.saudi_alerts||0)+" potential Saudi case/context alerts.");
+      setMessage("Prioritization v2.1 complete: "+String(data||0)+" articles analyzed; "+String(result.priority||0)+" high-priority and "+String(result.saudi_alerts||0)+" potential Saudi case/context alerts.");
       await load();
     }catch(e:any){
       setMessage(e?.message||"Queue analysis failed.");
