@@ -144,13 +144,27 @@ const CASE_TERMS=[
   "case report","case series","case presentation","patient","patients","individual case",
   "spontaneous report","adverse event","adverse events","adverse reaction","adverse reactions"
 ];
+const CASE_REPORT_TERMS=[
+  "case report","case series","case presentation","individual case","spontaneous report"
+];
 const SAFETY_TERMS=[
   "adverse event","adverse events","adverse reaction","adverse reactions","toxicity","toxicities",
   "side effect","side effects","drug-induced","drug induced","hospitalization","hospitalisation",
   "death","fatal","died","overdose","medication error","pregnancy","foetal","fetal","teratogenic",
   "anaphylaxis","hypersensitivity","bleeding","hemorrhage","haemorrhage","liver injury","hepatotoxic",
   "kidney injury","renal injury","renal failure","cardiac arrest","arrhythmia","thrombosis",
-  "suicidal","suicide","interaction","withdrawal","off-label","off label","misuse","abuse"
+  "thromboembolism","venous thromboembolism","ischemic stroke","stroke","intracranial hemorrhage",
+  "suicidal","suicide","interaction","drug-drug interaction","withdrawal","off-label","off label",
+  "misuse","abuse","treatment failure","lack of efficacy","breakthrough"
+];
+const EXPOSURE_TERMS=[
+  "above range","above-range","plasma level","plasma levels","drug level","drug levels",
+  "concentration","concentrations","exposure","cyp3a4","p-glycoprotein","p glycoprotein",
+  "pharmacokinetic","pharmacokinetics","auc","clearance","inhibitor","inhibitors"
+];
+const ASSOCIATION_TERMS=[
+  "associated with","increased risk","higher risk","elevated risk","caused by","induced by",
+  "attributed to","related to","adverse effect","adverse event","adverse reaction"
 ];
 
 function isWordChar(v:string){
@@ -176,20 +190,52 @@ function phrasePresent(text:string,term:string){
 function hits(text:string,terms:string[]){
   return terms.filter(t=>phrasePresent(text,t));
 }
-export function analyzeArticle(title:string,abstract:string,keywords:string[],terms:string[]){
-  const titleLower=title.toLowerCase();
-  const abstractLower=abstract.toLowerCase();
-  const keywordText=keywords.join(" ").toLowerCase();
+function unique(values:string[]){
+  return [...new Set(values)];
+}
+function sentences(v:string){
+  return (v.replace(/\s+/g," ").match(/[^.!?]+[.!?]?/g)||[]).map(x=>x.trim()).filter(Boolean);
+}
+function hasAnyProductTerm(text:string,terms:string[]){
+  return terms.some(t=>phrasePresent(text,t));
+}
+function hasQuantifiedFinding(text:string){
+  return /\b\d+(?:\.\d+)?\s*%|\b(?:OR|HR|RR)\s*[=:]?\s*\d|95\s*%\s*CI|above[- ]range|significantly\s+(?:higher|lower|increased|decreased)|\b(?:higher|lower|increased|decreased)\s+(?:risk|odds|rate|level|levels|concentration|concentrations|exposure)/i.test(text);
+}
+function hasBreakthroughPattern(text:string,terms:string[]){
+  const lower=text.toLowerCase();
+  if(!hasAnyProductTerm(text,terms))return false;
+  if(/\b(?:breakthrough|treatment failure|lack of efficacy)\b/i.test(text))return true;
+  return terms.some(term=>{
+    const t=term.toLowerCase();
+    return lower.includes("while on "+t)||
+      lower.includes("while taking "+t)||
+      lower.includes("despite "+t)||
+      lower.includes("despite treatment with "+t);
+  });
+}
+function hasTreatmentOnlyPattern(text:string,terms:string[]){
+  const lower=text.toLowerCase();
+  return terms.some(term=>{
+    const t=term.toLowerCase();
+    return lower.includes("transitioned to "+t)||
+      lower.includes("switched to "+t)||
+      lower.includes("started on "+t)||
+      lower.includes("initiated "+t)||
+      lower.includes("treated with "+t);
+  });
+}
 
+export function analyzeArticle(title:string,abstract:string,keywords:string[],terms:string[]){
   const matchedTerms:string[]=[];
   const locations=new Set<string>();
   const termLocations:Record<string,string[]>={};
+
   for(const term of terms){
-    const t=term.toLowerCase();
     const loc:string[]=[];
-    if(titleLower.includes(t))loc.push("Title");
-    if(abstractLower.includes(t))loc.push("Abstract");
-    if(keywordText.includes(t))loc.push("Keywords");
+    if(phrasePresent(title,term))loc.push("Title");
+    if(phrasePresent(abstract,term))loc.push("Abstract");
+    if(phrasePresent(keywords.join(" "),term))loc.push("Keywords");
     if(loc.length){
       matchedTerms.push(term);
       termLocations[term]=loc;
@@ -198,23 +244,60 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
   }
 
   const combined=[title,abstract,keywords.join(" ")].join(" ");
+  const allSentences=[title,...sentences(abstract),...keywords];
+  const productContexts=allSentences.filter(s=>hasAnyProductTerm(s,terms));
+  const productInTitle=hasAnyProductTerm(title,terms);
   const saudiHits=hits(combined,SAUDI_TERMS);
   const caseHits=hits(combined,CASE_TERMS);
+  const caseReportHits=hits(combined,CASE_REPORT_TERMS);
   const safetyHits=hits(combined,SAFETY_TERMS);
+  const exposureHits=hits(combined,EXPOSURE_TERMS);
+  const productSafetyHits=unique(productContexts.flatMap(s=>hits(s,SAFETY_TERMS)));
+  const productExposureHits=unique(productContexts.flatMap(s=>hits(s,EXPOSURE_TERMS)));
+  const productAssociationHits=unique(productContexts.flatMap(s=>hits(s,ASSOCIATION_TERMS)));
+  const quantifiedProductEvidence=productContexts.some(hasQuantifiedFinding);
+  const breakthrough=productContexts.some(s=>hasBreakthroughPattern(s,terms));
+  const localSafetyEvidence=productSafetyHits.length>0||productExposureHits.length>0||productAssociationHits.length>0;
+  const genericSafetyEvidence=safetyHits.length>0||exposureHits.length>0;
+  const treatmentOnly=productContexts.length>0 &&
+    productContexts.some(s=>hasTreatmentOnlyPattern(s,terms)) &&
+    !localSafetyEvidence &&
+    !breakthrough;
   const caseLike=caseHits.length>0;
-  const urgentSaudi=saudiHits.length>0 && (caseLike||safetyHits.length>0);
+  const caseReportLike=caseReportHits.length>0;
+  const urgentSaudi=saudiHits.length>0 && (caseLike||genericSafetyEvidence);
+
+  let score=0;
+  if(productInTitle)score+=3;
+  if(localSafetyEvidence)score+=2;
+  if(productAssociationHits.length)score+=2;
+  if(quantifiedProductEvidence&&localSafetyEvidence)score+=2;
+  if(genericSafetyEvidence)score+=1;
+  if(productInTitle&&genericSafetyEvidence)score+=1;
+  if(caseReportLike&&localSafetyEvidence)score+=1;
+  if(breakthrough)score+=1;
+  if(treatmentOnly)score-=2;
 
   let relevance:"likely_relevant"|"possible"|"unlikely"="unlikely";
-  let reason="No strong generic safety or case-report terms detected. Keep available for QPPV review.";
+  let reason="Product mention found without clear product-linked safety, interaction, exposure, or case evidence.";
+
   if(urgentSaudi){
     relevance="likely_relevant";
-    reason="Priority review: Saudi context plus patient/case or safety terminology detected.";
-  }else if(caseHits.some(x=>x.includes("case report")||x.includes("case series")) || safetyHits.length>=2){
+    reason="Priority review: Saudi context plus clinical case or safety evidence detected. Human review remains required.";
+  }else if(score>=5){
     relevance="likely_relevant";
-    reason="High-priority safety/case terminology detected in the title, abstract or keywords.";
-  }else if(caseLike||safetyHits.length){
+    reason="Product-linked safety, interaction, exposure, or quantified outcome evidence detected.";
+  }else if(breakthrough){
     relevance="possible";
-    reason="Possible safety relevance detected; QPPV assessment required.";
+    reason="Possible breakthrough or lack-of-efficacy event while on the monitored product; QPPV assessment required.";
+  }else if((genericSafetyEvidence||caseReportLike)&&!treatmentOnly){
+    relevance="possible";
+    reason=localSafetyEvidence
+      ?"Possible product-linked safety relevance detected; attribution is not strong enough for high-priority classification."
+      :"Safety-relevant article mentions the monitored product, but product-specific attribution is unclear from the abstract.";
+  }else if(treatmentOnly){
+    relevance="unlikely";
+    reason="The monitored product appears to be background or treatment context without a product-linked safety finding.";
   }
 
   return {
@@ -224,9 +307,18 @@ export function analyzeArticle(title:string,abstract:string,keywords:string[],te
     relevance,
     reason,
     urgentSaudi,
-    saudiHits:[...new Set(saudiHits)].slice(0,8),
-    safetyHits:[...new Set(safetyHits)].slice(0,10),
-    caseHits:[...new Set(caseHits)].slice(0,8)
+    saudiHits:unique(saudiHits).slice(0,8),
+    safetyHits:unique(safetyHits).slice(0,12),
+    caseHits:unique(caseHits).slice(0,8),
+    productSafetyHits:productSafetyHits.slice(0,10),
+    exposureHits:unique(exposureHits).slice(0,10),
+    productExposureHits:productExposureHits.slice(0,10),
+    productAssociationHits:productAssociationHits.slice(0,8),
+    breakthrough,
+    quantifiedProductEvidence,
+    treatmentOnly,
+    score,
+    analysisVersion:"v2"
   };
 }
 
