@@ -2,12 +2,13 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Header, Badge, statusTone } from "../../_components";
 import { usePVOS } from "../../_provider";
 import { pvosSupabase } from "../../_pvos-supabase";
 import { dueLabel, formatDue, niceStatus } from "../../_utils";
 import { canApproveStep,decisionAttribution,approvalOutcome,type Member } from "../../_approval";
+import {TaskReviewPanel} from "../../_task-review";
 import styles from "../../pvos.module.css";
 
 function safeName(name:string){return name.replace(/[^a-zA-Z0-9._-]+/g,"-").slice(0,120)}
@@ -18,6 +19,8 @@ export default function TaskPage(){
   const [evidence,setEvidence]=useState<any[]>([]); const [approvals,setApprovals]=useState<any[]>([]); const [steps,setSteps]=useState<any[]>([]); const [audit,setAudit]=useState<any[]>([]);
   const [evidenceTitle,setEvidenceTitle]=useState(""); const [busy,setBusy]=useState(false); const [uploadMessage,setUploadMessage]=useState<string|null>(null);
   const [members,setMembers]=useState<Member[]>([]);const [workflowMessage,setWorkflowMessage]=useState<string|null>(null);
+  const [reviewPending,setReviewPending]=useState(true),[reviewHistory,setReviewHistory]=useState(false);
+  const reviewLoaded=useCallback((pending:boolean,history:boolean)=>{setReviewPending(pending);setReviewHistory(history);},[]);
 
   async function load(){
     const id=params.id;if(!id)return;
@@ -31,6 +34,7 @@ export default function TaskPage(){
       pvosSupabase.rpc("pvos_member_directory",{p_organization_id:t.organization_id})
     ]);
     setCompany(c.data);setEvidence(e.data??[]);setApprovals(a.data??[]);setAudit(au.data??[]);setProduct((p as any).data);
+    if(a.data?.length)setReviewPending(false);
     setMembers(m.data??[]);if(m.error||a.error||au.error)setWorkflowMessage((m.error||a.error||au.error)?.message??"Could not load approval history");
     const routeIds=[...new Set((a.data??[]).map((x:any)=>x.route_id).filter(Boolean))] as string[];
     if(routeIds.length){const {data:s}=await pvosSupabase.from("pvos_approval_steps").select("*").in("route_id",routeIds);setSteps(s??[])}else setSteps([]);
@@ -45,6 +49,7 @@ export default function TaskPage(){
   const stepBy=useMemo(()=>Object.fromEntries(steps.map(s=>[s.route_id+"|"+s.position,s])),[steps]);
 
   async function setStatus(status:string){
+    if(status==="awaiting_review"&&!approvals.length){document.getElementById("task-review")?.scrollIntoView({block:"start",behavior:"smooth"});return;}
     if(!task)return;setBusy(true);setWorkflowMessage(null);
     if(status==="awaiting_review"&&approvals.length){
       const {error}=await pvosSupabase.rpc("pvos_send_task_for_approval",{p_task_id:task.id});
@@ -55,9 +60,9 @@ export default function TaskPage(){
     }
     setBusy(false);await load();
   }
-  async function addEvidence(){if(!task||!session||!evidenceTitle.trim())return;setBusy(true);await pvosSupabase.from("pvos_task_evidence").insert({task_id:task.id,title:evidenceTitle.trim(),evidence_type:"note",uploaded_by:session.user.id});setEvidenceTitle("");setBusy(false);await load()}
+  async function addEvidence(){if(!task||!session||!evidenceTitle.trim()||reviewPending)return;setBusy(true);const {error}=await pvosSupabase.from("pvos_task_evidence").insert({task_id:task.id,title:evidenceTitle.trim(),evidence_type:"note",uploaded_by:session.user.id});if(error)setUploadMessage(error.message);else setEvidenceTitle("");setBusy(false);await load()}
   async function uploadEvidence(e:ChangeEvent<HTMLInputElement>){
-    const file=e.target.files?.[0];if(!file||!task||!session||!organizationId)return;setBusy(true);setUploadMessage(null);
+    const file=e.target.files?.[0];if(!file||!task||!session||!organizationId||reviewPending)return;setBusy(true);setUploadMessage(null);
     const path=`${organizationId}/${task.id}/${crypto.randomUUID()}-${safeName(file.name)}`;
     const {error:uploadError}=await pvosSupabase.storage.from("pvos-evidence").upload(path,file,{upsert:false});
     if(uploadError){setUploadMessage(uploadError.message);setBusy(false);e.target.value="";return}
@@ -82,9 +87,9 @@ export default function TaskPage(){
       <section className={styles.stack}>
         <div className={styles.info}><h3>Task details</h3><div className={styles.kv}><span>Company</span><span>{company.name}</span></div>{product?<div className={styles.kv}><span>Product</span><span>{product.brand_name} · {product.active_ingredient}</span></div>:null}<div className={styles.kv}><span>Owner</span><span>{task.owner_user_id===session?.user.id?"Me":"Team"}</span></div><div className={styles.kv}><span>Due</span><span>{formatDue(task.due_at)}</span></div><div className={styles.kv}><span>Priority</span><span>{niceStatus(task.priority)}</span></div><div className={styles.kv}><span>Source</span><span>{niceStatus(task.source)}</span></div>
           <div className={styles.inlineActions}>
-            {task.status==="not_started"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Start work</button>:null}
+            {task.status==="not_started"?<button className={styles.buttonGhost} disabled={busy||reviewPending} onClick={()=>setStatus("in_progress")}>Start work</button>:null}
             {task.status!=="awaiting_review"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("awaiting_review")}>{approvals.length?"Send into approval":"Send for review"}</button>:null}
-            {!approvals.length&&task.status!=="complete"?<button className={styles.button} disabled={busy} onClick={()=>setStatus("complete")}>Mark complete</button>:null}
+            {!approvals.length&&!reviewHistory&&task.status!=="complete"?<button className={styles.button} disabled={busy||reviewPending} onClick={()=>setStatus("complete")}>Mark complete</button>:null}
             {task.status==="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Reopen</button>:null}
           </div>
         </div>
@@ -92,13 +97,15 @@ export default function TaskPage(){
         <div className={styles.info} id="evidence"><h3>Evidence & documents</h3>
           {task.status==="complete"&&approvals.length?<p className={styles.muted}>The completed task and its approval history remain here with the evidence. Completion does not send these documents externally.</p>:null}
           {evidence.length?evidence.map(e=><div className={styles.kv} key={e.id}><span>{new Date(e.created_at).toLocaleDateString()}</span><span>{e.title}{e.file_path?<button className={styles.buttonGhost} style={{marginLeft:8}} onClick={()=>openEvidence(e)}>Open file</button>:null}</span></div>):<div className={styles.muted}>No evidence attached yet.</div>}
-          <div className={styles.inlineActions}><input className={styles.input} value={evidenceTitle} onChange={e=>setEvidenceTitle(e.target.value)} placeholder="Evidence note"/><button className={styles.buttonGhost} disabled={busy||!evidenceTitle.trim()} onClick={addEvidence}>Add note</button></div>
-          <div className={styles.inlineActions}><label className={styles.buttonGhost} style={{cursor:"pointer"}}>Upload file<input type="file" style={{display:"none"}} onChange={uploadEvidence} disabled={busy}/></label><span className={styles.muted}>Private storage · max 25 MB</span></div>
+          {reviewPending?<p className={styles.muted}>Evidence changes are locked while review is pending.</p>:null}
+          <div className={styles.inlineActions}><input className={styles.input} disabled={reviewPending} value={evidenceTitle} onChange={e=>setEvidenceTitle(e.target.value)} placeholder="Evidence note"/><button className={styles.buttonGhost} disabled={busy||reviewPending||!evidenceTitle.trim()} onClick={addEvidence}>Add note</button></div>
+          <div className={styles.inlineActions}><label className={styles.buttonGhost} style={{cursor:"pointer"}}>Upload file<input type="file" style={{display:"none"}} onChange={uploadEvidence} disabled={busy||reviewPending}/></label><span className={styles.muted}>Private storage · max 25 MB</span></div>
           {uploadMessage?<div className={uploadMessage.includes("uploaded")?styles.successBox:styles.errorBox} style={{marginTop:10}}>{uploadMessage}</div>:null}
         </div>
       </section>
 
       <aside className={styles.stack}>
+        {!approvals.length?<TaskReviewPanel task={task} members={members} userId={session?.user.id} onChanged={load} onPending={reviewLoaded}/>:null}
         <div className={styles.info} id="approval"><h3>Approval route & history</h3>{approvals.length?<><div className={styles.timeline}>{approvals.map(a=>{
           const s=stepBy[a.route_id+"|"+a.step_position];const actor=decisionAttribution(a,audit,members);
           const decided=["approved","rejected","skipped"].includes(a.status);

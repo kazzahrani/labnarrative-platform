@@ -1,7 +1,7 @@
 import { readApprovalRows, decisionAttribution, approvalOutcome, type Member } from "./_approval";
 
 type Row=Record<string,any>;
-export type InspectionData={organizationId:string,loadedAt:string,auditLoadedAt?:string,companies:Row[],tasks:Row[],evidence:Row[],literatureRecords:Row[],runs:Row[],secondReviews:Row[],handovers:Row[],handoverCompanies:Row[],handoverEvidence:Row[],products:Row[],approvals:Row[],steps:Row[],audit:Row[],members:Member[]};
+export type InspectionData={organizationId:string,loadedAt:string,auditLoadedAt?:string,companies:Row[],tasks:Row[],evidence:Row[],literatureRecords:Row[],runs:Row[],secondReviews:Row[],handovers:Row[],handoverCompanies:Row[],handoverEvidence:Row[],products:Row[],approvals:Row[],steps:Row[],audit:Row[],members:Member[],taskReviews?:Row[]};
 
 export async function loadInspectionAudit(client:any,organizationId:string){
   return readApprovalRows<Row>((from,to)=>client.from("pvos_audit_events").select("*").eq("organization_id",organizationId).order("id").range(from,to));
@@ -12,11 +12,11 @@ export async function loadInspectionAudit(client:any,organizationId:string){
 export async function loadInspection(client:any,organizationId:string):Promise<InspectionData>{
   const direct=(table:string)=>readApprovalRows<Row>((from,to)=>client.from(table).select("*").eq("organization_id",organizationId).order("id").range(from,to));
   const joined=(table:string,relation:string)=>readApprovalRows<Row>((from,to)=>client.from(table).select(`*,${relation}!inner(organization_id)`).eq(`${relation}.organization_id`,organizationId).order("id").range(from,to));
-  const [companies,tasks,evidence,literatureRecords,runs,secondReviews,handovers,handoverCompanies,handoverEvidence,products,approvals,auditRows,decisionEvents,directory]=await Promise.all([
+  const [companies,tasks,evidence,literatureRecords,runs,secondReviews,handovers,handoverCompanies,handoverEvidence,products,approvals,auditRows,decisionEvents,directory,taskReviews]=await Promise.all([
     direct("pvos_companies"),direct("pvos_tasks"),joined("pvos_task_evidence","pvos_tasks"),direct("pvos_literature_screening_records"),direct("pvos_literature_runs"),direct("pvos_literature_second_reviews"),direct("pvos_handovers"),joined("pvos_handover_companies","pvos_handovers"),direct("pvos_handover_evidence"),joined("pvos_products","pvos_companies"),joined("pvos_task_approvals","pvos_tasks"),
     readApprovalRows<Row>((from,to)=>client.from("pvos_audit_events").select("id,organization_id,company_id,actor_user_id,entity_type,entity_id,event_type,created_at,before_status:before_data->>status,after_status:after_data->>status,reason:metadata->>reason,actor_email:metadata->>actor_email,linked_task_id:metadata->>task_id,linked_run_id:metadata->>run_id,linked_handover_id:metadata->>handover_id").eq("organization_id",organizationId).order("id").range(from,to)),
     readApprovalRows<Row>((from,to)=>client.from("pvos_audit_events").select("*").eq("organization_id",organizationId).in("entity_type",["approval","product_registration"]).order("id").range(from,to)),
-    client.rpc("pvos_member_directory",{p_organization_id:organizationId})
+    client.rpc("pvos_member_directory",{p_organization_id:organizationId}),direct("pvos_task_reviews")
   ]);
   if(directory.error)throw new Error(directory.error.message);
   const details=new Map(decisionEvents.map(a=>[a.id,a]));
@@ -25,7 +25,7 @@ export async function loadInspection(client:any,organizationId:string):Promise<I
   const steps:Row[]=[];
   for(let i=0;i<routes.length;i+=100)steps.push(...await readApprovalRows<Row>((from,to)=>client.from("pvos_approval_steps").select("*").in("route_id",routes.slice(i,i+100)).order("id").range(from,to)));
   audit.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at))||Number(b.id)-Number(a.id));
-  return {organizationId,loadedAt:new Date().toISOString(),companies,tasks,evidence,literatureRecords,runs,secondReviews,handovers,handoverCompanies,handoverEvidence,products,approvals,steps,audit,members:directory.data||[]};
+  return {organizationId,loadedAt:new Date().toISOString(),companies,tasks,evidence,literatureRecords,runs,secondReviews,handovers,handoverCompanies,handoverEvidence,products,approvals,steps,audit,members:directory.data||[],taskReviews};
 }
 
 export function scopeInspection(data:InspectionData,companyId:string):InspectionData{
@@ -43,7 +43,7 @@ export function scopeInspection(data:InspectionData,companyId:string):Inspection
   const evidence=data.evidence.filter(e=>taskIds.has(e.task_id));
   const entities:Record<string,Set<any>>={task:taskIds,product_registration:productIds,approval:new Set(approvals.map(a=>a.id)),evidence:new Set(evidence.map(e=>e.id)),handover:handoverIds,handover_company:new Set(handoverCompanies.map(c=>c.id)),handover_evidence:new Set(handoverEvidence.map(e=>e.id)),literature_second_review:new Set(secondReviews.map(r=>r.id)),literature_screening_record:new Set(literatureRecords.map(r=>r.id)),literature_run:runIds};
   const audit=data.audit.filter(a=>a.company_id===companyId||entities[a.entity_type]?.has(a.entity_id)||taskIds.has(a.metadata?.task_id||a.linked_task_id)||runIds.has(a.metadata?.run_id||a.linked_run_id)||handoverIds.has(a.metadata?.handover_id||a.linked_handover_id));
-  return {...data,companies:data.companies.filter(c=>c.id===companyId),tasks,products,literatureRecords,runs,secondReviews,handovers,handoverCompanies,handoverEvidence,approvals,evidence,audit};
+  return {...data,companies:data.companies.filter(c=>c.id===companyId),tasks,products,literatureRecords,runs,secondReviews,handovers,handoverCompanies,handoverEvidence,approvals,evidence,audit,taskReviews:(data.taskReviews||[]).filter(r=>taskIds.has(r.task_id))};
 }
 
 export function inspectionAccount(data:InspectionData,id?:string|null){return id?data.members.find(m=>m.user_id===id)?.email||id:"Actor not recorded";}
@@ -73,7 +73,7 @@ export function inspectionChecks(data:InspectionData,now=Date.now()){
     unfinishedRuns:data.runs.filter(r=>r.status!=="complete"&&r.status!=="cancelled").length,
     pendingSecondReviews:data.secondReviews.filter(r=>r.status==="pending"||r.status==="returned").length,
     legacyLiterature:data.literatureRecords.filter(r=>r.metadata?.second_review?.status!=="approved").length,
-    pendingApprovals:approvals.filter(a=>a.status==="pending"||a.status==="in_review").length,
+    pendingApprovals:approvals.filter(a=>a.status==="pending"||a.status==="in_review").length+(data.taskReviews||[]).filter(r=>r.status==="pending").length,
     unattributedApprovals:approvals.filter(a=>["approved","rejected","skipped"].includes(a.status)&&!a.actor.recorded).length,
     missingHandoverEvidence:data.handovers.filter(h=>h.workflow_version===2&&["accepted","active","handback_pending","closed"].includes(h.status)&&!frozenHandovers.has(h.id)).length,
     unknownRegistration:data.products.filter(p=>!p.registration_status?.trim()||p.registration_status==="Not recorded").length,
@@ -117,6 +117,7 @@ export function inspectionExport(data:InspectionData,companyId:string,generatedA
   const cycles=(history:Row[]=[])=>history.map(h=>({cycle:h.cycle,status:h.status,note:h.note,assigned_to:h.assigned_to,assigned_by:h.assigned_by,assigned_at:h.assigned_at,reviewed_by:h.reviewed_by,reviewed_at:h.reviewed_at,scope_item_ids:h.metadata?.scope_item_ids}));
   section("EXPORT CONTEXT",["Organization ID","Company scope","Generated at UTC","Record reads completed at UTC","Audit reads completed at UTC","Read consistency","Shared handover snapshots","Files","Audit detail"],[[data.organizationId,companyId,generatedAt,data.loadedAt,data.auditLoadedAt||data.loadedAt,"Fetched database view; not an atomic database snapshot","Full original snapshots retained in JSON to preserve recorded hash","References only; document bytes remain on source records","CSV summarizes every audit event; full JSON retains original before/after data"]]);
   section("TASK REGISTER",["Task ID","Company","Task","Type","Status","Due UTC","Completed UTC","Active evidence records"],data.tasks.map(t=>[t.id,company(t.company_id),t.title,t.activity_type,t.status,t.due_at,t.completed_at,data.evidence.filter(e=>e.task_id===t.id&&!e.archived_at).length]));
+  section("TASK REVIEW CYCLES",["Review ID","Task ID","Company","Cycle","Submitted task","Sent by ID","Sent by email","Reviewer ID","Reviewer email","Sent UTC","Submission note","Status","Decision by ID","Decision email","Decision role","Decision UTC","Decision note","Submitted evidence references JSON"],(data.taskReviews||[]).map(r=>[r.id,r.task_id,company(r.company_id),r.cycle,r.snapshot?.task?.title,r.sent_by,r.sent_by_email,r.assigned_to,r.assigned_email,r.sent_at,r.submission_note,r.status,r.decided_by,r.decided_email,r.decided_role,r.decided_at,r.decision_note,JSON.stringify(r.snapshot?.evidence||[])]));
   section("TASK EVIDENCE",["Evidence ID","Task ID","Company","Title","Type","Version","Recorded UTC","Uploaded by ID","Account label","File path","External reference","Archived UTC"],data.evidence.map(e=>[e.id,e.task_id,company(taskBy[e.task_id]?.company_id),e.title,e.evidence_type,e.version,e.created_at,e.uploaded_by,account(e.uploaded_by),e.file_path,e.external_url,e.archived_at]));
   section("SCREENING RUN REGISTER",["Run ID","Company","Period start","Period end","Status","Started UTC","Completed UTC","Started by ID","Completed by ID","Source count","Product count","Result count","Reviewed count"],data.runs.map(r=>[r.id,company(r.company_id),r.period_start,r.period_end,r.status,r.started_at,r.completed_at,r.started_by,r.completed_by,r.source_count,r.product_count,r.result_count,r.reviewed_count]));
   section("LITERATURE SCREENING RECORDS",["Evidence ID","Run ID","Company","Period start","Period end","Completed UTC","First reviewer IDs","Second reviewer ID","Second reviewed UTC","Second decision","Second note","Review cycles summary JSON","Sources JSON","Products JSON","Metrics JSON"],data.literatureRecords.map(r=>[r.id,r.run_id,company(r.company_id),r.period_start,r.period_end,r.completed_at,(r.metadata?.first_reviewer_user_ids||[]).join("; "),r.metadata?.second_review?.reviewed_by,r.metadata?.second_review?.reviewed_at,r.metadata?.second_review?.status||"Legacy / not recorded",r.metadata?.second_review?.note,JSON.stringify(cycles(r.metadata?.second_review?.metadata?.history)),JSON.stringify(r.source_snapshot),JSON.stringify(r.product_snapshot),JSON.stringify(r.metrics)]));
