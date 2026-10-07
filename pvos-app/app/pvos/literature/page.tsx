@@ -361,6 +361,7 @@ export default function LiteraturePage(){
     if(runForm.end<runForm.start){setMessage("Period end must be on or after the start date.");return;}
     const companyProducts=products.filter(x=>x.company_id===runForm.companyId);
     if(!companyProducts.length){setMessage("This company has no products to screen.");return;}
+    const lwwSources=sources.filter(x=>x.active&&x.metadata?.connector==="lww_crossref");
 
     setBusy(true);setMessage("");
     let runId:string|undefined;
@@ -385,12 +386,18 @@ export default function LiteraturePage(){
         period_end:runForm.end,
         status:"running",
         started_by:session.user.id,
-        source_count:1,
+        source_count:1+lwwSources.length,
         product_count:companyProducts.length,
-        metadata:{v0:true,scope:"all_company_products",connectors:["pubmed"]}
+        metadata:{v0:true,scope:"all_company_products",connectors:lwwSources.length?["pubmed","lww_crossref"]:["pubmed"]}
       }).select("*").single();
       if(runError||!run)throw runError||new Error("Could not create screening run.");
       runId=run.id;
+
+      const productPayload=companyProducts.map(p=>({
+        id:p.id,
+        brand_name:p.brand_name,
+        active_ingredient:p.active_ingredient
+      }));
 
       const response=await authorizedFetch("/api/pvos/literature/pubmed",{
         method:"POST",
@@ -398,44 +405,131 @@ export default function LiteraturePage(){
         body:JSON.stringify({
           periodStart:runForm.start,
           periodEnd:runForm.end,
-          products:companyProducts.map(p=>({
-            id:p.id,
-            brand_name:p.brand_name,
-            active_ingredient:p.active_ingredient
-          }))
+          products:productPayload
         })
       });
       const result=await response.json();
       if(!response.ok)throw new Error(result?.error||"PubMed screening failed.");
 
-      const payload=(result.items||[]).map((x:any)=>({
+      let lwwResult:any={items:[],reports:[],sources_checked:0,results:0};
+      let lwwError:string|null=null;
+      if(lwwSources.length){
+        try{
+          const lwwResponse=await authorizedFetch("/api/pvos/literature/lww",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              periodStart:runForm.start,
+              periodEnd:runForm.end,
+              products:productPayload,
+              sources:lwwSources.map(s=>({
+                id:s.id,
+                name:s.name,
+                url:s.url,
+                metadata:s.metadata||{}
+              }))
+            })
+          });
+          lwwResult=await lwwResponse.json();
+          if(!lwwResponse.ok)throw new Error(lwwResult?.error||"Saudi journal screening failed.");
+        }catch(e:any){
+          lwwError=e?.message||"Saudi journal screening failed.";
+          lwwResult={items:[],reports:[],sources_checked:lwwSources.length,results:0};
+        }
+      }
+
+      const pubmedPayload=(result.items||[]).map((x:any)=>({
         ...x,
         organization_id:organizationId,
         run_id:run.id,
         source_id:source.id,
         company_id:runForm.companyId
       }));
+      const lwwSourceMap=Object.fromEntries(lwwSources.map(s=>[s.name,s.id]));
+      const saudiPayload=(lwwResult.items||[]).map((x:any)=>({
+        ...x,
+        organization_id:organizationId,
+        run_id:run.id,
+        source_id:lwwSourceMap[x.metadata?.source_name]||null,
+        company_id:runForm.companyId
+      })).filter((x:any)=>!!x.source_id);
+
+      const merged=new Map<string,any>();
+      for(const x of pubmedPayload){
+        const key=x.product_id+"::"+String(x.doi||x.article_url||x.title).toLowerCase();
+        merged.set(key,x);
+      }
+      for(const x of saudiPayload){
+        const key=x.product_id+"::"+String(x.doi||x.article_url||x.title).toLowerCase();
+        const existing=merged.get(key);
+        if(existing){
+          merged.set(key,{
+            ...existing,
+            ...x,
+            abstract:x.abstract||existing.abstract,
+            publication_date:x.publication_date||existing.publication_date,
+            metadata:{
+              ...(existing.metadata||{}),
+              ...(x.metadata||{}),
+              also_found_in:["PubMed","Saudi journal source"],
+              pubmed_pmid:existing.metadata?.pmid||null,
+              direct_source_duplicate:true
+            }
+          });
+        }else merged.set(key,x);
+      }
+      const payload=[...merged.values()];
+
       if(payload.length){
         const {error:itemError}=await pvosSupabase.from("pvos_literature_items").insert(payload);
         if(itemError)throw itemError;
       }
 
       const now=new Date().toISOString();
-      await Promise.all([
+      const sourceUpdates=[
         pvosSupabase.from("pvos_literature_sources").update({
           last_checked_at:now,
           next_due_at:nextDue("weekly")
         }).eq("id",source.id),
+        ...lwwSources.map(s=>pvosSupabase.from("pvos_literature_sources").update({
+          last_checked_at:now,
+          next_due_at:nextDue("daily"),
+          metadata:{
+            ...(s.metadata||{}),
+            last_connector_check_at:now,
+            last_connector_report:(lwwResult.reports||[]).find((r:any)=>r.source_id===s.id)||null,
+            connector_status:lwwError?"error":"active"
+          }
+        }).eq("id",s.id))
+      ];
+
+      await Promise.all([
+        ...sourceUpdates,
         pvosSupabase.from("pvos_literature_runs").update({
           status:"review",
           result_count:payload.length,
-          metadata:{v0:true,scope:"all_company_products",connectors:["pubmed"],pubmed_results:payload.length,searches:result.searches||[]}
+          metadata:{
+            v0:true,
+            scope:"all_company_products",
+            connectors:lwwSources.length?["pubmed","lww_crossref"]:["pubmed"],
+            pubmed_results:pubmedPayload.length,
+            saudi_journal_results:saudiPayload.length,
+            merged_results:payload.length,
+            searches:result.searches||[],
+            saudi_journal_reports:lwwResult.reports||[],
+            saudi_journal_error:lwwError
+          }
         }).eq("id",run.id)
       ]);
 
       setShowRun(false);
       setTab("queue");
-      setMessage("Screening run created: PubMed searched "+companyProducts.length+" products and returned "+payload.length+" articles for QPPV review.");
+      setMessage(
+        "Screening run created: "+payload.length+" unique article-product results · "+
+        pubmedPayload.length+" from PubMed"+
+        (lwwSources.length?" · "+saudiPayload.length+" from "+lwwSources.length+" active Saudi LWW journals":"")+
+        (lwwError?" · Saudi journal connector warning: "+lwwError:"")
+      );
       await load();
     }catch(e:any){
       if(runId)await pvosSupabase.from("pvos_literature_runs").update({status:"draft",metadata:{v0:true,error:e?.message||"Screening failed"}}).eq("id",runId);
