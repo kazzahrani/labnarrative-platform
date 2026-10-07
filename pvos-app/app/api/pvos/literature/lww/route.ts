@@ -109,17 +109,41 @@ export async function POST(req:NextRequest){
     for(const source of sources){
       const onlineIssn=validIssn(source.metadata?.online_issn);
       const printIssn=validIssn(source.metadata?.print_issn);
-      const issn=onlineIssn||printIssn;
-      if(!issn){
+      const issns=[...new Set([onlineIssn,printIssn].filter((x):x is string=>!!x))];
+      if(!issns.length){
         reports.push({source_id:source.id,name:source.name,status:"skipped",reason:"No valid ISSN"});
         continue;
       }
 
       try{
-        const crossref=await fetchCrossrefWorks(issn,periodStart,periodEnd);
+        const issnReports:any[]=[];
+        const workMap=new Map<string,any>();
+        let totalResults=0;
+        let anySuccess=false;
+        let anyTruncated=false;
+
+        for(const issn of issns){
+          try{
+            const crossref=await fetchCrossrefWorks(issn,periodStart,periodEnd);
+            anySuccess=true;
+            totalResults+=crossref.total;
+            anyTruncated=anyTruncated||crossref.truncated;
+            issnReports.push({issn,status:"ok",retrieved:crossref.items.length,total_results:crossref.total,truncated:crossref.truncated});
+            for(const work of crossref.items){
+              const key=String(work?.DOI||cleanText(Array.isArray(work?.title)?work.title[0]:work?.title)).toLowerCase();
+              if(key&&!workMap.has(key))workMap.set(key,{...work,__pvos_issn:issn});
+            }
+          }catch(e:any){
+            issnReports.push({issn,status:"error",error:e?.message||"Source retrieval failed."});
+          }
+        }
+
+        if(!anySuccess)throw new Error("No configured ISSN returned a Crossref response.");
+
+        const works=[...workMap.values()];
         let matched=0;
 
-        for(const work of crossref.items){
+        for(const work of works){
           const title=cleanText(Array.isArray(work?.title)?work.title[0]:work?.title);
           if(!title)continue;
           const abstract=cleanText(work?.abstract);
@@ -155,7 +179,7 @@ export async function POST(req:NextRequest){
                 source_platform:"LWW",
                 source_name:source.name,
                 source_url:source.url,
-                source_issn:issn,
+                source_issn:work.__pvos_issn||issns[0],
                 source_retrieved_at:retrievedAt,
                 retrieval_route:"Crossref ISSN",
                 direct_source_monitoring:false,
@@ -198,10 +222,11 @@ export async function POST(req:NextRequest){
           name:source.name,
           status:"ok",
           route:"Crossref ISSN",
-          issn,
-          retrieved:crossref.items.length,
-          total_results:crossref.total,
-          truncated:crossref.truncated,
+          issns_attempted:issns,
+          issn_reports:issnReports,
+          retrieved:works.length,
+          total_results:totalResults,
+          truncated:anyTruncated,
           matched
         });
       }catch(e:any){
@@ -209,7 +234,7 @@ export async function POST(req:NextRequest){
           source_id:source.id,
           name:source.name,
           status:"error",
-          issn,
+          issns_attempted:issns,
           error:e?.message||"Source retrieval failed."
         });
       }
