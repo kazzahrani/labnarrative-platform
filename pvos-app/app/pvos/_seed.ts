@@ -146,14 +146,26 @@ export async function ensureDemoWorkspace(supabase:SupabaseClient, organizationI
   ],{onConflict:"route_id,position",ignoreDuplicates:true});
   if (stepsError) throw stepsError;
 
-  await upsertAndFetch(
-    supabase,"pvos_task_approvals",
-    [
-      { task_id:task["demo-rmp-review"],route_id:route.id,seed_key:"demo-rmp-step-1",step_position:1,assigned_user_id:userId,status:"approved",completed_at:new Date(Date.now()-86400000).toISOString() },
-      { task_id:task["demo-rmp-review"],route_id:route.id,seed_key:"demo-rmp-step-2",step_position:2,status:"in_review" },
-      { task_id:task["demo-rmp-review"],route_id:route.id,seed_key:"demo-rmp-step-3",step_position:3,status:"pending" },
-    ],
-    "task_id,seed_key","seed_key",
-    ["demo-rmp-step-1","demo-rmp-step-2","demo-rmp-step-3"]
-  );
+  // Read before seeding: returning users must never rewrite their approval decisions.
+  // New demo accounts start with real pending steps, not a fabricated past approval.
+  const rmpTaskId=task["demo-rmp-review"];
+  const approvalSeeds=[
+    {task_id:rmpTaskId,route_id:route.id,seed_key:"demo-rmp-step-1",step_position:1,assigned_user_id:userId,status:"pending"},
+    {task_id:rmpTaskId,route_id:route.id,seed_key:"demo-rmp-step-2",step_position:2,status:"pending"},
+    {task_id:rmpTaskId,route_id:route.id,seed_key:"demo-rmp-step-3",step_position:3,status:"pending"}
+  ];
+  const {data:existing,error:approvalReadError}=await supabase.from("pvos_task_approvals").select("seed_key,status")
+    .eq("task_id",rmpTaskId).in("seed_key",approvalSeeds.map(a=>a.seed_key));
+  if(approvalReadError)throw approvalReadError;
+  const seen=new Set((existing??[]).map(a=>a.seed_key));
+  const missing=approvalSeeds.filter(a=>!seen.has(a.seed_key));
+  if(missing.length){
+    const {error:approvalInsertError}=await supabase.from("pvos_task_approvals").upsert(missing,{onConflict:"task_id,seed_key",ignoreDuplicates:true});
+    if(approvalInsertError)throw approvalInsertError;
+  }
+  const rmpTask=seededTasks.find((t:any)=>t.id===rmpTaskId);
+  if(rmpTask?.status==="awaiting_review"&&missing.length&&!(existing??[]).length){
+    const {error:sendError}=await supabase.rpc("pvos_send_task_for_approval",{p_task_id:rmpTaskId});
+    if(sendError)throw sendError;
+  }
 }
