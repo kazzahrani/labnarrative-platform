@@ -70,6 +70,104 @@ export async function fetchOpenAlexAbstract(doi?:string|null){
   }:null;
 }
 
+
+async function fetchSemanticScholarAbstract(doi?:string|null,pmid?:string|null){
+  const id=doi?"DOI:"+doi:pmid?"PMID:"+pmid:"";
+  if(!id)return null;
+  const data=await fetchJson(
+    "https://api.semanticscholar.org/graph/v1/paper/"+encodeURIComponent(id)+"?fields=title,abstract,url,openAccessPdf",
+    {"Accept":"application/json"}
+  );
+  const abstract=String(data?.abstract||"").trim();
+  return abstract?{
+    text:cleanMarkup(abstract),
+    source:"Semantic Scholar",
+    sourceUrl:String(data?.url||data?.openAccessPdf?.url||"")
+  }:null;
+}
+
+function decodeHtmlEntities(v:string){
+  return v
+    .replace(/&nbsp;/gi," ")
+    .replace(/&amp;/gi,"&")
+    .replace(/&quot;/gi,'"')
+    .replace(/&#39;|&apos;/gi,"'")
+    .replace(/&lt;/gi,"<")
+    .replace(/&gt;/gi,">")
+    .replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCharCode(parseInt(n,16)));
+}
+
+function metaContent(html:string,names:string[]){
+  const wanted=new Set(names.map(x=>x.toLowerCase()));
+  for(const m of html.matchAll(/<meta\b[^>]*>/gi)){
+    const tag=m[0];
+    const key=tag.match(/(?:name|property)=["']([^"']+)["']/i)?.[1]?.toLowerCase();
+    if(!key||!wanted.has(key))continue;
+    const value=tag.match(/content=["']([\s\S]*?)["']/i)?.[1];
+    if(value&&value.trim())return cleanMarkup(decodeHtmlEntities(value));
+  }
+  return "";
+}
+
+function jsonLdDescription(html:string){
+  for(const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)){
+    try{
+      const parsed=JSON.parse(decodeHtmlEntities(m[1]));
+      const stack=Array.isArray(parsed)?parsed:[parsed];
+      for(const item of stack){
+        const value=item?.abstract||item?.description;
+        if(typeof value==="string"&&value.trim())return cleanMarkup(value);
+        if(Array.isArray(item?.["@graph"])){
+          for(const node of item["@graph"]){
+            const v=node?.abstract||node?.description;
+            if(typeof v==="string"&&v.trim())return cleanMarkup(v);
+          }
+        }
+      }
+    }catch{}
+  }
+  return "";
+}
+
+export async function fetchPublisherMetadataText(doi?:string|null){
+  if(!doi)return null;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const res=await fetch("https://doi.org/"+doi,{
+      redirect:"follow",
+      signal:controller.signal,
+      cache:"no-store",
+      headers:{
+        "User-Agent":"PVOS literature screening prototype",
+        "Accept":"text/html,application/xhtml+xml"
+      }
+    });
+    if(!res.ok)return null;
+    const contentType=res.headers.get("content-type")||"";
+    if(!contentType.includes("text/html")&&!contentType.includes("application/xhtml+xml"))return null;
+    const html=(await res.text()).slice(0,1500000);
+
+    let text=metaContent(html,[
+      "citation_abstract","dc.description","dcterms.abstract",
+      "description","og:description","twitter:description"
+    ]);
+    if(!text)text=jsonLdDescription(html);
+
+    if(text.length<120)return null;
+    return {
+      text,
+      source:"Publisher metadata",
+      sourceUrl:res.url||"https://doi.org/"+doi
+    };
+  }catch{
+    return null;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchFallbackArticleText(pmid:string,doi?:string|null){
   const europe=await fetchEuropePmcAbstract(pmid);
   if(europe)return europe;
@@ -79,6 +177,12 @@ export async function fetchFallbackArticleText(pmid:string,doi?:string|null){
 
   const openAlex=await fetchOpenAlexAbstract(doi);
   if(openAlex)return openAlex;
+
+  const semantic=await fetchSemanticScholarAbstract(doi,pmid);
+  if(semantic)return semantic;
+
+  const publisher=await fetchPublisherMetadataText(doi);
+  if(publisher)return publisher;
 
   return null;
 }
