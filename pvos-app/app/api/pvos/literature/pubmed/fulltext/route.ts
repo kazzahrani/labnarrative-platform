@@ -113,7 +113,7 @@ export async function POST(req:NextRequest){
               assessment_state:"full_text_required",
               full_text_lookup_status:"no_open_text_found",
               full_text_lookup_at:lookupAt,
-              full_text_lookup_source:"PMC / Europe PMC / Crossref / OpenAlex"
+              full_text_lookup_source:"PMC / Europe PMC / Crossref / OpenAlex / Semantic Scholar / Publisher metadata"
             }
           });
         }
@@ -168,7 +168,7 @@ export async function POST(req:NextRequest){
               assessment_state:"full_text_required",
               full_text_lookup_status:"no_open_text_found",
               full_text_lookup_at:lookupAt,
-              full_text_lookup_source:"PMC / Europe PMC / Crossref / OpenAlex"
+              full_text_lookup_source:"PMC / Europe PMC / Crossref / OpenAlex / Semantic Scholar / Publisher metadata"
             }
           });
         }
@@ -243,7 +243,7 @@ export async function POST(req:NextRequest){
       requested:items.length,
       retrieved,
       unavailable,
-      lookup_sources:["PubMed Central","Europe PMC","Crossref","OpenAlex"]
+      lookup_sources:["PubMed Central","Europe PMC","Crossref","OpenAlex","Semantic Scholar","Publisher metadata"]
     });
   }catch(e:any){
     return NextResponse.json({error:e?.message??"Full-text retrieval failed."},{status:500});
