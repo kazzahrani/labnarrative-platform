@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Header } from "../_components";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
@@ -130,6 +130,7 @@ export default function LiteraturePage(){
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
   const [selectedRun,setSelectedRun]=useState<any|null>(null);
+  const inspectionLinkOpened=useRef(false);
   const [selectedSecondReviewId,setSelectedSecondReviewId]=useState<string|null>(null);
   const [rapidOpen,setRapidOpen]=useState(false);
   const [rapidItemId,setRapidItemId]=useState<string|null>(null);
@@ -205,6 +206,17 @@ export default function LiteraturePage(){
   }
 
   useEffect(()=>{load()},[organizationId]);
+
+  useEffect(()=>{
+    if(loading||inspectionLinkOpened.current)return;
+    const id=new URLSearchParams(window.location.search).get("inspectionRun");
+    if(!id)return;
+    inspectionLinkOpened.current=true;
+    const run=runs.find(r=>r.id===id);
+    setTab("runs");
+    if(run)setSelectedRun(run);
+    else setMessage("The linked screening run is not available in this workspace.");
+  },[loading,runs]);
 
   const companyMap=useMemo(()=>Object.fromEntries(companies.map(x=>[x.id,x.name])),[companies]);
   const productMap=useMemo(()=>Object.fromEntries(products.map(x=>[x.id,x])),[products]);
