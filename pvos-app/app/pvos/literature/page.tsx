@@ -371,7 +371,8 @@ export default function LiteraturePage(){
     if(runForm.end<runForm.start){setMessage("Period end must be on or after the start date.");return;}
     const companyProducts=products.filter(x=>x.company_id===runForm.companyId);
     if(!companyProducts.length){setMessage("This company has no products to screen.");return;}
-    const lwwSources=sources.filter(x=>x.active&&x.metadata?.connector==="lww_crossref");
+    const crossrefSources=sources.filter(x=>x.active&&["lww_crossref","crossref_journal"].includes(x.metadata?.connector));
+    const lwwSources=crossrefSources.filter(x=>x.metadata?.platform==="lww");
     const openWebSources=sources.filter(x=>x.active&&x.metadata?.connector==="open_web_snapshot");
 
     setBusy(true);setMessage("");
@@ -397,14 +398,15 @@ export default function LiteraturePage(){
         period_end:runForm.end,
         status:"running",
         started_by:session.user.id,
-        source_count:1+lwwSources.length+openWebSources.length,
+        source_count:1+crossrefSources.length+openWebSources.length,
         product_count:companyProducts.length,
         metadata:{
           v0:true,
           scope:"all_company_products",
           connectors:[
             "pubmed",
-            ...(lwwSources.length?["lww_crossref","lww_direct"]:[]),
+            ...(crossrefSources.length?["crossref_journal"]:[]),
+            ...(lwwSources.length?["lww_direct"]:[]),
             ...(openWebSources.length?["open_web_snapshot"]:[])
           ]
         }
@@ -434,7 +436,7 @@ export default function LiteraturePage(){
       let lwwDirect:any={items:[],reports:[],sources_checked:0,results:0,skipped:false};
       let lwwError:string|null=null;
       let lwwDirectError:string|null=null;
-      if(lwwSources.length){
+      if(crossrefSources.length){
         try{
           const lwwResponse=await authorizedFetch("/api/pvos/literature/lww",{
             method:"POST",
@@ -443,7 +445,7 @@ export default function LiteraturePage(){
               periodStart:runForm.start,
               periodEnd:runForm.end,
               products:productPayload,
-              sources:lwwSources.map(s=>({
+              sources:crossrefSources.map(s=>({
                 id:s.id,
                 name:s.name,
                 url:s.url,
@@ -452,12 +454,14 @@ export default function LiteraturePage(){
             })
           });
           lwwResult=await lwwResponse.json();
-          if(!lwwResponse.ok)throw new Error(lwwResult?.error||"Saudi journal screening failed.");
+          if(!lwwResponse.ok)throw new Error(lwwResult?.error||"Saudi journal metadata screening failed.");
         }catch(e:any){
-          lwwError=e?.message||"Saudi journal screening failed.";
-          lwwResult={items:[],reports:[],sources_checked:lwwSources.length,results:0};
+          lwwError=e?.message||"Saudi journal metadata screening failed.";
+          lwwResult={items:[],reports:[],sources_checked:crossrefSources.length,results:0};
         }
+      }
 
+      if(lwwSources.length){
         try{
           const directResponse=await authorizedFetch("/api/pvos/literature/lww-direct",{
             method:"POST",
@@ -521,7 +525,7 @@ export default function LiteraturePage(){
       }
 
       const failedJournalReports=(lwwResult.reports||[]).filter((r:any)=>r.status!=="ok"||r.truncated);
-      const journalWarning=lwwError||(failedJournalReports.length?failedJournalReports.length+" of "+lwwSources.length+" Saudi journal checks failed or were incomplete.":null);
+      const journalWarning=lwwError||(failedJournalReports.length?failedJournalReports.length+" of "+crossrefSources.length+" Saudi metadata checks failed or were incomplete.":null);
       const failedOpenReports=(openWebResult.reports||[]).filter((r:any)=>r.status!=="ok");
       const openWarning=openWebError||(failedOpenReports.length?failedOpenReports.length+" of "+openWebSources.length+" open Saudi journal checks failed.":null);
 
@@ -532,19 +536,19 @@ export default function LiteraturePage(){
         source_id:source.id,
         company_id:runForm.companyId
       }));
-      const lwwSourceMap=Object.fromEntries(lwwSources.map(s=>[s.name,s.id]));
+      const crossrefSourceMap=Object.fromEntries(crossrefSources.map(s=>[s.name,s.id]));
       const saudiPayload=(lwwResult.items||[]).map((x:any)=>({
         ...x,
         organization_id:organizationId,
         run_id:run.id,
-        source_id:lwwSourceMap[x.metadata?.source_name]||null,
+        source_id:crossrefSourceMap[x.metadata?.source_name]||null,
         company_id:runForm.companyId
       })).filter((x:any)=>!!x.source_id);
       const directSaudiPayload=(lwwDirect.items||[]).map((x:any)=>({
         ...x,
         organization_id:organizationId,
         run_id:run.id,
-        source_id:lwwSourceMap[x.metadata?.source_name]||null,
+        source_id:crossrefSourceMap[x.metadata?.source_name]||null,
         company_id:runForm.companyId
       })).filter((x:any)=>!!x.source_id);
       const openSourceMap=Object.fromEntries(openWebSources.map(s=>[s.id,s]));
@@ -612,9 +616,10 @@ export default function LiteraturePage(){
           last_checked_at:now,
           next_due_at:nextDue("weekly")
         }).eq("id",source.id),
-        ...lwwSources.map(s=>{
+        ...crossrefSources.map(s=>{
           const report=(lwwResult.reports||[]).find((r:any)=>r.source_id===s.id);
-          const directReport=(lwwDirect.reports||[]).find((r:any)=>r.source_id===s.id);
+          const isLww=s.metadata?.platform==="lww";
+          const directReport=isLww?(lwwDirect.reports||[]).find((r:any)=>r.source_id===s.id):null;
           const fallbackComplete=!lwwError&&report?.status==="ok"&&!report?.truncated;
           const directComplete=directReport?.status==="ok"&&directReport?.direct===true;
           return pvosSupabase.from("pvos_literature_sources").update({
@@ -623,14 +628,16 @@ export default function LiteraturePage(){
               ...(s.metadata||{}),
               last_connector_check_at:now,
               last_connector_report:report||null,
-              last_direct_check_at:now,
-              last_direct_report:directReport||null,
-              connector_status:fallbackComplete?"active":"error",
-              direct_monitoring_status:lwwDirect?.skipped
-                ?"historical_not_applicable"
-                :directComplete
-                  ?"active"
-                  :(directReport?.status||(lwwDirectError?"error":"unknown"))
+              ...(isLww?{
+                last_direct_check_at:now,
+                last_direct_report:directReport||null,
+                direct_monitoring_status:lwwDirect?.skipped
+                  ?"historical_not_applicable"
+                  :directComplete
+                    ?"active"
+                    :(directReport?.status||(lwwDirectError?"error":"unknown"))
+              }:{}),
+              connector_status:fallbackComplete?"active":"error"
             }
           }).eq("id",s.id);
         }),
@@ -662,7 +669,8 @@ export default function LiteraturePage(){
             scope:"all_company_products",
             connectors:[
               "pubmed",
-              ...(lwwSources.length?["lww_crossref","lww_direct"]:[]),
+              ...(crossrefSources.length?["crossref_journal"]:[]),
+              ...(lwwSources.length?["lww_direct"]:[]),
               ...(openWebSources.length?["open_web_snapshot"]:[])
             ],
             pubmed_results:pubmedPayload.length,
@@ -694,7 +702,7 @@ export default function LiteraturePage(){
       setMessage(
         "Screening run created: "+payload.length+" unique article-product results · "+
         pubmedPayload.length+" from PubMed"+
-        (lwwSources.length?" · "+saudiPayload.length+" Saudi product matches from metadata":"")+
+        (crossrefSources.length?" · "+saudiPayload.length+" Saudi product matches from "+crossrefSources.length+" metadata-monitored journals":"")+
         (lwwDirect?.skipped?" · direct LWW check skipped for historical period":lwwSources.length?" · "+Number(lwwDirect.direct_sources_ok||0)+"/"+lwwSources.length+" direct LWW sources reachable":"")+
         (journalWarning?" · WARNING — "+journalWarning:"")+
         (lwwDirectError?" · Direct LWW warning: "+lwwDirectError:"")+
