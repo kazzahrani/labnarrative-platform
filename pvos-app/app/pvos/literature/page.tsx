@@ -1401,6 +1401,11 @@ export default function LiteraturePage(){
                 <div className={styles.muted} style={{marginTop:4}}>
                   {s.metadata?.direct_monitoring_status==="active"?"Current-issue feed + Crossref":s.metadata?.direct_monitoring_status==="blocked"?"Direct feed blocked · Crossref fallback":s.metadata?.direct_monitoring_status==="historical_not_applicable"?"Crossref backfill · direct monitoring runs on recent periods":"Crossref ISSN monitoring"}
                 </div>
+              </div>:s.metadata?.connector==="open_web_snapshot"?<div>
+                <Badge>Direct journal monitor</Badge>
+                <div className={styles.muted} style={{marginTop:4}}>
+                  {s.metadata?.snapshot_initialized?"Snapshot tracking active":"Baseline pending"}
+                </div>
               </div>:s.metadata?.connector_status==="planned"?<Badge>Planned</Badge>:<Badge>{s.method==="manual"?"Manual / pending automation":s.method.toUpperCase()}</Badge>}</td>
               <td>{dateLabel(s.last_checked_at)}</td>
               <td>{dateLabel(s.next_due_at)}</td>
