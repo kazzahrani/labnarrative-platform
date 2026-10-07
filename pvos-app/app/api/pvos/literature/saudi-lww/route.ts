@@ -224,8 +224,8 @@ export async function POST(req:NextRequest){
               relevance:analysis.relevance,
               ai_reason:analysis.reason,
               metadata:{
-                connector:"lww_crossref",
-                source_platform:"LWW",
+                connector:String(source.metadata?.connector||"crossref_journal"),
+                source_platform:String(source.metadata?.platform||"crossref"),
                 source_name:source.name,
                 source_url:source.url,
                 source_issn:work.__pvos_issn||issns[0],
@@ -301,7 +301,7 @@ export async function POST(req:NextRequest){
     }
 
     return NextResponse.json({
-      connector:"lww_crossref",
+      connector:"crossref_journal",
       sources_checked:sources.length,
       results:deduped.length,
       items:deduped,
