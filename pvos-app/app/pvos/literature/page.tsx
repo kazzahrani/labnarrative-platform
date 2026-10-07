@@ -550,7 +550,11 @@ export default function LiteraturePage(){
               last_direct_check_at:now,
               last_direct_report:directReport||null,
               connector_status:fallbackComplete?"active":"error",
-              direct_monitoring_status:lwwDirect?.skipped?"historical_not_applicable":directComplete?"active":directReport?.status||lwwDirectError?"unavailable":"unknown"
+              direct_monitoring_status:lwwDirect?.skipped
+                ?"historical_not_applicable"
+                :directComplete
+                  ?"active"
+                  :(directReport?.status||(lwwDirectError?"error":"unknown"))
             }
           }).eq("id",s.id);
         })
