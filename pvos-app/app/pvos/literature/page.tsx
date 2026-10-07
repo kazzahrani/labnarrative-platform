@@ -6,7 +6,7 @@ import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import styles from "../pvos.module.css";
 
-type Tab="sources"|"queue"|"runs"|"psur";
+type Tab="sources"|"queue"|"runs"|"alerts"|"psur";
 type ReviewStatus="unreviewed"|"relevant"|"not_relevant"|"needs_review";
 
 const today=()=>new Date().toISOString().slice(0,10);
@@ -123,6 +123,8 @@ export default function LiteraturePage(){
   const [records,setRecords]=useState<any[]>([]);
   const [secondReviews,setSecondReviews]=useState<any[]>([]);
   const [members,setMembers]=useState<any[]>([]);
+  const [alerts,setAlerts]=useState<any[]>([]);
+  const [automationSetting,setAutomationSetting]=useState<any|null>(null);
   const [loading,setLoading]=useState(true);
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
@@ -152,7 +154,7 @@ export default function LiteraturePage(){
   async function load(){
     if(!organizationId)return;
     setLoading(true);
-    const [s,r,i,c,f,rec,sr,mem]=await Promise.all([
+    const [s,r,i,c,f,rec,sr,mem,al,auto]=await Promise.all([
       pvosSupabase.from("pvos_literature_sources").select("*").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_literature_runs").select("*").eq("organization_id",organizationId).order("period_end",{ascending:false}),
       pvosSupabase.from("pvos_literature_items").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
@@ -160,7 +162,9 @@ export default function LiteraturePage(){
       pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
       pvosSupabase.from("pvos_literature_screening_records").select("*").eq("organization_id",organizationId).order("completed_at",{ascending:false}),
       pvosSupabase.from("pvos_literature_second_reviews").select("*").eq("organization_id",organizationId).order("assigned_at",{ascending:false}),
-      pvosSupabase.rpc("pvos_member_directory",{p_organization_id:organizationId})
+      pvosSupabase.rpc("pvos_member_directory",{p_organization_id:organizationId}),
+      pvosSupabase.from("pvos_literature_alerts").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
+      pvosSupabase.from("pvos_literature_automation_settings").select("*").eq("organization_id",organizationId).maybeSingle()
     ]);
     const cs=c.data||[];
     let ps:any[]=[];
@@ -177,6 +181,8 @@ export default function LiteraturePage(){
     setRecords(rec.data||[]);
     setSecondReviews(sr.data||[]);
     setMembers(mem.data||[]);
+    setAlerts(al.data||[]);
+    setAutomationSetting(auto.data||null);
     setRunForm(v=>({...v,companyId:v.companyId||cs[0]?.id||""}));
     setLoading(false);
   }
@@ -187,7 +193,11 @@ export default function LiteraturePage(){
   const productMap=useMemo(()=>Object.fromEntries(products.map(x=>[x.id,x])),[products]);
   const sourceMap=useMemo(()=>Object.fromEntries(sources.map(x=>[x.id,x])),[sources]);
   const memberMap=useMemo(()=>Object.fromEntries(members.map(x=>[x.user_id,x])),[members]);
+  const literatureItemMap=useMemo(()=>Object.fromEntries(items.map(x=>[x.id,x])),[items]);
   const secondReviewMap=useMemo(()=>Object.fromEntries(secondReviews.map(x=>[x.run_id,x])),[secondReviews]);
+  const openAlerts=alerts.filter(x=>x.status==="open");
+  const automationResult=automationSetting?.last_result||{};
+  const automationFailures=Array.isArray(automationResult?.failures)?automationResult.failures:[];
   const activeSources=sources.filter(x=>x.active);
   const saudiSources=sources.filter(x=>x.metadata?.source_group==="Saudi journals 2025");
   const liveSaudiSources=saudiSources.filter(x=>x.active);
@@ -363,6 +373,33 @@ export default function LiteraturePage(){
     if(error){setMessage(error.message);return;}
     setSourceForm({name:"",url:"",language:"English",frequency:"weekly",notes:""});
     setShowSource(false);setMessage("Literature source added.");await load();
+  }
+
+  async function updateLiteratureAlert(alert:any,status:"acknowledged"|"dismissed"){
+    if(!session)return;
+    setBusy(true);setMessage("");
+    try{
+      const patch=status==="acknowledged"
+        ?{status,acknowledged_by:session.user.id,acknowledged_at:new Date().toISOString()}
+        :{status,acknowledged_by:null,acknowledged_at:null};
+      const {error}=await pvosSupabase.from("pvos_literature_alerts").update(patch).eq("id",alert.id);
+      if(error)throw error;
+      await load();
+    }catch(e:any){
+      setMessage(e?.message||"Could not update literature alert.");
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  function openAlertInQueue(alert:any){
+    const item=literatureItemMap[alert.literature_item_id];
+    if(item){
+      setRunFilter(item.run_id||"");
+      setProductFilter(item.product_id||"");
+      setQueueFilter("all");
+    }
+    setTab("queue");
   }
 
   async function createRun(e:FormEvent){
@@ -1373,6 +1410,21 @@ export default function LiteraturePage(){
       <div className={[styles.card,saudiAlerts.length?styles.danger:""].join(" ")}><span>Saudi alerts</span><strong>{saudiAlerts.length}</strong></div>
     </section>
 
+    {automationSetting?<div className={automationSetting.last_status==="error"?styles.errorBox:styles.successBox} style={{marginBottom:14,display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+      <div>
+        <strong>Automatic literature monitoring</strong>
+        <span style={{marginLeft:8}}>Every {automationSetting.cadence_hours}h</span>
+        <span style={{marginLeft:8}}>· Last check {dateTimeLabel(automationSetting.last_run_at)}</span>
+        <span style={{marginLeft:8}}>· Next check {dateTimeLabel(automationSetting.next_due_at)}</span>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <Badge tone={automationSetting.last_status==="error"?"red":automationSetting.last_status==="partial"?"amber":"green"}>{String(automationSetting.last_status||"never").replace("_"," ")}</Badge>
+        <span>{Number(automationResult?.new_items||0)} new</span>
+        <span>{Number(automationResult?.alerts||0)} alerts</span>
+        {automationFailures.length?<span>{automationFailures.length} source issue{automationFailures.length===1?"":"s"}</span>:null}
+      </div>
+    </div>:null}
+
     {message?<div className={message.includes("added")||message.includes("created")||message.includes("complete")||message.includes("returned")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
 
     <section className={styles.panel}>
@@ -1380,6 +1432,7 @@ export default function LiteraturePage(){
         <button className={tab==="sources"?styles.button:styles.buttonGhost} onClick={()=>setTab("sources")}>Sources</button>
         <button className={tab==="queue"?styles.button:styles.buttonGhost} onClick={()=>setTab("queue")}>Screening Queue {openItems.length?"("+openItems.length+")":""}</button>
         <button className={tab==="runs"?styles.button:styles.buttonGhost} onClick={()=>setTab("runs")}>Screening Runs</button>
+        <button className={tab==="alerts"?styles.button:styles.buttonGhost} onClick={()=>setTab("alerts")}>Alerts {openAlerts.length?"("+openAlerts.length+")":""}</button>
         <button className={tab==="psur"?styles.button:styles.buttonGhost} onClick={()=>setTab("psur")}>PSUR Evidence {psurEvidence.length?"("+psurEvidence.length+")":""}</button>
       </div>
 
@@ -1424,6 +1477,40 @@ export default function LiteraturePage(){
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No literature sources yet. Add the journals or databases your QPPV team is required to screen.</div>}
+      </>:null}
+
+      {tab==="alerts"?<>
+        <div className={styles.panelHeader} style={{marginTop:12}}>
+          <div>
+            <h2>Literature alerts</h2>
+            <div className={styles.muted} style={{marginTop:4}}>Review-required notifications from automatic monitoring · {openAlerts.length} open</div>
+          </div>
+        </div>
+        {alerts.length?<div className={styles.tableWrap}><table className={styles.table}>
+          <thead><tr><th>Severity</th><th>Article</th><th>Product</th><th>Company</th><th>Type</th><th>Detected</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>{alerts.map(a=>{
+            const item=literatureItemMap[a.literature_item_id];
+            const product=productMap[a.product_id||item?.product_id];
+            const typeLabel=a.alert_type==="saudi_case_context"?"Saudi case / context":a.alert_type==="saudi_journal_match"?"Saudi journal match":"Priority literature";
+            return <tr key={a.id}>
+              <td><Badge tone={a.severity==="critical"?"red":a.severity==="high"?"amber":"default"}>{a.severity}</Badge></td>
+              <td style={{minWidth:300}}><strong>{a.title}</strong>{a.reason?<div className={styles.muted} style={{marginTop:4}}>{a.reason}</div>:null}</td>
+              <td>{product?<><strong>{product.brand_name}</strong><div className={styles.muted}>{product.active_ingredient}</div></>:"—"}</td>
+              <td>{companyMap[a.company_id]||"—"}</td>
+              <td>{typeLabel}</td>
+              <td>{dateTimeLabel(a.created_at)}</td>
+              <td><Badge tone={a.status==="open"?"amber":"green"}>{a.status}</Badge></td>
+              <td><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <button className={styles.buttonGhost} onClick={()=>openAlertInQueue(a)}>Open in queue</button>
+                {item?.article_url?<a className={styles.buttonGhost} href={item.article_url} target="_blank" rel="noreferrer">Article ↗</a>:null}
+                {a.status==="open"?<>
+                  <button className={styles.button} disabled={busy} onClick={()=>updateLiteratureAlert(a,"acknowledged")}>Acknowledge</button>
+                  <button className={styles.buttonGhost} disabled={busy} onClick={()=>updateLiteratureAlert(a,"dismissed")}>Dismiss</button>
+                </>:null}
+              </div></td>
+            </tr>
+          })}</tbody>
+        </table></div>:<div className={styles.empty}>No literature alerts yet. Automatic monitoring will place review-required findings here.</div>}
       </>:null}
 
       {tab==="queue"?<>
