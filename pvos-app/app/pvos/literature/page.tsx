@@ -220,6 +220,7 @@ export default function LiteraturePage(){
   const openAlerts=alerts.filter(x=>x.status==="open");
   const automationResult=automationSetting?.last_result||{};
   const automationFailures=Array.isArray(automationResult?.failures)?automationResult.failures:[];
+  const automationCoverageGaps=Array.isArray(automationResult?.coverage_gaps)?automationResult.coverage_gaps:[];
   const activeSources=sources.filter(x=>x.active);
   const saudiSources=sources.filter(x=>x.metadata?.source_group==="Saudi journals 2025");
   const liveSaudiSources=saudiSources.filter(x=>x.active);
@@ -1439,6 +1440,7 @@ export default function LiteraturePage(){
         <span>{Number(automationResult?.new_items||0)} new</span>
         <span>{Number(automationResult?.alerts||0)} alerts</span>
         {automationFailures.length?<span>{automationFailures.length} source issue{automationFailures.length===1?"":"s"}</span>:null}
+        {automationCoverageGaps.length?<span title={automationCoverageGaps.map((x:any)=>x.source+": "+x.reason).join("\n")}>{automationCoverageGaps.length} coverage gap{automationCoverageGaps.length===1?"":"s"}</span>:null}
       </div>
     </div>:null}
 
@@ -1482,7 +1484,7 @@ export default function LiteraturePage(){
                 </div>
               </div>:s.metadata?.connector==="crossref_journal"?<div>
                 <Badge>Metadata monitor</Badge>
-                <div className={styles.muted} style={{marginTop:4}}>Crossref ISSN + rolling update watch</div>
+                <div className={styles.muted} style={{marginTop:4}}>{s.metadata?.direct_monitoring_status==="error"?"Direct page unavailable · Crossref fallback":"Crossref ISSN + rolling update watch"}</div>
               </div>:s.metadata?.connector==="open_web_snapshot"?<div>
                 <Badge>Direct journal monitor</Badge>
                 <div className={styles.muted} style={{marginTop:4}}>
@@ -1491,7 +1493,7 @@ export default function LiteraturePage(){
               </div>:s.metadata?.connector_status==="planned"?<Badge>Planned</Badge>:<Badge>{s.method==="manual"?"Manual / pending automation":s.method.toUpperCase()}</Badge>}</td>
               <td>{dateLabel(s.last_checked_at)}</td>
               <td>{dateLabel(s.next_due_at)}</td>
-              <td><Badge tone={!s.active?"default":s.metadata?.connector_status==="error"?"red":due?"amber":"green"}>{!s.active?"Planned":s.metadata?.connector_status==="error"?"Connection issue":due?"Due":"Active"}</Badge></td>
+              <td><Badge tone={!s.active?"default":s.metadata?.connector_status==="error"?"red":s.metadata?.coverage_limitation||due?"amber":"green"}>{!s.active?"Planned":s.metadata?.connector_status==="error"?"Connection issue":s.metadata?.coverage_limitation?"Limited coverage":due?"Due":"Active"}</Badge>{s.active&&s.metadata?.coverage_limitation?<div className={styles.muted} style={{marginTop:4,maxWidth:280}}>{String(s.metadata.coverage_limitation)}</div>:null}</td>
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No literature sources yet. Add the journals or databases your QPPV team is required to screen.</div>}

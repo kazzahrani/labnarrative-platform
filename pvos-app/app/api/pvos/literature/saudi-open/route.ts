@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, productTerms, type ProductInput } from "../_pubmed";
 import { refineRanking } from "../_rank";
+import { unusableJournalPage } from "../_sources";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL??"https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -236,7 +237,7 @@ export async function POST(req:NextRequest){
           http_status:landing.status,
           error:landing.error||null
         });
-        if(!landing.ok)continue;
+        if(!landing.ok||unusableJournalPage(landing.text))continue;
         if(!landingUrl)landingUrl=landing.url||scanUrl;
         const found=articleCandidates(landing.text,landing.url||scanUrl,platform,source.metadata||{});
         for(const x of found){
@@ -252,6 +253,10 @@ export async function POST(req:NextRequest){
       }
 
       const candidates=[...candidateMap.values()];
+      if(!candidates.length){
+        reports.push({source_id:source.id,name:source.name,status:"error",stage:"parsing",error:"No article links found; journal coverage could not be verified.",attempts});
+        continue;
+      }
       const details=await mapLimited(candidates,5,async candidate=>{
         const page=await fetchHtml(candidate.url);
         if(!page.ok)return {

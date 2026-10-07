@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, productTerms, type ProductInput } from "../_pubmed";
 import { refineRanking } from "../_rank";
+import { crossrefIssns, fetchCrossrefWorks } from "../_sources";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL??"https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -50,43 +51,6 @@ function bestDate(item:any){
     datePartsToIso(item?.created)||
     null;
 }
-function validIssn(v:any){
-  const s=String(v??"").trim();
-  return /^\d{4}-[\dXx]{4}$/.test(s)?s:null;
-}
-async function fetchCrossrefWorks(issn:string,start:string,end:string,mode:"publication"|"update"="publication"){
-  const rows=500;
-  let cursor="*";
-  const items:any[]=[];
-  let total=0;
-  for(let page=0;page<8;page++){
-    const url=new URL("https://api.crossref.org/v1/journals/"+encodeURIComponent(issn)+"/works");
-    const dateFilter=mode==="update"
-      ?"from-update-date:"+start+",until-update-date:"+end
-      :"from-pub-date:"+start+",until-pub-date:"+end;
-    url.searchParams.set("filter",dateFilter+",type:journal-article");
-    url.searchParams.set("rows",String(rows));
-    url.searchParams.set("cursor",cursor);
-    url.searchParams.set("mailto","support@pvos.site");
-    const res=await fetch(url.toString(),{
-      cache:"no-store",
-      headers:{
-        "Accept":"application/json",
-        "User-Agent":"PVOS literature monitoring/1.0 (https://pvos.site)"
-      }
-    });
-    if(!res.ok)throw new Error("Crossref request failed ("+res.status+").");
-    const data=await res.json();
-    const message=data?.message||{};
-    const pageItems=Array.isArray(message.items)?message.items:[];
-    total=Number(message["total-results"]||pageItems.length);
-    items.push(...pageItems);
-    const next=String(message["next-cursor"]||"");
-    if(!next||pageItems.length<rows||items.length>=total)break;
-    cursor=next;
-  }
-  return {items,total,truncated:items.length<total,mode};
-}
 function recentPeriod(end:string){
   const t=new Date(end+"T23:59:59Z").getTime();
   return Math.abs(Date.now()-t)<=45*86400000;
@@ -119,9 +83,7 @@ export async function POST(req:NextRequest){
     const retrievedAt=new Date().toISOString();
 
     for(const source of sources){
-      const onlineIssn=validIssn(source.metadata?.online_issn);
-      const printIssn=validIssn(source.metadata?.print_issn);
-      const issns=[...new Set([onlineIssn,printIssn].filter((x):x is string=>!!x))];
+      const issns=crossrefIssns(source.metadata);
       if(!issns.length){
         reports.push({source_id:source.id,name:source.name,status:"skipped",reason:"No valid ISSN"});
         continue;

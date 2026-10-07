@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {crossrefIssns,fetchCrossrefWorks,unusableJournalPage,readAllRows} from '../pvos-app/app/api/pvos/literature/_sources.ts';
+assert.deepEqual(crossrefIssns({online_issn:'1658-8592',print_issn:'1658-8312',crossref_issns:['1658-8312']}),['1658-8312']);
+assert.deepEqual(crossrefIssns({online_issn:'1658-8223',print_issn:'1658-645X'}),['1658-8223','1658-645X']);
+let calls=0;
+const records=Array.from({length:501},(_,i)=>({DOI:'10.1234/'+i}));
+const result=await fetchCrossrefWorks('1658-645X','2026-10-06','2026-10-07','update',async url=>{
+  const u=new URL(url);assert.ok(u.searchParams.get('filter').includes('from-update-date:2026-10-06'));
+  assert.equal(u.searchParams.get('cursor'),calls===0?'*':'page-2');
+  return Response.json({message:{items:calls++===0?records.slice(0,500):records.slice(500),'total-results':501,'next-cursor':'page-2'}});
+});
+assert.equal(result.items.length,501);assert.equal(result.truncated,false);assert.equal(calls,2);
+const incomplete=await fetchCrossrefWorks('1658-645X','2026-10-06','2026-10-07','update',async()=>Response.json({message:{items:[records[0]],'total-results':501}}));
+assert.equal(incomplete.truncated,true,'incomplete retrieval must remain visible');
+let notFoundCalls=0;
+await assert.rejects(()=>fetchCrossrefWorks('1658-8592','2026-10-06','2026-10-07','update',async()=>{notFoundCalls++;return new Response('',{status:404})}),/404/);
+assert.equal(notFoundCalls,1);
+assert.equal(unusableJournalPage('<title>Test Page for the Nginx HTTP Server on AlmaLinux</title>'),true);
+assert.equal(unusableJournalPage('<h1>Majmaah Journal of Health Sciences</h1><a href="?mno=123">An article</a>'),false);
+assert.equal(readFileSync('pvos-app/app/api/pvos/literature/_sources.ts','utf8'),readFileSync('supabase/functions/pvos-daily-literature/_sources.ts','utf8'));
+const history=Array.from({length:2317},(_,id)=>({id}));
+const all=await readAllRows(async (from,to)=>({data:history.slice(from,to+1),error:null}));
+assert.equal(all.length,2317,'deduplication must include records beyond the API row limit');
+await assert.rejects(()=>readAllRows(async()=>({data:null,error:new Error('query failed')})),/query failed/);
+console.log('Source monitoring: verified ISSNs, pagination, incomplete responses, HTTP errors, placeholder pages, and runtime parity passed.');
