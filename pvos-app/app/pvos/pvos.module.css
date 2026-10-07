@@ -136,3 +136,34 @@
 .root:not(.light) .rmpTable thead .rmpSticky{background:inherit!important}
 .root:not(.light) .rmpTable tbody tr:hover td{background:#151d24!important}
 
+.literatureNav{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.literatureReader{display:grid;grid-template-columns:minmax(260px,34%) minmax(0,1fr);align-items:start;border-top:1px solid #273039}
+.articleList{max-height:720px;overflow:auto;border-right:1px solid #273039}
+.articleRow,.articleSelected{display:flex;align-items:flex-start;gap:10px;padding:14px;border-bottom:1px solid #273039}
+.articleSelected{background:#1c252b;border-left:3px solid #acc96a;padding-left:11px}
+.articleRow button,.articleSelected button{border:0;background:none;color:inherit;text-align:left;cursor:pointer;padding:0;width:100%;font:inherit;line-height:1.45}
+.articleRow button:focus-visible,.articleSelected button:focus-visible{outline:2px solid #acc96a;outline-offset:4px}
+.articleRow small,.articleSelected small{display:block;margin-top:7px;color:#9caab4;font-size:12px}
+.readingPanel{padding:22px;min-width:0;overflow-wrap:anywhere}
+.readingPanel h3{font-size:19px;line-height:1.45;margin:12px 0}
+.articleText{font-size:14px;line-height:1.75;margin:18px 0;max-height:440px;overflow:auto}
+.reviewDecision{border:1px solid #303c46;border-radius:10px;padding:14px;margin-top:16px}
+.reviewDecision legend{padding:0 6px}
+.readerToolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:14px}
+.readerToolbar label{font-size:12px;display:grid;gap:5px}
+.screeningWorkspace{border:1px solid #303c46;background:#111920;border-radius:12px;margin-bottom:18px}
+.screeningStages{list-style:none;display:flex;gap:24px;flex-wrap:wrap;padding:0 16px;margin:0 0 16px;font-size:13px}
+.screeningNext{display:flex;gap:18px;justify-content:space-between;align-items:center;padding:0 16px 16px;flex-wrap:wrap}
+.screeningNext p{font-size:13px;line-height:1.6;max-width:680px}
+.screeningChoices{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;padding:16px}
+.screeningChoice{text-align:left;background:transparent;border:1px solid #303c46;border-radius:10px;padding:16px;cursor:pointer;color:inherit;font:inherit}
+.screeningChoice:hover{background:#1c252b}
+.screeningChoice span,.screeningChoice small{display:block;line-height:1.5}
+.screeningChoice small{margin-top:6px;color:#9caab4}
+.light .literatureReader,.light .articleList,.light .articleRow,.light .articleSelected{border-color:#dce3e7}
+.light .articleSelected{background:#f1f4f5;border-left-color:#91aa4d}
+.light .articleRow small,.light .articleSelected small,.light .screeningChoice small{color:#596a75}
+.light .reviewDecision,.light .screeningChoice{border-color:#dce3e7}
+.light .screeningWorkspace{background:#fff;border-color:#dce3e7}
+.light .screeningChoice:hover{background:#f1f4f5}
+@media(max-width:950px){.literatureReader{grid-template-columns:1fr}.articleList{max-height:300px;border-right:0;border-bottom:1px solid #303c46}.readingPanel{padding:16px}.screeningStages{gap:12px}}

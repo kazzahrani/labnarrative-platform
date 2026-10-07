@@ -6,6 +6,8 @@ import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import { PRIORITIZATION_VERSION } from "../../api/pvos/literature/_rank";
 import styles from "../pvos.module.css";
+import {ArticleReader} from "./_reader";
+import {ScreeningWorkspace} from "./_screening-workspace";
 
 type Tab="sources"|"queue"|"runs"|"second"|"alerts"|"psur";
 type ReviewStatus="unreviewed"|"relevant"|"not_relevant"|"needs_review";
@@ -114,7 +116,30 @@ function secondPassSuggestion(x:any):SecondPassDecision{
 
 export default function LiteraturePage(){
   const {organizationId,session}=usePVOS();
-  const [tab,setTab]=useState<Tab>("sources");
+  const [area,setArea]=useState<"review"|"records"|"monitoring">("review");
+  const [tab,setTabState]=useState<Tab>("queue");
+  function setTab(next:Tab){setTabState(next);setArea(next==="sources"?"monitoring":next==="psur"?"records":"review");}
+  const [articleId,setArticleId]=useState<string|null>(null),[readerSaving,setReaderSaving]=useState(false);
+  const [runView,setRunView]=useState<"active"|"complete">("active");
+  const [showReviewerAccess,setShowReviewerAccess]=useState(false);
+  const reviewerAccessRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(!showReviewerAccess)return;
+    const previous=document.activeElement as HTMLElement|null;
+    const dialog=reviewerAccessRef.current;
+    const controls=()=>Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')||[]);
+    controls()[0]?.focus();
+    const onKey=(event:KeyboardEvent)=>{
+      if(event.key==="Escape"){event.preventDefault();setShowReviewerAccess(false);}
+      if(event.key!=="Tab")return;
+      const xs=controls(),first=xs[0],last=xs[xs.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    };
+    dialog?.addEventListener("keydown",onKey);
+    return ()=>{dialog?.removeEventListener("keydown",onKey);previous?.focus();};
+  },[showReviewerAccess]);
+  const [secondView,setSecondView]=useState<"mine"|"team"|"history">("mine");
   const [sources,setSources]=useState<any[]>([]);
   const [runs,setRuns]=useState<any[]>([]);
   const [items,setItems]=useState<any[]>([]);
@@ -157,7 +182,7 @@ export default function LiteraturePage(){
   const [sourceForm,setSourceForm]=useState({name:"",url:"",language:"English",frequency:"weekly",notes:""});
   const [runForm,setRunForm]=useState({companyId:"",start:daysAgo(7),end:today()});
 
-  async function loadRows(table:"pvos_literature_items"|"pvos_literature_followups"){
+  async function loadRows(table:string){
     const rows:any[]=[];
     for(let offset=0;;offset+=1000){
       const result=await pvosSupabase.from(table).select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}).order("id").range(offset,offset+999);
@@ -171,15 +196,15 @@ export default function LiteraturePage(){
     if(!organizationId)return;
     setLoading(true);
     const [s,r,i,c,f,rec,sr,mem,al,auto]=await Promise.all([
-      pvosSupabase.from("pvos_literature_sources").select("*").eq("organization_id",organizationId).order("name"),
-      pvosSupabase.from("pvos_literature_runs").select("*").eq("organization_id",organizationId).order("period_end",{ascending:false}),
+      loadRows("pvos_literature_sources"),
+      loadRows("pvos_literature_runs"),
       loadRows("pvos_literature_items"),
       pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name"),
       loadRows("pvos_literature_followups"),
-      pvosSupabase.from("pvos_literature_screening_records").select("*").eq("organization_id",organizationId).order("completed_at",{ascending:false}),
-      pvosSupabase.from("pvos_literature_second_reviews").select("*").eq("organization_id",organizationId).order("assigned_at",{ascending:false}),
+      loadRows("pvos_literature_screening_records"),
+      loadRows("pvos_literature_second_reviews"),
       pvosSupabase.rpc("pvos_member_directory",{p_organization_id:organizationId}),
-      pvosSupabase.from("pvos_literature_alerts").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
+      loadRows("pvos_literature_alerts"),
       pvosSupabase.from("pvos_literature_automation_settings").select("*").eq("organization_id",organizationId).maybeSingle()
     ]);
     const loadError=[s,r,i,c,f,rec,sr,mem,al,auto].find(result=>result.error)?.error;
@@ -187,10 +212,9 @@ export default function LiteraturePage(){
     const cs=c.data||[];
     let ps:any[]=[];
     if(cs.length){
-      const {data}=await pvosSupabase.from("pvos_products").select("id,company_id,brand_name,active_ingredient").in("company_id",cs.map(x=>x.id)).order("brand_name");
-      ps=data||[];
+      for(let offset=0;;offset+=1000){const {data,error}=await pvosSupabase.from("pvos_products").select("id,company_id,brand_name,active_ingredient").in("company_id",cs.map(x=>x.id)).order("id").range(offset,offset+999);if(error){setMessage("Could not load product scope: "+error.message);setLoading(false);return;}ps.push(...(data||[]));if((data||[]).length<1000)break;}
     }
-    setSources(s.data||[]);
+    setSources((s.data||[]).sort((a:any,b:any)=>a.name.localeCompare(b.name)));
     setRuns(r.data||[]);
     setItems(i.data||[]);
     setCompanies(cs);
@@ -213,8 +237,7 @@ export default function LiteraturePage(){
     if(!id)return;
     inspectionLinkOpened.current=true;
     const run=runs.find(r=>r.id===id);
-    setTab("runs");
-    if(run)setSelectedRun(run);
+    if(run){setSelectedRun(run);setRunFilter(run.id);setArea("records");setTabState("runs");setRunView("complete");}
     else setMessage("The linked screening run is not available in this workspace.");
   },[loading,runs]);
 
@@ -284,6 +307,7 @@ export default function LiteraturePage(){
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
   const recordMap=useMemo(()=>Object.fromEntries(records.map(x=>[x.run_id,x])),[records]);
   const selectedQueueRun=useMemo(()=>runs.find(x=>x.id===runFilter)||null,[runs,runFilter]);
+  const workspaceRun=selectedRun?runMap[selectedRun.id]||selectedRun:selectedQueueRun;
   const queueSecondReview=selectedQueueRun?secondReviewMap[selectedQueueRun.id]:null;
   const queueLockedForSecondReview=!!queueSecondReview&&(queueSecondReview.status==="pending"||queueSecondReview.status==="approved");
 
@@ -371,6 +395,7 @@ export default function LiteraturePage(){
       total:xs.length,
       reviewed:reviewed.length,
       open:xs.filter(x=>x.review_status==="unreviewed"||x.review_status==="needs_review").length,
+      unreviewed:xs.filter(x=>x.review_status==="unreviewed").length,
       relevant:xs.filter(x=>x.review_status==="relevant").length,
       notRelevant:xs.filter(x=>x.review_status==="not_relevant").length,
       saudi:xs.filter(x=>x.metadata?.urgent_saudi).length,
@@ -438,22 +463,23 @@ export default function LiteraturePage(){
       setQueueFilter("all");
       setFocusedAlertItemId(item.id);
       setActiveAlertId(alert.id);
+      setArticleId(item.id);setBatchMode(false);setSelectedRun(null);
     }
     setTab("queue");
   }
 
   async function finishAlertReview(item:any){
-    setPendingRelevantId(null);
-    if(!activeAlertId||focusedAlertItemId!==item.id)return;
-    if(!session)return;
+    if(!activeAlertId||focusedAlertItemId!==item.id){setPendingRelevantId(null);return true;}
+    if(!session)return false;
     setBusy(true);
     try{
-      const {error}=await pvosSupabase.from("pvos_literature_alerts").update({
+      const {data,error}=await pvosSupabase.from("pvos_literature_alerts").update({
         status:"acknowledged",
         acknowledged_by:session.user.id,
         acknowledged_at:new Date().toISOString()
-      }).eq("id",activeAlertId);
-      if(error)throw error;
+      }).eq("id",activeAlertId).select("id").single();
+      if(error||!data)throw error||new Error("No acknowledged alert was returned. Retry before continuing.");
+      setPendingRelevantId(null);
       setFocusedAlertItemId(null);
       setActiveAlertId(null);
       setRunFilter("");
@@ -461,8 +487,10 @@ export default function LiteraturePage(){
       setQueueFilter("open");
       await load();
       setTab("alerts");
+      return true;
     }catch(e:any){
       setMessage(e?.message||"Could not complete alert review.");
+      return false;
     }finally{
       setBusy(false);
     }
@@ -880,48 +908,55 @@ export default function LiteraturePage(){
   }
 
   async function setReview(item:any,status:ReviewStatus){
-    if(!session)return;
-    if(item.review_status===status){if(status==="relevant")setPendingRelevantId(item.id);return;}
+    if(!session)return false;
+    if(item.review_status===status){if(status==="relevant")setPendingRelevantId(item.id);return true;}
     setBusy(true);
     const reviewedNow=status!=="unreviewed";
     const reviewedAt=reviewedNow?new Date().toISOString():null;
-    const {error}=await pvosSupabase.from("pvos_literature_items").update({
+    const {data,error}=await pvosSupabase.from("pvos_literature_items").update({
       review_status:status,
       reviewer_user_id:session.user.id,
       reviewed_at:reviewedAt
-    }).eq("id",item.id);
-    if(error){setBusy(false);setMessage(error.message);return;}
-    setItems(prev=>prev.map(x=>x.id===item.id?{
-      ...x,
-      review_status:status,
-      reviewer_user_id:session.user.id,
-      reviewed_at:reviewedAt
-    }:x));
+    }).eq("id",item.id).select("*").single();
+    if(error||!data){setBusy(false);setMessage(error?.message||"No saved decision was returned. Refresh before retrying.");return false;}
+    setItems(prev=>prev.map(x=>x.id===item.id?{...x,...data}:x));
 
     if(status==="relevant"){
       setPendingRelevantId(item.id);
       setBusy(false);
-      return;
+      return true;
     }
 
     if(pendingRelevantId===item.id)setPendingRelevantId(null);
 
-    if(status==="not_relevant"&&activeAlertId&&focusedAlertItemId===item.id){
-      const {error:alertError}=await pvosSupabase.from("pvos_literature_alerts").update({
-        status:"acknowledged",
-        acknowledged_by:session.user.id,
-        acknowledged_at:new Date().toISOString()
-      }).eq("id",activeAlertId);
-      if(alertError){setBusy(false);setMessage(alertError.message);return;}
-      setFocusedAlertItemId(null);
-      setActiveAlertId(null);
-      setRunFilter("");
-      setProductFilter("");
-      setQueueFilter("open");
-      await load();
-      setTab("alerts");
-    }
     setBusy(false);
+    return true;
+  }
+
+  async function saveReaderDecision(item:any,decision:"relevant"|"not_relevant"|"needs_review",psur:boolean,signal:boolean){
+    if(readerSaving)return false;setReaderSaving(true);setMessage("");
+    try{
+      const next=visibleItems.find(x=>x.id!==item.id&&(x.review_status==="unreviewed"||x.review_status==="needs_review")&&!['pending','approved'].includes(secondReviewMap[x.run_id]?.status));
+      if(!await setReview(item,decision))return false;
+      if(decision==="relevant"){
+        if(psur&&!hasFollowup(item.id,"psur_evidence")&&!await queueFollowup(item,"psur_evidence"))return false;
+        if(signal&&!hasFollowup(item.id,"signal_review")&&!await queueFollowup(item,"signal_review"))return false;
+      }
+      if(decision!=="needs_review"&&!await finishAlertReview(item))return false;
+      setArticleId(next?.id||null);
+      if(!next&&!activeAlertId)setMessage(decision==="needs_review"?"Decision saved. This article remains open until the missing information is resolved.":"Decision saved. Use the screening progress above for the next step.");
+      return true;
+    }catch(e:any){setBusy(false);setMessage(e?.message||"Could not save this article. Retry before continuing.");return false;}finally{setReaderSaving(false);}
+  }
+
+  async function saveBatchNotRelevant(){
+    if(!session||!runFilter||!batchSelected.length||busy)return;
+    if(!window.confirm("Record your Not relevant decision for "+batchSelected.length+" selected article-product records?"))return;
+    setBusy(true);setMessage("");
+    const reviewedAt=new Date().toISOString();
+    const {data,error}=await pvosSupabase.from("pvos_literature_items").update({review_status:"not_relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt}).eq("run_id",runFilter).in("id",batchSelected).in("review_status",["unreviewed","needs_review"]).select("id");
+    setBusy(false);if(error){setMessage(error.message);return;}
+    const ids=new Set((data||[]).map(x=>x.id));setItems(prev=>prev.map(x=>ids.has(x.id)?{...x,review_status:"not_relevant",reviewer_user_id:session.user.id,reviewed_at:reviewedAt}:x));setBatchSelected([]);setMessage(ids.size+" selected decisions saved as Not relevant.");
   }
 
   function startBatchReview(){
@@ -1228,6 +1263,7 @@ export default function LiteraturePage(){
   function openRunDecisions(run:any){
     setSelectedRun(null);
     setRunFilter(run.id);
+    setArticleId(null);setSelectedSecondReviewId(null);setSecondReviewerId("");setActiveAlertId(null);
     setProductFilter("");
     const hasOpen=runItems(run.id).some(x=>x.review_status==="unreviewed"||x.review_status==="needs_review");
     setQueueFilter(hasOpen?"open":"reviewed");
@@ -1237,6 +1273,11 @@ export default function LiteraturePage(){
     setBatchSelected([]);
     setBatchPinned([]);
     setTab("queue");
+  }
+
+  function openSecondReview(run:any){
+    const second=secondReviewMap[run.id];if(!second)return;
+    setSelectedRun(null);setRunFilter(run.id);setFocusedAlertItemId(null);setSelectedSecondReviewId(second.id);setSecondReviewNote(second.note||"");setTab("second");
   }
 
   function startRapidReview(){
@@ -1308,7 +1349,7 @@ export default function LiteraturePage(){
   }
 
   async function queueFollowup(item:any,destination:"signal_review"|"psur_evidence"){
-    if(!organizationId||!session)return;
+    if(!organizationId||!session)return false;
     setBusy(true);
     const {data,error}=await pvosSupabase.from("pvos_literature_followups").upsert({
       organization_id:organizationId,
@@ -1326,11 +1367,12 @@ export default function LiteraturePage(){
       }
     },{onConflict:"literature_item_id,destination"}).select("*").single();
     setBusy(false);
-    if(error){setMessage(error.message);return;}
+    if(error){setMessage(error.message);return false;}
     if(data)setFollowups(prev=>[
       data,
       ...prev.filter(x=>!(x.literature_item_id===item.id&&x.destination===destination))
     ]);
+    return true;
   }
 
   async function completeScreening(run:any){
@@ -1422,51 +1464,37 @@ export default function LiteraturePage(){
   },[rapidOpen,rapidItemId,busy,rapidSeen,productFilter,sortedItems]);
 
   return <>
-    <Header
-      eyebrow="Safety intelligence"
-      title="Literature"
-      sub="Register required literature sources, collect potential safety articles into one screening queue, record the QPPV decision, and preserve a traceable screening history."
-      action={<div className={styles.inlineActions} style={{marginTop:0}}>
-        <button className={styles.buttonGhost} onClick={()=>{setShowSource(true);setMessage("")}}>+ Add source</button>
-        <button className={styles.button} onClick={()=>{setShowRun(true);setMessage("")}} disabled={!companies.length}>+ New screening run</button>
-      </div>}
-    />
-
-    <section className={styles.cards}>
-      <div className={styles.card}><span>Active sources</span><strong>{activeSources.length}</strong></div>
-      <div className={styles.card}><span>Products in scope</span><strong>{products.length}</strong></div>
-      <div className={[styles.card,openItems.length?styles.warning:""].join(" ")}><span>Open articles</span><strong>{openItems.length}</strong></div>
-      <div className={[styles.card,priorityItems.length?styles.warning:""].join(" ")}><span>Priority review</span><strong>{priorityItems.length}</strong></div>
-      <div className={[styles.card,saudiAlerts.length?styles.danger:""].join(" ")}><span>Saudi alerts</span><strong>{saudiAlerts.length}</strong></div>
-    </section>
-
-    {automationSetting?<div className={automationSetting.last_status==="error"?styles.errorBox:styles.successBox} style={{marginBottom:14,display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-      <div>
-        <strong>Automatic literature monitoring</strong>
-        <span style={{marginLeft:8}}>Every {automationSetting.cadence_hours}h</span>
-        <span style={{marginLeft:8}}>· Last check {dateTimeLabel(automationSetting.last_run_at)}</span>
-        <span style={{marginLeft:8}}>· Next check {dateTimeLabel(automationSetting.next_due_at)}</span>
+    <Header eyebrow="Safety intelligence" title="Literature" sub="Review findings, record both reviewers and retain screening evidence." action={<div className={styles.inlineActions} style={{marginTop:0}}>
+      {area==="monitoring"?<button className={styles.buttonGhost} onClick={()=>{setShowSource(true);setMessage("")}}>Add source</button>:null}
+      <button className={styles.buttonGhost} onClick={()=>{setShowRun(true);setMessage("")}} disabled={!companies.length||busy||readerSaving}>New screening / historical search</button>
+    </div>}/>
+    <div className={styles.literatureNav} aria-label="Literature areas">
+      <button disabled={busy||readerSaving||loading} className={area==="review"?styles.button:styles.buttonGhost} aria-pressed={area==="review"} onClick={()=>{setTab("queue");setSelectedRun(null);setRunFilter("");setFocusedAlertItemId(null);setActiveAlertId(null);setBatchMode(false);setArticleId(null)}}>Review</button>
+      <button disabled={busy||readerSaving||loading} className={area==="records"?styles.button:styles.buttonGhost} aria-pressed={area==="records"} onClick={()=>{setArea("records");setTabState("runs");setRunView("complete");setSelectedRun(null);setRunFilter("");setFocusedAlertItemId(null)}}>Records</button>
+      <button disabled={busy||readerSaving||loading} className={area==="monitoring"?styles.button:styles.buttonGhost} aria-pressed={area==="monitoring"} onClick={()=>{setTab("sources");setSelectedRun(null)}}>Monitoring</button>
+    </div>
+    <p className={styles.muted}>{area==="review"?"Choose a screening, review its articles, then follow the next action shown above the queue.":area==="records"?"Completed screening records and PSUR evidence. Review history and export remain attached to each record.":"Sources, product coverage and automatic checks. Retrieval coverage is separate from QPPV screening completion."}</p>
+    {automationSetting?<div className={automationFailures.length||automationCoverageGaps.length||automationSetting.last_status==="error"?styles.notice:styles.info} style={{marginBottom:14}}>
+      <div className={styles.inlineActions} style={{marginTop:0}}>
+        <span>Monitoring · Every {automationSetting.cadence_hours}h · Last check {dateTimeLabel(automationSetting.last_run_at)}</span>
+        {automationFailures.length||automationCoverageGaps.length?<button disabled={busy||readerSaving||loading} className={styles.buttonGhost} onClick={()=>setTab("sources")}>{automationFailures.length} source issues · {automationCoverageGaps.length} coverage gaps</button>:null}
+        {area==="monitoring"?<span>Next check {dateTimeLabel(automationSetting.next_due_at)} · {Number(automationResult.new_items||0)} new · {Number(automationResult.alerts||0)} alerts</span>:null}
       </div>
-      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-        <Badge tone={automationSetting.last_status==="error"?"red":automationSetting.last_status==="partial"?"amber":"green"}>{String(automationSetting.last_status||"never").replace("_"," ")}</Badge>
-        <span>{Number(automationResult?.new_items||0)} new</span>
-        <span>{Number(automationResult?.alerts||0)} alerts</span>
-        {automationFailures.length?<span>{automationFailures.length} source issue{automationFailures.length===1?"":"s"}</span>:null}
-        {automationCoverageGaps.length?<span title={automationCoverageGaps.map((x:any)=>x.source+": "+x.reason).join("\n")}>{automationCoverageGaps.length} coverage gap{automationCoverageGaps.length===1?"":"s"}</span>:null}
-      </div>
+      {area==="monitoring"&&(automationFailures.length||automationCoverageGaps.length)?<details><summary>Source issues and coverage limitations</summary>{[...automationFailures,...automationCoverageGaps].map((x:any,i:number)=><p key={i}>{x.source||x.name||"Source"}: {x.reason||x.error||JSON.stringify(x)}</p>)}</details>:null}
     </div>:null}
-
-    {message?<div className={message.includes("added")||message.includes("created")||message.includes("complete")||message.includes("returned")||message.includes("approved")||message.includes("sent")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
-
+    {message?<div className={styles.notice} role="status" style={{marginBottom:14}}>{message}</div>:null}
+    {area==="review"?<div className={styles.inlineActions} style={{marginBottom:14,flexWrap:"wrap"}}>
+      <button disabled={busy||readerSaving||loading} className={tab==="queue"?styles.button:styles.buttonGhost} onClick={()=>setTab("queue")}>First screening ({openItems.length} open records)</button>
+      <button disabled={busy||readerSaving||loading} className={tab==="second"?styles.button:styles.buttonGhost} onClick={()=>{setSelectedSecondReviewId(null);setTab("second")}}>Second reviews ({myPendingSecondReviews.length} assigned to you)</button>
+      {openAlerts.length?<button disabled={busy||readerSaving||loading} className={tab==="alerts"?styles.button:styles.buttonGhost} onClick={()=>{setTab("alerts");setSelectedRun(null)}}>Urgent alerts ({openAlerts.length})</button>:<span className={styles.muted}>No open alerts</span>}
+    </div>:null}
+    {area==="records"?<div className={styles.inlineActions} style={{marginBottom:14}}>
+      <button disabled={busy||readerSaving||loading} className={tab==="runs"?styles.button:styles.buttonGhost} onClick={()=>{setTabState("runs");setRunView("complete")}}>Screening records</button>
+      <button disabled={busy||readerSaving||loading} className={tab==="psur"?styles.button:styles.buttonGhost} onClick={()=>setTab("psur")}>PSUR evidence</button>
+      <button disabled={busy||readerSaving||loading} className={styles.buttonGhost} onClick={()=>{setTab("alerts");setSelectedRun(null)}}>Alert history</button>
+    </div>:null}
+    {workspaceRun&&area!=="monitoring"&&tab!=="psur"&&tab!=="alerts"?<ScreeningWorkspace run={workspaceRun} company={companyMap[workspaceRun.company_id]||"Company"} stats={statsForRun(workspaceRun)} record={recordMap[workspaceRun.id]} second={recordMap[workspaceRun.id]?.metadata?.second_review||secondReviewMap[workspaceRun.id]} members={members} userId={session?.user.id} firstReviewerIds={runItems(workspaceRun.id).map(x=>x.reviewer_user_id).filter(Boolean)} reviewer={secondReviewerId} onReviewer={setSecondReviewerId} busy={busy||readerSaving} onReview={()=>openRunDecisions(workspaceRun)} onSecond={()=>openSecondReview(workspaceRun)} onSend={()=>assignSecondReviewer(workspaceRun)} onComplete={()=>completeScreening(workspaceRun)} onExport={()=>exportScreeningRecord(workspaceRun)} onClose={()=>{setSelectedRun(null);setRunFilter("");setSelectedSecondReviewId(null);setBatchMode(false);setTab(area==="records"?"runs":"queue");if(area==="records")setArea("records")}} onManageReviewers={()=>setShowReviewerAccess(true)}/>:null}
     <section className={styles.panel}>
-      <div style={{padding:"12px 14px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
-        <button className={tab==="sources"?styles.button:styles.buttonGhost} onClick={()=>setTab("sources")}>Sources</button>
-        <button className={tab==="queue"?styles.button:styles.buttonGhost} onClick={()=>setTab("queue")}>Screening Queue {openItems.length?"("+openItems.length+")":""}</button>
-        <button className={tab==="runs"?styles.button:styles.buttonGhost} onClick={()=>setTab("runs")}>Screening Runs</button>
-        <button className={tab==="second"?styles.button:styles.buttonGhost} onClick={()=>setTab("second")}>Second Review {myPendingSecondReviews.length?"("+myPendingSecondReviews.length+")":""}</button>
-        <button className={tab==="alerts"?styles.button:styles.buttonGhost} onClick={()=>setTab("alerts")}>Alerts {openAlerts.length?"("+openAlerts.length+")":""}</button>
-        <button className={tab==="psur"?styles.button:styles.buttonGhost} onClick={()=>setTab("psur")}>PSUR Evidence {psurEvidence.length?"("+psurEvidence.length+")":""}</button>
-      </div>
 
       {tab==="sources"?<>
         <div className={styles.panelHeader} style={{marginTop:12}}>
@@ -1546,133 +1574,50 @@ export default function LiteraturePage(){
       </>:null}
 
       {tab==="queue"?<>
-        <div className={styles.panelHeader} style={{marginTop:12}}>
-          <div>
-            <h2>Screening queue</h2>
-            <div className={styles.muted} style={{marginTop:4}}>{openItems.length} awaiting final QPPV decision · {reviewed.length} reviewed</div>
+        <div className={styles.panelHeader}><h2>{runFilter?"Article review":"Active screenings"}</h2><span className={styles.muted}>System suggestions support the QPPV decision.</span></div>
+        {!runFilter&&!focusedAlertItemId?<div className={styles.screeningChoices}>
+          {loading?<p>Loading screenings…</p>:runs.filter(r=>!recordMap[r.id]&&r.status!=="cancelled").map(r=>{
+            const s=statsForRun(r),sr=secondReviewMap[r.id];
+            return <button key={r.id} className={styles.screeningChoice} onClick={()=>{openRunDecisions(r);if(sr?.status==="pending"&&sr.assigned_to===session?.user.id)openSecondReview(r)}}>
+              <span>{companyMap[r.company_id]||"Company"}</span><small>{r.period_start} → {r.period_end}</small><small>{sr?.status==="returned"?"Returned for correction":sr?.status==="pending"?"Awaiting second reviewer":sr?.status==="approved"?"Ready to complete":s.open+" decisions open"}</small>
+            </button>;
+          })}
+          {!loading&&!runs.some(r=>!recordMap[r.id]&&r.status!=="cancelled")?<p>No active screenings. Completed evidence is in Records; Monitoring shows collection health.</p>:null}
+        </div>:<>
+          {focusedAlertItemId?<div className={styles.notice} style={{margin:14}}>Reviewing the exact alerted article. Saving a final decision closes its alert; Needs more information keeps it open.</div>:null}
+          <div className={styles.readerToolbar}>
+            <label>View <select className={styles.input} value={queueFilter} disabled={busy||readerSaving} onChange={e=>{setQueueFilter(e.target.value as typeof queueFilter);setArticleId(null)}}><option value="open">Open decisions</option><option value="fulltext">Full text required</option><option value="reviewed">Reviewed decisions</option><option value="all">All decisions</option></select></label>
+            <label>Product <select className={styles.input} value={productFilter} disabled={busy||readerSaving} onChange={e=>{setProductFilter(e.target.value);setArticleId(null)}}><option value="">All products in this screening</option>{products.filter(p=>!selectedQueueRun||p.company_id===selectedQueueRun.company_id).map(p=><option key={p.id} value={p.id}>{p.brand_name}</option>)}</select></label>
+            <button className={styles.buttonGhost} disabled={busy||readerSaving||queueLockedForSecondReview||!!focusedAlertItemId} onClick={batchMode?finishBatchReview:startBatchReview}>{batchMode?"Exit batch selection":"Select articles"}</button>
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length||queueLockedForSecondReview}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
-            <button className={batchMode?styles.button:styles.buttonGhost} onClick={batchMode?finishBatchReview:startBatchReview} disabled={!openItems.length||queueLockedForSecondReview}>{batchMode?"Exit batch review":"Batch review"}</button>
-            <button className={styles.button} onClick={startRapidReview} disabled={!openItems.length||queueLockedForSecondReview}>Rapid review</button>
-          </div>
-        </div>
-        {focusedAlertItemId?<div className={styles.notice} style={{margin:"0 14px 12px",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <div><strong>Reviewing literature alert</strong><span className={styles.muted} style={{marginLeft:8}}>Only the alerted article is shown.</span></div>
-          <button className={styles.buttonGhost} onClick={()=>{setFocusedAlertItemId(null);setActiveAlertId(null);setRunFilter("");setProductFilter("");setQueueFilter("open");setTab("alerts")}}>Back to Alerts</button>
-        </div>:null}
-        <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            <button className={queueFilter==="open"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("open")}>Open ({openItems.length})</button>
-            <button className={queueFilter==="priority"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("priority")}>Priority ({priorityItems.length})</button>
-            <button className={queueFilter==="fulltext"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("fulltext")}>Full text ({fullTextItems.length})</button>
-            <button className={queueFilter==="saudi"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("saudi")}>Saudi alerts ({saudiAlerts.length})</button>
-            <button className={queueFilter==="reviewed"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("reviewed")}>Reviewed ({reviewed.length})</button>
-            <button className={queueFilter==="all"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("all")}>All ({items.length})</button>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <select className={styles.input} style={{width:245}} value={runFilter} onChange={e=>{setRunFilter(e.target.value);setBatchSelected([]);setBatchPinned([])}}>
-              <option value="">All screening runs</option>
-              {runs.map(r=><option key={r.id} value={r.id}>{dateLabel(r.period_start)} – {dateLabel(r.period_end)} · {companyMap[r.company_id]||"Company"}</option>)}
-            </select>
-            <select className={styles.input} style={{width:210}} value={productFilter} onChange={e=>setProductFilter(e.target.value)}>
-              <option value="">All products</option>
-              {products.map(p=><option key={p.id} value={p.id}>{p.brand_name}</option>)}
-            </select>
-            <span className={styles.muted}>Showing {visibleItems.length}</span>
-          </div>
-        </div>
-        {batchMode?<div className={styles.notice} style={{margin:"0 14px 12px",padding:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-            <div>
-              <strong>Batch review · {selectedQueueRun?dateLabel(selectedQueueRun.period_start)+" – "+dateLabel(selectedQueueRun.period_end):"Select one screening run"}</strong>
-              <div className={styles.muted} style={{marginTop:5}}>
-                You do not need to inspect every article. First confirm the low-risk PVOS Unlikely group in one action, then review only the smaller Likely / Possible / Full-text set.
-              </div>
-              <div className={styles.muted} style={{marginTop:5}}>
-                {batchLikelyOpen.length} Likely · {batchPossibleOpen.length} Possible · {batchUnlikelyOpen.length} Unlikely · {batchFullTextOpen.length} Full text · {batchSelected.length} selected
-              </div>
-              <div className={styles.muted} style={{marginTop:5}}>
-                PVOS suggestions: {batchHighConfidenceRelevant.length} high-confidence Relevant · {batchLowRiskPossible.length} low-risk Possible
-              </div>
-              <div className={styles.muted} style={{marginTop:5}}>
-                Second pass: {batchSecondPass.relevant.length} Relevant · {batchSecondPass.not_relevant.length} Not relevant · {batchSecondPass.needs_review.length} Needs review · {batchSecondPass.full_text.length} Full text untouched
-              </div>
+          {batchMode?<div className={styles.notice} style={{margin:14}}>
+            <span>{batchSelected.length} selected</span>
+            <div className={styles.inlineActions}>
+              <button className={styles.buttonGhost} disabled={busy||readerSaving} onClick={()=>setBatchSelected(visibleItems.filter(x=>x.run_id===runFilter&&!x.metadata?.full_text_required&&(x.review_status==="unreviewed"||x.review_status==="needs_review")).map(x=>x.id))}>Select eligible articles in this view</button>
+              <button className={styles.buttonGhost} disabled={busy||readerSaving||!batchSelected.length} onClick={()=>setBatchSelected([])}>Clear selection</button>
+              <button className={styles.button} disabled={busy||readerSaving||!batchSelected.length} onClick={saveBatchRelevant}>Mark selected Relevant</button>
+              <button className={styles.buttonGhost} disabled={busy||readerSaving||!batchSelected.length} onClick={saveBatchNotRelevant}>Mark selected Not relevant</button>
+            </div><p className={styles.muted}>Full-text records are excluded from batch selection. Batch decisions are recorded under your account; downstream choices remain per article.</p>
+          </div>:null}
+          {loading?<div className={styles.empty}>Loading articles…</div>:<ArticleReader items={visibleItems} selectedId={articleId} onSelect={setArticleId} products={productMap} sources={sourceMap} members={memberMap} locked={x=>!!recordMap[x.run_id]||["pending","approved"].includes(secondReviewMap[x.run_id]?.status)} busy={busy||readerSaving} hasFollowup={hasFollowup} onSave={saveReaderDecision} batch={batchMode} selected={batchSelected} canSelect={x=>!recordMap[x.run_id]&&!["pending","approved"].includes(secondReviewMap[x.run_id]?.status)&&x.run_id===runFilter&&(x.review_status==="unreviewed"||x.review_status==="needs_review")&&!x.metadata?.full_text_required} onToggle={toggleBatchSelected}/>}
+          <details style={{padding:14}}><summary>Advanced screening tools</summary>
+            <div className={styles.inlineActions}>
+              <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||busy||readerSaving||queueLockedForSecondReview}>{analyzing?"Analysing…":"Refresh prioritisation"}</button>
+              <button className={styles.buttonGhost} onClick={retrieveAvailableFullText} disabled={busy||readerSaving||queueLockedForSecondReview||!batchFullTextOpen.length}>Retrieve available article text</button>
+              <button className={styles.buttonGhost} onClick={confirmUnlikelyNotRelevant} disabled={busy||readerSaving||queueLockedForSecondReview||!batchUnlikelyOpen.length}>Review Unlikely group for batch exclusion ({batchUnlikelyOpen.length})</button>
             </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              <button className={styles.buttonGhost} disabled={busy||!batchFullTextOpen.length||!runFilter} onClick={retrieveAvailableFullText}>Retrieve available article text ({batchFullTextOpen.length})</button>
-              <button className={styles.button} disabled={busy||!(batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length)||!runFilter} onClick={applySecondPassSuggestions}>Apply second-pass suggestions ({batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length})</button>
-              <button className={styles.button} disabled={busy||!batchUnlikelyOpen.length||!runFilter} onClick={confirmUnlikelyNotRelevant}>Confirm Unlikely → Not relevant ({batchUnlikelyOpen.length})</button>
-              <button className={styles.button} disabled={busy||!batchHighConfidenceRelevant.length||!runFilter} onClick={acceptHighConfidenceRelevant}>Accept high-confidence Relevant ({batchHighConfidenceRelevant.length})</button>
-              <button className={styles.buttonGhost} disabled={busy||!batchLowRiskPossible.length||!runFilter} onClick={confirmLowRiskPossibleNotRelevant}>Confirm low-risk Possible → Not relevant ({batchLowRiskPossible.length})</button>
-              <button className={styles.buttonGhost} disabled={busy||!batchSelected.length||!runFilter} onClick={saveBatchRelevant}>Save selected as Relevant ({batchSelected.length})</button>
-              <button className={styles.buttonGhost} disabled={busy||!!batchSelected.length||!batchRemainingEligible.length||!runFilter} onClick={markBatchRemainingNotRelevant}>Mark all other eligible Not relevant ({batchRemainingEligible.length})</button>
-            </div>
-          </div>
-        </div>:null}
-        {loading?<div className={styles.empty}>Loading screening queue…</div>:items.length?<div className={styles.tableWrap}><table className={styles.table} style={{minWidth:1180}}>
-          <thead><tr>{batchMode?<th style={{width:74}}>Relevant?</th>:null}<th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Matched terms</th><th>Safety priority</th><th>QPPV review</th></tr></thead>
-          <tbody>{visibleItems.map(x=>{
-            const p=productMap[x.product_id];
-            const second=secondReviewMap[x.run_id];
-            const reviewLocked=!!second&&(second.status==="pending"||second.status==="approved");
-            const batchEligible=!reviewLocked&&x.run_id===runFilter&&(x.review_status==="unreviewed"||x.review_status==="needs_review")&&!x.metadata?.full_text_required;
-            return <tr key={x.id}>
-              {batchMode?<td style={{textAlign:"center",verticalAlign:"top"}}>
-                {batchEligible?<input type="checkbox" aria-label={"Mark "+x.title+" as relevant"} checked={batchSelected.includes(x.id)} onChange={()=>toggleBatchSelected(x.id)} style={{width:18,height:18,cursor:"pointer"}}/>:x.metadata?.full_text_required?<Badge tone="amber">Full text</Badge>:x.review_status==="relevant"?<Badge tone="green">Relevant</Badge>:null}
-              </td>:null}
-              <td style={{minWidth:340}}>
-                {x.metadata?.urgent_saudi?<div style={{marginBottom:7}}><Badge tone="red">⚠ Potential Saudi case / context</Badge></div>:null}
-                {x.article_url?<a href={x.article_url} target="_blank" rel="noreferrer">{x.title}</a>:<strong>{x.title}</strong>}
-                {x.abstract?<div className={styles.muted} style={{marginTop:6,maxWidth:500,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{x.abstract}</div>:null}
-                {x.ai_reason?<div style={{marginTop:6,fontSize:11,lineHeight:1.45}}>{x.ai_reason}</div>:null}
-              </td>
-              <td>{p?<><strong>{p.brand_name}</strong><div className={styles.muted} style={{marginTop:3}}>{p.active_ingredient||"—"}</div></>:"—"}</td>
-              <td>{sourceMap[x.source_id]?.name||x.journal||"—"}</td>
-              <td>
-                <strong>{dateLabel(x.publication_date)}</strong>
-                {x.metadata?.issue_date&&x.metadata.issue_date!==x.publication_date?<div className={styles.muted} style={{marginTop:3}}>Issue: {dateLabel(x.metadata.issue_date)}</div>:null}
-              </td>
-              <td>
-                {(x.matched_terms||[]).length?(x.matched_terms||[]).join(", "):"—"}
-                {x.metadata?.match_locations?.length?<div className={styles.muted} style={{marginTop:4}}>Matched in: {x.metadata.match_locations.join(" · ")}</div>:null}
-              </td>
-              <td>
-                {x.metadata?.full_text_required?<Badge tone="amber">Full text required</Badge>:<Badge tone={relevanceTone(x.relevance)}>{relevanceLabel(x.relevance)}</Badge>}
-                {x.metadata?.product_role?<div className={styles.muted} style={{marginTop:5}}>Role: {String(x.metadata.product_role).replaceAll("_"," ")}</div>:null}
-                {x.metadata?.finding_types?.length?<div className={styles.muted} style={{marginTop:3,maxWidth:190}}>{x.metadata.finding_types.slice(0,3).map((v:string)=>v.replaceAll("_"," ")).join(" · ")}</div>:x.metadata?.safety_hits?.length?<div className={styles.muted} style={{marginTop:3,maxWidth:190}}>{x.metadata.safety_hits.slice(0,3).join(", ")}</div>:null}
-              </td>
-              <td style={{minWidth:275}}>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                  <button disabled={busy||reviewLocked} className={x.review_status==="relevant"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"relevant")}>Relevant</button>
-                  <button disabled={busy||reviewLocked} className={x.review_status==="not_relevant"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"not_relevant")}>Not relevant</button>
-                  <button disabled={busy||reviewLocked} className={x.review_status==="needs_review"?styles.button:styles.buttonGhost} onClick={()=>setReview(x,"needs_review")}>Needs review</button>
-                </div>
-                <div className={styles.muted} style={{marginTop:6}}>{reviewLabel(x.review_status)}</div>
-                {x.reviewer_user_id?<div className={styles.muted} style={{marginTop:3,fontSize:11}}>Reviewed by {memberMap[x.reviewer_user_id]?.email||"workspace member"}{x.reviewed_at?" · "+dateTimeLabel(x.reviewed_at):""}</div>:null}
-                {reviewLocked?<div className={styles.muted} style={{marginTop:4,fontSize:11}}>Locked for second review</div>:null}
-                {x.review_status==="relevant"?<div style={{marginTop:10,paddingTop:9,borderTop:"1px solid rgba(148,163,184,.16)"}}>
-                  {pendingRelevantId===x.id?<div className={styles.muted} style={{marginBottom:7}}>Decision saved. Add any downstream actions now, then continue.</div>:<div className={styles.muted} style={{marginBottom:6}}>Downstream</div>}
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    <button disabled={busy||hasFollowup(x.id,"signal_review")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"signal_review")}>{hasFollowup(x.id,"signal_review")?"Signal queued":"Add to Signal Review"}</button>
-                    <button disabled={busy||hasFollowup(x.id,"psur_evidence")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"psur_evidence")}>{hasFollowup(x.id,"psur_evidence")?"PSUR included":"Include in PSUR evidence"}</button>
-                    {pendingRelevantId===x.id?<button disabled={busy} className={styles.button} onClick={()=>finishAlertReview(x)}>Done</button>:null}
-                  </div>
-                </div>:null}
-              </td>
-            </tr>
-          })}</tbody>
-        </table></div>:<div className={styles.empty}>No articles yet. Run a screening period to retrieve PubMed results for the company products. Every result remains visible; automated prioritization only changes review order.</div>}
+          </details>
+        </>}
       </>:null}
 
       {tab==="runs"?<>
         <div className={styles.panelHeader} style={{marginTop:12}}>
-          <h2>Screening runs</h2>
+          <h2>{area==="records"?"Completed screening records":"Active screenings"}</h2>
           <span className={styles.muted}>One auditable record per screening period</span>
         </div>
-        {loading?<div className={styles.empty}>Loading screening runs…</div>:runs.length?<div className={styles.tableWrap}><table className={styles.table}>
+        {loading?<div className={styles.empty}>Loading screening runs…</div>:runs.some(r=>runView==="complete"?!!recordMap[r.id]:!recordMap[r.id])?<div className={styles.tableWrap}><table className={styles.table}>
           <thead><tr><th>Period</th><th>Company</th><th>Sources</th><th>Products</th><th>Results</th><th>Reviewed</th><th>Second review</th><th>Status</th><th></th></tr></thead>
-          <tbody>{runs.map(r=>{
+          <tbody>{runs.filter(r=>runView==="complete"?!!recordMap[r.id]:!recordMap[r.id]).map(r=>{
             const counts=runCounts[r.id]||{total:r.result_count||0,reviewed:r.reviewed_count||0};
             return <tr key={r.id}>
               <td><strong>{dateLabel(r.period_start)} – {dateLabel(r.period_end)}</strong></td>
@@ -1683,7 +1628,7 @@ export default function LiteraturePage(){
               <td>{counts.reviewed}</td>
               <td>{secondReviewMap[r.id]?<Badge tone={secondReviewMap[r.id].status==="approved"?"green":secondReviewMap[r.id].status==="returned"?"red":"amber"}>{String(secondReviewMap[r.id].status).replace("_"," ")}</Badge>:<span className={styles.muted}>Not assigned</span>}</td>
               <td><Badge tone={recordMap[r.id]?"green":r.status==="review"?"amber":"default"}>{recordMap[r.id]?"Complete":secondReviewMap[r.id]?.status==="pending"?"Awaiting second review":secondReviewMap[r.id]?.status==="returned"?"Returned for correction":String(r.status).replace("_"," ")}</Badge></td>
-              <td><button className={styles.buttonGhost} onClick={()=>{setSelectedRun(r);setMessage("")}}>Open</button></td>
+              <td><button className={styles.buttonGhost} onClick={()=>{setSelectedRun(r);setRunFilter(r.id);setMessage("")}}>Open record</button></td>
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No screening runs yet. Create one for a historical or current screening period.</div>}
@@ -1693,15 +1638,16 @@ export default function LiteraturePage(){
         <div className={styles.panelHeader} style={{marginTop:12}}>
           <div>
             <h2>Second review</h2>
-            <div className={styles.muted} style={{marginTop:4}}>Independent verification of first-review literature decisions before an inspection-ready screening record can be completed.</div>
+            <div className={styles.muted} style={{marginTop:4}}>Verify the focused first-review decisions before a screening record is completed.</div>
           </div>
           <span className={styles.muted}>{myPendingSecondReviews.length} assigned to you · {secondReviews.filter(x=>x.status==="pending").length} pending in workspace</span>
         </div>
 
         {!selectedSecondReview?<>
-          {secondReviews.length?<div className={styles.tableWrap}><table className={styles.table}>
+          <div style={{padding:14}}><label>Review queue <select className={styles.input} value={secondView} onChange={e=>setSecondView(e.target.value as typeof secondView)}><option value="mine">Pending reviews assigned to me</option><option value="team">All pending reviews</option><option value="history">Review history, including returned cycles</option></select></label></div>
+          {secondReviews.some(sr=>secondView==="mine"?sr.status==="pending"&&sr.assigned_to===session?.user.id:secondView==="team"?sr.status==="pending":sr.status!=="pending")?<div className={styles.tableWrap}><table className={styles.table}>
             <thead><tr><th>Period</th><th>Company</th><th>Review scope</th><th>Assigned to</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
-            <tbody>{secondReviews.map(sr=>{
+            <tbody>{secondReviews.filter(sr=>secondView==="mine"?sr.status==="pending"&&sr.assigned_to===session?.user.id:secondView==="team"?sr.status==="pending":sr.status!=="pending").map(sr=>{
               const run=runMap[sr.run_id];
               const summary=sr.metadata?.summary||{};
               return <tr key={sr.id}>
@@ -1714,10 +1660,10 @@ export default function LiteraturePage(){
                 <td>{memberMap[sr.assigned_to]?.email||"Workspace member"}{sr.assigned_to===session?.user.id?<div style={{marginTop:4}}><Badge tone="lime">You</Badge></div>:null}</td>
                 <td>{dateTimeLabel(sr.assigned_at)}</td>
                 <td><Badge tone={sr.status==="approved"?"green":sr.status==="returned"?"red":"amber"}>{String(sr.status).replaceAll("_"," ")}</Badge></td>
-                <td><button className={styles.buttonGhost} onClick={()=>{setSelectedSecondReviewId(sr.id);setSecondReviewNote(sr.note||"")}}>Open</button></td>
+                <td><button className={styles.buttonGhost} onClick={()=>{setSelectedRun(null);setRunFilter(sr.run_id);setSelectedSecondReviewId(sr.id);setSecondReviewNote(sr.note||"")}}>Open</button></td>
               </tr>
             })}</tbody>
-          </table></div>:<div className={styles.empty}>No second-review assignments yet. Screen each article, then assign an independent workspace member from Screening Runs. Needs review decisions can be returned for resolution.</div>}
+          </table></div>:<div className={styles.empty}>No reviews match this view. Choose another review queue or an active screening.</div>}
         </>:<>
           {(()=>{
             const sr=selectedSecondReview;
@@ -1804,7 +1750,7 @@ export default function LiteraturePage(){
 
               {sr.status==="pending"&&!assignedToMe?<div className={styles.notice} style={{margin:"14px"}}>Pending independent review by <strong>{memberMap[sr.assigned_to]?.email||"assigned reviewer"}</strong>. First-review decisions are locked until the reviewer approves or returns the screening.</div>:null}
               {sr.status==="approved"?<div className={styles.successBox} style={{margin:"14px"}}>Approved by {memberMap[sr.reviewed_by]?.email||"the assigned reviewer"}{sr.reviewed_at?" on "+dateTimeLabel(sr.reviewed_at):""}. The dual-review record is now ready for screening completion.</div>:null}
-              {sr.status==="returned"?<div className={styles.errorBox} style={{margin:"14px"}}>Returned to the first reviewer. The screening can be edited and then reassigned; the previous review cycle remains in the audit history.</div>:null}
+              {sr.status==="returned"?<div className={styles.notice} style={{margin:"14px"}}>Returned to the first reviewer. Earlier cycles remain in the audit history. {run?<button className={styles.button} onClick={()=>openRunDecisions(run)}>Resolve corrections</button>:null}</div>:null}
             </>;
           })()}
         </>}
@@ -1900,83 +1846,15 @@ export default function LiteraturePage(){
       </div>
     </div>:null}
 
-    {selectedRun?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedRun(null)}}>
-      <div className={styles.modalCard}>
-        <div className={styles.modalHeader}>
-          <div>
-            <div className={styles.eyebrow}>Screening evidence</div>
-            <h2>{dateLabel(selectedRun.period_start)} – {dateLabel(selectedRun.period_end)}</h2>
-            <div className={styles.muted} style={{marginTop:5}}>{companyMap[selectedRun.company_id]||"Company"}</div>
-          </div>
-          <button className={styles.modalClose} onClick={()=>setSelectedRun(null)}>×</button>
-        </div>
-        {(()=>{
-          const s=statsForRun(selectedRun);
-          const rec=recordMap[selectedRun.id];
-          const second=secondReviewMap[selectedRun.id];
-          const firstReviewerIds=new Set(runItems(selectedRun.id).map(x=>x.reviewer_user_id).filter(Boolean));
-          const otherMembers=members.filter(m=>m.user_id!==session?.user.id&&!firstReviewerIds.has(m.user_id));
-          const unreviewedCount=runItems(selectedRun.id).filter(x=>x.review_status==="unreviewed").length;
-          return <>
-            <div className={styles.info}>
-              <div className={styles.kv}><span>Results retrieved</span><span>{s.total}</span></div>
-              <div className={styles.kv}><span>Final decisions</span><span>{s.reviewed} / {s.total}</span></div>
-              <div className={styles.kv}><span>Still open</span><span>{s.open}</span></div>
-              <div className={styles.kv}><span>Relevant</span><span>{s.relevant}</span></div>
-              <div className={styles.kv}><span>Not relevant</span><span>{s.notRelevant}</span></div>
-              <div className={styles.kv}><span>Saudi alerts</span><span>{s.saudi}</span></div>
-              <div className={styles.kv}><span>Signal escalations</span><span>{s.signal}</span></div>
-              <div className={styles.kv}><span>PSUR selections</span><span>{s.psur}</span></div>
-            </div>
-            <div className={s.open?styles.notice:styles.successBox} style={{marginTop:14}}>
-              {rec?"This screening run is complete and its evidence snapshot is locked in the inspection record.":s.open?String(s.open)+" article(s) still require a final Relevant / Not relevant decision before the run can be completed.":"All retrieved articles have a final first-review decision."}
-            </div>
-
-            {!rec?<div className={styles.info} style={{marginTop:14}}>
-              <div className={styles.kv}><span>Second review</span><span>{second?String(second.status).replace("_"," "):"Not assigned"}</span></div>
-              {second?.assigned_to?<div className={styles.kv}><span>Assigned to</span><span>{memberMap[second.assigned_to]?.email||"Workspace member"}</span></div>:null}
-              {second?.assigned_at?<div className={styles.kv}><span>Assigned at</span><span>{dateTimeLabel(second.assigned_at)}</span></div>:null}
-              {second?.reviewed_by?<div className={styles.kv}><span>Reviewed by</span><span>{memberMap[second.reviewed_by]?.email||"Workspace member"}</span></div>:null}
-              {second?.reviewed_at?<div className={styles.kv}><span>Reviewed at</span><span>{dateTimeLabel(second.reviewed_at)}</span></div>:null}
-              {second?.note?<div className={styles.kv}><span>Review note</span><span>{second.note}</span></div>:null}
-            </div>:null}
-
-            {!rec&&unreviewedCount===0&&(!second||second.status==="returned")?<div className={styles.notice} style={{marginTop:14}}>
-              <strong>{second?.status==="returned"?"Resend for second review":"Send to second reviewer"}</strong>
-              <div className={styles.muted} style={{marginTop:5}}>Relevant, Needs review and flagged decisions are routed for independent verification. Routine low-risk exclusions remain in the first-review audit trail.</div>
-              {otherMembers.length?<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:10}}>
-                <select className={styles.input} style={{minWidth:260}} value={secondReviewerId} onChange={e=>setSecondReviewerId(e.target.value)}>
-                  <option value="">Choose workspace member</option>
-                  {otherMembers.map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}
-                </select>
-                <button className={styles.button} disabled={busy||!secondReviewerId} onClick={()=>assignSecondReviewer(selectedRun)}>{busy?"Sending…":"Send for second review"}</button>
-              </div>:<div className={styles.muted} style={{marginTop:10}}>No independent reviewer is available. Add a member who did not make first-review decisions in this run.</div>}
-              <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(148,163,184,.18)"}}>
-                <div className={styles.muted} style={{marginBottom:7}}>Add reviewer by email</div>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <input className={styles.input} style={{minWidth:260}} type="email" value={reviewerEmail} onChange={e=>setReviewerEmail(e.target.value)} placeholder="reviewer@company.com"/>
-                  <select className={styles.input} aria-label="New reviewer workspace role" value={reviewerRole} onChange={e=>setReviewerRole(e.target.value)}>
-                    <option value="deputy_qppv">Deputy QPPV</option><option value="qppv">QPPV</option><option value="pv_specialist">PV specialist</option><option value="quality">Quality</option>
-                  </select>
-                  <button className={styles.buttonGhost} disabled={busy||!reviewerEmail.trim()} onClick={addReviewerByEmail}>Add reviewer</button>
-                </div>
-                <div className={styles.muted} style={{marginTop:6,fontSize:11}}>Workspace access is granted by email; no email notification is sent. Existing PVOS accounts are added immediately. A new reviewer joins this workspace when they first sign in using the same email.</div>
-              </div>
-            </div>:null}
-
-            {!rec&&second?<div style={{marginTop:14}}>
-              <button className={styles.buttonGhost} onClick={()=>{setSelectedRun(null);setSelectedSecondReviewId(second.id);setSecondReviewNote(second.note||"");setTab("second")}}>Open focused second review</button>
-            </div>:null}
-
-            {!rec&&second?.status==="pending"&&second.assigned_to!==session?.user.id?<div className={styles.notice} style={{marginTop:14}}>Pending second review by <strong>{memberMap[second.assigned_to]?.email||"assigned reviewer"}</strong>.</div>:null}
-            {!rec&&second?.status==="approved"?<div className={styles.successBox} style={{marginTop:14}}>Second review approved by {memberMap[second.reviewed_by]?.email||"the assigned reviewer"}{second.reviewed_at?" on "+dateTimeLabel(second.reviewed_at):""}. The screening can now be completed.</div>:null}
-
-            <div className={styles.modalActions} style={{justifyContent:"space-between",flexWrap:"wrap"}}>
-              <button className={styles.buttonGhost} onClick={()=>openRunDecisions(selectedRun)}>Review decisions</button>
-              {rec?<button className={styles.button} onClick={()=>exportScreeningRecord(selectedRun)}>Export screening record</button>:<button className={styles.button} disabled={busy||s.open>0||!second||second.status!=="approved"} onClick={()=>completeScreening(selectedRun)}>{busy?"Creating record…":"Complete screening & create evidence"}</button>}
-            </div>
-          </>;
-        })()}
+    {showReviewerAccess?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setShowReviewerAccess(false)}}>
+      <div ref={reviewerAccessRef} className={styles.modalCard} role="dialog" aria-modal="true" aria-labelledby="reviewer-access-title">
+        <div className={styles.modalHeader}><h2 id="reviewer-access-title">Reviewer access</h2><button className={styles.modalClose} onClick={()=>setShowReviewerAccess(false)} aria-label="Close reviewer access">×</button></div>
+        <p>Authorize a reviewer account to join this workspace, then choose that member in the screening workspace.</p>
+        <label>Email <input className={styles.input} type="email" value={reviewerEmail} onChange={e=>setReviewerEmail(e.target.value)} placeholder="reviewer@company.com"/></label>
+        <label>Workspace role <select className={styles.input} value={reviewerRole} onChange={e=>setReviewerRole(e.target.value)}><option value="deputy_qppv">Deputy QPPV</option><option value="qppv">QPPV</option><option value="pv_specialist">PV specialist</option><option value="quality">Quality</option></select></label>
+        <div className={styles.inlineActions}><button className={styles.button} disabled={busy||!reviewerEmail.trim()} onClick={addReviewerByEmail}>Add reviewer</button></div>
+        <p className={styles.muted}>No email notification is sent. New accounts join when they sign in using the authorized email. First reviewers cannot perform second review on their own decisions.</p>
+        {message?<div className={styles.notice} role="status">{message}</div>:null}
       </div>
     </div>:null}
 
