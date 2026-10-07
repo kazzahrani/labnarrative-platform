@@ -144,6 +144,8 @@ export default function LiteraturePage(){
   const [batchSelected,setBatchSelected]=useState<string[]>([]);
   const [batchPinned,setBatchPinned]=useState<string[]>([]);
   const [pendingRelevantId,setPendingRelevantId]=useState<string|null>(null);
+  const [focusedAlertItemId,setFocusedAlertItemId]=useState<string|null>(null);
+  const [activeAlertId,setActiveAlertId]=useState<string|null>(null);
   const [secondReviewerId,setSecondReviewerId]=useState("");
   const [secondReviewNote,setSecondReviewNote]=useState("");
   const [reviewerEmail,setReviewerEmail]=useState("");
@@ -227,6 +229,7 @@ export default function LiteraturePage(){
     return score(b)-score(a);
   }),[items]);
   const visibleItems=useMemo(()=>sortedItems.filter(x=>{
+    if(focusedAlertItemId&&x.id!==focusedAlertItemId)return false;
     if(runFilter&&x.run_id!==runFilter)return false;
     if(productFilter&&x.product_id!==productFilter)return false;
     const open=x.review_status==="unreviewed"||x.review_status==="needs_review";
@@ -237,7 +240,7 @@ export default function LiteraturePage(){
     if(queueFilter==="saudi")return !!x.metadata?.urgent_saudi&&(open||keepRelevantHere);
     if(queueFilter==="reviewed")return x.review_status==="relevant"||x.review_status==="not_relevant";
     return true;
-  }),[sortedItems,queueFilter,productFilter,runFilter,pendingRelevantId,batchPinned]);
+  }),[sortedItems,queueFilter,productFilter,runFilter,pendingRelevantId,batchPinned,focusedAlertItemId]);
   const rapidCandidates=useMemo(()=>sortedItems.filter(x=>{
     if(runFilter&&x.run_id!==runFilter)return false;
     if(productFilter&&x.product_id!==productFilter)return false;
@@ -398,8 +401,36 @@ export default function LiteraturePage(){
       setRunFilter(item.run_id||"");
       setProductFilter(item.product_id||"");
       setQueueFilter("all");
+      setFocusedAlertItemId(item.id);
+      setActiveAlertId(alert.id);
     }
     setTab("queue");
+  }
+
+  async function finishAlertReview(item:any){
+    setPendingRelevantId(null);
+    if(!activeAlertId||focusedAlertItemId!==item.id)return;
+    if(!session)return;
+    setBusy(true);
+    try{
+      const {error}=await pvosSupabase.from("pvos_literature_alerts").update({
+        status:"acknowledged",
+        acknowledged_by:session.user.id,
+        acknowledged_at:new Date().toISOString()
+      }).eq("id",activeAlertId);
+      if(error)throw error;
+      setFocusedAlertItemId(null);
+      setActiveAlertId(null);
+      setRunFilter("");
+      setProductFilter("");
+      setQueueFilter("open");
+      await load();
+      setTab("alerts");
+    }catch(e:any){
+      setMessage(e?.message||"Could not complete alert review.");
+    }finally{
+      setBusy(false);
+    }
   }
 
   async function createRun(e:FormEvent){
@@ -821,16 +852,38 @@ export default function LiteraturePage(){
       reviewer_user_id:session.user.id,
       reviewed_at:reviewedAt
     }).eq("id",item.id);
-    setBusy(false);
-    if(error){setMessage(error.message);return;}
+    if(error){setBusy(false);setMessage(error.message);return;}
     setItems(prev=>prev.map(x=>x.id===item.id?{
       ...x,
       review_status:status,
       reviewer_user_id:session.user.id,
       reviewed_at:reviewedAt
     }:x));
-    if(status==="relevant")setPendingRelevantId(item.id);
-    else if(pendingRelevantId===item.id)setPendingRelevantId(null);
+
+    if(status==="relevant"){
+      setPendingRelevantId(item.id);
+      setBusy(false);
+      return;
+    }
+
+    if(pendingRelevantId===item.id)setPendingRelevantId(null);
+
+    if(status==="not_relevant"&&activeAlertId&&focusedAlertItemId===item.id){
+      const {error:alertError}=await pvosSupabase.from("pvos_literature_alerts").update({
+        status:"acknowledged",
+        acknowledged_by:session.user.id,
+        acknowledged_at:new Date().toISOString()
+      }).eq("id",activeAlertId);
+      if(alertError){setBusy(false);setMessage(alertError.message);return;}
+      setFocusedAlertItemId(null);
+      setActiveAlertId(null);
+      setRunFilter("");
+      setProductFilter("");
+      setQueueFilter("open");
+      await load();
+      setTab("alerts");
+    }
+    setBusy(false);
   }
 
   function startBatchReview(){
@@ -1525,6 +1578,10 @@ export default function LiteraturePage(){
             <button className={styles.button} onClick={startRapidReview} disabled={!openItems.length}>Rapid review</button>
           </div>
         </div>
+        {focusedAlertItemId?<div className={styles.notice} style={{margin:"0 14px 12px",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div><strong>Reviewing literature alert</strong><span className={styles.muted} style={{marginLeft:8}}>Only the alerted article is shown.</span></div>
+          <button className={styles.buttonGhost} onClick={()=>{setFocusedAlertItemId(null);setActiveAlertId(null);setRunFilter("");setProductFilter("");setQueueFilter("open");setTab("alerts")}}>Back to Alerts</button>
+        </div>:null}
         <div style={{padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             <button className={queueFilter==="open"?styles.button:styles.buttonGhost} onClick={()=>setQueueFilter("open")}>Open ({openItems.length})</button>
@@ -1620,7 +1677,7 @@ export default function LiteraturePage(){
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     <button disabled={busy||hasFollowup(x.id,"signal_review")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"signal_review")}>{hasFollowup(x.id,"signal_review")?"Signal queued":"Add to Signal Review"}</button>
                     <button disabled={busy||hasFollowup(x.id,"psur_evidence")} className={styles.buttonGhost} onClick={()=>queueFollowup(x,"psur_evidence")}>{hasFollowup(x.id,"psur_evidence")?"PSUR included":"Include in PSUR evidence"}</button>
-                    {pendingRelevantId===x.id?<button disabled={busy} className={styles.button} onClick={()=>setPendingRelevantId(null)}>Done</button>:null}
+                    {pendingRelevantId===x.id?<button disabled={busy} className={styles.button} onClick={()=>finishAlertReview(x)}>Done</button>:null}
                   </div>
                 </div>:null}
               </td>
