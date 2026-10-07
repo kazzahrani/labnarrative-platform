@@ -135,6 +135,7 @@ export default function LiteraturePage(){
   const [busy,setBusy]=useState(false);
   const [analyzing,setAnalyzing]=useState(false);
   const [queueFilter,setQueueFilter]=useState<"open"|"priority"|"fulltext"|"saudi"|"reviewed"|"all">("open");
+  const [sourceFilter,setSourceFilter]=useState<"all"|"active"|"saudi"|"planned">("all");
   const [productFilter,setProductFilter]=useState("");
   const [runFilter,setRunFilter]=useState("");
   const [batchMode,setBatchMode]=useState(false);
@@ -188,6 +189,15 @@ export default function LiteraturePage(){
   const memberMap=useMemo(()=>Object.fromEntries(members.map(x=>[x.user_id,x])),[members]);
   const secondReviewMap=useMemo(()=>Object.fromEntries(secondReviews.map(x=>[x.run_id,x])),[secondReviews]);
   const activeSources=sources.filter(x=>x.active);
+  const saudiSources=sources.filter(x=>x.metadata?.source_group==="Saudi journals 2025");
+  const liveSaudiSources=saudiSources.filter(x=>x.active);
+  const plannedSaudiSources=saudiSources.filter(x=>!x.active);
+  const visibleSources=sources.filter(x=>{
+    if(sourceFilter==="active")return !!x.active;
+    if(sourceFilter==="saudi")return x.metadata?.source_group==="Saudi journals 2025";
+    if(sourceFilter==="planned")return !x.active&&x.metadata?.source_group==="Saudi journals 2025";
+    return true;
+  });
   const openItems=items.filter(x=>x.review_status==="unreviewed"||x.review_status==="needs_review");
   const reviewed=items.filter(x=>x.review_status==="relevant"||x.review_status==="not_relevant");
   const priorityItems=items.filter(x=>x.relevance==="likely_relevant"&&(x.review_status==="unreviewed"||x.review_status==="needs_review"));
@@ -1206,21 +1216,29 @@ export default function LiteraturePage(){
 
       {tab==="sources"?<>
         <div className={styles.panelHeader} style={{marginTop:12}}>
-          <h2>Literature sources</h2>
-          <span className={styles.muted}>{activeSources.length} active · {sources.length} total</span>
+          <div>
+            <h2>Literature sources</h2>
+            <div className={styles.muted} style={{marginTop:4}}>{activeSources.length} active · {sources.length} total · {saudiSources.length} Saudi journals · {liveSaudiSources.length} connected</div>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            <button className={sourceFilter==="all"?styles.button:styles.buttonGhost} onClick={()=>setSourceFilter("all")}>All ({sources.length})</button>
+            <button className={sourceFilter==="active"?styles.button:styles.buttonGhost} onClick={()=>setSourceFilter("active")}>Active ({activeSources.length})</button>
+            <button className={sourceFilter==="saudi"?styles.button:styles.buttonGhost} onClick={()=>setSourceFilter("saudi")}>Saudi journals ({saudiSources.length})</button>
+            <button className={sourceFilter==="planned"?styles.button:styles.buttonGhost} onClick={()=>setSourceFilter("planned")}>Planned ({plannedSaudiSources.length})</button>
+          </div>
         </div>
         {loading?<div className={styles.empty}>Loading sources…</div>:sources.length?<div className={styles.tableWrap}><table className={styles.table}>
-          <thead><tr><th>Source</th><th>Language</th><th>Frequency</th><th>Connection</th><th>Last checked</th><th>Next due</th><th>Status</th></tr></thead>
-          <tbody>{sources.map(s=>{
+          <thead><tr><th>Source</th><th>Coverage</th><th>Frequency</th><th>Connection</th><th>Last checked</th><th>Next due</th><th>Status</th></tr></thead>
+          <tbody>{visibleSources.map(s=>{
             const due=s.next_due_at&&new Date(s.next_due_at)<new Date();
             return <tr key={s.id}>
               <td><strong>{s.name}</strong>{s.url?<div className={styles.muted} style={{marginTop:4}}><a href={s.url} target="_blank" rel="noreferrer">Open source ↗</a></div>:null}</td>
-              <td>{s.language}</td>
+              <td>{s.metadata?.source_group==="Saudi journals 2025"?<div><Badge tone="lime">Saudi journal</Badge>{s.metadata?.pubmed_indexed?<div className={styles.muted} style={{marginTop:4}}>PubMed indexed</div>:<div className={styles.muted} style={{marginTop:4}}>Not PubMed indexed</div>}</div>:s.language}</td>
               <td>{String(s.screening_frequency).replace("_"," ")}</td>
-              <td><Badge>{s.method==="manual"?"Manual / pending automation":s.method.toUpperCase()}</Badge></td>
+              <td>{s.metadata?.connector==="lww_crossref"?<div><Badge>LWW / Crossref</Badge><div className={styles.muted} style={{marginTop:4}}>ISSN monitoring</div></div>:s.metadata?.connector_status==="planned"?<Badge>Planned</Badge>:<Badge>{s.method==="manual"?"Manual / pending automation":s.method.toUpperCase()}</Badge>}</td>
               <td>{dateLabel(s.last_checked_at)}</td>
               <td>{dateLabel(s.next_due_at)}</td>
-              <td><Badge tone={!s.active?"default":due?"amber":"green"}>{!s.active?"Inactive":due?"Due":"Active"}</Badge></td>
+              <td><Badge tone={!s.active?"default":s.metadata?.connector_status==="error"?"red":due?"amber":"green"}>{!s.active?"Planned":s.metadata?.connector_status==="error"?"Connection issue":due?"Due":"Active"}</Badge></td>
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No literature sources yet. Add the journals or databases your QPPV team is required to screen.</div>}
