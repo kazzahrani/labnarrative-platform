@@ -372,6 +372,7 @@ export default function LiteraturePage(){
     const companyProducts=products.filter(x=>x.company_id===runForm.companyId);
     if(!companyProducts.length){setMessage("This company has no products to screen.");return;}
     const lwwSources=sources.filter(x=>x.active&&x.metadata?.connector==="lww_crossref");
+    const openWebSources=sources.filter(x=>x.active&&x.metadata?.connector==="open_web_snapshot");
 
     setBusy(true);setMessage("");
     let runId:string|undefined;
@@ -396,9 +397,17 @@ export default function LiteraturePage(){
         period_end:runForm.end,
         status:"running",
         started_by:session.user.id,
-        source_count:1+lwwSources.length,
+        source_count:1+lwwSources.length+openWebSources.length,
         product_count:companyProducts.length,
-        metadata:{v0:true,scope:"all_company_products",connectors:lwwSources.length?["pubmed","lww_crossref"]:["pubmed"]}
+        metadata:{
+          v0:true,
+          scope:"all_company_products",
+          connectors:[
+            "pubmed",
+            ...(lwwSources.length?["lww_crossref","lww_direct"]:[]),
+            ...(openWebSources.length?["open_web_snapshot"]:[])
+          ]
+        }
       }).select("*").single();
       if(runError||!run)throw runError||new Error("Could not create screening run.");
       runId=run.id;
@@ -473,8 +482,48 @@ export default function LiteraturePage(){
         }
       }
 
+      let openWebResult:any={entries:[],matches:[],reports:[],sources_checked:0,sources_ok:0};
+      let openWebError:string|null=null;
+      let openRegistration:any={new_keys:[],new_count:0,total:0};
+
+      if(openWebSources.length){
+        try{
+          const openResponse=await authorizedFetch("/api/pvos/literature/saudi-open",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              organizationId,
+              periodStart:runForm.start,
+              periodEnd:runForm.end,
+              products:productPayload,
+              sources:openWebSources.map(s=>({
+                id:s.id,
+                name:s.name,
+                url:s.url,
+                metadata:s.metadata||{}
+              }))
+            })
+          });
+          openWebResult=await openResponse.json();
+          if(!openResponse.ok)throw new Error(openWebResult?.error||"Open Saudi journal monitoring failed.");
+
+          if((openWebResult.entries||[]).length){
+            const {data,error}=await pvosSupabase.rpc("pvos_register_literature_source_entries",{
+              p_entries:openWebResult.entries
+            });
+            if(error)throw error;
+            openRegistration=data||openRegistration;
+          }
+        }catch(e:any){
+          openWebError=e?.message||"Open Saudi journal monitoring failed.";
+          openWebResult={entries:[],matches:[],reports:[],sources_checked:openWebSources.length,sources_ok:0};
+        }
+      }
+
       const failedJournalReports=(lwwResult.reports||[]).filter((r:any)=>r.status!=="ok"||r.truncated);
       const journalWarning=lwwError||(failedJournalReports.length?failedJournalReports.length+" of "+lwwSources.length+" Saudi journal checks failed or were incomplete.":null);
+      const failedOpenReports=(openWebResult.reports||[]).filter((r:any)=>r.status!=="ok");
+      const openWarning=openWebError||(failedOpenReports.length?failedOpenReports.length+" of "+openWebSources.length+" open Saudi journal checks failed.":null);
 
       const pubmedPayload=(result.items||[]).map((x:any)=>({
         ...x,
@@ -498,13 +547,35 @@ export default function LiteraturePage(){
         source_id:lwwSourceMap[x.metadata?.source_name]||null,
         company_id:runForm.companyId
       })).filter((x:any)=>!!x.source_id);
+      const openSourceMap=Object.fromEntries(openWebSources.map(s=>[s.id,s]));
+      const newOpenKeys=new Set<string>((openRegistration?.new_keys||[]).map((x:any)=>String(x)));
+      const endDistance=Math.abs(Date.now()-new Date(runForm.end+"T23:59:59").getTime());
+      const recentRun=endDistance<=45*86400000;
+      const openSaudiPayload=(openWebResult.matches||[]).filter((x:any)=>{
+        const s=openSourceMap[x.source_id];
+        if(!s)return false;
+        const registeredKey=x.source_id+"::"+x.external_key;
+        if(!recentRun)return !!x.in_requested_period;
+        if(!s.metadata?.snapshot_initialized)return !!x.in_requested_period;
+        return newOpenKeys.has(registeredKey);
+      }).map((x:any)=>({
+        ...x,
+        organization_id:organizationId,
+        run_id:run.id,
+        company_id:runForm.companyId,
+        metadata:{
+          ...(x.metadata||{}),
+          source_snapshot_new:newOpenKeys.has(x.source_id+"::"+x.external_key),
+          source_snapshot_baseline:!openSourceMap[x.source_id]?.metadata?.snapshot_initialized
+        }
+      }));
 
       const merged=new Map<string,any>();
       for(const x of pubmedPayload){
         const key=x.product_id+"::"+String(x.doi||x.article_url||x.title).toLowerCase();
         merged.set(key,x);
       }
-      for(const x of [...saudiPayload,...directSaudiPayload]){
+      for(const x of [...saudiPayload,...directSaudiPayload,...openSaudiPayload]){
         const key=x.product_id+"::"+String(x.doi||x.article_url||x.title).toLowerCase();
         const existing=merged.get(key);
         if(existing){
@@ -516,7 +587,12 @@ export default function LiteraturePage(){
             metadata:{
               ...(existing.metadata||{}),
               ...(x.metadata||{}),
-              also_found_in:[...new Set([...(existing.metadata?.also_found_in||[]),existing.metadata?.connector==="pubmed"?"PubMed":null,x.metadata?.direct_source_monitoring?"Direct LWW":"Saudi journal metadata"].filter(Boolean))],
+              also_found_in:[...new Set([
+                ...(existing.metadata?.also_found_in||[]),
+                existing.metadata?.connector==="pubmed"?"PubMed":null,
+                x.metadata?.connector==="open_web_snapshot"?"Direct Saudi journal":null,
+                x.metadata?.direct_source_monitoring?"Direct LWW":"Saudi journal metadata"
+              ].filter(Boolean))],
               pubmed_pmid:existing.metadata?.pmid||existing.metadata?.pubmed_pmid||null,
               direct_source_duplicate:true
             }
@@ -557,6 +633,22 @@ export default function LiteraturePage(){
                   :(directReport?.status||(lwwDirectError?"error":"unknown"))
             }
           }).eq("id",s.id);
+        }),
+        ...openWebSources.map(s=>{
+          const report=(openWebResult.reports||[]).find((r:any)=>r.source_id===s.id);
+          const complete=!openWebError&&report?.status==="ok";
+          return pvosSupabase.from("pvos_literature_sources").update({
+            ...(complete?{last_checked_at:now,next_due_at:nextDue("daily")}:{ }),
+            metadata:{
+              ...(s.metadata||{}),
+              snapshot_initialized:complete?true:!!s.metadata?.snapshot_initialized,
+              snapshot_initialized_at:!s.metadata?.snapshot_initialized&&complete?now:s.metadata?.snapshot_initialized_at||null,
+              last_snapshot_check_at:now,
+              last_snapshot_report:report||null,
+              connector_status:complete?"active":"error",
+              direct_monitoring_status:complete?"active":"error"
+            }
+          }).eq("id",s.id);
         })
       ];
 
@@ -568,20 +660,31 @@ export default function LiteraturePage(){
           metadata:{
             v0:true,
             scope:"all_company_products",
-            connectors:lwwSources.length?["pubmed","lww_crossref","lww_direct"]:["pubmed"],
+            connectors:[
+              "pubmed",
+              ...(lwwSources.length?["lww_crossref","lww_direct"]:[]),
+              ...(openWebSources.length?["open_web_snapshot"]:[])
+            ],
             pubmed_results:pubmedPayload.length,
             saudi_journal_results:saudiPayload.length,
             saudi_direct_results:directSaudiPayload.length,
             saudi_direct_sources_ok:Number(lwwDirect.direct_sources_ok||0),
             saudi_direct_sources_blocked:Number(lwwDirect.blocked_sources||0),
             saudi_direct_skipped:!!lwwDirect.skipped,
+            open_saudi_sources_checked:openWebSources.length,
+            open_saudi_sources_ok:Number(openWebResult.sources_ok||0),
+            open_saudi_entries_seen:Number(openWebResult.entries?.length||0),
+            open_saudi_new_entries:Number(openRegistration?.new_count||0),
+            open_saudi_product_matches:openSaudiPayload.length,
             merged_results:payload.length,
             searches:result.searches||[],
             saudi_journal_reports:lwwResult.reports||[],
             saudi_direct_reports:lwwDirect.reports||[],
             saudi_journal_error:journalWarning,
             saudi_direct_error:lwwDirectError,
-            source_coverage_complete:!journalWarning
+            open_saudi_reports:openWebResult.reports||[],
+            open_saudi_error:openWarning,
+            source_coverage_complete:!journalWarning&&!openWarning
           }
         }).eq("id",run.id)
       ]);
@@ -594,7 +697,9 @@ export default function LiteraturePage(){
         (lwwSources.length?" · "+saudiPayload.length+" Saudi product matches from metadata":"")+
         (lwwDirect?.skipped?" · direct LWW check skipped for historical period":lwwSources.length?" · "+Number(lwwDirect.direct_sources_ok||0)+"/"+lwwSources.length+" direct LWW sources reachable":"")+
         (journalWarning?" · WARNING — "+journalWarning:"")+
-        (lwwDirectError?" · Direct LWW warning: "+lwwDirectError:"")
+        (lwwDirectError?" · Direct LWW warning: "+lwwDirectError:"")+
+        (openWebSources.length?" · "+Number(openWebResult.sources_ok||0)+"/"+openWebSources.length+" open Saudi sources reachable · "+openSaudiPayload.length+" new/date-matched product result(s)":"")+
+        (openWarning?" · Open-source warning: "+openWarning:"")
       );
       await load();
     }catch(e:any){
