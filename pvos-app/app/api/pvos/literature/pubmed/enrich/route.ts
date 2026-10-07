@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, fetchPubMedDetails, productTerms, type ProductInput } from "../../_pubmed";
-import { refineRanking } from "../../_rank";
+import { refineRanking, PRIORITIZATION_VERSION } from "../../_rank";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL ?? "https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -91,7 +91,7 @@ export async function POST(req:NextRequest){
           pubmed_date:detail?.pubmed_date??item.metadata?.pubmed_date??null,
           date_display_basis:detail?.online_date?"online":detail?.pubmed_date?"pubmed":item.metadata?.date_display_basis||"issue",
           enriched_at:new Date().toISOString(),
-          enrichment_version:"v3.1"
+          enrichment_version:PRIORITIZATION_VERSION
         }
       };
     });
