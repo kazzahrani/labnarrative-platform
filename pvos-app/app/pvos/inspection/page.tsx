@@ -19,6 +19,7 @@ function localDateStamp(){
 }
 
 function auditLabel(a:any){
+  if(a.entity_type==="handover_evidence")return "Deputy-acknowledged handover evidence frozen (PDF available in Handover)";
   const before=a.before_data??{};
   const after=a.after_data??{};
   if(a.entity_type==="task"){

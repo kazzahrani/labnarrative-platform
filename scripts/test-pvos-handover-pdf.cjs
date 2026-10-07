@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {createRequire}=require('node:module');
+const appRequire=createRequire(path.resolve('pvos-app/package.json'));
+const ts=appRequire('typescript');
+const source=fs.readFileSync('pvos-app/app/api/pvos/handover/_pdf.ts','utf8');
+const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
+const moduleObject={exports:{}};
+new Function('require','module','exports',compiled)(appRequire,moduleObject,moduleObject.exports);
+process.chdir('pvos-app');
+const tasks=Array.from({length:120},(_,i)=>({id:'task-'+i,title:i===0?'Unicode workload: café – München — متابعة السلامة':'Very long PV task '+i+' '+('inspection traceability '.repeat(12)),activity_type:'PSUR',priority:'high',status:'in_progress',due_at:i%2?'2026-10-09T13:00:00Z':null}));
+const evidence={id:'test-evidence',handover_id:'test-handover',created_at:'2026-10-07T15:00:00Z',snapshot_sha256:'abcdef0123456789'.repeat(4),template_version:'handover-v1',snapshot:{handover_id:'test-handover',leave_start:'2026-10-08',leave_end:'2026-10-15',sent_at:'2026-10-07T12:00:00Z',accepted_at:'2026-10-07T15:00:00Z',participants:{organization_name:'Regression fixture — not a real handover',qppv:{email:'qppv@example.invalid',user_id:'qppv-account'},deputy:{email:'deputy@example.invalid',user_id:'deputy-account'}},companies:[{company_id:'company-1',deputy_acknowledged_by:'deputy-account',deputy_acknowledged_at:'2026-10-07T15:00:00Z',snapshot:{company_name:'Test Pharmaceutical Company',contract_scope:'PV services',risk:'High',open_tasks:tasks.length,due_during_leave:60,tasks}}]}};
+(async()=>{
+ const bytes=await moduleObject.exports.renderHandoverPDF(evidence);
+ const {PDFDocument}=appRequire('pdf-lib');const doc=await PDFDocument.load(bytes);
+ assert.ok(doc.getPageCount()>10,'large workload must paginate');
+ await assert.rejects(()=>moduleObject.exports.renderHandoverPDF({...evidence,template_version:'unknown'}),/Unsupported/);
+ const unsupported=structuredClone(evidence);unsupported.snapshot.participants.organization_name='测试';
+ await assert.rejects(()=>moduleObject.exports.renderHandoverPDF(unsupported),/cannot render a character/,'unsupported glyphs must fail visibly, not silently disappear');
+ const output=process.env.PVOS_TEST_PDF_OUTPUT;
+ if(output)fs.writeFileSync(output,bytes);
+ console.log('PASS: Unicode font embedding, long titles, 120-task pagination, fixed metadata and template guard; pages='+doc.getPageCount());
+})().catch(e=>{console.error(e);process.exitCode=1});
