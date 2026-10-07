@@ -89,30 +89,70 @@ function publicationDateFrom(html:string){
   );
 }
 async function fetchHtml(url:string){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
-  try{
-    const res=await fetch(url,{
-      redirect:"follow",
-      cache:"no-store",
-      signal:controller.signal,
-      headers:{
-        "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154 Safari/537.36",
-        "Accept":"text/html,application/xhtml+xml;q=0.9,*/*;q=0.6",
-        "Accept-Language":"en-US,en;q=0.9"
-      }
-    });
-    const text=await res.text();
-    return {ok:res.ok,status:res.status,url:res.url||url,text,contentType:res.headers.get("content-type")||""};
-  }catch(e:any){
-    return {ok:false,status:0,url,text:"",contentType:"",error:e?.message||"fetch failed"};
-  }finally{clearTimeout(timer);}
+  let last:any={ok:false,status:0,url,text:"",contentType:"",error:"fetch failed"};
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),20000);
+    try{
+      const res=await fetch(url,{
+        redirect:"follow",
+        cache:"no-store",
+        signal:controller.signal,
+        headers:{
+          "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154 Safari/537.36",
+          "Accept":"text/html,application/xhtml+xml;q=0.9,*/*;q=0.6",
+          "Accept-Language":"en-US,en;q=0.9"
+        }
+      });
+      const text=await res.text();
+      last={ok:res.ok,status:res.status,url:res.url||url,text,contentType:res.headers.get("content-type")||""};
+      if(res.ok)return last;
+    }catch(e:any){
+      last={ok:false,status:0,url,text:"",contentType:"",error:e?.message||"fetch failed"};
+    }finally{clearTimeout(timer);}
+    if(attempt===0)await new Promise(r=>setTimeout(r,700));
+  }
+  return last;
 }
-function articleCandidates(html:string,base:string,platform:string){
+function scanUrls(source:SourceInput){
+  const configured=Array.isArray(source.metadata?.direct_scan_urls)?source.metadata.direct_scan_urls:[];
+  return [...new Set([
+    ...configured.map((x:any)=>String(x||"").trim()),
+    String(source.metadata?.direct_scan_url||"").trim(),
+    String(source.url||"").trim()
+  ].filter(Boolean))];
+}
+function articleCandidates(html:string,base:string,platform:string,metadata:Record<string,any>={}){
   const out:{url:string;title:string}[]=[];
   const seen=new Set<string>();
   const baseHost=(()=>{try{return new URL(base).host}catch{return ""}})();
   const deny=/^(home|about|issues?|archives?|current issue|ahead of print|contact|submit|login|register|pdf|full text|abstract|read article|read more|for authors)$/i;
+
+  if(platform==="saudijournals"){
+    const code=String(metadata?.journal_code||"").trim().toLowerCase();
+    if(code){
+      const re=new RegExp("10\\.36348\\/"+code+"\\.[A-Z0-9._-]+","gi");
+      for(const m of html.matchAll(re)){
+        const doi=String(m[0]).replace(/[),.;]+$/,"");
+        const key=doi.toLowerCase();
+        if(seen.has(key))continue;
+        seen.add(key);
+        out.push({url:"https://doi.org/"+doi,title:doi});
+      }
+      return out.slice(0,30);
+    }
+  }
+
+  if(platform==="ejmanager"){
+    for(const m of html.matchAll(/10\.5455\/mjhs\.[A-Z0-9._-]+/gi)){
+      const doi=String(m[0]).replace(/[),.;]+$/,"");
+      const key=doi.toLowerCase();
+      if(seen.has(key))continue;
+      seen.add(key);
+      out.push({url:"https://doi.org/"+doi,title:doi});
+      if(out.length>=40)break;
+    }
+  }
 
   for(const m of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)){
     const rawHref=decode(m[1]).trim();
@@ -124,16 +164,17 @@ function articleCandidates(html:string,base:string,platform:string){
     const path=u.pathname+u.search;
     let ok=false;
 
-    if(platform==="saudijournals")ok=/\/journal-details\//i.test(path);
-    else if(platform==="researchcommons")ok=/\/jmeds\/vol\d+\/iss\d+\/\d+/i.test(path);
+    if(platform==="researchcommons")ok=/\/jmeds\/vol\d+\/iss\d+\/\d+/i.test(path);
     else if(platform==="ejmanager")ok=/[?&]mno=\d+/i.test(path);
     else if(platform==="scientific_scholar"){
       ok=u.host===baseHost&&
         u.pathname.split("/").filter(Boolean).length===1&&
         (u.pathname.match(/-/g)||[]).length>=4;
+    }else if(platform==="springer"||platform==="nature"){
+      ok=u.host===baseHost&&(/\/article\//i.test(path)||/\/articles\//i.test(path));
     }else{
       ok=u.host===baseHost&&text.length>=28&&
-        /article|paper|study|case|review|trial|effect|association|prevalence|outcome|analysis/i.test(text);
+        (/\/article/i.test(path)||/article|paper|study|case|review|trial|effect|association|prevalence|outcome|analysis/i.test(text));
     }
 
     if(!ok)continue;
@@ -141,7 +182,7 @@ function articleCandidates(html:string,base:string,platform:string){
     if(seen.has(key))continue;
     seen.add(key);
     out.push({url,title:text});
-    if(out.length>=30)break;
+    if(out.length>=40)break;
   }
   return out;
 }
@@ -181,15 +222,36 @@ export async function POST(req:NextRequest){
     const retrievedAt=new Date().toISOString();
 
     for(const source of sources){
-      const scanUrl=String(source.metadata?.direct_scan_url||source.url||"");
       const platform=String(source.metadata?.platform||"generic");
-      const landing=await fetchHtml(scanUrl);
-      if(!landing.ok){
-        reports.push({source_id:source.id,name:source.name,status:"error",stage:"landing",http_status:landing.status,error:landing.error||"Source page unavailable"});
+      const attempts:any[]=[];
+      const candidateMap=new Map<string,{url:string;title:string}>();
+      let landingUrl="";
+
+      for(const scanUrl of scanUrls(source)){
+        const landing=await fetchHtml(scanUrl);
+        attempts.push({
+          url:scanUrl,
+          final_url:landing.url||scanUrl,
+          ok:landing.ok,
+          http_status:landing.status,
+          error:landing.error||null
+        });
+        if(!landing.ok)continue;
+        if(!landingUrl)landingUrl=landing.url||scanUrl;
+        const found=articleCandidates(landing.text,landing.url||scanUrl,platform,source.metadata||{});
+        for(const x of found){
+          const key=x.url.toLowerCase();
+          if(!candidateMap.has(key))candidateMap.set(key,x);
+        }
+      }
+
+      if(!landingUrl){
+        const last=attempts[attempts.length-1]||{};
+        reports.push({source_id:source.id,name:source.name,status:"error",stage:"landing",http_status:last.http_status||0,error:last.error||"Source page unavailable",attempts});
         continue;
       }
 
-      const candidates=articleCandidates(landing.text,landing.url||scanUrl,platform);
+      const candidates=[...candidateMap.values()];
       const details=await mapLimited(candidates,5,async candidate=>{
         const page=await fetchHtml(candidate.url);
         if(!page.ok)return {
@@ -296,8 +358,9 @@ export async function POST(req:NextRequest){
         status:"ok",
         direct:true,
         platform,
-        scan_url:landing.url||scanUrl,
+        scan_url:landingUrl,
         candidates:candidates.length,
+        landing_attempts:attempts,
         entries:details.length,
         detail_fetch_ok:details.filter(x=>x.fetch_ok).length,
         matched
