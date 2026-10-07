@@ -577,12 +577,13 @@ export default function LiteraturePage(){
       setMessage("There are no PubMed full-text items to retrieve in this screening run.");
       return;
     }
-    setBusy(true);setMessage("Checking PubMed Central for available full text…");
+    setBusy(true);setMessage("Checking PubMed Central and open literature indexes for available article text…");
     try{
       const body=candidates.map(x=>({
         id:x.id,
         title:x.title,
         pmid:String(x.metadata.pmid),
+        doi:x.doi||null,
         abstract:x.abstract||"",
         metadata:x.metadata||{},
         product:productMap[x.product_id]||{id:x.product_id}
@@ -599,7 +600,7 @@ export default function LiteraturePage(){
       if(error)throw error;
 
       setMessage(
-        "Full-text lookup complete: "+String(result.retrieved||0)+" retrieved from PubMed Central · "+
+        "Article-text lookup complete: "+String(result.retrieved||0)+" retrieved automatically · "+
         String(result.unavailable||0)+" still require external full text."
       );
       await load();
@@ -1182,7 +1183,7 @@ export default function LiteraturePage(){
               </div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              <button className={styles.buttonGhost} disabled={busy||!batchFullTextOpen.length||!runFilter} onClick={retrieveAvailableFullText}>Retrieve available full text ({batchFullTextOpen.length})</button>
+              <button className={styles.buttonGhost} disabled={busy||!batchFullTextOpen.length||!runFilter} onClick={retrieveAvailableFullText}>Retrieve available article text ({batchFullTextOpen.length})</button>
               <button className={styles.button} disabled={busy||!(batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length)||!runFilter} onClick={applySecondPassSuggestions}>Apply second-pass suggestions ({batchSecondPass.relevant.length+batchSecondPass.not_relevant.length+batchSecondPass.needs_review.length})</button>
               <button className={styles.button} disabled={busy||!batchUnlikelyOpen.length||!runFilter} onClick={confirmUnlikelyNotRelevant}>Confirm Unlikely → Not relevant ({batchUnlikelyOpen.length})</button>
               <button className={styles.button} disabled={busy||!batchHighConfidenceRelevant.length||!runFilter} onClick={acceptHighConfidenceRelevant}>Accept high-confidence Relevant ({batchHighConfidenceRelevant.length})</button>
