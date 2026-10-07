@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {crossrefIssns,fetchCrossrefWorks,unusableJournalPage,readAllRows} from '../pvos-app/app/api/pvos/literature/_sources.ts';
+import {crossrefIssns,fetchCrossrefWorks,unusableJournalPage,readAllRows,saudiJournalArticles,saudiJournalIssueUrls,parseSaudiJournalArticle,scanSaudiJournal} from '../pvos-app/app/api/pvos/literature/_sources.ts';
 assert.deepEqual(crossrefIssns({online_issn:'1658-8592',print_issn:'1658-8312',crossref_issns:['1658-8312']}),['1658-8312']);
 assert.deepEqual(crossrefIssns({online_issn:'1658-8223',print_issn:'1658-645X'}),['1658-8223','1658-645X']);
 let calls=0;
@@ -23,4 +23,20 @@ const history=Array.from({length:2317},(_,id)=>({id}));
 const all=await readAllRows(async (from,to)=>({data:history.slice(from,to+1),error:null}));
 assert.equal(all.length,2317,'deduplication must include records beyond the API row limit');
 await assert.rejects(()=>readAllRows(async()=>({data:null,error:new Error('query failed')})),/query failed/);
+
+const dental=`<div class="article-box mt-3"><div onclick="location.href='/articles/13151/'">Dental safety study</div><a href="#">https://doi.org/10.36348/sjodr.2026.v11i10.001</a><a href="/articles/13151/">READ ARTICLE</a></div>`;
+const unrelated=dental.replaceAll('sjodr.','sjmps.').replaceAll('13151','13150');
+const candidates=saudiJournalArticles(dental+unrelated,'https://saudijournals.com/journal/sjodr/home','sjodr');
+assert.equal(candidates.length,1,'publisher-wide feed must be filtered to the configured journal');
+assert.equal(candidates[0].url,'https://saudijournals.com/articles/13151/','new publisher articles must not depend on DOI resolution');
+const archives=`<div onclick="location.href='/journal-details/sjodr/208/2277'">Issue 9</div><div onclick="location.href='/journal-details/sjodr/208/2296'">Issue 10</div><div onclick="location.href='/journal-details/sjodr/197/2110'">Prior year</div>`;
+assert.deepEqual(saudiJournalIssueUrls(archives,'https://saudijournals.com/','sjodr'),['https://saudijournals.com/journal-details/sjodr/208/2296','https://saudijournals.com/journal-details/sjodr/208/2277']);
+const article=`<meta property="og:title" content="Generic Publisher Name"><div class="fs-2">Dental safety study</div><strong>Published : </strong>Oct. 7, 2026</div><a>10.36348/sjodr.2026.v11i10.001</a><strong>Abstract</strong></div><div class="mt-3">Specific clinical abstract.</div>`;
+assert.deepEqual(parseSaudiJournalArticle(article),{title:'Dental safety study',abstract:'Specific clinical abstract.',doi:'10.36348/sjodr.2026.v11i10.001',publicationDate:'2026-10-07'});
+const visited=[];
+const scan=await scanSaudiJournal({url:'https://saudijournals.com/journal/sjodr/home',metadata:{journal_code:'sjodr'}},async url=>{
+ visited.push(url);return {ok:true,status:200,url,text:url.endsWith('/home')?unrelated:url.endsWith('/archives')?archives:dental};
+});
+assert.equal(scan.candidates.length,1,'empty journal home feed must still scan current and previous issues');
+assert.equal(visited.length,4);
 console.log('Source monitoring: verified ISSNs, pagination, incomplete responses, HTTP errors, placeholder pages, and runtime parity passed.');

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, productTerms, type ProductInput } from "../_pubmed";
 import { refineRanking } from "../_rank";
-import { unusableJournalPage } from "../_sources";
+import { unusableJournalPage, scanSaudiJournal, parseSaudiJournalArticle } from "../_sources";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL??"https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -228,7 +228,11 @@ export async function POST(req:NextRequest){
       const candidateMap=new Map<string,{url:string;title:string}>();
       let landingUrl="";
 
-      for(const scanUrl of scanUrls(source)){
+      if(platform==="saudijournals"){
+        const scan=await scanSaudiJournal(source,fetchHtml);
+        attempts.push(...scan.attempts);landingUrl=scan.landingUrl;
+        for(const item of scan.candidates)candidateMap.set(item.url.toLowerCase(),item);
+      }else for(const scanUrl of scanUrls(source)){
         const landing=await fetchHtml(scanUrl);
         attempts.push({
           url:scanUrl,
@@ -259,7 +263,7 @@ export async function POST(req:NextRequest){
       }
       const details=await mapLimited(candidates,5,async candidate=>{
         const page=await fetchHtml(candidate.url);
-        if(!page.ok)return {
+        if(!page.ok||unusableJournalPage(page.text))return {
           external_key:"url:"+candidate.url.toLowerCase(),
           title:candidate.title,
           article_url:candidate.url,
@@ -269,15 +273,16 @@ export async function POST(req:NextRequest){
           fetch_ok:false
         };
         const url=canonical(page.text,page.url||candidate.url);
-        const doi=meta(page.text,["citation_doi","dc.identifier"])||doiFrom(page.text);
+        const direct=platform==="saudijournals"?parseSaudiJournalArticle(page.text):null;
+        const doi=direct?.doi||meta(page.text,["citation_doi","dc.identifier"])||doiFrom(page.text);
         return {
           external_key:externalKey(doi||null,url),
-          title:titleFrom(page.text,candidate.title),
+          title:direct?direct.title:titleFrom(page.text,candidate.title),
           article_url:url,
           doi:doi||null,
-          publication_date:publicationDateFrom(page.text),
-          abstract:abstractFrom(page.text)||null,
-          fetch_ok:true
+          publication_date:direct?direct.publicationDate:publicationDateFrom(page.text),
+          abstract:(direct?direct.abstract:abstractFrom(page.text))||null,
+          fetch_ok:!direct||!!direct.title
         };
       });
 
@@ -297,7 +302,8 @@ export async function POST(req:NextRequest){
             platform,
             source_name:source.name,
             source_retrieved_at:retrievedAt,
-            fetch_ok:detail.fetch_ok
+            fetch_ok:detail.fetch_ok,
+            ...(platform==="saudijournals"?{parser_version:"saudijournals_v2"}:{})
           }
         });
 
@@ -360,7 +366,7 @@ export async function POST(req:NextRequest){
       reports.push({
         source_id:source.id,
         name:source.name,
-        status:"ok",
+        status:details.every(x=>x.fetch_ok)&&attempts.every(x=>x.ok)?"ok":"partial",
         direct:true,
         platform,
         scan_url:landingUrl,

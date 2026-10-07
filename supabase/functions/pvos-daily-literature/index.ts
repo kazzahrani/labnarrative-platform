@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { analyzeArticle, fetchPubMedDetails, ncbiJson, productTerms, sleep, ymd } from "./_pubmed.ts";
 import { refineRanking } from "./_rank.ts";
-import { crossrefIssns, fetchCrossrefWorks, unusableJournalPage, readAllRows } from "./_sources.ts";
+import { crossrefIssns, fetchCrossrefWorks, unusableJournalPage, readAllRows, scanSaudiJournal, parseSaudiJournalArticle } from "./_sources.ts";
 
 const SEARCH_PAGE_SIZE=500;
 const SUMMARY_CHUNK_SIZE=200;
@@ -165,12 +165,17 @@ Deno.serve(async(req)=>{
     const reports=[];
     for(const source of sources||[]){
       const report:any={source_id:source.id,source:source.name,coverage_limitation:source.metadata?.coverage_limitation||null,issn_reports:[],direct_attempts:[]};
-      for(const issn of crossrefIssns(source.metadata)){
+      for(const issn of (source.metadata?.connector==="open_web_snapshot"?[]:crossrefIssns(source.metadata))){
         try{const result=await fetchCrossrefWorks(issn,body.baseline?minusDays(today,365):windowStart,today,body.baseline?"publication":"update");
           report.issn_reports.push({issn,status:result.truncated?"partial":"ok",total:result.total,retrieved:result.items.length,sample:result.items.slice(0,3).map((x:any)=>({doi:x.DOI,title:x.title,issn:x.ISSN}))});
         }catch(e:any){report.issn_reports.push({issn,status:"error",error:e.message})}
       }
-      if(body.check_direct===true){for(const scanUrl of scanUrls(source)){const page=await fetchHtml(scanUrl);report.direct_attempts.push({url:scanUrl,status:page.status,usable:page.ok&&!unusableJournalPage(page.text),candidates:page.ok?articleCandidates(page.text,page.url,source).length:0,error:page.error||null})}}
+      if(body.check_direct===true){
+        if(source.metadata?.platform==="saudijournals"){
+          const scan=await scanSaudiJournal(source,fetchHtml);report.direct_attempts=scan.attempts;report.candidates=scan.candidates.length;
+          report.sample=[];for(const item of scan.candidates.slice(0,3)){const page=await fetchHtml(item.url);const detail=parseSaudiJournalArticle(page.text);report.sample.push({url:item.url,status:page.status,title:detail.title,doi:detail.doi,abstract_length:detail.abstract.length})}
+        }else for(const scanUrl of scanUrls(source)){const page=await fetchHtml(scanUrl);report.direct_attempts.push({url:scanUrl,status:page.status,usable:page.ok&&!unusableJournalPage(page.text),candidates:page.ok?articleCandidates(page.text,page.url,source).length:0,error:page.error||null})}
+      }
       reports.push(report);
     }
     return Response.json({diagnostic:true,checked_at:now.toISOString(),reports});
@@ -230,24 +235,38 @@ Deno.serve(async(req)=>{
         }
 
         for(const source of openSources){
-          let landing:any=null;const attempts:any[]=[];
-          for(const scanUrl of scanUrls(source)){const r=await fetchHtml(scanUrl);attempts.push({url:scanUrl,status:r.status,ok:r.ok});if(r.ok&&!unusableJournalPage(r.text)){landing=r;break}}
+          let landing:any=null;const attempts:any[]=[];let cands:any[]=[];
+          if(source.metadata?.platform==="saudijournals"){
+            const scan=await scanSaudiJournal(source,fetchHtml);attempts.push(...scan.attempts);cands=scan.candidates;
+            for(const attempt of scan.attempts.filter(x=>!x.ok))failures.push({company_id:company.id,source:source.name,error:"Journal issue page unavailable",attempt});
+            if(scan.landingUrl)landing={url:scan.landingUrl,text:""};
+          }else for(const scanUrl of scanUrls(source)){const r=await fetchHtml(scanUrl);attempts.push({url:scanUrl,status:r.status,ok:r.ok});if(r.ok&&!unusableJournalPage(r.text)){landing=r;break}}
           if(!landing){failures.push({company_id:company.id,source:source.name,error:"Open source unavailable"});sourceReports.push({source:source.name,status:"error"});continue}
-          const cands=articleCandidates(landing.text,landing.url,source);
+          if(source.metadata?.platform!=="saudijournals")cands=articleCandidates(landing.text,landing.url,source);
           if(!cands.length){failures.push({company_id:company.id,source:source.name,error:"No article links found; coverage not verified",attempts});sourceReports.push({source:source.name,status:"error"});continue}
-          const known=await readAllRows((from,to)=>admin.from("pvos_literature_source_entries").select("external_key,article_url,first_seen_at").eq("source_id",source.id).order("id").range(from,to));
+          const known=await readAllRows((from,to)=>admin.from("pvos_literature_source_entries").select("external_key,article_url,first_seen_at,metadata").eq("source_id",source.id).order("id").range(from,to));
           const knownKeys=new Map(known.map((x:any)=>[x.external_key,x]));
           const knownUrls=new Set((known||[]).map((x:any)=>String(x.article_url||"").toLowerCase()));
-          const newCands=cands.filter((x:any)=>!knownUrls.has(String(x.url).toLowerCase())).slice(0,20);
+          const visibleKnown=cands.map((x:any)=>x.doi?"doi:"+x.doi.toLowerCase():externalKey(null,x.url)).filter((keyx:string)=>knownKeys.has(keyx));
+          if(visibleKnown.length)await admin.from("pvos_literature_source_entries").update({last_seen_at:now.toISOString()}).eq("source_id",source.id).in("external_key",visibleKnown);
+          const newCands=cands.filter((x:any)=>{
+            const existing=x.doi?knownKeys.get("doi:"+x.doi.toLowerCase()):null;
+            if(source.metadata?.platform==="saudijournals"&&existing?.metadata?.parser_version!=="saudijournals_v2")return true;
+            return !knownUrls.has(String(x.url).toLowerCase())&&!existing;
+          });
           let added=0;const sourceFailureStart=failures.length;
-          for(const cand of newCands){
-            const page=await fetchHtml(cand.url);if(!page.ok||unusableJournalPage(page.text)){failures.push({company_id:company.id,source:source.name,error:"Article page unavailable",article_url:cand.url,http_status:page.status});continue;}
-            const canon=canonical(page.text,page.url||cand.url),doi=meta(page.text,["citation_doi","dc.identifier"])||doiFrom(page.text),title=titleFrom(page.text,cand.title),abstract=abstractFrom(page.text)||null,pubDate=publicationDateFrom(page.text);
+          const pages:any[]=[];
+          for(let i=0;i<newCands.length;i+=5)pages.push(...await Promise.all(newCands.slice(i,i+5).map((x:any)=>fetchHtml(x.url))));
+          for(let i=0;i<newCands.length;i++){
+            const cand=newCands[i],page=pages[i];if(!page.ok||unusableJournalPage(page.text)){failures.push({company_id:company.id,source:source.name,error:"Article page unavailable",article_url:cand.url,http_status:page.status});continue;}
+            const direct=source.metadata?.platform==="saudijournals"?parseSaudiJournalArticle(page.text):null;
+            const canon=canonical(page.text,page.url||cand.url),doi=direct?.doi||meta(page.text,["citation_doi","dc.identifier"])||doiFrom(page.text),title=direct?direct.title:titleFrom(page.text,cand.title),abstract=(direct?direct.abstract:abstractFrom(page.text))||null,pubDate=direct?direct.publicationDate:publicationDateFrom(page.text);
+            if(!title){failures.push({company_id:company.id,source:source.name,error:"Article title could not be parsed",article_url:cand.url});continue}
             const keyx=externalKey(doi||null,canon);
-            await admin.from("pvos_literature_source_entries").upsert({organization_id:orgId,source_id:source.id,external_key:keyx,title,article_url:canon,doi:doi||null,publication_date:pubDate,abstract,first_seen_at:knownKeys.get(keyx)?.first_seen_at||now.toISOString(),last_seen_at:now.toISOString(),metadata:{connector:"open_web_snapshot",automated:true,source_retrieved_at:now.toISOString()}},{onConflict:"source_id,external_key"});
+            await admin.from("pvos_literature_source_entries").upsert({organization_id:orgId,source_id:source.id,external_key:keyx,title,article_url:canon,doi:doi||null,publication_date:pubDate,abstract,first_seen_at:knownKeys.get(keyx)?.first_seen_at||now.toISOString(),last_seen_at:now.toISOString(),metadata:{connector:"open_web_snapshot",automated:true,source_retrieved_at:now.toISOString(),...(source.metadata?.platform==="saudijournals"?{parser_version:"saudijournals_v2"}:{})}},{onConflict:"source_id,external_key"});
             added++;
             for(const product of products){const terms=productTerms(product);const a=refineRanking(analyzeArticle(title,abstract||"",[],terms),title,abstract||"",terms);if(!a.matchedTerms.length)continue;
-              candidates.push({product_id:product.id,source_id:source.id,title,journal:source.name,publication_date:pubDate,article_url:canon,doi:doi||null,abstract,matched_terms:a.matchedTerms,relevance:a.relevance,ai_reason:a.reason,review_status:"unreviewed",metadata:{connector:"open_web_snapshot",automated_screening:true,discovery_channel:"first_seen_snapshot",retrieved_at:now.toISOString(),saudi_journal:true,source_first_seen_at:now.toISOString(),urgent_saudi:a.urgentSaudi,saudi_hits:a.saudiHits,safety_hits:a.safetyHits,special_hits:a.specialHits,lack_efficacy_hits:a.lackEfficacyHits,interaction_hits:a.interactionHits,case_hits:a.caseHits,assessment_state:a.assessmentState,full_text_required:a.fullTextRequired,publication_context:a.publicationContext,product_role:a.productRole,finding_types:a.findingTypes,prioritization_version:a.analysisVersion}})
+              candidates.push({product_id:product.id,source_id:source.id,title,journal:source.name,publication_date:pubDate,article_url:canon,doi:doi||null,abstract,matched_terms:a.matchedTerms,relevance:a.relevance,ai_reason:a.reason,review_status:"unreviewed",metadata:{connector:"open_web_snapshot",automated_screening:true,discovery_channel:"first_seen_snapshot",retrieved_at:now.toISOString(),saudi_journal:true,source_first_seen_at:knownKeys.get(keyx)?.first_seen_at||now.toISOString(),urgent_saudi:a.urgentSaudi,saudi_hits:a.saudiHits,safety_hits:a.safetyHits,special_hits:a.specialHits,lack_efficacy_hits:a.lackEfficacyHits,interaction_hits:a.interactionHits,case_hits:a.caseHits,assessment_state:a.assessmentState,full_text_required:a.fullTextRequired,publication_context:a.publicationContext,product_role:a.productRole,finding_types:a.findingTypes,prioritization_version:a.analysisVersion}})
             }
           }
           await admin.from("pvos_literature_sources").update({last_checked_at:now.toISOString(),next_due_at:new Date(now.getTime()+Number(setting.cadence_hours||4)*3600000).toISOString(),metadata:{...(source.metadata||{}),snapshot_initialized:true,last_automated_check_at:now.toISOString(),automation_status:failures.length>sourceFailureStart?"partial":"ok"}}).eq("id",source.id);
