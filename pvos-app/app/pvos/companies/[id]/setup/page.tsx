@@ -7,6 +7,7 @@ import { Header } from "../../../_components";
 import { usePVOS } from "../../../_provider";
 import { pvosSupabase } from "../../../_pvos-supabase";
 import styles from "../../../pvos.module.css";
+import { emptyRegistration, RegistrationFields } from "../../_registration-fields";
 
 function localInput(offsetDays:number){
   const d=new Date();d.setDate(d.getDate()+offsetDays);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
@@ -17,6 +18,7 @@ export default function CompanySetupPage(){
   const params=useParams<{id:string}>(); const router=useRouter(); const {session}=usePVOS();
   const [company,setCompany]=useState<any|null>(null);
   const [productName,setProductName]=useState(""); const [ingredient,setIngredient]=useState(""); const [rmp,setRmp]=useState("Routine");
+  const [registration,setRegistration]=useState(emptyRegistration);
   const [obligationTitle,setObligationTitle]=useState(""); const [activity,setActivity]=useState("Literature"); const [cadence,setCadence]=useState("weekly"); const [nextDue,setNextDue]=useState(localInput(7)); const [responsibility,setResponsibility]=useState("organization");
   const [routeName,setRouteName]=useState(""); const [routeActivity,setRouteActivity]=useState("General"); const [routeRoles,setRouteRoles]=useState("QPPV, Quality, Manager, Client");
   const [routes,setRoutes]=useState<any[]>([]);
@@ -34,8 +36,8 @@ export default function CompanySetupPage(){
 
   async function addProduct(e:FormEvent){
     e.preventDefault();if(!company)return;setBusy(true);setMessage(null);
-    const {error}=await pvosSupabase.from("pvos_products").insert({company_id:company.id,brand_name:productName.trim(),active_ingredient:ingredient.trim()||null,registration_status:"Registered",rmp_status:rmp});
-    setBusy(false); if(error){setMessage(error.message);return;} setProductName("");setIngredient("");setMessage("Product added.");
+    const {error}=await pvosSupabase.from("pvos_products").insert({company_id:company.id,brand_name:productName.trim(),active_ingredient:ingredient.trim()||null,registration_status:registration.status==="Not recorded"?null:registration.status,sfda_registration_number:registration.number.trim()||null,registration_reference:registration.reference.trim()||null,rmp_status:rmp});
+    setBusy(false); if(error){setMessage(error.message);return;} setProductName("");setIngredient("");setRegistration(emptyRegistration);setMessage("Product added.");
   }
 
   async function addObligation(e:FormEvent){
@@ -67,6 +69,7 @@ export default function CompanySetupPage(){
       <form className={styles.info} onSubmit={addProduct}><h3>Add product</h3><div className={styles.form}>
         <label>Brand name<input className={styles.input} value={productName} onChange={e=>setProductName(e.target.value)} required/></label>
         <label>Active ingredient<input className={styles.input} value={ingredient} onChange={e=>setIngredient(e.target.value)}/></label>
+        <RegistrationFields value={registration} onChange={setRegistration}/>
         <label>RMP status<select className={styles.input} value={rmp} onChange={e=>setRmp(e.target.value)}><option>Routine</option><option>Active</option><option>Not required</option><option>Under review</option></select></label>
       </div><div className={styles.inlineActions}><button className={styles.button} disabled={busy}>Add product</button></div></form>
 
