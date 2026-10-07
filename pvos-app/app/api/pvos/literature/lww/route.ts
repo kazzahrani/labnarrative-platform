@@ -64,7 +64,6 @@ async function fetchCrossrefWorks(issn:string,start:string,end:string){
     url.searchParams.set("filter","from-pub-date:"+start+",until-pub-date:"+end+",type:journal-article");
     url.searchParams.set("rows",String(rows));
     url.searchParams.set("cursor",cursor);
-    url.searchParams.set("cursor-max",String(rows));
     url.searchParams.set("mailto","support@pvos.site");
     const res=await fetch(url.toString(),{
       cache:"no-store",
@@ -73,7 +72,10 @@ async function fetchCrossrefWorks(issn:string,start:string,end:string){
         "User-Agent":"PVOS literature monitoring/1.0 (https://pvos.site)"
       }
     });
-    if(!res.ok)throw new Error("Crossref request failed ("+res.status+").");
+    if(!res.ok){
+      const detail=(await res.text()).replace(/<[^>]+>/g," ").replace(/\s+/g," ").slice(0,400);
+      throw new Error("Crossref request failed ("+res.status+"): "+detail);
+    }
     const data=await res.json();
     const message=data?.message||{};
     const pageItems=Array.isArray(message.items)?message.items:[];
