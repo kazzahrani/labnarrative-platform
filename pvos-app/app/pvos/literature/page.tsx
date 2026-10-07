@@ -6,7 +6,7 @@ import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import styles from "../pvos.module.css";
 
-type Tab="sources"|"queue"|"runs"|"alerts"|"psur";
+type Tab="sources"|"queue"|"runs"|"second"|"alerts"|"psur";
 type ReviewStatus="unreviewed"|"relevant"|"not_relevant"|"needs_review";
 
 const today=()=>new Date().toISOString().slice(0,10);
@@ -129,6 +129,7 @@ export default function LiteraturePage(){
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
   const [selectedRun,setSelectedRun]=useState<any|null>(null);
+  const [selectedSecondReviewId,setSelectedSecondReviewId]=useState<string|null>(null);
   const [rapidOpen,setRapidOpen]=useState(false);
   const [rapidItemId,setRapidItemId]=useState<string|null>(null);
   const [rapidSeen,setRapidSeen]=useState<string[]>([]);
@@ -196,7 +197,12 @@ export default function LiteraturePage(){
   const sourceMap=useMemo(()=>Object.fromEntries(sources.map(x=>[x.id,x])),[sources]);
   const memberMap=useMemo(()=>Object.fromEntries(members.map(x=>[x.user_id,x])),[members]);
   const literatureItemMap=useMemo(()=>Object.fromEntries(items.map(x=>[x.id,x])),[items]);
+  const runMap=useMemo(()=>Object.fromEntries(runs.map(x=>[x.id,x])),[runs]);
   const secondReviewMap=useMemo(()=>Object.fromEntries(secondReviews.map(x=>[x.run_id,x])),[secondReviews]);
+  const myPendingSecondReviews=secondReviews.filter(x=>x.status==="pending"&&x.assigned_to===session?.user.id);
+  const selectedSecondReview=selectedSecondReviewId?secondReviews.find(x=>x.id===selectedSecondReviewId)||null:null;
+  const selectedSecondRun=selectedSecondReview?runMap[selectedSecondReview.run_id]||null:null;
+  const selectedSecondScope=Array.isArray(selectedSecondReview?.metadata?.scope_snapshot)?selectedSecondReview.metadata.scope_snapshot:[];
   const openAlerts=alerts.filter(x=>x.status==="open");
   const automationResult=automationSetting?.last_result||{};
   const automationFailures=Array.isArray(automationResult?.failures)?automationResult.failures:[];
@@ -251,6 +257,8 @@ export default function LiteraturePage(){
   const hasFollowup=(itemId:string,destination:string)=>followups.some(x=>x.literature_item_id===itemId&&x.destination===destination&&x.status!=="dismissed");
   const recordMap=useMemo(()=>Object.fromEntries(records.map(x=>[x.run_id,x])),[records]);
   const selectedQueueRun=useMemo(()=>runs.find(x=>x.id===runFilter)||null,[runs,runFilter]);
+  const queueSecondReview=selectedQueueRun?secondReviewMap[selectedQueueRun.id]:null;
+  const queueLockedForSecondReview=!!queueSecondReview&&(queueSecondReview.status==="pending"||queueSecondReview.status==="approved");
 
   async function freshAccessToken(){
     const {data:{session:current}}=await pvosSupabase.auth.getSession();
@@ -1301,7 +1309,11 @@ export default function LiteraturePage(){
       setMessage("Cannot complete screening: "+stats.open+" article(s) still need a final QPPV decision.");
       return;
     }
-    if(secondReview&&secondReview.status!=="approved"){
+    if(!secondReview){
+      setMessage("Cannot complete screening until a second reviewer has reviewed and approved the first-review decisions.");
+      return;
+    }
+    if(secondReview.status!=="approved"){
       setMessage("Cannot complete screening until the assigned second review is approved.");
       return;
     }
@@ -1478,13 +1490,14 @@ export default function LiteraturePage(){
       </div>
     </div>:null}
 
-    {message?<div className={message.includes("added")||message.includes("created")||message.includes("complete")||message.includes("returned")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
+    {message?<div className={message.includes("added")||message.includes("created")||message.includes("complete")||message.includes("returned")||message.includes("approved")||message.includes("sent")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
 
     <section className={styles.panel}>
       <div style={{padding:"12px 14px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
         <button className={tab==="sources"?styles.button:styles.buttonGhost} onClick={()=>setTab("sources")}>Sources</button>
         <button className={tab==="queue"?styles.button:styles.buttonGhost} onClick={()=>setTab("queue")}>Screening Queue {openItems.length?"("+openItems.length+")":""}</button>
         <button className={tab==="runs"?styles.button:styles.buttonGhost} onClick={()=>setTab("runs")}>Screening Runs</button>
+        <button className={tab==="second"?styles.button:styles.buttonGhost} onClick={()=>setTab("second")}>Second Review {myPendingSecondReviews.length?"("+myPendingSecondReviews.length+")":""}</button>
         <button className={tab==="alerts"?styles.button:styles.buttonGhost} onClick={()=>setTab("alerts")}>Alerts {openAlerts.length?"("+openAlerts.length+")":""}</button>
         <button className={tab==="psur"?styles.button:styles.buttonGhost} onClick={()=>setTab("psur")}>PSUR Evidence {psurEvidence.length?"("+psurEvidence.length+")":""}</button>
       </div>
@@ -1573,9 +1586,9 @@ export default function LiteraturePage(){
             <div className={styles.muted} style={{marginTop:4}}>{openItems.length} awaiting final QPPV decision · {reviewed.length} reviewed</div>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
-            <button className={batchMode?styles.button:styles.buttonGhost} onClick={batchMode?finishBatchReview:startBatchReview} disabled={!openItems.length}>{batchMode?"Exit batch review":"Batch review"}</button>
-            <button className={styles.button} onClick={startRapidReview} disabled={!openItems.length}>Rapid review</button>
+            <button className={styles.buttonGhost} onClick={analyzeQueue} disabled={analyzing||!items.length||queueLockedForSecondReview}>{analyzing?"Analyzing abstracts…":"Analyze & prioritize"}</button>
+            <button className={batchMode?styles.button:styles.buttonGhost} onClick={batchMode?finishBatchReview:startBatchReview} disabled={!openItems.length||queueLockedForSecondReview}>{batchMode?"Exit batch review":"Batch review"}</button>
+            <button className={styles.button} onClick={startRapidReview} disabled={!openItems.length||queueLockedForSecondReview}>Rapid review</button>
           </div>
         </div>
         {focusedAlertItemId?<div className={styles.notice} style={{margin:"0 14px 12px",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
@@ -1708,6 +1721,112 @@ export default function LiteraturePage(){
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No screening runs yet. Create one for a historical or current screening period.</div>}
+      </>:null}
+
+      {tab==="second"?<>
+        <div className={styles.panelHeader} style={{marginTop:12}}>
+          <div>
+            <h2>Second review</h2>
+            <div className={styles.muted} style={{marginTop:4}}>Independent verification of first-review literature decisions before an inspection-ready screening record can be completed.</div>
+          </div>
+          <span className={styles.muted}>{myPendingSecondReviews.length} assigned to you · {secondReviews.filter(x=>x.status==="pending").length} pending in workspace</span>
+        </div>
+
+        {!selectedSecondReview?<>
+          {secondReviews.length?<div className={styles.tableWrap}><table className={styles.table}>
+            <thead><tr><th>Period</th><th>Company</th><th>Review scope</th><th>Assigned to</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
+            <tbody>{secondReviews.map(sr=>{
+              const run=runMap[sr.run_id];
+              const summary=sr.metadata?.summary||{};
+              return <tr key={sr.id}>
+                <td><strong>{run?dateLabel(run.period_start)+" – "+dateLabel(run.period_end):"Screening run"}</strong></td>
+                <td>{run?companyMap[run.company_id]||"—":"—"}</td>
+                <td>
+                  <strong>{Number(summary.scope_count||0)} focused decision{Number(summary.scope_count||0)===1?"":"s"}</strong>
+                  <div className={styles.muted} style={{marginTop:3}}>{Number(summary.relevant||0)} Relevant · {Number(summary.likely_relevant||0)} Likely · {Number(summary.saudi_alerts||0)} Saudi · {Number(summary.full_text||0)} Full text</div>
+                </td>
+                <td>{memberMap[sr.assigned_to]?.email||"Workspace member"}{sr.assigned_to===session?.user.id?<div style={{marginTop:4}}><Badge tone="lime">You</Badge></div>:null}</td>
+                <td>{dateTimeLabel(sr.assigned_at)}</td>
+                <td><Badge tone={sr.status==="approved"?"green":sr.status==="returned"?"red":"amber"}>{String(sr.status).replaceAll("_"," ")}</Badge></td>
+                <td><button className={styles.buttonGhost} onClick={()=>{setSelectedSecondReviewId(sr.id);setSecondReviewNote(sr.note||"")}}>Open</button></td>
+              </tr>
+            })}</tbody>
+          </table></div>:<div className={styles.empty}>No second-review assignments yet. Finish the first review of a screening run, then assign a different workspace member from Screening Runs.</div>}
+        </>:<>
+          {(()=>{
+            const sr=selectedSecondReview;
+            const run=selectedSecondRun;
+            const summary=sr.metadata?.summary||{};
+            const assignedToMe=sr.assigned_to===session?.user.id;
+            return <>
+              <div style={{padding:"12px 14px",display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",borderTop:"1px solid rgba(148,163,184,.14)"}}>
+                <button className={styles.buttonGhost} onClick={()=>{setSelectedSecondReviewId(null);setSecondReviewNote("")}}>← Back to second reviews</button>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <Badge tone={sr.status==="approved"?"green":sr.status==="returned"?"red":"amber"}>{String(sr.status).replaceAll("_"," ")}</Badge>
+                  <span className={styles.muted}>Cycle {Number(sr.metadata?.assignment_cycle||1)} · snapshot {dateTimeLabel(sr.metadata?.snapshot_at)}</span>
+                </div>
+              </div>
+
+              <div className={styles.notice} style={{margin:"0 14px 14px"}}>
+                <strong>{run?companyMap[run.company_id]||"Company":"Screening"} · {run?dateLabel(run.period_start)+" – "+dateLabel(run.period_end):""}</strong>
+                <div className={styles.muted} style={{marginTop:5}}>
+                  Second review is intentionally focused on the decisions with the highest regulatory value: Relevant articles, PVOS Likely-relevant articles, Saudi alerts, and Full-text decisions. Routine low-risk Not relevant decisions remain preserved in the first-review audit trail.
+                </div>
+                <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10}}>
+                  <span><strong>{Number(summary.total||0)}</strong> total screened</span>
+                  <span><strong>{Number(summary.relevant||0)}</strong> Relevant</span>
+                  <span><strong>{Number(summary.not_relevant||0)}</strong> Not relevant</span>
+                  <span><strong>{Number(summary.scope_count||selectedSecondScope.length)}</strong> in second-review scope</span>
+                </div>
+                <div className={styles.muted} style={{marginTop:8}}>
+                  Assigned by {memberMap[sr.assigned_by]?.email||"workspace member"} · assigned to {memberMap[sr.assigned_to]?.email||"workspace member"} · {dateTimeLabel(sr.assigned_at)}
+                </div>
+              </div>
+
+              {selectedSecondScope.length?<div className={styles.tableWrap}><table className={styles.table} style={{minWidth:1180}}>
+                <thead><tr><th>Article</th><th>Product</th><th>Why in scope</th><th>First decision</th><th>First reviewer</th><th>Downstream</th></tr></thead>
+                <tbody>{selectedSecondScope.map((x:any)=>{
+                  const p=productMap[x.product_id];
+                  const reasons=[
+                    x.review_status==="relevant"?"Relevant":null,
+                    x.relevance==="likely_relevant"?"Likely relevant":null,
+                    x.saudi_alert?"Saudi alert":null,
+                    x.full_text_required?"Full text":null
+                  ].filter(Boolean);
+                  const downstream=Array.isArray(x.followups)?x.followups:[];
+                  return <tr key={x.id}>
+                    <td style={{minWidth:390}}>
+                      {x.article_url?<a href={x.article_url} target="_blank" rel="noreferrer">{x.title} ↗</a>:<strong>{x.title}</strong>}
+                      {x.abstract?<div className={styles.muted} style={{marginTop:6,maxWidth:520,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{x.abstract}</div>:null}
+                      {x.ai_reason?<div style={{marginTop:6,fontSize:11,lineHeight:1.45}}>{x.ai_reason}</div>:null}
+                    </td>
+                    <td>{p?<><strong>{p.brand_name}</strong><div className={styles.muted}>{p.active_ingredient||"—"}</div></>:"—"}</td>
+                    <td><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{reasons.map((v:any)=><Badge key={v} tone={v==="Saudi alert"?"red":v==="Relevant"?"green":"amber"}>{v}</Badge>)}</div></td>
+                    <td><Badge tone={x.review_status==="relevant"?"green":"default"}>{reviewLabel(x.review_status)}</Badge>{x.reviewed_at?<div className={styles.muted} style={{marginTop:4}}>{dateTimeLabel(x.reviewed_at)}</div>:null}</td>
+                    <td>{memberMap[x.reviewer_user_id]?.email||"Workspace member"}</td>
+                    <td>{downstream.length?<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{downstream.map((v:string)=><Badge key={v}>{v==="psur_evidence"?"PSUR evidence":v==="signal_review"?"Signal review":v.replaceAll("_"," ")}</Badge>)}</div>:<span className={styles.muted}>None</span>}</td>
+                  </tr>
+                })}</tbody>
+              </table></div>:<div className={styles.empty}>This assignment does not contain a focused scope snapshot. Reassign the second review to create a fresh v2 snapshot.</div>}
+
+              {sr.note?<div className={sr.status==="returned"?styles.errorBox:styles.notice} style={{margin:"14px"}}><strong>Second-review note</strong><div style={{marginTop:5}}>{sr.note}</div></div>:null}
+
+              {sr.status==="pending"&&assignedToMe?<div className={styles.notice} style={{margin:"14px"}}>
+                <strong>Second-review decision</strong>
+                <div className={styles.muted} style={{marginTop:5}}>Check the scoped decisions and their downstream actions. Approve to lock reviewer identity and timestamp, or return the screening with a required note explaining what the first reviewer must revisit.</div>
+                <textarea className={styles.input} style={{minHeight:88,marginTop:10}} value={secondReviewNote} onChange={e=>setSecondReviewNote(e.target.value)} placeholder="Return note (required only when returning)…"/>
+                <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,flexWrap:"wrap"}}>
+                  <button className={styles.buttonGhost} disabled={busy} onClick={()=>decideSecondReview(run,"returned")}>Return to first reviewer</button>
+                  <button className={styles.button} disabled={busy} onClick={()=>decideSecondReview(run,"approved")}>Approve second review</button>
+                </div>
+              </div>:null}
+
+              {sr.status==="pending"&&!assignedToMe?<div className={styles.notice} style={{margin:"14px"}}>Pending independent review by <strong>{memberMap[sr.assigned_to]?.email||"assigned reviewer"}</strong>. First-review decisions are locked until the reviewer approves or returns the screening.</div>:null}
+              {sr.status==="approved"?<div className={styles.successBox} style={{margin:"14px"}}>Approved by {memberMap[sr.reviewed_by]?.email||"the assigned reviewer"}{sr.reviewed_at?" on "+dateTimeLabel(sr.reviewed_at):""}. The dual-review record is now ready for screening completion.</div>:null}
+              {sr.status==="returned"?<div className={styles.errorBox} style={{margin:"14px"}}>Returned to the first reviewer. The screening can be edited and then reassigned; the previous review cycle remains in the audit history.</div>:null}
+            </>;
+          })()}
+        </>}
       </>:null}
 
       {tab==="psur"?<>
@@ -1874,7 +1993,7 @@ export default function LiteraturePage(){
 
             <div className={styles.modalActions} style={{justifyContent:"space-between",flexWrap:"wrap"}}>
               <button className={styles.buttonGhost} onClick={()=>openRunDecisions(selectedRun)}>Review decisions</button>
-              {rec?<button className={styles.button} onClick={()=>exportScreeningRecord(selectedRun)}>Export screening record</button>:<button className={styles.button} disabled={busy||s.open>0||(!!second&&second.status!=="approved")} onClick={()=>completeScreening(selectedRun)}>{busy?"Creating record…":"Complete screening & create evidence"}</button>}
+              {rec?<button className={styles.button} onClick={()=>exportScreeningRecord(selectedRun)}>Export screening record</button>:<button className={styles.button} disabled={busy||s.open>0||!second||second.status!=="approved"} onClick={()=>completeScreening(selectedRun)}>{busy?"Creating record…":"Complete screening & create evidence"}</button>}
             </div>
           </>;
         })()}
