@@ -1407,8 +1407,11 @@ export default function LiteraturePage(){
               <td>{s.metadata?.connector==="lww_crossref"?<div>
                 <Badge>{s.metadata?.direct_monitoring_status==="active"?"Direct LWW + fallback":"LWW metadata fallback"}</Badge>
                 <div className={styles.muted} style={{marginTop:4}}>
-                  {s.metadata?.direct_monitoring_status==="active"?"Current-issue feed + Crossref":s.metadata?.direct_monitoring_status==="blocked"?"Direct feed blocked · Crossref fallback":s.metadata?.direct_monitoring_status==="historical_not_applicable"?"Crossref backfill · direct monitoring runs on recent periods":"Crossref ISSN monitoring"}
+                  {s.metadata?.direct_monitoring_status==="active"?"Current-issue feed + Crossref":s.metadata?.direct_monitoring_status==="blocked"?"Direct feed blocked · Crossref fallback":s.metadata?.direct_monitoring_status==="historical_not_applicable"?"Crossref backfill · direct monitoring runs on recent periods":"Crossref ISSN + update watch"}
                 </div>
+              </div>:s.metadata?.connector==="crossref_journal"?<div>
+                <Badge>Metadata monitor</Badge>
+                <div className={styles.muted} style={{marginTop:4}}>Crossref ISSN + rolling update watch</div>
               </div>:s.metadata?.connector==="open_web_snapshot"?<div>
                 <Badge>Direct journal monitor</Badge>
                 <div className={styles.muted} style={{marginTop:4}}>
