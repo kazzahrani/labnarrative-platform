@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { analyzeArticle, productTerms, type ProductInput } from "../../_pubmed";
 import { refineRanking } from "../../_rank";
 import { fetchPmcArticles, fetchPmcIdsForPmids } from "../../_pmc";
+import { fetchFallbackArticleText } from "../../_fallback-text";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL??"https://kvhmxjfenjtzfavyhnvb.supabase.co";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_PVOS_SUPABASE_PUBLISHABLE_KEY??"sb_publishable_3x3ll4gYAdqi9TAnPzNnMA_BxJKNM8D";
@@ -11,6 +12,7 @@ type ItemInput={
   id:string;
   title:string;
   pmid:string;
+  doi?:string|null;
   abstract?:string|null;
   metadata?:Record<string,any>;
   product:ProductInput;
@@ -53,35 +55,123 @@ export async function POST(req:NextRequest){
       const lookupAt=new Date().toISOString();
 
       if(!pmcid){
-        unavailable++;
-        updates.push({
-          id:item.id,
-          metadata:{
-            full_text_required:true,
-            assessment_state:"full_text_required",
-            full_text_lookup_status:"no_pmc_full_text",
-            full_text_lookup_at:lookupAt,
-            full_text_lookup_source:"PubMed Central"
-          }
-        });
+        const fallback=await fetchFallbackArticleText(item.pmid,item.doi);
+        if(fallback?.text){
+          retrieved++;
+          const terms=productTerms(item.product);
+          const analysis=refineRanking(
+            analyzeArticle(item.title,fallback.text,[],terms),
+            item.title,
+            fallback.text,
+            terms
+          );
+          updates.push({
+            id:item.id,
+            abstract:fallback.text,
+            matched_terms:analysis.matchedTerms,
+            relevance:analysis.relevance,
+            ai_reason:analysis.reason,
+            metadata:{
+              full_text_required:false,
+              assessment_state:"external_abstract_retrieved",
+              full_text_lookup_status:"external_abstract_retrieved",
+              full_text_lookup_at:lookupAt,
+              full_text_lookup_source:fallback.source,
+              external_text_url:fallback.sourceUrl,
+              match_locations:analysis.matchLocations,
+              matched_term_locations:analysis.termLocations,
+              urgent_saudi:analysis.urgentSaudi,
+              saudi_hits:analysis.saudiHits,
+              safety_hits:analysis.safetyHits,
+              special_hits:analysis.specialHits,
+              lack_efficacy_hits:analysis.lackEfficacyHits,
+              interaction_hits:analysis.interactionHits,
+              case_hits:analysis.caseHits,
+              product_safety_hits:analysis.productSafetyHits,
+              product_special_hits:analysis.productSpecialHits,
+              product_lack_efficacy_hits:analysis.productLackEfficacyHits,
+              exposure_hits:analysis.exposureHits,
+              product_exposure_hits:analysis.productExposureHits,
+              product_interaction_hits:analysis.productInteractionHits,
+              product_association_hits:analysis.productAssociationHits,
+              breakthrough:analysis.breakthrough,
+              quantified_product_evidence:analysis.quantifiedProductEvidence,
+              direct_outcome_statement:analysis.directOutcomeStatement,
+              publication_context:analysis.publicationContext,
+              product_role:analysis.productRole,
+              finding_types:analysis.findingTypes,
+              prioritization_version:analysis.analysisVersion,
+              fallback_text_screened_at:lookupAt
+            }
+          });
+        }else{
+          unavailable++;
+          updates.push({
+            id:item.id,
+            metadata:{
+              full_text_required:true,
+              assessment_state:"full_text_required",
+              full_text_lookup_status:"no_open_text_found",
+              full_text_lookup_at:lookupAt,
+              full_text_lookup_source:"PMC / Europe PMC / Crossref / OpenAlex"
+            }
+          });
+        }
         continue;
       }
 
       const pmc=articleCache[pmcid.toUpperCase()]||null;
 
       if(!pmc?.fullText&&!pmc?.abstract){
-        unavailable++;
-        updates.push({
-          id:item.id,
-          metadata:{
-            pmcid,
-            full_text_required:true,
-            assessment_state:"full_text_required",
-            full_text_lookup_status:"pmc_record_without_text",
-            full_text_lookup_at:lookupAt,
-            full_text_lookup_source:"PubMed Central"
-          }
-        });
+        const fallback=await fetchFallbackArticleText(item.pmid,item.doi);
+        if(fallback?.text){
+          retrieved++;
+          const terms=productTerms(item.product);
+          const analysis=refineRanking(
+            analyzeArticle(item.title,fallback.text,[],terms),
+            item.title,
+            fallback.text,
+            terms
+          );
+          updates.push({
+            id:item.id,
+            abstract:fallback.text,
+            matched_terms:analysis.matchedTerms,
+            relevance:analysis.relevance,
+            ai_reason:analysis.reason,
+            metadata:{
+              pmcid,
+              full_text_required:false,
+              assessment_state:"external_abstract_retrieved",
+              full_text_lookup_status:"external_abstract_retrieved",
+              full_text_lookup_at:lookupAt,
+              full_text_lookup_source:fallback.source,
+              external_text_url:fallback.sourceUrl,
+              match_locations:analysis.matchLocations,
+              matched_term_locations:analysis.termLocations,
+              urgent_saudi:analysis.urgentSaudi,
+              safety_hits:analysis.safetyHits,
+              finding_types:analysis.findingTypes,
+              publication_context:analysis.publicationContext,
+              product_role:analysis.productRole,
+              prioritization_version:analysis.analysisVersion,
+              fallback_text_screened_at:lookupAt
+            }
+          });
+        }else{
+          unavailable++;
+          updates.push({
+            id:item.id,
+            metadata:{
+              pmcid,
+              full_text_required:true,
+              assessment_state:"full_text_required",
+              full_text_lookup_status:"no_open_text_found",
+              full_text_lookup_at:lookupAt,
+              full_text_lookup_source:"PMC / Europe PMC / Crossref / OpenAlex"
+            }
+          });
+        }
         continue;
       }
 
@@ -152,7 +242,8 @@ export async function POST(req:NextRequest){
       updates,
       requested:items.length,
       retrieved,
-      unavailable
+      unavailable,
+      lookup_sources:["PubMed Central","Europe PMC","Crossref","OpenAlex"]
     });
   }catch(e:any){
     return NextResponse.json({error:e?.message??"Full-text retrieval failed."},{status:500});
