@@ -1287,7 +1287,12 @@ export default function LiteraturePage(){
               <td><strong>{s.name}</strong>{s.url?<div className={styles.muted} style={{marginTop:4}}><a href={s.url} target="_blank" rel="noreferrer">Open source ↗</a></div>:null}</td>
               <td>{s.metadata?.source_group==="Saudi journals 2025"?<div><Badge tone="lime">Saudi journal</Badge>{s.metadata?.pubmed_indexed?<div className={styles.muted} style={{marginTop:4}}>PubMed indexed</div>:<div className={styles.muted} style={{marginTop:4}}>Not PubMed indexed</div>}</div>:s.language}</td>
               <td>{String(s.screening_frequency).replace("_"," ")}</td>
-              <td>{s.metadata?.connector==="lww_crossref"?<div><Badge>LWW / Crossref</Badge><div className={styles.muted} style={{marginTop:4}}>ISSN monitoring</div></div>:s.metadata?.connector_status==="planned"?<Badge>Planned</Badge>:<Badge>{s.method==="manual"?"Manual / pending automation":s.method.toUpperCase()}</Badge>}</td>
+              <td>{s.metadata?.connector==="lww_crossref"?<div>
+                <Badge>{s.metadata?.direct_monitoring_status==="active"?"Direct LWW + fallback":"LWW metadata fallback"}</Badge>
+                <div className={styles.muted} style={{marginTop:4}}>
+                  {s.metadata?.direct_monitoring_status==="active"?"Current-issue feed + Crossref":s.metadata?.direct_monitoring_status==="blocked"?"Direct feed blocked · Crossref fallback":s.metadata?.direct_monitoring_status==="historical_not_applicable"?"Crossref backfill · direct monitoring runs on recent periods":"Crossref ISSN monitoring"}
+                </div>
+              </div>:s.metadata?.connector_status==="planned"?<Badge>Planned</Badge>:<Badge>{s.method==="manual"?"Manual / pending automation":s.method.toUpperCase()}</Badge>}</td>
               <td>{dateLabel(s.last_checked_at)}</td>
               <td>{dateLabel(s.next_due_at)}</td>
               <td><Badge tone={!s.active?"default":s.metadata?.connector_status==="error"?"red":due?"amber":"green"}>{!s.active?"Planned":s.metadata?.connector_status==="error"?"Connection issue":due?"Due":"Active"}</Badge></td>
