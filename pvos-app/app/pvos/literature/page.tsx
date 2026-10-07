@@ -150,9 +150,20 @@ export default function LiteraturePage(){
   const [secondReviewerId,setSecondReviewerId]=useState("");
   const [secondReviewNote,setSecondReviewNote]=useState("");
   const [reviewerEmail,setReviewerEmail]=useState("");
+  const [reviewerRole,setReviewerRole]=useState("deputy_qppv");
   const [message,setMessage]=useState("");
   const [sourceForm,setSourceForm]=useState({name:"",url:"",language:"English",frequency:"weekly",notes:""});
   const [runForm,setRunForm]=useState({companyId:"",start:daysAgo(7),end:today()});
+
+  async function loadRows(table:"pvos_literature_items"|"pvos_literature_followups"){
+    const rows:any[]=[];
+    for(let offset=0;;offset+=1000){
+      const result=await pvosSupabase.from(table).select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}).order("id").range(offset,offset+999);
+      if(result.error)return {data:null,error:result.error};
+      rows.push(...(result.data||[]));
+      if((result.data||[]).length<1000)return {data:rows,error:null};
+    }
+  }
 
   async function load(){
     if(!organizationId)return;
@@ -160,15 +171,17 @@ export default function LiteraturePage(){
     const [s,r,i,c,f,rec,sr,mem,al,auto]=await Promise.all([
       pvosSupabase.from("pvos_literature_sources").select("*").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_literature_runs").select("*").eq("organization_id",organizationId).order("period_end",{ascending:false}),
-      pvosSupabase.from("pvos_literature_items").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
+      loadRows("pvos_literature_items"),
       pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name"),
-      pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
+      loadRows("pvos_literature_followups"),
       pvosSupabase.from("pvos_literature_screening_records").select("*").eq("organization_id",organizationId).order("completed_at",{ascending:false}),
       pvosSupabase.from("pvos_literature_second_reviews").select("*").eq("organization_id",organizationId).order("assigned_at",{ascending:false}),
       pvosSupabase.rpc("pvos_member_directory",{p_organization_id:organizationId}),
       pvosSupabase.from("pvos_literature_alerts").select("*").eq("organization_id",organizationId).order("created_at",{ascending:false}),
       pvosSupabase.from("pvos_literature_automation_settings").select("*").eq("organization_id",organizationId).maybeSingle()
     ]);
+    const loadError=[s,r,i,c,f,rec,sr,mem,al,auto].find(result=>result.error)?.error;
+    if(loadError){setMessage("Could not load the complete literature workspace: "+loadError.message);setLoading(false);return;}
     const cs=c.data||[];
     let ps:any[]=[];
     if(cs.length){
@@ -852,8 +865,9 @@ export default function LiteraturePage(){
 
   async function setReview(item:any,status:ReviewStatus){
     if(!session)return;
+    if(item.review_status===status){if(status==="relevant")setPendingRelevantId(item.id);return;}
     setBusy(true);
-    const reviewedNow=status==="relevant"||status==="not_relevant";
+    const reviewedNow=status!=="unreviewed";
     const reviewedAt=reviewedNow?new Date().toISOString():null;
     const {error}=await pvosSupabase.from("pvos_literature_items").update({
       review_status:status,
@@ -1150,7 +1164,7 @@ export default function LiteraturePage(){
     const {data,error}=await pvosSupabase.rpc("pvos_invite_workspace_member",{
       p_organization_id:organizationId,
       p_email:reviewerEmail.trim(),
-      p_role:"reviewer"
+      p_role:reviewerRole
     });
     setBusy(false);
     if(error){setMessage(error.message);return;}
@@ -1302,7 +1316,6 @@ export default function LiteraturePage(){
 
   async function completeScreening(run:any){
     if(!organizationId||!session)return;
-    const xs=runItems(run.id);
     const stats=statsForRun(run);
     const secondReview=secondReviewMap[run.id];
     if(stats.open>0){
@@ -1319,84 +1332,11 @@ export default function LiteraturePage(){
     }
     setBusy(true);setMessage("");
     try{
-      const sourceIds=[...new Set(xs.map(x=>x.source_id).filter(Boolean))];
-      const sourceSnapshot=sources.filter(x=>sourceIds.includes(x.id)).map(x=>({
-        id:x.id,name:x.name,url:x.url,method:x.method,language:x.language
-      }));
-      const scopedProducts=products.filter(x=>x.company_id===run.company_id).map(x=>({
-        id:x.id,brand_name:x.brand_name,active_ingredient:x.active_ingredient
-      }));
-      const searchSnapshot=(run.metadata?.searches?.length?run.metadata.searches:scopedProducts.map(p=>{
-        const sample=xs.find(x=>x.product_id===p.id);
-        return {product_id:p.id,brand_name:p.brand_name,active_ingredient:p.active_ingredient,terms:sample?.metadata?.search_terms||[]};
-      }));
-      const decisions=xs.map(x=>({
-        literature_item_id:x.id,
-        product_id:x.product_id,
-        product:productMap[x.product_id]?.brand_name||null,
-        title:x.title,
-        pmid:x.metadata?.pmid||null,
-        doi:x.doi||null,
-        article_url:x.article_url,
-        relevance:x.relevance,
-        review_status:x.review_status,
-        reviewer_user_id:x.reviewer_user_id,
-        reviewed_at:x.reviewed_at,
-        saudi_alert:!!x.metadata?.urgent_saudi,
-        assessment_state:x.metadata?.assessment_state||"standard",
-        full_text_required:!!x.metadata?.full_text_required,
-        product_role:x.metadata?.product_role||null,
-        publication_context:x.metadata?.publication_context||null,
-        finding_types:x.metadata?.finding_types||[]
-      }));
-      const downstream=runFollowups(run.id).map(x=>({
-        literature_item_id:x.literature_item_id,
-        destination:x.destination,
-        status:x.status,
-        created_at:x.created_at
-      }));
-      const completedAt=new Date().toISOString();
-      const {error:recordError}=await pvosSupabase.from("pvos_literature_screening_records").upsert({
-        organization_id:organizationId,
-        run_id:run.id,
-        company_id:run.company_id,
-        period_start:run.period_start,
-        period_end:run.period_end,
-        source_snapshot:sourceSnapshot,
-        product_snapshot:scopedProducts,
-        search_snapshot:searchSnapshot,
-        metrics:stats,
-        decision_snapshot:decisions,
-        downstream_snapshot:downstream,
-        completed_by:session.user.id,
-        completed_at:completedAt,
-        metadata:{
-          record_version:"v2",
-          review_model:secondReview?"QPPV first review + second reviewer":"QPPV final decision",
-          generated_by:"PVOS",
-          second_review:secondReview?{
-            id:secondReview.id,
-            status:secondReview.status,
-            assigned_to:secondReview.assigned_to,
-            assigned_by:secondReview.assigned_by,
-            assigned_at:secondReview.assigned_at,
-            reviewed_by:secondReview.reviewed_by,
-            reviewed_at:secondReview.reviewed_at,
-            note:secondReview.note
-          }:null
-        }
-      },{onConflict:"run_id"});
-      if(recordError)throw recordError;
-      const {error:runError}=await pvosSupabase.from("pvos_literature_runs").update({
-        status:"complete",
-        completed_by:session.user.id,
-        completed_at:completedAt,
-        reviewed_count:stats.reviewed
-      }).eq("id",run.id);
-      if(runError)throw runError;
-      setMessage("Screening completed. Inspection-ready evidence record created.");
+      const {error}=await pvosSupabase.rpc("pvos_complete_literature_screening",{p_run_id:run.id});
+      if(error)throw error;
+      setMessage("Screening completed. Both reviewers and review history are preserved in the evidence record.");
       await load();
-      setSelectedRun({...run,status:"complete",completed_at:completedAt});
+      setSelectedRun(null);
     }catch(e:any){
       setMessage(e?.message||"Could not complete screening.");
     }finally{
@@ -1409,7 +1349,7 @@ export default function LiteraturePage(){
     if(!record)return;
     const lines:string[]=[];
     const add=(k:string,v:any)=>lines.push('"'+String(k).replaceAll('"','""')+'","'+String(v??"").replaceAll('"','""')+'"');
-    add("PVOS Literature Screening Record","v1");
+    add("PVOS Literature Screening Record",record.metadata?.record_version||"v1");
     add("Company",companyMap[run.company_id]||"");
     add("Period",run.period_start+" to "+run.period_end);
     add("Completed at",record.completed_at);
@@ -1429,9 +1369,15 @@ export default function LiteraturePage(){
     add("Second reviewed at",second?.reviewed_at||"");
     add("Second review note",second?.note||"");
     lines.push("");
-    lines.push('"Article","Product","PMID","Safety priority","QPPV decision","Saudi alert","Reviewed at"');
+    add("Second review scope",second?.metadata?.scope_rule||"");
+    add("Second review cycle",second?.metadata?.assignment_cycle||1);
+    lines.push('"Article","Product","PMID","DOI","Safety priority","First decision","First reviewer ID","First reviewer","First reviewed at","Decision note","Saudi alert"');
     for(const d of record.decision_snapshot||[]){
-      lines.push([d.title,d.product,d.pmid,d.relevance,d.review_status,d.saudi_alert?"Yes":"No",d.reviewed_at].map((v:any)=>'"'+String(v??"").replaceAll('"','""')+'"').join(","));
+      lines.push([d.title,d.product,d.pmid,d.doi,d.relevance,d.review_status,d.reviewer_user_id,memberMap[d.reviewer_user_id]?.email||d.reviewer_user_id,d.reviewed_at,d.decision_note,d.saudi_alert?"Yes":"No"].map((v:any)=>'"'+String(v??"").replaceAll('"','""')+'"').join(","));
+    }
+    lines.push("",'"Cycle","Status","Assigned to ID","Assigned at","Second reviewer ID","Second reviewer","Reviewed at","Reason"');
+    for(const cycle of [...(second?.metadata?.history||[]),...(second?[second]:[])]){
+      lines.push([cycle.cycle||cycle.metadata?.assignment_cycle||1,cycle.status,cycle.assigned_to,cycle.assigned_at,cycle.reviewed_by,memberMap[cycle.reviewed_by]?.email||cycle.reviewed_by,cycle.reviewed_at,cycle.note].map((v:any)=>'"'+String(v??"").replaceAll('"','""')+'"').join(","));
     }
     const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
     const url=URL.createObjectURL(blob);
@@ -1716,7 +1662,7 @@ export default function LiteraturePage(){
               <td>{counts.total}</td>
               <td>{counts.reviewed}</td>
               <td>{secondReviewMap[r.id]?<Badge tone={secondReviewMap[r.id].status==="approved"?"green":secondReviewMap[r.id].status==="returned"?"red":"amber"}>{String(secondReviewMap[r.id].status).replace("_"," ")}</Badge>:<span className={styles.muted}>Not assigned</span>}</td>
-              <td><Badge tone={recordMap[r.id]?"green":r.status==="review"?"amber":"default"}>{recordMap[r.id]?"Complete":String(r.status).replace("_"," ")}</Badge></td>
+              <td><Badge tone={recordMap[r.id]?"green":r.status==="review"?"amber":"default"}>{recordMap[r.id]?"Complete":secondReviewMap[r.id]?.status==="pending"?"Awaiting second review":secondReviewMap[r.id]?.status==="returned"?"Returned for correction":String(r.status).replace("_"," ")}</Badge></td>
               <td><button className={styles.buttonGhost} onClick={()=>{setSelectedRun(r);setMessage("")}}>Open</button></td>
             </tr>
           })}</tbody>
@@ -1751,7 +1697,7 @@ export default function LiteraturePage(){
                 <td><button className={styles.buttonGhost} onClick={()=>{setSelectedSecondReviewId(sr.id);setSecondReviewNote(sr.note||"")}}>Open</button></td>
               </tr>
             })}</tbody>
-          </table></div>:<div className={styles.empty}>No second-review assignments yet. Finish the first review of a screening run, then assign a different workspace member from Screening Runs.</div>}
+          </table></div>:<div className={styles.empty}>No second-review assignments yet. Screen each article, then assign an independent workspace member from Screening Runs. Needs review decisions can be returned for resolution.</div>}
         </>:<>
           {(()=>{
             const sr=selectedSecondReview;
@@ -1770,12 +1716,12 @@ export default function LiteraturePage(){
               <div className={styles.notice} style={{margin:"0 14px 14px"}}>
                 <strong>{run?companyMap[run.company_id]||"Company":"Screening"} · {run?dateLabel(run.period_start)+" – "+dateLabel(run.period_end):""}</strong>
                 <div className={styles.muted} style={{marginTop:5}}>
-                  Second review is intentionally focused on the decisions with the highest regulatory value: Relevant articles, PVOS Likely-relevant articles, Saudi alerts, and Full-text decisions. Routine low-risk Not relevant decisions remain preserved in the first-review audit trail.
+                  Second review is intentionally focused on the decisions with the highest regulatory value: Relevant and Needs review articles, Likely-relevant exclusions, Saudi alerts, and Full-text decisions. Routine low-risk Not relevant decisions remain preserved in the first-review audit trail.
                 </div>
                 <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10}}>
                   <span><strong>{Number(summary.total||0)}</strong> total screened</span>
                   <span><strong>{Number(summary.relevant||0)}</strong> Relevant</span>
-                  <span><strong>{Number(summary.not_relevant||0)}</strong> Not relevant</span>
+                  <span><strong>{Number(summary.needs_review||0)}</strong> Needs review</span><span><strong>{Number(summary.not_relevant||0)}</strong> Not relevant</span>
                   <span><strong>{Number(summary.scope_count||selectedSecondScope.length)}</strong> in second-review scope</span>
                 </div>
                 <div className={styles.muted} style={{marginTop:8}}>
@@ -1788,7 +1734,7 @@ export default function LiteraturePage(){
                 <tbody>{selectedSecondScope.map((x:any)=>{
                   const p=productMap[x.product_id];
                   const reasons=[
-                    x.review_status==="relevant"?"Relevant":null,
+                    x.review_status==="relevant"?"Relevant":x.review_status==="needs_review"?"Needs review":null,
                     x.relevance==="likely_relevant"?"Likely relevant":null,
                     x.saudi_alert?"Saudi alert":null,
                     x.full_text_required?"Full text":null
@@ -1797,7 +1743,12 @@ export default function LiteraturePage(){
                   return <tr key={x.id}>
                     <td style={{minWidth:390}}>
                       {x.article_url?<a href={x.article_url} target="_blank" rel="noreferrer">{x.title} ↗</a>:<strong>{x.title}</strong>}
-                      {x.abstract?<div className={styles.muted} style={{marginTop:6,maxWidth:520,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{x.abstract}</div>:null}
+                      <details style={{marginTop:8,maxWidth:520}}>
+                        <summary style={{cursor:"pointer"}}>Article text & first-review note</summary>
+                        <div style={{marginTop:8,whiteSpace:"pre-wrap",lineHeight:1.5}}>{x.abstract||"Abstract unavailable. Open the source article for review."}</div>
+                        {x.decision_note?<div style={{marginTop:8}}>First-review note: {x.decision_note}</div>:null}
+                        {literatureItemMap[x.id]?.full_text?<details style={{marginTop:8}}><summary style={{cursor:"pointer"}}>Retrieved full text</summary><div style={{whiteSpace:"pre-wrap",maxHeight:360,overflow:"auto",marginTop:8}}>{literatureItemMap[x.id].full_text}</div></details>:null}
+                      </details>
                       {x.ai_reason?<div style={{marginTop:6,fontSize:11,lineHeight:1.45}}>{x.ai_reason}</div>:null}
                     </td>
                     <td>{p?<><strong>{p.brand_name}</strong><div className={styles.muted}>{p.active_ingredient||"—"}</div></>:"—"}</td>
@@ -1807,17 +1758,27 @@ export default function LiteraturePage(){
                     <td>{downstream.length?<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{downstream.map((v:string)=><Badge key={v}>{v==="psur_evidence"?"PSUR evidence":v==="signal_review"?"Signal review":v.replaceAll("_"," ")}</Badge>)}</div>:<span className={styles.muted}>None</span>}</td>
                   </tr>
                 })}</tbody>
-              </table></div>:<div className={styles.empty}>This assignment does not contain a focused scope snapshot. Reassign the second review to create a fresh v2 snapshot.</div>}
+              </table></div>:<div className={styles.empty}>No articles meet the focused review policy. First-review decisions remain available through Screening Runs.</div>}
 
+              {Array.isArray(sr.metadata?.history)&&sr.metadata.history.length?<details style={{margin:"14px"}}>
+                <summary style={{cursor:"pointer"}}>Previous review cycles ({sr.metadata.history.length})</summary>
+                {sr.metadata.history.map((cycle:any,index:number)=><div key={index} className={styles.notice} style={{marginTop:8}}>
+                  <strong>Cycle {cycle.cycle} · {cycle.status}</strong>
+                  <div style={{marginTop:5}}>{memberMap[cycle.reviewed_by]?.email||cycle.reviewed_by||"No decision"} · {dateTimeLabel(cycle.reviewed_at)}</div>
+                  {cycle.note?<div style={{marginTop:5}}>{cycle.note}</div>:null}
+                  <details style={{marginTop:6}}><summary style={{cursor:"pointer"}}>First-review decisions in this cycle</summary>{(cycle.metadata?.scope_snapshot||[]).map((x:any)=><div key={x.id} style={{marginTop:8}}>{x.title} · {reviewLabel(x.review_status)} · {memberMap[x.reviewer_user_id]?.email||x.reviewer_user_id} · {dateTimeLabel(x.reviewed_at)}</div>)}</details>
+                </div>)}
+              </details>:null}
               {sr.note?<div className={sr.status==="returned"?styles.errorBox:styles.notice} style={{margin:"14px"}}><strong>Second-review note</strong><div style={{marginTop:5}}>{sr.note}</div></div>:null}
 
               {sr.status==="pending"&&assignedToMe?<div className={styles.notice} style={{margin:"14px"}}>
                 <strong>Second-review decision</strong>
+                {Number(summary.needs_review||0)>0?<div style={{marginTop:8}}>Return this screening with a reason so the first reviewer can resolve Needs review articles. Approval requires final decisions.</div>:null}
                 <div className={styles.muted} style={{marginTop:5}}>Check the scoped decisions and their downstream actions. Approve to lock reviewer identity and timestamp, or return the screening with a required note explaining what the first reviewer must revisit.</div>
                 <textarea className={styles.input} style={{minHeight:88,marginTop:10}} value={secondReviewNote} onChange={e=>setSecondReviewNote(e.target.value)} placeholder="Return note (required only when returning)…"/>
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,flexWrap:"wrap"}}>
                   <button className={styles.buttonGhost} disabled={busy} onClick={()=>decideSecondReview(run,"returned")}>Return to first reviewer</button>
-                  <button className={styles.button} disabled={busy} onClick={()=>decideSecondReview(run,"approved")}>Approve second review</button>
+                  <button className={styles.button} disabled={busy||!run||runItems(run.id).some(x=>x.review_status==="unreviewed"||x.review_status==="needs_review")} onClick={()=>decideSecondReview(run,"approved")}>Approve second review</button>
                 </div>
               </div>:null}
 
@@ -1933,7 +1894,9 @@ export default function LiteraturePage(){
           const s=statsForRun(selectedRun);
           const rec=recordMap[selectedRun.id];
           const second=secondReviewMap[selectedRun.id];
-          const otherMembers=members.filter(m=>m.user_id!==session?.user.id);
+          const firstReviewerIds=new Set(runItems(selectedRun.id).map(x=>x.reviewer_user_id).filter(Boolean));
+          const otherMembers=members.filter(m=>m.user_id!==session?.user.id&&!firstReviewerIds.has(m.user_id));
+          const unreviewedCount=runItems(selectedRun.id).filter(x=>x.review_status==="unreviewed").length;
           return <>
             <div className={styles.info}>
               <div className={styles.kv}><span>Results retrieved</span><span>{s.total}</span></div>
@@ -1958,34 +1921,31 @@ export default function LiteraturePage(){
               {second?.note?<div className={styles.kv}><span>Review note</span><span>{second.note}</span></div>:null}
             </div>:null}
 
-            {!rec&&s.open===0&&(!second||second.status==="returned")?<div className={styles.notice} style={{marginTop:14}}>
+            {!rec&&unreviewedCount===0&&(!second||second.status==="returned")?<div className={styles.notice} style={{marginTop:14}}>
               <strong>{second?.status==="returned"?"Resend for second review":"Send to second reviewer"}</strong>
-              <div className={styles.muted} style={{marginTop:5}}>The second reviewer can inspect the first-review decisions, then approve or return the screening. Reviewer identity and timestamp are preserved.</div>
+              <div className={styles.muted} style={{marginTop:5}}>Relevant, Needs review and flagged decisions are routed for independent verification. Routine low-risk exclusions remain in the first-review audit trail.</div>
               {otherMembers.length?<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:10}}>
                 <select className={styles.input} style={{minWidth:260}} value={secondReviewerId} onChange={e=>setSecondReviewerId(e.target.value)}>
                   <option value="">Choose workspace member</option>
                   {otherMembers.map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}
                 </select>
                 <button className={styles.button} disabled={busy||!secondReviewerId} onClick={()=>assignSecondReviewer(selectedRun)}>{busy?"Sending…":"Send for second review"}</button>
-              </div>:<div className={styles.muted} style={{marginTop:10}}>No other workspace member is available yet.</div>}
+              </div>:<div className={styles.muted} style={{marginTop:10}}>No independent reviewer is available. Add a member who did not make first-review decisions in this run.</div>}
               <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid rgba(148,163,184,.18)"}}>
                 <div className={styles.muted} style={{marginBottom:7}}>Add reviewer by email</div>
                 <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                   <input className={styles.input} style={{minWidth:260}} type="email" value={reviewerEmail} onChange={e=>setReviewerEmail(e.target.value)} placeholder="reviewer@company.com"/>
+                  <select className={styles.input} aria-label="New reviewer workspace role" value={reviewerRole} onChange={e=>setReviewerRole(e.target.value)}>
+                    <option value="deputy_qppv">Deputy QPPV</option><option value="qppv">QPPV</option><option value="pv_specialist">PV specialist</option><option value="quality">Quality</option>
+                  </select>
                   <button className={styles.buttonGhost} disabled={busy||!reviewerEmail.trim()} onClick={addReviewerByEmail}>Add reviewer</button>
                 </div>
-                <div className={styles.muted} style={{marginTop:6,fontSize:11}}>Existing PVOS accounts are added immediately. A new reviewer joins this workspace when they first sign in using the same email.</div>
+                <div className={styles.muted} style={{marginTop:6,fontSize:11}}>Workspace access is granted by email; no email notification is sent. Existing PVOS accounts are added immediately. A new reviewer joins this workspace when they first sign in using the same email.</div>
               </div>
             </div>:null}
 
-            {!rec&&second?.status==="pending"&&second.assigned_to===session?.user.id?<div className={styles.notice} style={{marginTop:14}}>
-              <strong>Second-review decision</strong>
-              <div className={styles.muted} style={{marginTop:5}}>Review the first-review decisions. Approve to lock the dual-review record, or return it with a note.</div>
-              <textarea className={styles.input} style={{minHeight:76,marginTop:10}} value={secondReviewNote} onChange={e=>setSecondReviewNote(e.target.value)} placeholder="Return note (required only when returning)…"/>
-              <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,flexWrap:"wrap"}}>
-                <button className={styles.buttonGhost} disabled={busy} onClick={()=>decideSecondReview(selectedRun,"returned")}>Return to first reviewer</button>
-                <button className={styles.button} disabled={busy} onClick={()=>decideSecondReview(selectedRun,"approved")}>Approve second review</button>
-              </div>
+            {!rec&&second?<div style={{marginTop:14}}>
+              <button className={styles.buttonGhost} onClick={()=>{setSelectedRun(null);setSelectedSecondReviewId(second.id);setSecondReviewNote(second.note||"");setTab("second")}}>Open focused second review</button>
             </div>:null}
 
             {!rec&&second?.status==="pending"&&second.assigned_to!==session?.user.id?<div className={styles.notice} style={{marginTop:14}}>Pending second review by <strong>{memberMap[second.assigned_to]?.email||"assigned reviewer"}</strong>.</div>:null}

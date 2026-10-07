@@ -52,6 +52,12 @@ function auditLabel(a:any){
     if(!before.qppv_handback_acknowledged_at && after.qppv_handback_acknowledged_at) return "QPPV acknowledged company handback";
     return "Company handover updated";
   }
+  if(a.entity_type==="literature_second_review"){
+    if(a.event_type==="insert") return "Literature second review assigned";
+    if(after.status==="approved") return "Independent literature review approved";
+    if(after.status==="returned") return "Literature screening returned with reason";
+    return "Literature second review reassigned";
+  }
   if(a.entity_type==="literature_screening_record"){
     if(a.event_type==="insert") return "Literature screening evidence record created";
     return "Literature screening evidence record updated";
@@ -124,7 +130,7 @@ export default function Inspection(){
       ];
     });
 
-    const literatureHeader=["Completed at","Company","Period start","Period end","Sources","Products","Results","Reviewed","Relevant","Not relevant","Saudi alerts","Signal escalations","PSUR selections"];
+    const literatureHeader=["Completed at","Company","Period start","Period end","Sources","Products","Results","Reviewed","Relevant","Not relevant","Saudi alerts","Signal escalations","PSUR selections","First reviewer IDs","Second reviewer ID","Second reviewed at","Second review decision","Second review note","Review cycles"];
     const literatureRows=literatureRecords.map(r=>[
       r.completed_at,
       companyBy[r.company_id]?.name??"",
@@ -138,9 +144,20 @@ export default function Inspection(){
       r.metrics?.notRelevant??0,
       r.metrics?.saudi??0,
       r.metrics?.signal??0,
-      r.metrics?.psur??0
+      r.metrics?.psur??0,
+      (r.metadata?.first_reviewer_user_ids||[]).join("; "),
+      r.metadata?.second_review?.reviewed_by||"",
+      r.metadata?.second_review?.reviewed_at||"",
+      r.metadata?.second_review?.status||"",
+      r.metadata?.second_review?.note||"",
+      JSON.stringify(r.metadata?.second_review?.metadata?.history||[])
     ]);
 
+    const decisionHeader=["Run ID","Article","First decision","First reviewer ID","First reviewed at","First-review note","Second reviewer ID","Second reviewed at"];
+    const decisionRows=literatureRecords.flatMap(r=>(r.decision_snapshot||[]).map((d:any)=>[
+      r.run_id,d.title,d.review_status,d.reviewer_user_id,d.reviewed_at,d.decision_note,
+      r.metadata?.second_review?.reviewed_by||"",r.metadata?.second_review?.reviewed_at||""
+    ]));
     const auditHeader=["Audit timestamp","Company / scope","Record","Action"];
     const auditRows=audit.map(a=>[
       a.created_at,
@@ -162,6 +179,10 @@ export default function Inspection(){
       literatureHeader.map(csvCell).join(","),
       ...literatureRows.map(r=>r.map(csvCell).join(",")),
       "",
+      "# PVOS LITERATURE REVIEWER DECISIONS",
+      decisionHeader.map(csvCell).join(","),
+      ...decisionRows.map(r=>r.map(csvCell).join(",")),
+      "",
       "# PVOS AUDIT HISTORY",
       auditHeader.map(csvCell).join(","),
       ...auditRows.map(r=>r.map(csvCell).join(","))
@@ -178,7 +199,7 @@ export default function Inspection(){
     <Header eyebrow="Inspection readiness" title="Can we prove the work was done?" sub="Check whether completed PV activities have supporting evidence and whether important work is overdue. Use the records and audit history to help prepare for inspection. The percentage is a PVOS workflow indicator, not an SFDA score or certification."/>
     <div className={styles.grid2}>
       <section className={styles.info}><h3>Workflow evidence snapshot</h3><div style={{fontSize:42,fontWeight:900,letterSpacing:"-.05em",marginBottom:10}}>{metrics.score}%</div><div className={styles.progress}><span style={{width:metrics.score+"%"}}></span></div><p className={styles.sub} style={{marginTop:14}}>{metrics.missing} completed task(s) are missing evidence and {metrics.overdue} active task(s) are overdue.</p></section>
-      <aside className={styles.info}><h3>Inspection export</h3><p className={styles.sub}>Export a readable task register, evidence register and append-only audit history. Internal UUIDs are intentionally excluded from this reviewer-facing export.</p><div className={styles.inlineActions}><button className={styles.button} onClick={exportCsv}>Export CSV</button><span className={styles.pill}>{companies.length} companies tracked</span></div></aside>
+      <aside className={styles.info}><h3>Inspection export</h3><p className={styles.sub}>Export a readable task register, evidence register and append-only audit history. Literature reviewer IDs and timestamps are included for traceability.</p><div className={styles.inlineActions}><button className={styles.button} onClick={exportCsv}>Export CSV</button><span className={styles.pill}>{companies.length} companies tracked</span></div></aside>
     </div>
     <section className={styles.panel}><div className={styles.panelHeader}><h2>Control checks</h2><span className={styles.muted}>Calculated from the live PVOS database</span></div><div style={{padding:14}} className={styles.metricList}>
       <div className={styles.metricRow}><span>Completed PV activities</span><strong className={styles.good}>{metrics.completed}</strong></div>
@@ -191,7 +212,7 @@ export default function Inspection(){
     <section className={styles.panel}>
       <div className={styles.panelHeader}><h2>Literature screening evidence</h2><span className={styles.muted}>{literatureRecords.length} completed record(s)</span></div>
       {literatureRecords.length?<div className={styles.tableWrap}><table className={styles.table}>
-        <thead><tr><th>Completed</th><th>Company</th><th>Period</th><th>Sources</th><th>Results</th><th>Reviewed</th><th>Relevant</th><th>Signal</th><th>PSUR</th></tr></thead>
+        <thead><tr><th>Completed</th><th>Company</th><th>Period</th><th>Sources</th><th>Results</th><th>Reviewed</th><th>Relevant</th><th>Signal</th><th>PSUR</th><th>Dual review</th></tr></thead>
         <tbody>{literatureRecords.map(r=><tr key={r.id}>
           <td>{r.completed_at?new Date(r.completed_at).toLocaleString():"—"}</td>
           <td>{companyBy[r.company_id]?.name??"—"}</td>
@@ -202,6 +223,7 @@ export default function Inspection(){
           <td>{r.metrics?.relevant??0}</td>
           <td>{r.metrics?.signal??0}</td>
           <td>{r.metrics?.psur??0}</td>
+          <td>{r.metadata?.second_review?.status||"Legacy record"}<div className={styles.muted}>{r.metadata?.second_review?.reviewed_at?new Date(r.metadata.second_review.reviewed_at).toLocaleString():"—"}</div></td>
         </tr>)}</tbody>
       </table></div>:<div className={styles.empty}>No completed literature screening records yet.</div>}
     </section>
