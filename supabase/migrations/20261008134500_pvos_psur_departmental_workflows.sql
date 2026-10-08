@@ -227,8 +227,10 @@ begin
  elsif (r.status='received' and p_action='approve') then next_status:='complete';
  elsif (r.status in ('draft','waiting') and p_action='cancel') then next_status:='cancelled';
  else raise exception 'Invalid workflow transition'; end if;
- if p_action='mark_received' and auth.uid() not in (r.requester_user_id,r.recipient_user_id,r.reviewer_user_id)
-    and v_role not in ('admin','qppv','deputy_qppv') then raise exception 'Not authorised to log receipt'; end if;
+ if p_action='mark_received' and auth.uid()<>r.requester_user_id
+    and (r.recipient_user_id is null or auth.uid()<>r.recipient_user_id)
+    and auth.uid()<>r.reviewer_user_id and v_role not in ('admin','qppv','deputy_qppv') then
+     raise exception 'Not authorised to log receipt'; end if;
  if p_action in ('mark_requested','resend','cancel') and auth.uid()<>r.requester_user_id
     and v_role not in ('admin','qppv','deputy_qppv') then raise exception 'Only requester or PV lead may change the request'; end if;
  if p_action in ('approve','return') and auth.uid()<>r.reviewer_user_id then raise exception 'Only the assigned reviewer may decide'; end if;
@@ -261,10 +263,10 @@ grant execute on function public.pvos_act_department_request(uuid,text,text) to 
 -- Linked department tasks can only be completed by the controlled department workflow.
 create or replace function public.pvos_guard_department_completion() returns trigger language plpgsql set search_path='' as $$
 begin
- if current_user not in ('postgres','supabase_admin','service_role')
-  and new.status='complete' and old.status<>'complete'
-  and exists(select 1 from public.pvos_department_requests r where r.task_id=old.id and r.status<>'complete') then
-   raise exception 'Complete the departmental review before closing this task';
+ if new.status in ('complete','cancelled') and new.status<>old.status
+  and exists(select 1 from public.pvos_department_requests r where r.task_id=old.id and
+    (r.status<>'complete' and new.status='complete' or r.status<>'cancelled' and new.status='cancelled')) then
+   raise exception 'Use departmental workflow to close or cancel this request';
  end if;
  return new;
 end $$;
