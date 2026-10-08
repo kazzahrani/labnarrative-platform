@@ -8,7 +8,6 @@ import styles from "../pvos.module.css";
 
 const EMA_URL="https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/periodic-safety-update-reports-psurs";
 type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any};
-type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any};
 const norm=(v:any)=>String(v??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const colLetter=(value:number)=>{let n=value+1,s="";while(n>0){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26);}return s;};
 export function PsurCycles({companyId,organizationId,products,onChanged}:{companyId:string,organizationId:string,products:any[],onChanged?:()=>void}){
