@@ -26,7 +26,7 @@ const auditName=(v:string)=>({
  mark_received:"Response received",return:"Returned for corrections",resend:"Corrections requested",
  reviewer_assigned:"Reviewer assigned",approve:"Approved",cancel:"Cancelled"
 } as Record<string,string>)[v]||v.replaceAll("_"," ");
-function statusFor(r:RequestRow,documents:Evidence[]|undefined){
+function statusFor(r:RequestRow,documents:Evidence[]|undefined=undefined){
  if(r.status==="complete")return "Complete";
  if(r.status==="cancelled")return "Cancelled";
  if(r.status==="draft")return "Draft";
