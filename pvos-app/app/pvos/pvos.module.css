@@ -170,3 +170,94 @@
 @media(max-width:950px){.literatureReader{grid-template-columns:1fr}.articleList{max-height:300px;border-right:0;border-bottom:1px solid #303c46}.readingPanel{padding:16px}.screeningStages{gap:12px}}
 
 .root [hidden]{display:none!important}
+
+
+/* Department Requests — compact daily workspace, optional create modal, readable detail drawer. */
+.requestWorkspace{min-width:0}
+.requestWorkspace>.panel{margin-top:0}
+.requestSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.requestSummary>div{padding:13px 15px;border:1px solid #27323a;border-radius:12px;display:flex;gap:9px;align-items:center;justify-content:space-between;min-width:0}
+.requestSummary span{font-size:12px;color:#94a4b0}
+.requestSummary strong{font-size:19px;font-weight:650;font-variant-numeric:tabular-nums}
+.requestFilters{display:flex;gap:10px;margin-bottom:10px}
+.requestFilters input{min-width:0;flex:1}
+.requestFilters select{flex:0 0 180px}
+.requestList{border:1px solid #26323b;border-radius:12px;overflow:hidden}
+.requestListRow{appearance:none;display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-width:0;background:transparent;border:0;border-bottom:1px solid #26323b;color:inherit;text-align:left;padding:14px 15px;cursor:pointer;font:inherit}
+.requestListRow:last-child{border-bottom:0}
+.requestListRow:hover{background:#182129}
+.requestListRow:focus-visible{outline:2px solid #90ad4b;outline-offset:-2px}
+.requestRowName{min-width:0;display:grid;gap:4px;flex:1}
+.requestRowName strong{font-size:13px;font-weight:650}
+.requestRowName>span{font-size:12px;color:#94a3ae;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.requestRowDot{color:#6f818d;font-weight:400}
+.requestRowEnd{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.requestRowEnd>span:last-child{font-size:22px;color:#788895;font-weight:400;line-height:1}
+.requestDialog{width:min(640px,100%);max-height:calc(100vh - 48px);overflow:auto;border:1px solid #2b3740;background:#11171d;border-radius:18px;box-shadow:0 24px 80px #0006;padding:22px}
+.requestDialogHead,.requestDrawerHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.requestDialogHead{margin-bottom:20px}
+.requestDialogHead h2,.requestDrawerHeader h2{font-size:20px;letter-spacing:-.03em;margin:0 0 6px}
+.requestForm{display:grid;gap:16px}
+.requestField{display:grid;gap:8px;font-size:12px;color:#9cabb8;font-weight:650}
+.requestAdvancedToggle,.requestTextButton{appearance:none;padding:0;text-align:left;border:0;background:none;color:#b8c7d0;font-size:12px;font-weight:650;cursor:pointer;width:max-content}
+.requestAdvancedToggle:hover,.requestTextButton:hover{text-decoration:underline}
+.requestDialogActions{display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #2a343c;padding-top:15px}
+.requestDrawerBackdrop{position:fixed;inset:0;z-index:1100;background:#050a0e99;display:flex;justify-content:flex-end}
+.requestDrawer{width:min(585px,100%);height:100%;box-sizing:border-box;background:#11171d;border-left:1px solid #30404a;box-shadow:-15px 0 50px #0004;display:flex;flex-direction:column;min-width:0}
+.requestDrawerHeader{padding:22px 24px;border-bottom:1px solid #28343d}
+.requestDrawerBody{overflow-y:auto;padding:20px 24px 36px;display:grid;align-content:start;gap:16px;min-height:0}
+.requestStatusLine{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.requestDescription{margin:0;font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+.requestReturnReason{border:1px solid #755323;border-radius:10px;background:#211b12;padding:12px 14px;line-height:1.45;font-size:13px}
+.requestReturnReason strong{font-size:12px}
+.requestReturnReason p{margin:6px 0;font-size:13px;white-space:pre-wrap}
+.requestMeta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border:1px solid #2a343c;border-radius:12px;padding:14px}
+.requestMeta>div{min-width:0;display:grid;gap:4px}
+.requestMeta span{color:#8295a1;font-size:11px}
+.requestMeta strong{font-size:12px;font-weight:550;overflow-wrap:anywhere}
+.requestDetailSection{display:grid;gap:11px;border-top:1px solid #2a343c;padding-top:16px;min-width:0}
+.requestDetailSection h3{font-size:13px;margin:0;font-weight:650}
+.requestSectionHead{display:flex;align-items:center;justify-content:space-between}
+.requestEvidence{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #29323b;padding:7px 0}
+.requestEvidence>div{min-width:0;display:grid;gap:3px}
+.requestEvidence strong{font-size:12px;font-weight:550;overflow-wrap:anywhere}
+.requestEvidence .muted{font-size:11px}
+.requestActionRow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+.requestActionRow select{flex:1;min-width:180px}
+.requestApproved{border:1px solid #334e39;border-radius:10px;padding:12px 14px;font-size:13px}
+.requestApproved strong{font-size:12px}
+.requestApproved>div{margin-top:6px;overflow-wrap:anywhere}
+.requestHistory{display:grid;gap:0}
+.requestHistoryItem{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px;border-bottom:1px solid #29333d;padding:10px 0}
+.requestHistoryItem:last-child{border:0}
+.requestHistoryItem>div{min-width:0;display:grid;gap:4px}
+.requestHistoryItem strong{font-size:12px;font-weight:650}
+.requestHistoryItem p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.5}
+.requestHistoryItem .muted{font-size:11px}
+.light .requestSummary>div,.light .requestList{border-color:#e1e7ea}
+.light .requestSummary span,.light .requestRowName>span{color:#697d89}
+.light .requestListRow{border-color:#e6ebee}
+.light .requestListRow:hover{background:#f3f6f7}
+.light .requestRowEnd>span:last-child{color:#84939d}
+.light .requestDialog,.light .requestDrawer{background:#fff;border-color:#dfe5e8;color:#172027}
+.light .requestDrawerBackdrop{background:#1b2b3499}
+.light .requestDrawerHeader,.light .requestDetailSection,.light .requestDialogActions,.light .requestEvidence,.light .requestHistoryItem{border-color:#e3e9ec}
+.light .requestMeta{border-color:#e3e9ec}
+.light .requestMeta span{color:#657987}
+.light .requestAdvancedToggle,.light .requestTextButton{color:#445b69}
+.light .requestField{color:#586d7b}
+.light .requestReturnReason{background:#fffaf2;border-color:#e8d0a1;color:#644c20}
+.light .requestApproved{border-color:#cddfcf;color:#315d38}
+@media(max-width:680px){
+ .requestSummary{gap:6px}
+ .requestSummary>div{padding:10px;display:grid;gap:5px}
+ .requestSummary strong{font-size:17px}
+ .requestFilters select{flex-basis:120px}
+ .requestListRow{align-items:flex-start;gap:8px}
+ .requestRowEnd{gap:6px}
+ .requestRowEnd .badge{max-width:100px;text-align:center}
+ .requestDialog{padding:17px;max-height:calc(100vh - 24px)}
+ .requestDrawerHeader{padding:15px}
+ .requestDrawerBody{padding:16px}
+ .requestHistoryItem{grid-template-columns:75px minmax(0,1fr)}
+}
