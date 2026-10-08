@@ -27,6 +27,7 @@ export function AppShell({children}:{children:ReactNode}) {
   const navItems=[
     ["/pvos/dashboard","Dashboard"],
     ["/pvos/companies","Companies"],
+    ["/pvos/invoices","Invoice approvals"],
     ["/pvos/literature","Literature"],
     ["/pvos/signal","Signals"],
     ["/pvos/rmp","RMP"],
