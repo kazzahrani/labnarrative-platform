@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import styles from "./pvos.module.css";
 import { usePVOS } from "./_provider";
 import { pvosSupabase } from "./_pvos-supabase";
+import { NotificationCenter } from "./_notification-center";
 
 export function AppShell({children}:{children:ReactNode}) {
   const pathname=usePathname();
@@ -44,7 +45,10 @@ export function AppShell({children}:{children:ReactNode}) {
 
   return <div className={rootClass}><div className={styles.shell}>
     <aside className={styles.sidebar}>
-      <div className={styles.brand}><img className={styles.mark} src="/pvos-mark.svg" alt="" aria-hidden="true"/><div>PVOS</div></div>
+      <div className={styles.sidebarBrandRow}>
+       <div className={styles.brand}><img className={styles.mark} src="/pvos-mark.svg" alt="" aria-hidden="true"/><div>PVOS</div></div>
+       <NotificationCenter userId={session.user.id}/>
+      </div>
       <nav className={styles.nav}>
         {navItems.map(([href,label])=><Link key={href} href={href} className={isActive(href)?styles.navActive:undefined} aria-current={isActive(href)?"page":undefined}>{label}</Link>)}
       </nav>
