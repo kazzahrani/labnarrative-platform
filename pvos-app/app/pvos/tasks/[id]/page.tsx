@@ -34,6 +34,7 @@ export default function TaskPage(){
       pvosSupabase.rpc("pvos_member_directory",{p_organization_id:t.organization_id})
     ]);
     setCompany(c.data);setEvidence(e.data??[]);setApprovals(a.data??[]);setAudit(au.data??[]);setProduct((p as any).data);
+    if(t.metadata?.authority_period_id){setReviewPending(["awaiting_review","complete"].includes(t.status));setReviewHistory(true);}
     if(a.data?.length)setReviewPending(false);
     setMembers(m.data??[]);if(m.error||a.error||au.error)setWorkflowMessage((m.error||a.error||au.error)?.message??"Could not load approval history");
     const routeIds=[...new Set((a.data??[]).map((x:any)=>x.route_id).filter(Boolean))] as string[];
@@ -80,6 +81,8 @@ export default function TaskPage(){
 
   if(!task||!company)return <div className={styles.empty}>Loading task…</div>;
   const displayStatus=dueLabel(task.due_at,task.status);
+  const authorityPeriod=task.metadata?.authority_period_id;
+  const authorityLink=authorityPeriod?`/pvos/signal?view=authority&authorityPeriod=${authorityPeriod}`:null;
   return <>
     <Header eyebrow={task.activity_type+" · "+company.name} title={task.title} sub="Live structured PV task. Status, evidence and approval handoffs are persisted with audit history." action={<div className={styles.inlineActions} style={{marginTop:0}}><a className={styles.buttonGhost} href={"/pvos/companies/"+company.id}>← Company</a><Badge tone={statusTone(displayStatus)}>{displayStatus}</Badge></div>}/>
     {workflowMessage?<div className={styles.notice} role="status" style={{marginBottom:14}}>{workflowMessage} <Link href="/pvos/approvals">Open Approval tracking →</Link></div>:null}
@@ -87,17 +90,20 @@ export default function TaskPage(){
       <section className={styles.stack}>
         <div className={styles.info}><h3>Task details</h3><div className={styles.kv}><span>Company</span><span>{company.name}</span></div>{product?<div className={styles.kv}><span>Product</span><span>{product.brand_name} · {product.active_ingredient}</span></div>:null}<div className={styles.kv}><span>Owner</span><span>{task.owner_user_id===session?.user.id?"Me":"Team"}</span></div><div className={styles.kv}><span>Due</span><span>{formatDue(task.due_at)}</span></div><div className={styles.kv}><span>Priority</span><span>{niceStatus(task.priority)}</span></div><div className={styles.kv}><span>Source</span><span>{niceStatus(task.source)}</span></div>
           <div className={styles.inlineActions}>
+            {authorityLink?<Link className={styles.button} href={authorityLink}>Open authority monitoring →</Link>:<>
             {task.status==="not_started"?<button className={styles.buttonGhost} disabled={busy||reviewPending} onClick={()=>setStatus("in_progress")}>Start work</button>:null}
             {task.status!=="awaiting_review"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("awaiting_review")}>{approvals.length?"Send into approval":"Send for review"}</button>:null}
             {!approvals.length&&!reviewHistory&&task.status!=="complete"?<button className={styles.button} disabled={busy||reviewPending} onClick={()=>setStatus("complete")}>Mark complete</button>:null}
             {task.status==="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Reopen</button>:null}
+            </>}
           </div>
+          {authorityLink?<p className={styles.muted}>Prepare source checks and send to the named reviewer in Authority monitoring. This task completes when the monitoring record is independently approved.</p>:null}
         </div>
 
         <div className={styles.info} id="evidence"><h3>Evidence & documents</h3>
           {task.status==="complete"&&approvals.length?<p className={styles.muted}>The completed task and its approval history remain here with the evidence. Completion does not send these documents externally.</p>:null}
           {evidence.length?evidence.map(e=><div className={styles.kv} key={e.id}><span>{new Date(e.created_at).toLocaleDateString()}</span><span>{e.title}{e.file_path?<button className={styles.buttonGhost} style={{marginLeft:8}} onClick={()=>openEvidence(e)}>Open file</button>:null}</span></div>):<div className={styles.muted}>No evidence attached yet.</div>}
-          {reviewPending?<p className={styles.muted}>Evidence changes are locked while review is pending.</p>:null}
+          {reviewPending?<p className={styles.muted}>{authorityLink&&task.status==="complete"?"Approved monitoring evidence is retained. Open the monitoring record for both reviewers and its frozen snapshot.":"Evidence changes are locked while review is pending."}</p>:null}
           <div className={styles.inlineActions}><input className={styles.input} disabled={reviewPending} value={evidenceTitle} onChange={e=>setEvidenceTitle(e.target.value)} placeholder="Evidence note"/><button className={styles.buttonGhost} disabled={busy||reviewPending||!evidenceTitle.trim()} onClick={addEvidence}>Add note</button></div>
           <div className={styles.inlineActions}><label className={styles.buttonGhost} style={{cursor:"pointer"}}>Upload file<input type="file" style={{display:"none"}} onChange={uploadEvidence} disabled={busy||reviewPending}/></label><span className={styles.muted}>Private storage · max 25 MB</span></div>
           {uploadMessage?<div className={uploadMessage.includes("uploaded")?styles.successBox:styles.errorBox} style={{marginTop:10}}>{uploadMessage}</div>:null}
@@ -105,12 +111,12 @@ export default function TaskPage(){
       </section>
 
       <aside className={styles.stack}>
-        {!approvals.length?<TaskReviewPanel task={task} members={members} userId={session?.user.id} onChanged={load} onPending={reviewLoaded}/>:null}
+        {authorityLink?<div className={styles.info}><h3>Monthly monitoring review</h3><p>Owner → named QPPV reviewer → Approve or Return with reason. Submission cycles, source checks and approved evidence are retained on the monitoring period.</p><Link href={authorityLink}>Open review and evidence history →</Link></div>:!approvals.length?<TaskReviewPanel task={task} members={members} userId={session?.user.id} onChanged={load} onPending={reviewLoaded}/>:null}
         <div className={styles.info} id="approval"><h3>Approval route & history</h3>{approvals.length?<><div className={styles.timeline}>{approvals.map(a=>{
           const s=stepBy[a.route_id+"|"+a.step_position];const actor=decisionAttribution(a,audit,members);
           const decided=["approved","rejected","skipped"].includes(a.status);
           return <div key={a.id} className={[styles.step,a.status==="approved"?styles.done:a.status==="in_review"?styles.current:""].join(" ")}><span className={styles.dot}></span><div><strong>{a.decision_context?.step_role??s?.role??("Step "+a.step_position)}</strong><p>{niceStatus(a.status)}{decided&&actor.at?" · "+new Date(actor.at).toLocaleString():""}</p>{decided?<><p>{actor.name}{a.decision_context?.acting_workspace_role?" · Workspace role: "+niceStatus(a.decision_context.acting_workspace_role):""}</p><p>{approvalOutcome(a,task,approvals,stepBy)}</p>{a.comment?<p>{a.comment}</p>:null}</>:<p>{a.assigned_user_id?members.find(m=>m.user_id===a.assigned_user_id)?.email??a.assigned_user_id:"Unassigned · role reviewer or administrator"}</p>}</div></div>;
-        })}</div>{approvals.some(a=>canApproveStep(a,stepBy[a.route_id+"|"+a.step_position],session?.user.id,members))?<button className={styles.button} disabled={busy} onClick={approveCurrent}>Approve current step</button>:null}<div className={styles.inlineActions}><Link className={styles.buttonGhost} href="/pvos/approvals">All approval history →</Link></div></>:<div className={styles.muted}>No approval workflow attached to this task.</div>}</div>
+        })}</div>{approvals.some(a=>canApproveStep(a,stepBy[a.route_id+"|"+a.step_position],session?.user.id,members))?<button className={styles.button} disabled={busy} onClick={approveCurrent}>Approve current step</button>:null}<div className={styles.inlineActions}><Link className={styles.buttonGhost} href="/pvos/approvals">All approval history →</Link></div></>:<div className={styles.muted}>{authorityLink?"Independent approval is recorded in the monthly monitoring history.":"No approval workflow attached to this task."}</div>}</div>
         <div className={styles.info}><h3>Audit history</h3><p className={styles.muted}>Latest {audit.length} events · account and database event time</p>{audit.length?audit.map(a=>{
           const before=a.before_data??{},after=a.after_data??{};
           const description=a.entity_type==="approval"?(after.status!==before.status?"Approval step "+niceStatus(after.status??a.event_type):"Approval updated"):

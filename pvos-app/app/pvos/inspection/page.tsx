@@ -12,9 +12,9 @@ import InspectionChecklist from "./_checklist";
 import { loadInspectionChecklist } from "../_inspection-checklist";
 import styles from "../pvos.module.css";
 
-type Tab="literature"|"handover"|"approvals"|"registration"|"tasks"|"audit";
+type Tab="authority"|"literature"|"handover"|"approvals"|"registration"|"tasks"|"audit";
 type Row=Record<string,any>;
-const tabs:[Tab,string][]=[["literature","Literature"],["handover","Handover"],["approvals","Approvals"],["registration","Registration"],["tasks","Tasks & evidence"],["audit","Audit history"]];
+const tabs:[Tab,string][]=[["authority","Authority monitoring"],["literature","Literature"],["handover","Handover"],["approvals","Approvals"],["registration","Registration"],["tasks","Tasks & evidence"],["audit","Audit history"]];
 function time(value?:string|null){return value?new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Riyadh",dateStyle:"medium",timeStyle:"medium"}).format(new Date(value)):"Not recorded";}
 function RecordId({value}:{value?:string|null}){return <span title={value||undefined}>{value?value.slice(0,8)+"…":"Not recorded"}</span>;}
 function saveFile(text:string,type:string,name:string){
@@ -110,11 +110,14 @@ export default function Inspection(){
       </div>
       <details className={styles.info} style={{marginBottom:16}}><summary>Control checks and outstanding work</summary><div className={styles.metricList} style={{marginTop:12}}>
         {([
-          ['Completed tasks missing active evidence',checks.missingTaskEvidence],['Overdue active tasks',checks.overdueTasks],['Unfinished screening runs',checks.unfinishedRuns],['Second reviews pending or returned',checks.pendingSecondReviews],['Approval steps waiting or queued',checks.pendingApprovals],['Older approval decisions without a recorded actor',checks.unattributedApprovals],['Literature evidence without recorded second approval',checks.legacyLiterature],['Accepted handovers missing frozen evidence',checks.missingHandoverEvidence],['Products with registration status not recorded',checks.unknownRegistration],['Registered products missing an SFDA number',checks.missingRegistrationNumber]
+          ['Completed tasks missing active evidence',checks.missingTaskEvidence],['Overdue active tasks',checks.overdueTasks],['Unfinished screening runs',checks.unfinishedRuns],['Second reviews pending or returned',checks.pendingSecondReviews],['Authority reviews pending or returned',checks.pendingAuthorityReviews],['Approval steps waiting or queued',checks.pendingApprovals],['Older approval decisions without a recorded actor',checks.unattributedApprovals],['Literature evidence without recorded second approval',checks.legacyLiterature],['Accepted handovers missing frozen evidence',checks.missingHandoverEvidence],['Products with registration status not recorded',checks.unknownRegistration],['Registered products missing an SFDA number',checks.missingRegistrationNumber]
         ] as [string,number][]).map(([label,count])=><div className={styles.metricRow} key={label}><span>{label}</span><strong className={count?styles.warn:styles.good}>{count}</strong></div>)}
       </div><p className={styles.muted}>Counts describe the stored records. An empty gap count does not establish complete journal coverage, evidence quality or regulatory compliance.</p></details>
       <div className={styles.inlineActions} style={{marginBottom:16,flexWrap:"wrap"}}>{tabs.map(([id,label])=><button key={id} className={tab===id?styles.button:styles.buttonGhost} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>
       <section className={styles.panel}><div className={styles.panelHeader}><h2>{tabs.find(([id])=>id===tab)?.[1]}</h2><span className={styles.muted}>{companyFilter==="all"?"All companies":company(companyFilter)}</span></div>
+        {tab==="authority"?<RowsTable key={tab+companyFilter} headers={["Company / period","Status","Owner → reviewer","Approved evidence","Record"]} rows={scoped.authorityPeriods||[]} render={p=>{
+          const r=(scoped.authorityRecords||[]).find(r=>r.period_id===p.id);return [<>{company(p.company_id)}<div className={styles.muted}>{p.period_start} → {p.period_end}</div></>,<Badge tone={p.status==="approved"?"green":"amber"}>{niceStatus(p.status)}</Badge>,<>{p.settings_snapshot?.owner_email}<div>→ {p.settings_snapshot?.reviewer_email}</div></>,r?<><div>{r.snapshot?.first_review?.email} · {time(r.snapshot?.first_review?.submitted_at)}</div><div>{r.snapshot?.second_review?.email} · {time(r.snapshot?.second_review?.decided_at)}</div><div className={styles.muted}>SHA-256: {r.snapshot_sha256.slice(0,16)}…</div></>:"No approved snapshot",<Link href={"/pvos/signal?authorityPeriod="+p.id}>Open monitoring record →</Link>];
+        }}/>:null}
         {tab==="literature"?<RowsTable key={tab+companyFilter} headers={["Company / period","Evidence / completed","First reviewers","Second review","Earlier cycles","Record"]} rows={scoped.literatureRecords} render={r=>[
           <>{company(r.company_id)}<div className={styles.muted}>{r.period_start} → {r.period_end}</div></>,<><RecordId value={r.id}/><div className={styles.muted}>{time(r.completed_at)}</div></>,
           <>{(r.metadata?.first_reviewer_user_ids||[]).map((id:string)=><div key={id}>{actor(id)}</div>)}</>,

@@ -27,6 +27,11 @@ const data={organizationId:'org',loadedAt:'2026-10-07T19:00:00Z',companies:[{id:
 data.checklistItems=[{id:'ci1',company_id:'c1',title:'Qualifications',status:'reviewed',effective_status:'needs_review',owner_user_id:'q',support_count:0},{id:'ci2',company_id:'c2',title:'Other company checkpoint',status:'missing_evidence'}];
 data.checklistLinks=[{id:'cl1',company_id:'c1',item_id:'ci1',title:'SOP v2',kind:'external',external_url:'https://example.invalid/sop',version:'v2'},{id:'cl2',company_id:'c2',item_id:'ci2',title:'Other company link'}];
 data.checklistReviews=[{id:'cr1',company_id:'c1',item_id:'ci1',decision:'reviewed',conclusion:'=Original conclusion',reviewer_email:'frozen-checklist@example.invalid',reviewed_by:'q',reviewed_at:'2026-10-08T07:00:00Z',snapshot:{sources:[{title:'Original evidence v1'}]}},{id:'cr2',company_id:'c2',item_id:'ci2',conclusion:'Other company review'}];
+data.authorityPeriods=[{id:'ap1',company_id:'c1',status:'approved',settings_snapshot:{sop_reference:'Authority SOP v2'}},{id:'ap2',company_id:'c2',status:'pending_review'}];
+data.authorityChecks=[{id:'ac1',company_id:'c1',period_id:'ap1',source_snapshot:{name:'Health authority'},outcome:'findings',checked_email:'frozen-authority-owner@example.invalid'}];
+data.authorityFindings=[{id:'af1',company_id:'c1',period_id:'ap1',title:'Authority safety finding',assessment:'relevant',product_ids:['p1']}];
+data.authorityReviews=[{id:'ar1',company_id:'c1',period_id:'ap1',status:'approved',sent_email:'frozen-authority-owner@example.invalid',decided_email:'frozen-authority-reviewer@example.invalid',snapshot:{checks:[],findings:[]}}];
+data.authorityRecords=[{id:'authority-record',company_id:'c1',period_id:'ap1',snapshot_sha256:'retained-authority-sha',snapshot:{first_review:{email:'frozen-authority-owner@example.invalid'},second_review:{email:'frozen-authority-reviewer@example.invalid'}}},{id:'other-authority-record',company_id:'c2',snapshot_sha256:'other-company-sha'}];
 const scoped=scopeInspection(data,'c1');
 assert.deepEqual(scoped.tasks.map(t=>t.id),['t1','t3']);assert.deepEqual(scoped.evidence.map(e=>e.id),['e1']);assert.deepEqual(scoped.audit.map(a=>a.id),[1,2,3]);
 assert.equal(scoped.handoverCompanies.length,1);assert.strictEqual(scoped.handoverEvidence[0],data.handoverEvidence[0],'original shared snapshot must not be projected or rehashed');
@@ -41,7 +46,10 @@ assert.match(out.csv,/Needs review unresolved/);assert.match(out.csv,/TESTING/);
 assert.ok(!out.csv.includes('Other company task'));
 assert.deepEqual(scoped.checklistItems.map(i=>i.id),['ci1']);assert.deepEqual(scoped.checklistLinks.map(i=>i.id),['cl1']);assert.deepEqual(scoped.checklistReviews.map(i=>i.id),['cr1']);
 assert.match(out.csv,/Needs re-review/);assert.match(out.csv,/frozen-checklist@example.invalid/);assert.match(out.csv,/Original evidence v1/);assert.ok(!out.csv.includes('Other company checkpoint'));assert.ok(!out.csv.includes('Other company review'));
-assert.equal(out.json.records.checklistReviews[0].conclusion,'=Original conclusion');assert.equal(out.json.export_version,'inspection-v3');
+assert.equal(out.json.records.checklistReviews[0].conclusion,'=Original conclusion');assert.equal(out.json.export_version,'inspection-v4');
+assert.deepEqual(scoped.authorityPeriods.map(p=>p.id),['ap1']);assert.equal(inspectionChecks(scoped).pendingAuthorityReviews,0);assert.equal(inspectionChecks(data).pendingAuthorityReviews,1);
+assert.match(out.csv,/frozen-authority-owner@example.invalid/);assert.match(out.csv,/frozen-authority-reviewer@example.invalid/);assert.match(out.csv,/retained-authority-sha/);assert.ok(!out.csv.includes('other-company-sha'));
+assert.strictEqual(out.json.records.authorityRecords[0].snapshot,data.authorityRecords[0].snapshot,'Dual-review evidence remains the original immutable snapshot');
 
 const outside=out.csv.split('\n').find(line=>line.includes('Obvious irrelevant article'));
 assert.ok(outside.includes('Outside recorded scope'));assert.ok(!outside.includes('"d"'),'article outside second-review scope must not inherit reviewer decision');
@@ -50,14 +58,17 @@ assert.equal(out.json.records.literatureRecords[0].decision_snapshot[0].decision
 
 // Use the real loader with a query-builder test double: verify all pages and workspace filters.
 const tables={pvos_companies:data.companies,pvos_tasks:Array.from({length:2317},(_,i)=>({id:'task-'+i,company_id:'c1'})),pvos_task_evidence:data.evidence,pvos_literature_screening_records:data.literatureRecords,pvos_literature_runs:data.runs,pvos_literature_second_reviews:data.secondReviews,pvos_handovers:data.handovers,pvos_handover_companies:data.handoverCompanies,pvos_handover_evidence:data.handoverEvidence,pvos_products:data.products,pvos_task_approvals:data.approvals,pvos_audit_events:Array.from({length:2507},(_,i)=>({id:i,created_at:'2026-10-07',entity_type:'task',before_data:{title:'raw event data'},after_data:{title:'changed'}})),pvos_approval_steps:data.steps};
+for(const [t,k] of [['periods','authorityPeriods'],['checks','authorityChecks'],['findings','authorityFindings'],['reviews','authorityReviews'],['records','authorityRecords']])tables['pvos_authority_'+t]=data[k];
 tables.pvos_task_reviews=[];tables.pvos_inspection_checklist_links=[];tables.pvos_inspection_checklist_reviews=[];
 const requests=[];
 function client(failedTable){return {rpc:async(name)=>({data:name==='pvos_get_inspection_checklist'?data.checklistItems:data.members,error:null}),from(table){const query={filters:[],from:0,to:999,columns:'*',inFilters:[]};const builder={select(columns){query.columns=columns;return this;},eq(field,value){query.filters.push([field,value]);return this;},order(){return this;},in(field,value){query.filters.push([field,value]);query.inFilters.push([field,value]);return this;},range(from,to){query.from=from;query.to=to;return this;},then(resolve,reject){requests.push({table,...query});let rows=tables[table].filter(row=>query.inFilters.every(([field,values])=>values.includes(row[field]))).slice(query.from,query.to+1);if(!query.columns.includes('*'))rows=rows.map(row=>Object.fromEntries(query.columns.split(',').map(field=>[field,row[field]])));return Promise.resolve({data:rows,error:table===failedTable?{message:'permission denied'}:null}).then(resolve,reject);}};return builder;}};}
 const loaded=await loadInspection(client(),'org');assert.equal(loaded.checklistItems.length,2);assert.equal(loaded.tasks.length,2317);assert.equal(loaded.audit.length,2507);
+assert.equal(loaded.authorityRecords.length,2);assert.equal(loaded.authorityReviews[0].decided_email,'frozen-authority-reviewer@example.invalid');
 assert.equal(loaded.audit[0].before_data,undefined,'opening Inspection must not pull every audit payload');
 const completeAudit=await loadInspectionAudit(client(),'org');assert.equal(completeAudit.length,2507);assert.equal(completeAudit[0].before_data.title,'raw event data','export must retrieve the full original audit payload');
 for(const r of requests.filter(r=>r.table!=='pvos_approval_steps'))assert.ok(r.filters.some(([field,value])=>field.endsWith('organization_id')&&value==='org'),r.table+' must be explicitly workspace scoped');
 await assert.rejects(loadInspection(client('pvos_handover_evidence'),'org'),/permission denied/);
 await assert.rejects(loadInspection(client('pvos_inspection_checklist_reviews'),'org'),/permission denied/);
+await assert.rejects(loadInspection(client('pvos_authority_records'),'org'),/permission denied/);
 await assert.rejects(loadInspectionAudit(client('pvos_audit_events'),'org'),/permission denied/);
 console.log('PASS: company scope, intact shared snapshots, truthful approval actors, second-review article scope, return history, archived evidence, safe CSV/exact JSON, full pagination, workspace filters and read failures.');

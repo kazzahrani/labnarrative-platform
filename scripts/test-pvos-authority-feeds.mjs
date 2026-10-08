@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),ts=require('../pvos-app/node_modules/typescript'),cache=new Map();
+function load(file){if(cache.has(file))return cache.get(file);const module={exports:{}};const source=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;new Function('require','module','exports',source)(id=>load(path.resolve(path.dirname(file),id+'.ts')),module,module.exports);cache.set(file,module.exports);return module.exports;}
+const feeds=load(path.resolve('supabase/functions/pvos-authority-monitor/_feeds.ts'));
+const helpers=load(path.resolve('pvos-app/app/pvos/_authority.ts'));
+const atom=`<?xml version="1.0"?><feed><entry><title>Product A safety update</title><link rel="self" href="https://example.invalid/self"/><link rel="alternate" href="https://www.gov.uk/drug-safety-update/product-a"/><published>2026-10-01T12:00:00Z</published><summary>&lt;p&gt;An update &amp; supporting advice&lt;/p&gt;</summary></entry><entry><title>Unmatched class notice</title><link href="https://www.gov.uk/drug-safety-update/class"/><updated>2026-10-02T10:00:00Z</updated></entry></feed>`;
+assert.equal(feeds.parseFeed(atom,'https://www.gov.uk/drug-safety-update.atom').length,2,'unmatched entries must not be filtered');
+assert.equal(feeds.parseFeed(atom,'https://www.gov.uk/drug-safety-update.atom')[0].summary,'An update & supporting advice');
+const rss='<rss><channel><item><title>Publisher correction</title><link>http://www.fda.gov/safety/correction</link><pubDate>Thu, 01 Oct 2026 12:00:00 GMT</pubDate><description><![CDATA[<p>Updated notice</p>]]></description></item></channel></rss>';
+const fda=feeds.parseFeed(rss,'https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/medwatch/rss.xml')[0];
+assert.equal(fda.url,'https://www.fda.gov/safety/correction');assert.equal(fda.publisher_url,'http://www.fda.gov/safety/correction','original publisher link retained');
+assert.equal(feeds.httpsUrl('http://third-party.invalid/notice','https://www.fda.gov/feed'),null,'HTTP upgrade is restricted to FDA host');
+assert.equal(feeds.httpsUrl('https://user:password@example.invalid'),null);
+assert.throws(()=>feeds.parseFeed('<html>Access denied</html>','https://example.invalid'),/not an Atom/);
+assert.throws(()=>feeds.parseFeed('<rss><channel/></rss>','https://example.invalid'),/empty/);
+assert.throws(()=>feeds.parseFeed('<!DOCTYPE foo><rss/>','https://example.invalid'),/unsupported/);
+assert.throws(()=>feeds.parseFeed(atom.replace('</feed>',''),'https://example.invalid'),/incomplete/);
+await assert.rejects(feeds.collectFeed({source_key:'manual',feed_url:'http://127.0.0.1'},async()=>{throw Error('Must not fetch');}),/allowlist/);
+await assert.rejects(feeds.collectFeed({source_key:'mhra_dsu',feed_url:feeds.VERIFIED_FEEDS.mhra_dsu},async()=>({ok:false,status:403})),/403/);
+assert.match(await feeds.sha256('fixture'),/^[a-f0-9]{64}$/);
+const p={period_start:'2026-10-01',period_end:'2026-10-31',company_id:'company'};
+assert.equal(helpers.riyadhDay('2026-09-30T22:00:00Z'),'2026-10-01');
+assert.equal(helpers.noticeInPeriod({published_at:'2024-01-01',first_seen_at:'2026-10-02',baseline:true},p),false,'old baseline is not presented as newly published');
+assert.equal(helpers.noticeInPeriod({published_at:'2024-01-01',first_seen_at:'2026-10-02',baseline:false},p),true,'newly discovered older-dated notices remain visible');
+assert.equal(helpers.noticeInPeriod({published_at:'2026-10-02',first_seen_at:'2026-10-03',baseline:true},p),true);
+assert.equal(helpers.suggestedProducts({title:'Metformin update',summary:''},[{id:'p',brand_name:'Brand',active_ingredient:'metformin'}]).length,1);
+assert.equal(helpers.suggestedProducts({title:'metforminase',summary:''},[{id:'p',brand_name:'Brand',active_ingredient:'metformin'}]).length,0,'whole terms, not accidental substrings');
+assert.equal(helpers.sourceNeedsRecheck({source_id:'s',checked_at:'2026-10-03'},p,[],[{company_id:'company',updated_at:'2026-10-04'}]),true);
+const input=path.resolve('../authority-input');
+for(const name of ['mhra','fda']){const file=path.join(input,name+'.xml');if(fs.existsSync(file)){const rows=feeds.parseFeed(fs.readFileSync(file,'utf8'),feeds.VERIFIED_FEEDS[name==='mhra'?'mhra_dsu':'fda_medwatch']);assert.ok(rows.length>0);console.log(`Verified downloaded ${name} feed: ${rows.length} entries`);}}
+console.log('PASS: Atom/RSS parsing, original publisher links, strict collection allowlist, failure handling, hashes, baseline/date windows, unmatched notices and product-change rechecks.');

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge, Header } from "../_components";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
+import AuthorityMonitoring from "./_authority-monitoring";
+import { readApprovalRows } from "../_approval";
 import styles from "../pvos.module.css";
 
 type Assessment="unassessed"|"potential_signal"|"no_signal_concern"|"needs_more_info";
@@ -28,6 +30,11 @@ function assessmentTone(v:string):"default"|"red"|"amber"|"green"|"lime"{
 
 export default function SignalReviewPage(){
   const {organizationId,session}=usePVOS();
+  const [view,setView]=useState<"review"|"authority">("review");
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);if(params.get("view")==="authority"||params.has("authorityPeriod"))setView("authority");},[]);
+  function changeView(next:"review"|"authority"){
+    setView(next);const url=new URL(window.location.href);url.searchParams.set("view",next);if(next==="review")url.searchParams.delete("authorityPeriod");window.history.replaceState(window.history.state,"",url);
+  }
   const [followups,setFollowups]=useState<any[]>([]);
   const [items,setItems]=useState<any[]>([]);
   const [products,setProducts]=useState<any[]>([]);
@@ -41,17 +48,16 @@ export default function SignalReviewPage(){
   async function load(){
     if(!organizationId)return;
     setLoading(true);
-    const [f,i,p,r]=await Promise.all([
-      pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).eq("destination","signal_review").order("created_at",{ascending:false}),
-      pvosSupabase.from("pvos_literature_items").select("*").eq("organization_id",organizationId),
-      pvosSupabase.from("pvos_products").select("id,brand_name,active_ingredient"),
-      pvosSupabase.from("pvos_signal_reviews").select("*").eq("organization_id",organizationId).order("updated_at",{ascending:false})
-    ]);
-    setFollowups(f.data||[]);
-    setItems(i.data||[]);
-    setProducts(p.data||[]);
-    setReviews(r.data||[]);
-    setLoading(false);
+    try{
+      const rows=(table:string)=>readApprovalRows<any>((from,to)=>pvosSupabase.from(table).select("*").eq("organization_id",organizationId).order("id").range(from,to));
+      const [f,i,p,r]=await Promise.all([
+        readApprovalRows<any>((from,to)=>pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).eq("destination","signal_review").order("id").range(from,to)),
+        rows("pvos_literature_items"),
+        readApprovalRows<any>((from,to)=>pvosSupabase.from("pvos_products").select("*,pvos_companies!inner(organization_id)").eq("pvos_companies.organization_id",organizationId).order("id").range(from,to)),rows("pvos_signal_reviews")
+      ]);
+      setFollowups(f);setItems(i);setProducts(p);setReviews(r);
+    }catch(e){setMessage("Signal records could not be fully loaded: "+((e as {message?:string}).message||"Refresh and retry."));}
+    finally{setLoading(false);}
   }
 
   useEffect(()=>{load()},[organizationId]);
@@ -64,8 +70,11 @@ export default function SignalReviewPage(){
     const item=itemMap[f.literature_item_id];
     const product=productMap[f.product_id||item?.product_id];
     const review=reviewMap[f.literature_item_id];
-    return {followup:f,item,product,review};
-  }).filter(x=>x.item);
+    return {followup:f,item,product,review,origin:"literature"};
+  }).filter(x=>x.item).concat(reviews.filter(r=>r.authority_finding_id).map(r=>{
+    const f=r.metadata?.finding_snapshot||{},ps=r.metadata?.product_snapshot||[];
+    return {followup:{id:r.id,company_id:r.company_id,product_id:r.product_id},item:{id:r.authority_finding_id,title:r.metadata?.title||f.title,article_url:r.metadata?.url||f.url,abstract:f.rationale,journal:r.metadata?.authority_name||"Health authority",publication_date:f.notice_snapshot?.published_at,metadata:{},relevance:"human_confirmed"},product:ps.length?{brand_name:ps.map((p:any)=>p.brand_name).join(", "),active_ingredient:ps.map((p:any)=>p.active_ingredient).filter(Boolean).join(", ")}:productMap[r.product_id],review:r,origin:"authority"};
+  }));
 
   const newCount=rows.filter(x=>!x.review||x.review.status==="new").length;
   const inReview=rows.filter(x=>x.review?.status==="under_review").length;
@@ -75,6 +84,11 @@ export default function SignalReviewPage(){
   async function saveReview(row:any,assessment:Assessment,status:"new"|"under_review"|"closed"){
     if(!organizationId||!session)return;
     setBusy(true);setMessage("");
+    if(row.origin==="authority"){
+      const {error}=await pvosSupabase.rpc("pvos_assess_authority_signal",{p_review_id:row.review.id,p_assessment:assessment,p_status:status==="new"?"under_review":status,p_notes:notes});
+      setBusy(false);if(error){setMessage(error.message);return;}
+      setMessage("Authority signal assessment updated.");await load();setSelected(null);setNotes("");return;
+    }
     const now=new Date().toISOString();
     const {error}=await pvosSupabase.from("pvos_signal_reviews").upsert({
       organization_id:organizationId,
@@ -114,10 +128,12 @@ export default function SignalReviewPage(){
   return <>
     <Header
       eyebrow="Safety intelligence"
-      title="Signal Review"
-      sub="Review safety findings escalated from literature. PVOS preserves the evidence trail; the QPPV makes the signal assessment."
+      title={view==="authority"?"Authority monitoring":"Signal Review"}
+      sub={view==="authority"?"Prepare monthly company monitoring, send it to a named QPPV reviewer and retain the evidence.":"Review findings escalated from literature and health authorities. The QPPV makes the signal assessment."}
     />
 
+    <div className={styles.inlineActions} style={{marginBottom:16}}><button className={view==="review"?styles.button:styles.buttonGhost} aria-pressed={view==="review"} onClick={()=>changeView("review")}>Signal Review</button><button className={view==="authority"?styles.button:styles.buttonGhost} aria-pressed={view==="authority"} onClick={()=>changeView("authority")}>Authority monitoring</button></div>
+    {view==="authority"?<AuthorityMonitoring/>:<>
     <section className={styles.cards}>
       <div className={styles.card}><span>New findings</span><strong>{newCount}</strong></div>
       <div className={styles.card}><span>Under review</span><strong>{inReview}</strong></div>
@@ -131,7 +147,7 @@ export default function SignalReviewPage(){
     <section className={styles.panel}>
       <div className={styles.panelHeader}>
         <div>
-          <h2>Literature findings for signal assessment</h2>
+          <h2>Escalated findings for signal assessment</h2>
           <div className={styles.muted} style={{marginTop:4}}>Only findings explicitly escalated by the reviewer appear here.</div>
         </div>
       </div>
@@ -149,13 +165,13 @@ export default function SignalReviewPage(){
             </td>
             <td>{row.product?<><strong>{row.product.brand_name}</strong><div className={styles.muted} style={{marginTop:3}}>{row.product.active_ingredient||"—"}</div></>:"—"}</td>
             <td>{x.journal||"PubMed"}<div className={styles.muted} style={{marginTop:3}}>{dateLabel(x.publication_date)}</div></td>
-            <td><Badge tone={x.relevance==="likely_relevant"?"red":x.relevance==="possible"?"amber":"default"}>{x.relevance==="likely_relevant"?"Likely relevant":x.relevance==="possible"?"Possible":"Unscored"}</Badge></td>
+            <td><Badge tone={x.relevance==="likely_relevant"?"red":x.relevance==="possible"?"amber":"default"}>{row.origin==="authority"?"Human escalation":x.relevance==="likely_relevant"?"Likely relevant":x.relevance==="possible"?"Possible":"Unscored"}</Badge></td>
             <td><Badge tone={review?.status==="under_review"?"amber":review?.status==="closed"?"green":"default"}>{review?.status==="under_review"?"Under review":review?.status==="closed"?"Closed":"New"}</Badge></td>
             <td><Badge tone={assessmentTone(review?.assessment||"unassessed")}>{assessmentLabel(review?.assessment||"unassessed")}</Badge></td>
             <td><button className={styles.buttonGhost} onClick={()=>openRow(row)}>Open</button></td>
           </tr>
         })}</tbody>
-      </table></div>:<div className={styles.empty}>No literature findings have been escalated to Signal Review yet.</div>}
+      </table></div>:<div className={styles.empty}>No findings have been escalated to Signal Review yet.</div>}
     </section>
 
     {selected?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}>
@@ -173,12 +189,12 @@ export default function SignalReviewPage(){
           <div className={styles.kv}><span>Product</span><span>{selected.product?.brand_name||"—"} · {selected.product?.active_ingredient||"—"}</span></div>
           <div className={styles.kv}><span>Source</span><span>{selected.item.journal||"PubMed"}</span></div>
           <div className={styles.kv}><span>Available</span><span>{dateLabel(selected.item.publication_date)}</span></div>
-          <div className={styles.kv}><span>Safety priority</span><span>{selected.item.relevance==="likely_relevant"?"Likely relevant":selected.item.relevance==="possible"?"Possible":"Unscored"}</span></div>
-          <div className={styles.kv}><span>Saudi context</span><span>{selected.item.metadata?.urgent_saudi?"Yes — priority review":"No flag detected"}</span></div>
-          <div className={styles.kv}><span>Safety terms</span><span>{selected.item.metadata?.safety_hits?.length?selected.item.metadata.safety_hits.join(", "):"—"}</span></div>
+          <div className={styles.kv}><span>Safety priority</span><span>{selected.origin==="authority"?"Human escalation":selected.item.relevance==="likely_relevant"?"Likely relevant":selected.item.relevance==="possible"?"Possible":"Unscored"}</span></div>
+          {selected.origin==="literature"?<><div className={styles.kv}><span>Saudi context</span><span>{selected.item.metadata?.urgent_saudi?"Yes — priority review":"No flag detected"}</span></div>
+          <div className={styles.kv}><span>Safety terms</span><span>{selected.item.metadata?.safety_hits?.length?selected.item.metadata.safety_hits.join(", "):"—"}</span></div></>:null}
         </div>
 
-        {selected.item.abstract?<div className={styles.notice} style={{marginTop:14}}><strong>Abstract</strong><div style={{marginTop:7,lineHeight:1.6}}>{selected.item.abstract}</div></div>:null}
+        {selected.item.abstract?<div className={styles.notice} style={{marginTop:14}}><strong>{selected.origin==="authority"?"Recorded finding rationale":"Abstract"}</strong><div style={{marginTop:7,lineHeight:1.6}}>{selected.item.abstract}</div></div>:null}
 
         <label style={{display:"grid",gap:7,marginTop:16,fontSize:12,fontWeight:700,color:"#9cabb8"}}>
           QPPV assessment notes
@@ -187,15 +203,16 @@ export default function SignalReviewPage(){
 
         <div className={styles.modalActions} style={{justifyContent:"space-between",flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button className={styles.buttonGhost} disabled={busy} onClick={()=>saveReview(selected,"unassessed","under_review")}>Start / keep under review</button>
-            <button className={styles.buttonGhost} disabled={busy} onClick={()=>saveReview(selected,"needs_more_info","under_review")}>Needs more info</button>
+            <button className={styles.buttonGhost} disabled={busy||(selected.origin==="authority"&&!notes.trim())} onClick={()=>saveReview(selected,"unassessed","under_review")}>Start / keep under review</button>
+            <button className={styles.buttonGhost} disabled={busy||(selected.origin==="authority"&&!notes.trim())} onClick={()=>saveReview(selected,"needs_more_info","under_review")}>Needs more info</button>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button className={styles.buttonGhost} disabled={busy} onClick={()=>saveReview(selected,"no_signal_concern","closed")}>Close — no signal concern</button>
-            <button className={styles.button} disabled={busy} onClick={()=>saveReview(selected,"potential_signal","under_review")}>Mark potential signal</button>
+            <button className={styles.buttonGhost} disabled={busy||(selected.origin==="authority"&&!notes.trim())} onClick={()=>saveReview(selected,"no_signal_concern","closed")}>Close — no signal concern</button>
+            <button className={styles.button} disabled={busy||(selected.origin==="authority"&&!notes.trim())} onClick={()=>saveReview(selected,"potential_signal","under_review")}>Mark potential signal</button>
           </div>
         </div>
       </div>
     </div>:null}
+    </>}
   </>;
 }
