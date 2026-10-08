@@ -42,6 +42,11 @@ export default function InvoiceProcessingPage(){
  const [busy,setBusy]=useState(false),[fileBusy,setFileBusy]=useState(false),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[error,setError]=useState("");
  const fileInput=useRef<HTMLInputElement>(null);
  const uid=session?.user.id||"";
+ // The global notification bell can navigate between invoices on this same route.
+ useEffect(()=>{
+  const requested=params.get("invoice");
+  if(requested)setOpened(requested);
+ },[params]);
  const reload=useCallback(async()=>{
   const [r,c,n]=await Promise.all([
    pvosSupabase.rpc("pvos_invoice_list"),
@@ -86,7 +91,7 @@ export default function InvoiceProcessingPage(){
    if(e2)throw e2;
    setShowCreate(false);setTitle("");setDescription("");setReference("");setAmount("");setHeadEmail("");setFinanceEmail("");setDueOn("");
    setMessage("Draft created. Upload the invoice PDF, then click Submit to Head. No approval notification has been sent yet.");
-   await reload();setOpened(data.id);await loadDetail(data.id);void dispatchNotice(data.id);
+   await reload();setOpened(data.id);await loadDetail(data.id);window.dispatchEvent(new Event("pvos-notifications-changed"));void dispatchNotice(data.id);
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function upload(file:File|null,kind:"invoice"|"payment_proof"="invoice"){
@@ -120,7 +125,7 @@ export default function InvoiceProcessingPage(){
    if(e)throw e;
    setNote("");setPayRef("");
    setMessage(action==="confirm_paid"?"Payment completion recorded. QPPV notification queued.":"Decision recorded and next assignee notified in PVOS.");
-   await refresh();void dispatchNotice(current.id);
+   await refresh();window.dispatchEvent(new Event("pvos-notifications-changed"));void dispatchNotice(current.id);
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  const canUpload=current&&uid===current.requested_by&&["draft","head_review","returned_head","returned_finance"].includes(current.status);
