@@ -27,6 +27,11 @@ export function PVOSProvider({children}:{children:ReactNode}) {
   const [reloadToken,setReloadToken] = useState(0);
   const initUserRef=useRef<string|null>(null);
   const isLogin = pathname === "/pvos/login";
+  function redirectAfterLogin(){
+    const raw=new URLSearchParams(window.location.search).get("next")||"";
+    // Accept only internal PVOS links, never an external redirect.
+    return raw.startsWith("/pvos/")&&!raw.startsWith("//")&&!raw.startsWith("/pvos/login")?raw:"/pvos/dashboard";
+  }
 
   async function initialize(nextSession:Session|null) {
     setSession(nextSession);
@@ -36,7 +41,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       initUserRef.current=null;
       setOrganizationId(null);
       setLoading(false);
-      if (!isLogin) router.replace("/pvos/login");
+      if (!isLogin) router.replace(pathname==="/pvos/invoices"?"/pvos/login?next="+encodeURIComponent(pathname+window.location.search):"/pvos/login");
       return;
     }
 
@@ -46,7 +51,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       if(organizationId){
         await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
         setLoading(false);
-        if(isLogin) router.replace("/pvos/dashboard");
+        if(isLogin) router.replace(redirectAfterLogin());
       }
       return;
     }
