@@ -27,16 +27,13 @@ export function AppShell({children}:{children:ReactNode}) {
   const navItems=[
     ["/pvos/dashboard","Dashboard"],
     ["/pvos/companies","Companies"],
-    ["/pvos/tasks","Tasks"],
-    ["/pvos/automation","Automation & Import"],
     ["/pvos/literature","Literature"],
-    ["/pvos/signal","Signal Review"],
-    ["/pvos/rmp","RMP Tracker"],
-    ["/pvos/approvals","Approvals"],
-    ["/pvos/handover","Handover"],
+    ["/pvos/signal","Signals"],
+    ["/pvos/rmp","RMP"],
     ["/pvos/inspection","Inspection"],
+    ["/pvos/automation","Settings"],
   ] as const;
-  const isActive=(href:string)=>pathname===href || (href!=="/pvos/dashboard" && pathname.startsWith(href+"/"));
+  const isActive=(href:string)=>pathname===href || (href==="/pvos/dashboard"&&["/pvos/tasks","/pvos/approvals","/pvos/handover"].some(x=>pathname===x||pathname.startsWith(x+"/"))) || (href!=="/pvos/dashboard" && pathname.startsWith(href+"/"));
 
   if(pathname==="/pvos/login") return <div className={rootClass}>{children}</div>;
 
@@ -79,6 +76,14 @@ export function Header({eyebrow,title,sub,action}:{eyebrow:string,title:string,s
 export function Badge({children,tone="default"}:{children:ReactNode,tone?:"default"|"red"|"amber"|"green"|"lime"}) {
   const cls=[styles.badge,tone==="red"?styles.badgeRed:"",tone==="amber"?styles.badgeAmber:"",tone==="green"?styles.badgeGreen:"",tone==="lime"?styles.badgeLime:""].filter(Boolean).join(" ");
   return <span className={cls}>{children}</span>;
+}
+
+export function Help({children,label="More information"}:{children:ReactNode,label?:string}) {
+  return <span className={styles.infoTip} tabIndex={0} aria-label={label}>i<span className={styles.tooltip} role="tooltip">{children}</span></span>;
+}
+
+export function Tabs({label,value,items,onChange}:{label:string,value:string,items:{id:string,label:string}[],onChange:(id:string)=>void}) {
+  return <div className={styles.tabs} role="tablist" aria-label={label}>{items.map((item,i)=><button key={item.id} type="button" role="tab" aria-selected={value===item.id} tabIndex={value===item.id?0:-1} className={value===item.id?styles.tabActive:styles.tab} onClick={()=>onChange(item.id)} onKeyDown={e=>{let next=i;if(e.key==="ArrowRight")next=(i+1)%items.length;else if(e.key==="ArrowLeft")next=(i+items.length-1)%items.length;else if(e.key==="Home")next=0;else if(e.key==="End")next=items.length-1;else return;e.preventDefault();onChange(items[next].id);(e.currentTarget.parentElement?.children[next] as HTMLElement)?.focus();}}>{item.label}</button>)}</div>;
 }
 
 export function statusTone(status:string):"default"|"red"|"amber"|"green"|"lime" {

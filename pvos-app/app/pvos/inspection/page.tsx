@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Header, Badge } from "../_components";
+import { Header, Badge, Tabs, Help } from "../_components";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import { niceStatus } from "../_utils";
@@ -58,7 +58,7 @@ export default function Inspection(){
     catch(e){if(id===request.current)setError(e instanceof Error?e.message:"Could not load inspection records.");}
     finally{if(id===request.current)setLoading(false);}
   },[organizationId]);
-  useEffect(()=>{setData(null);setCompanyFilter("all");load();return()=>{request.current++;};},[load]);
+  useEffect(()=>{setData(null);setCompanyFilter(new URLSearchParams(window.location.search).get("company")||"all");load();return()=>{request.current++;};},[load]);
   const scoped=useMemo(()=>data?scopeInspection(data,companyFilter):null,[data,companyFilter]);
   const approvals=useMemo(()=>scoped?inspectionApprovals(scoped):[],[scoped]);
   const checks=useMemo(()=>scoped?inspectionChecks(scoped):null,[scoped]);
@@ -101,9 +101,9 @@ export default function Inspection(){
     </div>
     {exportError?<div className={styles.errorBox} role="alert">{exportError}</div>:null}
     {error?<div className={styles.errorBox} role="alert">Inspection could not load every record: {error}. Refresh before exporting.</div>:loading?<div className={styles.empty}>Loading complete inspection registers…</div>:scoped&&checks?<>
-      <p className={styles.muted}>Reads completed {time(scoped.loadedAt)} · All displayed times are Riyadh time; export timestamps are UTC. Exports contain file references, not attached document bytes.</p>
+      <Help>Reads completed {time(scoped.loadedAt)}. Displayed times are Riyadh time; exports use UTC and contain file references, not attached document bytes.</Help>
       {shared?<div className={styles.notice}>This scope includes shared handovers. The JSON export retains their full original snapshots, including other covered companies, so the recorded SHA-256 still refers to the original evidence.</div>:null}
-      <div className={styles.inlineActions} style={{marginBottom:16}}><button className={view==="checklist"?styles.button:styles.buttonGhost} aria-pressed={view==="checklist"} onClick={()=>setView("checklist")}>Checklist</button><button className={view==="evidence"?styles.button:styles.buttonGhost} aria-pressed={view==="evidence"} onClick={()=>setView("evidence")}>Evidence & history</button></div>
+      <Tabs label="Inspection areas" value={view} onChange={v=>setView(v as typeof view)} items={[{id:"checklist",label:"Checklist"},{id:"evidence",label:"Evidence & history"}]}/>
       {view==="checklist"?<InspectionChecklist key={companyFilter} data={data!} companyId={companyFilter} userId={session?.user.id} onCompany={setCompanyFilter} onRefresh={refreshChecklist}/>:<>
       <div className={styles.cards}>
         {[['Literature evidence records',scoped.literatureRecords.length],['Frozen handover snapshots',scoped.handoverEvidence.length],['Attributed approval decisions',approvals.filter(a=>a.actor.recorded).length],['Registration history events',registrationHistory.length]].map(([label,count])=><div className={styles.card} key={label}><div className={styles.muted}>{label}</div><div style={{fontSize:28,marginTop:8}}>{count}</div></div>)}
@@ -112,8 +112,8 @@ export default function Inspection(){
         {([
           ['Completed tasks missing active evidence',checks.missingTaskEvidence],['Overdue active tasks',checks.overdueTasks],['Unfinished screening runs',checks.unfinishedRuns],['Second reviews pending or returned',checks.pendingSecondReviews],['Authority reviews pending or returned',checks.pendingAuthorityReviews],['Approval steps waiting or queued',checks.pendingApprovals],['Older approval decisions without a recorded actor',checks.unattributedApprovals],['Literature evidence without recorded second approval',checks.legacyLiterature],['Accepted handovers missing frozen evidence',checks.missingHandoverEvidence],['Products with registration status not recorded',checks.unknownRegistration],['Registered products missing an SFDA number',checks.missingRegistrationNumber]
         ] as [string,number][]).map(([label,count])=><div className={styles.metricRow} key={label}><span>{label}</span><strong className={count?styles.warn:styles.good}>{count}</strong></div>)}
-      </div><p className={styles.muted}>Counts describe the stored records. An empty gap count does not establish complete journal coverage, evidence quality or regulatory compliance.</p></details>
-      <div className={styles.inlineActions} style={{marginBottom:16,flexWrap:"wrap"}}>{tabs.map(([id,label])=><button key={id} className={tab===id?styles.button:styles.buttonGhost} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>
+      </div><Help>Counts describe stored records. An empty gap count does not establish complete journal coverage, evidence quality or regulatory compliance.</Help></details>
+      <Tabs label="Evidence types" value={tab} onChange={v=>setTab(v as Tab)} items={tabs.map(([id,label])=>({id,label}))}/>
       <section className={styles.panel}><div className={styles.panelHeader}><h2>{tabs.find(([id])=>id===tab)?.[1]}</h2><span className={styles.muted}>{companyFilter==="all"?"All companies":company(companyFilter)}</span></div>
         {tab==="authority"?<RowsTable key={tab+companyFilter} headers={["Company / period","Status","Owner → reviewer","Approved evidence","Record"]} rows={scoped.authorityPeriods||[]} render={p=>{
           const r=(scoped.authorityRecords||[]).find(r=>r.period_id===p.id);return [<>{company(p.company_id)}<div className={styles.muted}>{p.period_start} → {p.period_end}</div></>,<Badge tone={p.status==="approved"?"green":"amber"}>{niceStatus(p.status)}</Badge>,<>{p.settings_snapshot?.owner_email}<div>→ {p.settings_snapshot?.reviewer_email}</div></>,r?<><div>{r.snapshot?.first_review?.email} · {time(r.snapshot?.first_review?.submitted_at)}</div><div>{r.snapshot?.second_review?.email} · {time(r.snapshot?.second_review?.decided_at)}</div><div className={styles.muted}>SHA-256: {r.snapshot_sha256.slice(0,16)}…</div></>:"No approved snapshot",<Link href={"/pvos/signal?authorityPeriod="+p.id}>Open monitoring record →</Link>];

@@ -2,10 +2,11 @@
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Header, Badge } from "../_components";
+import { Header, Badge, Tabs } from "../_components";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import { PV_TEMPLATES, suggestedDueDate, type PVTemplate } from "../_pv-templates";
+import {formatDue,niceStatus} from "../_utils";
 import styles from "../pvos.module.css";
 
 type ImportKind="companies"|"products"|"obligations"|"tasks";
@@ -43,6 +44,7 @@ function SectionTitle({title,info}:{title:string,info:string}){
 }
 
 export default function AutomationPage(){
+  const [settingsTab,setSettingsTab]=useState("schedules");
   const {organizationId,session,refresh}=usePVOS();
   const [companies,setCompanies]=useState<any[]>([]);
   const [products,setProducts]=useState<any[]>([]);
@@ -110,7 +112,7 @@ export default function AutomationPage(){
     }
     setBusy(null);
     if(error)setMessage(error.message);
-    else if(t.cadence==="event")setMessage(t.title+" added to "+(currentCompany?.name||"company")+". It will appear in Tasks when the event is triggered.");
+    else if(t.cadence==="event")setMessage(t.title+" added to "+(currentCompany?.name||"company")+". It will appear in Dashboard when the event is triggered.");
     else {
       setMessage(t.title+" added to "+(currentCompany?.name||"company")+". "+(generated>0?generated+" upcoming task"+(generated===1?" was":"s were")+" created.":"PVOS will create its upcoming task instances automatically."));
       setShowTasksLink(true);
@@ -159,20 +161,15 @@ export default function AutomationPage(){
   }
 
   return <>
-    <Header eyebrow="Reduce manual setup" title="Automation & import" sub="Create recurring PV work automatically, start from PV-specific templates, and migrate existing trackers without retyping every task or product."/>
-    <section className={styles.cards}>
-      <div className={styles.card}><span>Recurring obligations</span><strong>{recurring}</strong></div>
-      <div className={styles.card}><span>Event-driven</span><strong>{obligations.length-recurring}</strong></div>
-      <div className={styles.card}><span>Companies</span><strong>{companies.length}</strong></div>
-      <div className={styles.card}><span>Products</span><strong>{products.length}</strong></div>
-    </section>
-
-    <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:30}}>
+    <Header eyebrow="Reduce manual setup" title="Settings" sub="Create recurring PV work automatically, start from PV-specific templates, and migrate existing trackers without retyping every task or product."/>
+    <Tabs label="Settings areas" value={settingsTab} onChange={setSettingsTab} items={[{id:"schedules",label:"Schedules"},{id:"templates",label:"Templates"},{id:"imports",label:"Imports"},{id:"integrations",label:"Integrations"}]}/>
+      {message?<div className={styles.successBox} style={{margin:"0 14px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><span>{message}</span>{showTasksLink?<Link className={styles.buttonGhost} href="/pvos/dashboard">View work</Link>:null}</div>:null}
+    <section className={styles.panel} hidden={settingsTab!=="schedules"} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:30}}>
       <div className={styles.panelHeader}><SectionTitle title="Recurring task engine" info="Create an obligation once and PVOS creates the individual task instances while preserving every previous cycle. Automatic generation runs when the workspace loads; use Generate next 60 days after changing schedules or importing obligations."/><button className={styles.button} onClick={generate}>Generate next 60 days</button></div>
-      {message?<div className={styles.successBox} style={{margin:"0 14px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}><span>{message}</span>{showTasksLink?<Link className={styles.buttonGhost} href="/pvos/tasks">View tasks →</Link>:null}</div>:null}
+      <div className={styles.tableWrap}><table className={`${styles.table} ${styles.workTable}`}><thead><tr><th>Company / schedule</th><th>Frequency</th><th>Next due</th><th>Action</th></tr></thead><tbody>{obligations.filter(o=>o.cadence!=="event").map(o=><tr key={o.id}><td><strong>{o.title}</strong><div>{companies.find(c=>c.id===o.company_id)?.name}</div></td><td>{niceStatus(o.cadence)}</td><td>{formatDue(o.next_due_at)}</td><td><Link className={styles.buttonGhost} href={"/pvos/companies/"+o.company_id+"/setup"}>Edit schedule</Link></td></tr>)}</tbody></table>{!recurring?<div className={styles.empty}>No recurring schedules. Add a template or configure a company obligation.</div>:null}</div>
     </section>
 
-    <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:20}}>
+    <section className={styles.panel} hidden={settingsTab!=="templates"} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:20}}>
       <div className={styles.panelHeader}><SectionTitle title="PV template library" info="Use a template to avoid rebuilding common PV workflows from scratch. The first due date must still match the real contract, SOP and regulatory schedule."/><select className={styles.input} style={{maxWidth:260}} value={companyId} onChange={e=>setCompanyId(e.target.value)}><option value="">Select company</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
       <div style={{padding:14,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:12}}>
         {PV_TEMPLATES.map(t=><div key={t.id} className={styles.info} style={{margin:0}}>
@@ -183,10 +180,10 @@ export default function AutomationPage(){
       </div>
     </section>
 
-    <section className={styles.panel} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:10}}>
+    <section className={styles.panel} hidden={settingsTab!=="imports"} style={{marginBottom:16,overflow:"visible",position:"relative",zIndex:10}}>
       <div className={styles.panelHeader}><SectionTitle title="Bulk import" info="Export the current Excel tracker as CSV, match the template headers, then import instead of retyping. Recommended order: Companies → Products → Obligations / Tasks."/><button className={styles.buttonGhost} onClick={()=>downloadCsv(kind,templateFor(kind))}>Download CSV template</button></div>
       <div style={{padding:14}}>
-        <div className={styles.inlineActions} style={{marginTop:0,flexWrap:"wrap"}}>{(["companies","products","obligations","tasks"] as ImportKind[]).map(k=><button key={k} className={kind===k?styles.button:styles.buttonGhost} onClick={()=>changeKind(k)}>{k[0].toUpperCase()+k.slice(1)}</button>)}</div>
+        <Tabs label="Import type" value={kind} onChange={v=>changeKind(v as ImportKind)} items={(["companies","products","obligations","tasks"] as ImportKind[]).map(k=>({id:k,label:k[0].toUpperCase()+k.slice(1)}))}/>
         <div className={styles.formGrid} style={{marginTop:14}}>
           <label className={styles.full}>CSV file<input className={styles.input} style={{fontWeight:400}} type="file" accept=".csv,text/csv" onChange={fileChanged}/></label>
           <label className={styles.full}>CSV preview<textarea className={styles.input} style={{minHeight:210,fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",fontWeight:400}} value={csv} onChange={e=>setCsv(e.target.value)}/></label>
@@ -196,7 +193,7 @@ export default function AutomationPage(){
       </div>
     </section>
 
-    <section className={styles.panel} style={{overflow:"visible",position:"relative",zIndex:5}}>
+    <section className={styles.panel} hidden={settingsTab!=="integrations"} style={{overflow:"visible",position:"relative",zIndex:5}}>
       <div className={styles.panelHeader}><SectionTitle title="Microsoft 365 integration" info="Planned next layer: Outlook can turn selected regulatory emails into suggested tasks and deadlines, while SharePoint / OneDrive can link controlled documents instead of duplicating them. The QPPV remains the final reviewer."/><Badge>Planned</Badge></div>
     </section>
   </>;

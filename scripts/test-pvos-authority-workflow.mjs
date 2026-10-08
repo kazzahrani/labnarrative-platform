@@ -61,7 +61,7 @@ function load(file){
   if(id.endsWith('_task-review'))return {TaskReviewPanel:()=>jsx('p',{children:'Generic task review panel'})};
   if(id.endsWith('_provider'))return {usePVOS:()=>({organizationId:'org',session:{user:{id:actor}}})};
   if(id.endsWith('_pvos-supabase'))return {pvosSupabase:sdk};
-  if(id.endsWith('_components'))return {Header:p=>jsx('header',{children:[p.title,p.sub,p.action]}),Badge:p=>jsx('span',p),statusTone:()=> 'default'};
+  if(id.endsWith('_components'))return {Header:p=>jsx('header',{children:[p.title,p.sub,p.action]}),Badge:p=>jsx('span',p),Help:p=>jsx('span',p),Tabs:p=>jsx('div',{children:p.items.map(item=>jsx('button',{children:item.label,onClick:()=>p.onChange(item.id)}))}),statusTone:()=> 'default'};
   if(id.endsWith('.css'))return {__esModule:true,default:new Proxy({},{get:(_,key)=>key})};
   const base=path.resolve(path.dirname(file),id);return load(fs.existsSync(base+'.tsx')?base+'.tsx':base+'.ts');
  };
@@ -70,7 +70,8 @@ function load(file){
 let Page=load(path.join(app,'app/pvos/signal/page.tsx')).default;
 function render(node,location='root',disabled=false){
  if(Array.isArray(node))return node.flatMap((x,i)=>render(x,location+'.'+(x?.key??i),disabled));
- if(node==null||typeof node==='boolean')return [];if(typeof node!=='object')return [String(node)];
+ if(node==null||typeof node==='boolean')return [];
+  if(node?.props?.hidden)return [];if(typeof node!=='object')return [String(node)];
  if(typeof node.type==='function'){const key=location+':'+(node.key??'');current=hooks.get(key)||[];hooks.set(key,current);index=0;return render(node.type(node.props),key+'.component',disabled);}
  const inherited=disabled||node.type==='fieldset'&&!!node.props.disabled;
  return [{...node,disabled:inherited||node.props.disabled,children:render(node.props.children,location+'.children',inherited)}];
@@ -109,5 +110,6 @@ Page=load(path.join(app,'app/pvos/tasks/[id]/page.tsx')).default;hooks.clear();d
 assert.equal(find('a','Open authority monitoring →').props.href,`/pvos/signal?view=authority&authorityPeriod=${period.id}`);
 for(const label of ['Mark complete','Reopen','Send for review'])assert.ok(!all().some(n=>n.type==='button'&&text(n)===label),'No generic '+label+' action on linked monitoring task');
 assert.ok(!text(view).includes('Generic task review panel'),'Linked tasks use the independent monitoring workflow');
+await click('Evidence (0)');
 assert.ok(all().find(n=>n.type==='input'&&n.props.placeholder==='Evidence note').disabled,'Approved evidence stays read only');
 console.log('PASS: real component navigation, pagination, named routing, source gaps, relevance/product checks, explicit Signal escalation, independent Return/Approve, replacement history, approved records and authority Signal assessment payload.');

@@ -75,21 +75,23 @@ function load(file){
   const exports={};modules.set(file,exports);
   const localRequire=id=>{
     if(id==='react')return react;
+    if(id==='next/link')return {__esModule:true,default:p=>jsx('a',p)};
     if(id==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};
     if(id.endsWith('_provider'))return {usePVOS:()=>({organizationId:'org',session:{user:{id:actor}}})};
     if(id.endsWith('_pvos-supabase'))return {pvosSupabase:sdk};
-    if(id.endsWith('_components'))return {Header:p=>jsx('header',{children:[p.title,p.sub,p.action]}),Badge:p=>jsx('span',p)};
+    if(id.endsWith('_components'))return {Header:p=>jsx('header',{children:[p.title,p.sub,p.action]}),Badge:p=>jsx('span',p),Help:p=>jsx('span',p),Tabs:p=>jsx('div',{children:p.items.map(item=>jsx('button',{children:item.label,onClick:()=>p.onChange(item.id)}))})};
     if(id.endsWith('.css'))return {__esModule:true,default:new Proxy({},{get:(_,key)=>key})};
     if(id.endsWith('_rank'))return {PRIORITIZATION_VERSION:'fixture'};
-    return load(path.resolve(path.dirname(file),id+'.tsx'));
+    const base=path.resolve(path.dirname(file),id);return load(fs.existsSync(base+'.tsx')?base+'.tsx':base+'.ts');
   };
-  vm.runInNewContext('(function(require,exports){'+source+'\n})',{console,URLSearchParams,window:browserWindow,document:{activeElement:null},Blob,URL})(localRequire,exports);
+  vm.runInNewContext('(function(require,exports){'+source+'\n})',{console,Intl,URLSearchParams,window:browserWindow,document:{activeElement:null},Blob,URL})(localRequire,exports);
   return exports;
 }
 const Page=load(path.join(app,'app/pvos/literature/page.tsx')).default;
 function render(node,location='root'){
   if(Array.isArray(node))return node.flatMap((x,i)=>render(x,location+'.'+(x?.key??i)));
   if(node==null||typeof node==='boolean')return [];
+  if(node?.props?.hidden)return [];
   if(typeof node!=='object')return [String(node)];
   if(typeof node.type==='function'){
     const state=hooks.get(location)||[];hooks.set(location,state);current=state;index=0;
@@ -105,12 +107,11 @@ async function click(label){const node=find('button',label);assert.ok(!node.prop
 const article=()=>all().find(x=>x.type==='article'&&x.props['aria-label']==='Selected article');
 await flush();
 assert.ok(requests.some(x=>x.table==='pvos_literature_items'&&x.start===1000),'Complete paginated item load');
-assert.ok(text(view).includes('2 open records'));
-const choices=all().filter(n=>n.type==='button'&&n.props.className==='screeningChoice');
+const choices=all().filter(n=>n.type==='tr'&&text(n).includes('Screening '));
 assert.ok(text(choices[0]).includes('Screening ACTIVE · Automatic'));
 assert.ok(text(choices[1]).includes('Screening PARALLEL · Manual'),'Same-period runs have different references');
-assert.ok(text(choices[0]).includes('2 records · Created'),'Run size and creation time are visible');
-const choice=all().find(n=>n.type==='button'&&n.props.className==='screeningChoice');await choice.props.onClick();await flush();
+assert.ok(all([choices[0]]).some(n=>n.type==='td'&&text(n)==='2'),'Unresolved count is visible in compact list');
+const choice=all([choices[0]]).find(n=>n.type==='button'&&text(n)==='Continue');await choice.props.onClick();await flush();
 assert.ok(text(article()).includes('First safety article'));
 assert.equal(new URL(browserWindow.location.href).searchParams.get('run'),'active');
 hooks.clear();dirty=true;await flush();
@@ -119,7 +120,7 @@ assert.ok(text(view).includes('Screening ACTIVE · Automatic'),'Reader shows the
 assert.equal(new URL(browserWindow.location.href).searchParams.get('run'),'active','Initial render must not erase the run link');
 await click('Change screening');
 assert.equal(new URL(browserWindow.location.href).searchParams.has('run'),false,'Changing screening clears the old link');
-await all().find(n=>n.type==='button'&&n.props.className==='screeningChoice'&&text(n).includes('Screening ACTIVE')).props.onClick();await flush();
+await all([all().find(n=>n.type==='tr'&&text(n).includes('Screening ACTIVE'))]).find(n=>n.type==='button'&&text(n)==='Continue').props.onClick();await flush();
 await click('Relevant');
 let checkbox=all().find(n=>n.type==='input'&&n.props.type==='checkbox');checkbox.props.onChange({target:{checked:true}});await flush();
 await click('Save & next');
@@ -155,7 +156,7 @@ await click('Monitoring');assert.ok(text(view).includes('Connection failed'),'So
 db.pvos_literature_runs.push(row({id:'alert-run',company_id:'company',period_start:'2026-10-07',period_end:'2026-10-07',status:'review'}));
 db.pvos_literature_items.push(row({id:'alert-item',run_id:'alert-run',product_id:'product',source_id:'source',title:'Exact alerted article',review_status:'unreviewed',metadata:{urgent_saudi:true}}));
 db.pvos_literature_alerts.push(row({id:'alert',literature_item_id:'alert-item',status:'open',severity:'high'}));
-browserWindow.location.href='https://pvos.site/pvos/literature';hooks.clear();dirty=true;await flush();await click('Urgent alerts (1)');
+browserWindow.location.href='https://pvos.site/pvos/literature';hooks.clear();dirty=true;await flush();await click('Alerts (1)');
 const open=all().find(n=>n.type==='button'&&/Open in queue/.test(text(n)));assert.ok(open);await open.props.onClick();await flush();
 assert.ok(text(article()).includes('Exact alerted article'));assert.equal(all().filter(x=>x.type==='button'&&x.props['aria-pressed']!==undefined&&text(x).includes('First safety article')).length,0);
 hooks.clear();dirty=true;await flush();assert.ok(text(article()).includes('Exact alerted article'),'Refresh retains exact alert context');

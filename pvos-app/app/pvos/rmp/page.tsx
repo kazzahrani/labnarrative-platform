@@ -1,10 +1,12 @@
 "use client";
 
-import {FormEvent,useEffect,useMemo,useState} from "react";
-import {Header,Badge} from "../_components";
+import {FormEvent,useEffect,useMemo,useRef,useState} from "react";
+import {Header,Badge,Tabs,Help} from "../_components";
 import {usePVOS} from "../_provider";
 import {pvosSupabase} from "../_pvos-supabase";
 import {RmpExcelImport} from "../_rmp-excel-import";
+import Link from "next/link";
+import {deadlineState} from "../_work-utils";
 import styles from "../pvos.module.css";
 
 type V={id:string,type:"initial"|"subsequent",dlp:string,submission_date:string,identified_risks:string,potential_risks:string,missing_information:string,comments_reason:string,additional_rmm:string,created_at:string};
@@ -17,19 +19,23 @@ const arm=(v?:V)=>{const x=(v?.additional_rmm||"").trim().toLowerCase();return !
 const id=()=>crypto.randomUUID();
 
 export default function RmpPage(){
- const {organizationId,session}=usePVOS();
+ const {organizationId,session,reloadToken}=usePVOS();
  const [companies,setCompanies]=useState<any[]>([]),[products,setProducts]=useState<any[]>([]),[sel,setSel]=useState<any|null>(null);
  const [r,setR]=useState<R>({...blank}),[initial,setInitial]=useState<V|null>(null),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false),[tab,setTab]=useState<"overview"|"initial"|"updates">("overview");
- const [addOpen,setAddOpen]=useState(false),[expanded,setExpanded]=useState<string|null>(null),[portfolioTab,setPortfolioTab]=useState<"initial"|"subsequent">("initial");
+ const [companyScope,setCompanyScope]=useState(""),[filter,setFilter]=useState("all"),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ const deepLinkOpened=useRef(false);
+ const [taskContext,setTaskContext]=useState("");
+ const [addOpen,setAddOpen]=useState(false),[expanded,setExpanded]=useState<string|null>(null);
  const [u,setU]=useState<V>({id:"",type:"subsequent",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:""});
 
- async function load(){if(!organizationId)return;const {data:c}=await pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name");const cs=c||[];setCompanies(cs);if(!cs.length)return setProducts([]);const {data:p}=await pvosSupabase.from("pvos_products").select("*").in("company_id",cs.map(x=>x.id)).order("brand_name");setProducts(p||[])}
- useEffect(()=>{load()},[organizationId]);
+ async function load(){if(!organizationId)return;setLoading(true);setError("");try{const {data:c,error:ce}=await pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name");if(ce)throw ce;const cs=c||[];setCompanies(cs);if(!cs.length){setProducts([]);return;}const {data:p,error:pe}=await pvosSupabase.from("pvos_products").select("*").in("company_id",cs.map(x=>x.id)).order("brand_name");if(pe)throw pe;setProducts(p||[]);const q=new URLSearchParams(window.location.search);if(!deepLinkOpened.current){setCompanyScope(cs.some(c=>c.id===q.get("company"))?q.get("company")||"":"");setTaskContext(q.get("task")||"");const target=p?.find(x=>x.id===q.get("product"));if(target)open(target);deepLinkOpened.current=true;}}catch(e:any){setError(e.message||"Could not load RMP portfolio");}finally{setLoading(false);}}
+ useEffect(()=>{load()},[organizationId,reloadToken]);
  const cm=useMemo(()=>Object.fromEntries(companies.map(c=>[c.id,c.name])),[companies]);
- const tracked=products.filter(p=>rv(p).versions.length),today=new Date(new Date().toDateString()),soon=new Date(today);soon.setDate(soon.getDate()+30);
- const overdue=tracked.filter(p=>rv(p).next_due_date&&new Date(rv(p).next_due_date+"T00:00:00")<today).length;
- const dueSoon=tracked.filter(p=>{const d=rv(p).next_due_date;if(!d)return false;const x=new Date(d+"T00:00:00");return x>=today&&x<=soon}).length;
+ const scoped=products.filter(p=>!companyScope||p.company_id===companyScope),tracked=scoped.filter(p=>rv(p).versions.length);
+ const dueState=(p:any)=>deadlineState(rv(p).next_due_date,["Closed","Not required"].includes(rv(p).status)?"complete":"in_progress");
+ const overdue=tracked.filter(p=>dueState(p).overdue).length,dueSoon=tracked.filter(p=>{const days=dueState(p).days;return days!==null&&days>=0&&days<=30}).length;
  const withArmm=tracked.filter(p=>arm(last(rv(p)))).length;
+ const visible=scoped.filter(p=>filter==="all"||filter==="overdue"&&dueState(p).overdue||filter==="due"&&dueState(p).days!==null&&dueState(p).days!>=0&&dueState(p).days!<=30||filter==="untracked"&&!rv(p).versions.length);
  function open(p:any){const x=rv(p),i=x.versions.find(v=>v.type==="initial")||{id:id(),type:"initial",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:new Date().toISOString()} as V;setSel(p);setR(x);setInitial(i);setMsg("");setTab("overview");setAddOpen(false);setExpanded(null)}
  async function task(next:string){
   if(!sel||!organizationId||!next)return;
@@ -51,69 +57,18 @@ export default function RmpPage(){
   const {data:steps}=await pvosSupabase.from("pvos_approval_steps").select("*").eq("route_id",routeId).order("position");
   if(steps?.length) await pvosSupabase.from("pvos_task_approvals").insert(steps.map((x:any)=>({task_id:taskId,route_id:routeId,step_position:x.position,assigned_user_id:x.assignee_user_id,status:"pending"})));
  }
- async function save(){if(!sel||!initial)return;setBusy(true);let vs=[...r.versions],i=vs.findIndex(v=>v.type==="initial");if(i>=0)vs[i]=initial;else vs.unshift(initial);const next={...r,versions:vs},metadata={...(sel.metadata||{}),rmp:next};const {error}=await pvosSupabase.from("pvos_products").update({metadata,rmp_status:r.status}).eq("id",sel.id);if(!error&&r.next_due_date)await task(r.next_due_date);setBusy(false);setMsg(error?error.message:"RMP tracker saved"+(r.next_due_date?" and next update added to Tasks.":"."));setR(next);await load()}
+ async function save(){if(!sel||!initial)return;setBusy(true);let vs=[...r.versions],i=vs.findIndex(v=>v.type==="initial");if(i>=0)vs[i]=initial;else vs.unshift(initial);const next={...r,versions:vs},metadata={...(sel.metadata||{}),rmp:next};const {error}=await pvosSupabase.from("pvos_products").update({metadata,rmp_status:r.status}).eq("id",sel.id);if(!error&&r.next_due_date)await task(r.next_due_date);setBusy(false);setMsg(error?error.message:"RMP tracker saved"+(r.next_due_date?" and next update added to company work.":"."));setR(next);await load()}
  async function add(e:FormEvent){e.preventDefault();if(!sel||!u.submission_date)return;setBusy(true);const v={...u,id:id(),created_at:new Date().toISOString()},next={...r,versions:[...r.versions,v]},metadata={...(sel.metadata||{}),rmp:next};const {error}=await pvosSupabase.from("pvos_products").update({metadata,rmp_status:r.status}).eq("id",sel.id);if(!error&&r.next_due_date)await task(r.next_due_date);setBusy(false);if(error)return setMsg(error.message);setR(next);setU({...u,id:"",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:""});setExpanded(v.id);setAddOpen(false);setMsg("Subsequent RMP update added.");await load()}
 
  return <>
   <Header eyebrow="Product safety" title="RMP Tracker" sub="Track initial and subsequent RMP submissions, identified and potential risks, missing information, additional risk minimization measures, and the next DLP/update due date."/>
-  <section className={styles.cards}><div className={styles.card}><span>RMPs tracked</span><strong>{tracked.length}</strong></div><div className={styles.card}><span>Due in 30 days</span><strong>{dueSoon}</strong></div><div className={[styles.card,overdue?styles.danger:""].join(" ")}><span>Overdue</span><strong>{overdue}</strong></div><div className={styles.card}><span>With Additional Risk Minimization Measure</span><strong>{withArmm}</strong></div></section>
+  {taskContext?<div className={styles.notice}><Link href={"/pvos/tasks/"+taskContext+"#evidence"}>Task evidence & review →</Link> <Help>Saving the RMP register preserves its versions. Open the task to manage evidence and review.</Help></div>:null}
+  <div className={styles.workSummary}><span>{tracked.length} tracked</span><button className={styles.summaryButton} onClick={()=>setFilter("overdue")}>{overdue} overdue</button><button className={styles.summaryButton} onClick={()=>setFilter("due")}>{dueSoon} due in 30 days</button><span>{withArmm} with additional RMM <Help>Additional risk minimization measures are recorded in the latest submitted version.</Help></span></div>
   <section className={styles.panel}>
-  <div className={styles.panelHeader}>
-    <h2>RMP portfolio</h2>
-    <div className={styles.inlineActions} style={{marginTop:0}}>
-      <span className={styles.muted}>{products.length} products</span>
-      <RmpExcelImport organizationId={organizationId} userId={session?.user.id} companies={companies} products={products} onImported={load}/>
-    </div>
-  </div>
-
-  <div style={{padding:"12px 14px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
-    <button className={portfolioTab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("initial")}>Initial RMP</button>
-    <button className={portfolioTab==="subsequent"?styles.button:styles.buttonGhost} onClick={()=>setPortfolioTab("subsequent")}>Subsequent RMP</button>
-  </div>
-
-  {portfolioTab==="initial"?<div className={styles.tableWrap} style={{marginTop:12}}>
-    <table className={`${styles.table} ${styles.rmpTable}`} style={{minWidth:1450}}>
-      <thead><tr>
-        <th>Company</th>
-        <th>Product</th>
-        <th>Molecule</th>
-        <th>Submitted to</th><th>Frequency</th><th>DLP</th><th>Date of submission</th>
-        <th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
-        <th className={styles.rmpArmmCol}>Additional Risk Minimization Measure</th><th className={styles.rmpNextDueCol}>Next DLP/Update due date</th><th></th>
-      </tr></thead>
-      <tbody>{products.map(p=>{const x=rv(p),ini=x.versions.find(v=>v.type==="initial"),tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
-        <td>{cm[p.company_id]||"—"}</td>
-        <td><strong>{p.brand_name}</strong></td>
-        <td>{p.active_ingredient||"—"}</td>
-        <td>{tr?x.submitted_to:"—"}</td><td>{tr?x.frequency:"—"}</td><td>{ini?.dlp||"—"}</td><td>{fmt(ini?.submission_date)}</td>
-        <td>{ini?.identified_risks||"—"}</td><td>{ini?.potential_risks||"—"}</td><td>{ini?.missing_information||"—"}</td><td className={styles.rmpArmmCol}>{ini?.additional_rmm||"—"}</td>
-        <td className={styles.rmpNextDueCol}>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
-        <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
-      </tr>})}</tbody>
-    </table>
-  </div>:null}
-
-  {portfolioTab==="subsequent"?<div className={styles.tableWrap} style={{marginTop:12}}>
-    <table className={`${styles.table} ${styles.rmpTable}`} style={{minWidth:1320}}>
-      <thead><tr>
-        <th>Company</th>
-        <th>Product</th>
-        <th>Molecule</th>
-        <th>Date of submission</th><th>RMP Identified</th><th>RMP Potential</th><th>Missing Info</th>
-        <th className={styles.rmpCommentsCol}>Comments/Reason for update</th><th className={styles.rmpArmmCol}>Additional Risk Minimization Measure</th><th className={styles.rmpNextDueCol}>Next DLP/Update due date</th><th></th>
-      </tr></thead>
-      <tbody>{products.map(p=>{const x=rv(p),sub=x.versions.filter(v=>v.type==="subsequent"),l=sub[sub.length-1],tr=x.versions.length>0,late=x.next_due_date&&new Date(x.next_due_date+"T00:00:00")<today;return <tr key={p.id}>
-        <td>{cm[p.company_id]||"—"}</td>
-        <td><strong>{p.brand_name}</strong></td>
-        <td>{p.active_ingredient||"—"}</td>
-        <td>{fmt(l?.submission_date)}</td><td>{l?.identified_risks||"—"}</td><td>{l?.potential_risks||"—"}</td><td>{l?.missing_information||"—"}</td>
-        <td className={styles.rmpCommentsCol}>{l?.comments_reason||"—"}</td><td className={styles.rmpArmmCol}>{l?.additional_rmm||"—"}</td>
-        <td>{x.next_due_date?<Badge tone={late?"red":"default"}>{fmt(x.next_due_date)}</Badge>:tr?"On request / not set":"—"}</td>
-        <td><button className={tr?styles.buttonGhost:styles.button} onClick={()=>open(p)}>{tr?"Open":"Set up"}</button></td>
-      </tr>})}</tbody>
-    </table>
-  </div>:null}
-</section>
+   <div className={styles.panelHeader}><h2>RMP portfolio</h2><RmpExcelImport organizationId={organizationId} userId={session?.user.id} companies={companies} products={products} onImported={load}/></div>
+   <div className={styles.filterBar}><select aria-label="RMP company" className={styles.input} value={companyScope} onChange={e=>{setCompanyScope(e.target.value);const q=new URL(window.location.href);if(e.target.value)q.searchParams.set("company",e.target.value);else q.searchParams.delete("company");q.searchParams.delete("product");q.searchParams.delete("task");setTaskContext("");window.history.replaceState({},"",q)}}><option value="">All companies</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><select aria-label="RMP work filter" className={styles.input} value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All products</option><option value="overdue">Overdue</option><option value="due">Due in 30 days</option><option value="untracked">Not set up</option></select></div>
+   {error?<div className={styles.errorBox} role="alert">{error} <button className={styles.buttonGhost} onClick={load}>Retry</button></div>:loading?<div className={styles.empty}>Loading RMP portfolio…</div>:<div className={styles.tableWrap}><table className={`${styles.table} ${styles.workTable}`}><thead><tr><th>Company / product</th><th>RMP status</th><th>Latest submission</th><th>Next due</th><th>Additional RMM</th><th>Next action</th></tr></thead><tbody>{visible.map(p=>{const x=rv(p),v=last(x),due=dueState(p);return <tr key={p.id}><td><strong>{p.brand_name}</strong><div>{cm[p.company_id]}</div></td><td><Badge>{v?x.status:"Not set up"}</Badge></td><td>{fmt(v?.submission_date)}{v?<div className={styles.muted}>{v.type==="initial"?"Initial":"Subsequent"} · {x.versions.length} versions</div>:null}</td><td>{x.next_due_date?fmt(x.next_due_date):v?"On request / not set":"—"}{due.label?<div><Badge tone={due.overdue?"red":"default"}>{due.label}</Badge></div>:null}</td><td>{v?arm(v)?"Yes":"No":"—"}</td><td><button className={styles.buttonGhost} onClick={()=>open(p)}>{v?due.overdue?"Review overdue RMP":"Open RMP":"Set up RMP"}</button></td></tr>})}</tbody></table>{!visible.length?<div className={styles.empty}>No products in this view.</div>:null}</div>}
+  </section>
 
   {sel&&initial?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSel(null)}}>
    <div className={styles.modalCard} style={{width:"min(1080px,100%)",maxHeight:"calc(100vh - 40px)",padding:0}}>
@@ -122,11 +77,7 @@ export default function RmpPage(){
       <button className={styles.modalClose} onClick={()=>setSel(null)}>×</button>
     </div>
 
-    <div style={{padding:"14px 20px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
-      <button className={tab==="overview"?styles.button:styles.buttonGhost} onClick={()=>setTab("overview")}>Overview</button>
-      <button className={tab==="initial"?styles.button:styles.buttonGhost} onClick={()=>setTab("initial")}>Initial RMP</button>
-      <button className={tab==="updates"?styles.button:styles.buttonGhost} onClick={()=>setTab("updates")}>Subsequent RMP ({r.versions.filter(v=>v.type==="subsequent").length})</button>
-    </div>
+    <div style={{padding:"14px 20px 0"}}><Tabs label="Product RMP areas" value={tab} onChange={v=>setTab(v as typeof tab)} items={[{id:"overview",label:"Overview"},{id:"initial",label:"Initial RMP"},{id:"updates",label:`Subsequent RMP (${r.versions.filter(v=>v.type==="subsequent").length})`}]}/></div>
 
     {msg?<div className={msg.includes("saved")||msg.includes("added")?styles.successBox:styles.errorBox} style={{margin:"14px 20px 0"}}>{msg}</div>:null}
 
@@ -166,7 +117,7 @@ export default function RmpPage(){
 
     {tab==="updates"?<div style={{padding:20}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
-        <div><h3 style={{margin:0,fontSize:15}}>Subsequent RMP</h3><div className={styles.muted} style={{marginTop:4}}>Newest submission first. Open a record to see the Information Submitted and update details.</div></div>
+        <div><h3 style={{margin:0,fontSize:15}}>Subsequent RMP</h3><Help>Newest submission first. Open a record to see submitted information and update details.</Help></div>
         <button className={styles.button} onClick={()=>setAddOpen(true)}>+ Add subsequent RMP</button>
       </div>
 
@@ -194,7 +145,7 @@ export default function RmpPage(){
    {addOpen?<div className={styles.modalBackdrop} style={{zIndex:1200}} onMouseDown={e=>{if(e.target===e.currentTarget)setAddOpen(false)}}>
       <form onSubmit={add} className={styles.modalCard} style={{width:"min(760px,100%)"}}>
         <div className={styles.modalHeader}>
-          <div><div className={styles.eyebrow}>{sel.brand_name}</div><h2>Subsequent RMP</h2><div className={styles.muted}>Add a new subsequent RMP record without changing previous submissions.</div></div>
+          <div><div className={styles.eyebrow}>{sel.brand_name}</div><h2>Subsequent RMP</h2><Help>New subsequent RMP records preserve previous submissions.</Help></div>
           <button type="button" className={styles.modalClose} onClick={()=>setAddOpen(false)}>×</button>
         </div>
         <div className={styles.formGrid}>

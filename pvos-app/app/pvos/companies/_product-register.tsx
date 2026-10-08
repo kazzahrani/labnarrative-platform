@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Badge } from "../_components";
+import { Badge,Help } from "../_components";
 import { pvosSupabase } from "../_pvos-supabase";
 import { readProductPages, registrationLabel, registrationSummary, registrationTone } from "../_registration";
 import { RegistrationFields, type RegistrationDraft } from "./_registration-fields";
@@ -73,7 +73,7 @@ export function ProductRegister({companyId,organizationId,products,onSaved}:{com
     <div className={styles.panelHeader}><h2>Products</h2><Link className={styles.buttonGhost} href={"/pvos/companies/"+companyId+"/setup"}>+ Add product</Link></div>
     <div style={{padding:"0 16px 12px"}}>
       <div className={styles.inlineActions} style={{marginTop:0,flexWrap:"wrap"}}>{summary.map(s=><Badge key={s.label} tone={registrationTone(s.label)}>{s.count} {s.label}</Badge>)}</div>
-      <p className={styles.muted}>Registration details are recorded by your workspace; they are not automatically verified against SFDA.</p>
+      <Help>Registration details are recorded by your workspace; they are not automatically verified against SFDA.</Help>
       <label className={styles.muted}>Filter by registration status <select className={styles.input} style={{width:"auto",marginLeft:8}} value={filter} onChange={e=>setFilter(e.target.value)}><option>All</option>{summary.map(s=><option key={s.label}>{s.label}</option>)}</select></label>
       {message?<div className={styles.successBox} role="status" style={{marginTop:12}}>{message}</div>:null}
     </div>

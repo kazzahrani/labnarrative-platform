@@ -1,88 +1,43 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Header, Badge, statusTone } from "../_components";
-import { NewTaskModal } from "../_new-task-modal";
-import { usePVOS } from "../_provider";
-import { pvosSupabase } from "../_pvos-supabase";
-import { dueLabel, formatDue } from "../_utils";
+import {useEffect,useState} from "react";
+import {Header,Tabs,Help} from "../_components";
+import {NewTaskModal} from "../_new-task-modal";
+import {usePVOS} from "../_provider";
+import {readWork,type WorkData} from "../_work";
+import {WorkList} from "../_work-list";
+import {deadlineState} from "../_work-utils";
 import styles from "../pvos.module.css";
-
 export default function Dashboard(){
-  const {organizationId,session,reloadToken}=usePVOS();
-  const [tasks,setTasks]=useState<any[]>([]);
-  const [companies,setCompanies]=useState<any[]>([]);
-  const [products,setProducts]=useState<any[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [companyFilter,setCompanyFilter]=useState("all");
-  const [typeFilter,setTypeFilter]=useState("all");
-  const [statusFilter,setStatusFilter]=useState("all");
-  const [queueFilter,setQueueFilter]=useState("attention");
-  const [showNew,setShowNew]=useState(false);
-
-  useEffect(()=>{ if(!organizationId)return; let active=true; (async()=>{
-    setLoading(true);
-    const [t,c]=await Promise.all([
-      pvosSupabase.from("pvos_tasks").select("*").eq("organization_id",organizationId).neq("status","cancelled").order("due_at",{ascending:true,nullsFirst:false}),
-      pvosSupabase.from("pvos_companies").select("*").eq("organization_id",organizationId).order("name")
-    ]);
-    if(!active)return;
-    const cs=c.data??[]; setCompanies(cs); setTasks(t.data??[]);
-    if(cs.length){
-      const {data:p}=await pvosSupabase.from("pvos_products").select("*").in("company_id",cs.map(x=>x.id));
-      if(active)setProducts(p??[]);
-    }
-    setLoading(false);
-  })(); return()=>{active=false}; },[organizationId,reloadToken]);
-
-  const company=useMemo(()=>Object.fromEntries(companies.map(c=>[c.id,c])),[companies]);
-  const product=useMemo(()=>Object.fromEntries(products.map(p=>[p.id,p])),[products]);
-  const labels=useMemo(()=>tasks.map(t=>({...t,displayStatus:dueLabel(t.due_at,t.status)})),[tasks]);
-  const filtered=useMemo(()=>labels.filter(t=>{
-    const due=t.due_at?new Date(t.due_at).getTime():null;
-    const withinWeek=due===null||due<=Date.now()+7*86400000;
-    const attention=t.status!=="complete"&&(withinWeek||["awaiting_review","awaiting_external","in_progress"].includes(t.status));
-    return (queueFilter==="all"||attention) &&
-      (companyFilter==="all"||t.company_id===companyFilter) &&
-      (typeFilter==="all"||t.activity_type===typeFilter) &&
-      (statusFilter==="all"||t.displayStatus===statusFilter);
-  }),[labels,queueFilter,companyFilter,typeFilter,statusFilter]);
-  const activityTypes=[...new Set(labels.map(t=>t.activity_type))].sort();
-  const statusTypes=[...new Set(labels.map(t=>t.displayStatus))].sort();
-  const counts={
-    overdue:labels.filter(t=>t.displayStatus==="Overdue").length,
-    today:labels.filter(t=>t.displayStatus==="Due today").length,
-    week:labels.filter(t=>{
-      if(t.status==="complete"||!t.due_at)return false;
-      const due=new Date(t.due_at); due.setHours(0,0,0,0);
-      const now=new Date(); now.setHours(0,0,0,0);
-      return due.getTime()<=now.getTime()+7*86400000;
-    }).length,
-    waiting:labels.filter(t=>["awaiting_review","awaiting_external"].includes(t.status)).length,
-    complete:labels.filter(t=>t.status==="complete").length,
-  };
-
+  const {organizationId,session,reloadToken,refresh}=usePVOS();
+  const [data,setData]=useState<WorkData|null>(null),[error,setError]=useState(""),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
+  const [tab,setTab]=useState("mine"),[company,setCompany]=useState("all"),[filter,setFilter]=useState("attention"),[kind,setKind]=useState("all"),[search,setSearch]=useState(""),[showNew,setShowNew]=useState(false);
+  useEffect(()=>{const p=new URLSearchParams(window.location.search);if(["mine","reviews","team"].includes(p.get("tab")||""))setTab(p.get("tab")!);if(p.get("company"))setCompany(p.get("company")!);},[]);
+  useEffect(()=>{if(!organizationId||!session)return;let active=true;setLoading(true);setError("");readWork(organizationId,session.user.id).then(d=>{if(active)setData(d)}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[organizationId,session?.user.id,reloadToken,retry]);
+  function changeTab(value:string){setTab(value);setFilter("attention");const u=new URL(window.location.href);u.searchParams.set("tab",value);window.history.replaceState({},"",u);}
+  const scoped=(data?.items||[]).filter(w=>company==="all"||w.company_id===company);
+  const role=data?.members.find(m=>m.user_id===session?.user.id)?.role,canTeam=["admin","qppv","deputy_qppv","manager"].includes(role||"");
+  const reviews=scoped.filter(w=>w.review),mine=scoped.filter(w=>!w.review&&(w.owner===session?.user.id||!w.owner));
+  const base=tab==="reviews"?reviews:tab==="team"&&canTeam?scoped:mine;
+  const counts={overdue:base.filter(w=>deadlineState(w.due,w.status).overdue).length,week:base.filter(w=>{const d=deadlineState(w.due,w.status);return d.days!==null&&d.days>=0&&d.days<=7}).length,waiting:base.filter(w=>w.waiting&&(!w.review||tab!=="reviews")).length};
+  const visible=base.filter(w=>{
+    const d=deadlineState(w.due,w.status),complete=w.status==="complete";
+    return (kind==="all"||w.kind===kind)&&w.title.toLowerCase().includes(search.toLowerCase())&&(filter==="all"||filter==="completed"&&complete||!complete&&(filter==="attention"&&(d.days===null||d.days<=7||w.waiting||["in_progress","returned"].includes(w.status))||filter==="overdue"&&d.overdue||filter==="week"&&d.days!==null&&d.days>=0&&d.days<=7||filter==="waiting"&&w.waiting));
+  }).sort((a,b)=>Number(deadlineState(b.due,b.status).overdue)-Number(deadlineState(a.due,a.status).overdue)||String(a.due||"9999").localeCompare(String(b.due||"9999")));
   return <>
-    <Header eyebrow="My PV operation" title="What needs attention now?" sub="See what needs attention across all companies — overdue work, upcoming deadlines, approvals and active PV tasks. Use the filters to focus on a company, activity type or status." action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href="/pvos/automation">Import / automate</Link><button className={styles.button} onClick={()=>setShowNew(true)}>+ New task</button></div>}/>
-    <section className={styles.cards}>
-      <div className={[styles.card,styles.danger].join(" ")}><span>Overdue</span><strong>{counts.overdue}</strong></div>
-      <div className={[styles.card,styles.warning].join(" ")}><span>Due today</span><strong>{counts.today}</strong></div>
-      <div className={styles.card}><span>Due this week</span><strong>{counts.week}</strong></div>
-      <div className={styles.card}><span>Awaiting others</span><strong>{counts.waiting}</strong></div>
-      <div className={[styles.card,styles.accent].join(" ")}><span>Completed</span><strong>{counts.complete}</strong></div>
-    </section>
+    <Header eyebrow="My PV operation" title="Dashboard" sub="Your work and assigned reviews across authorised companies. Open an activity to continue in its own workspace." action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href="/pvos/handover">Leave handover</Link><button className={styles.button} onClick={()=>setShowNew(true)}>New task</button></div>}/>
+    <Tabs label="Dashboard views" value={tab} onChange={changeTab} items={[{id:"mine",label:"My work"},{id:"reviews",label:`Reviews (${reviews.length})`},...(canTeam?[{id:"team",label:"Team"}]:[])]}/>
     <section className={styles.panel}>
-      <div className={styles.panelHeader}><h2>Unified workload</h2><span className={styles.muted}>{loading?"Loading…":`${companies.length} companies`}</span></div>
-      <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"repeat(4,minmax(150px,220px))",gap:10,borderBottom:"1px solid #1d252d"}}>
-        <select className={styles.input} value={queueFilter} onChange={e=>setQueueFilter(e.target.value)}><option value="attention">Attention queue</option><option value="all">All scheduled work</option></select>
-        <select className={styles.input} value={companyFilter} onChange={e=>setCompanyFilter(e.target.value)}><option value="all">All companies</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
-        <select className={styles.input} value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="all">All activity types</option>{activityTypes.map(x=><option key={x}>{x}</option>)}</select>
-        <select className={styles.input} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">All statuses</option>{statusTypes.map(x=><option key={x}>{x}</option>)}</select>
+      <div className={styles.workSummary}><button onClick={()=>setFilter("overdue")} className={styles.summaryButton}><strong className={styles.bad}>{counts.overdue}</strong> Overdue</button><button onClick={()=>setFilter("week")} className={styles.summaryButton}><strong>{counts.week}</strong> Due this week</button><button onClick={()=>setFilter("waiting")} className={styles.summaryButton}><strong>{counts.waiting}</strong> Waiting</button><Help>Counts follow the selected company and Dashboard tab. Deadline timing is evaluated in Riyadh time, separately from work status.</Help></div>
+      <div className={styles.filterBar}>
+        <select aria-label="Company" className={styles.input} value={company} onChange={e=>setCompany(e.target.value)}><option value="all">All companies</option>{data?.companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <select aria-label="Work filter" className={styles.input} value={filter} onChange={e=>setFilter(e.target.value)}><option value="attention">Needs attention</option><option value="all">All work</option><option value="overdue">Overdue</option><option value="week">Due this week</option><option value="waiting">Waiting</option><option value="completed">Completed</option></select>
+        <select aria-label="Activity type" className={styles.input} value={kind} onChange={e=>setKind(e.target.value)}><option value="all">All activities</option>{[...new Set(base.map(w=>w.kind))].sort().map(k=><option key={k}>{k}</option>)}</select>
+        <input aria-label="Search work" className={styles.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search work"/>
       </div>
-      {loading?<div className={styles.empty}>Loading live PV tasks…</div>:filtered.length?<div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Company</th><th>Task</th><th>Type</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
-      <tbody>{filtered.map(t=><tr key={t.id}><td><Link href={"/pvos/companies/"+t.company_id}>{company[t.company_id]?.name??"—"}</Link></td><td><Link href={"/pvos/tasks/"+t.id}>{t.title}</Link>{t.product_id?<div className={styles.muted}>{product[t.product_id]?.brand_name??"Product"}</div>:null}</td><td>{t.activity_type}</td><td>{t.owner_user_id===session?.user.id?"Me":"Team"}</td><td>{formatDue(t.due_at)}</td><td><Badge tone={statusTone(t.displayStatus)}>{t.displayStatus}</Badge></td></tr>)}</tbody></table></div>:<div className={styles.empty}>No tasks need attention under these filters. Switch to “All scheduled work” to see future recurring tasks.</div>}
+      {error?<div className={styles.errorBox} role="alert">{error} <button className={styles.buttonGhost} onClick={()=>setRetry(n=>n+1)}>Retry</button></div>:loading?<div className={styles.empty}>Loading work and reviews…</div>:data?<WorkList items={visible} companies={data.companies} members={data.members} userId={session?.user.id}/>:null}
     </section>
-    <NewTaskModal open={showNew} onClose={()=>setShowNew(false)} onCreated={()=>location.reload()}/>
+    <div className={styles.inlineActions}><Link className={styles.buttonGhost} href="/pvos/approvals">Review history</Link><Link className={styles.buttonGhost} href="/pvos/handover">Handover records</Link></div>
+    <NewTaskModal open={showNew} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);refresh()}}/>
   </>;
 }

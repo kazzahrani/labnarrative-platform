@@ -1,12 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Header } from "../_components";
+import { Badge, Header, Tabs, Help } from "../_components";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import { PRIORITIZATION_VERSION } from "../../api/pvos/literature/_rank";
 import styles from "../pvos.module.css";
 import {ArticleReader} from "./_reader";
+import Link from "next/link";
+import {isHistoricalRun} from "../_work-utils";
 import {ScreeningWorkspace} from "./_screening-workspace";
 
 type Tab="sources"|"queue"|"runs"|"second"|"alerts"|"psur";
@@ -150,6 +152,9 @@ export default function LiteraturePage(){
   const [products,setProducts]=useState<any[]>([]);
   const [followups,setFollowups]=useState<any[]>([]);
   const [records,setRecords]=useState<any[]>([]);
+  const [companyScope,setCompanyScope]=useState("");
+  const [searchPurpose,setSearchPurpose]=useState("routine");
+  const [taskContext,setTaskContext]=useState<{id:string,due:string}|null>(null);
   const [secondReviews,setSecondReviews]=useState<any[]>([]);
   const [members,setMembers]=useState<any[]>([]);
   const [alerts,setAlerts]=useState<any[]>([]);
@@ -228,7 +233,7 @@ export default function LiteraturePage(){
     setMembers(mem.data||[]);
     setAlerts(al.data||[]);
     setAutomationSetting(auto.data||null);
-    setRunForm(v=>({...v,companyId:v.companyId||cs[0]?.id||""}));
+    setRunForm(v=>({...v,companyId:new URLSearchParams(window.location.search).get("company")||v.companyId||cs[0]?.id||""}));
     setLoading(false);
   }
 
@@ -238,6 +243,8 @@ export default function LiteraturePage(){
     if(loading||!organizationId||navigationReady)return;
     const params=new URLSearchParams(window.location.search);
     const inspectionId=params.get("inspectionRun"),id=inspectionId||params.get("run");
+    const scope=params.get("company");if(scope&&companies.some(c=>c.id===scope))setCompanyScope(scope);
+    if(params.get("task"))setTaskContext({id:params.get("task")!,due:params.get("due")||""});
     const view=inspectionId?"runs":params.get("view");
     if(view==="sources"){setArea("monitoring");setTabState("sources");}
     else if(view==="runs"||view==="psur"){setArea("records");setTabState(view);setRunView("complete");}
@@ -271,13 +278,14 @@ export default function LiteraturePage(){
     const url=new URL(window.location.href);
     url.searchParams.delete("inspectionRun");
     url.searchParams.set("view",tab);
+    if(companyScope)url.searchParams.set("company",companyScope);else url.searchParams.delete("company");
     const id=selectedRun?.id||runFilter;
     if(id)url.searchParams.set("run",id);else url.searchParams.delete("run");
     if(id&&tab==="queue")url.searchParams.set("queueView",queueFilter);else url.searchParams.delete("queueView");
     if(id&&tab==="queue"&&articleId)url.searchParams.set("article",articleId);else url.searchParams.delete("article");
     if(tab==="queue"&&activeAlertId)url.searchParams.set("alert",activeAlertId);else url.searchParams.delete("alert");
     if(url.href!==window.location.href)window.history.replaceState(window.history.state,"",url.href);
-  },[loading,navigationReady,tab,runFilter,selectedRun?.id,articleId,activeAlertId,queueFilter]);
+  },[loading,navigationReady,tab,runFilter,selectedRun?.id,articleId,activeAlertId,queueFilter,companyScope]);
 
   const companyMap=useMemo(()=>Object.fromEntries(companies.map(x=>[x.id,x.name])),[companies]);
   const productMap=useMemo(()=>Object.fromEntries(products.map(x=>[x.id,x])),[products]);
@@ -572,6 +580,7 @@ export default function LiteraturePage(){
         metadata:{
           v0:true,
           scope:"all_company_products",
+          purpose:isHistoricalRun({period_end:runForm.end,metadata:{}})?"historical":"routine",
           connectors:[
             "pubmed",
             ...(crossrefSources.length?["crossref_journal"]:[]),
@@ -836,6 +845,7 @@ export default function LiteraturePage(){
           metadata:{
             v0:true,
             scope:"all_company_products",
+          purpose:isHistoricalRun({period_end:runForm.end,metadata:{}})?"historical":"routine",
             connectors:[
               "pubmed",
               ...(crossrefSources.length?["crossref_journal"]:[]),
@@ -1504,14 +1514,11 @@ export default function LiteraturePage(){
   return <>
     <Header eyebrow="Safety intelligence" title="Literature" sub="Review findings, record both reviewers and retain screening evidence." action={<div className={styles.inlineActions} style={{marginTop:0}}>
       {area==="monitoring"?<button className={styles.buttonGhost} onClick={()=>{setShowSource(true);setMessage("")}}>Add source</button>:null}
-      <button className={styles.buttonGhost} onClick={()=>{setShowRun(true);setMessage("")}} disabled={!companies.length||busy||readerSaving}>New screening / historical search</button>
+      <button className={styles.buttonGhost} onClick={()=>{setShowRun(true);setMessage("")}} disabled={!companies.length||busy||readerSaving}>New search</button>
     </div>}/>
-    <div className={styles.literatureNav} aria-label="Literature areas">
-      <button disabled={busy||readerSaving||loading} className={area==="review"?styles.button:styles.buttonGhost} aria-pressed={area==="review"} onClick={()=>{setTab("queue");setSelectedRun(null);setRunFilter("");setFocusedAlertItemId(null);setActiveAlertId(null);setBatchMode(false);setArticleId(null)}}>Review</button>
-      <button disabled={busy||readerSaving||loading} className={area==="records"?styles.button:styles.buttonGhost} aria-pressed={area==="records"} onClick={()=>{setArea("records");setTabState("runs");setRunView("complete");setSelectedRun(null);setRunFilter("");setFocusedAlertItemId(null)}}>Records</button>
-      <button disabled={busy||readerSaving||loading} className={area==="monitoring"?styles.button:styles.buttonGhost} aria-pressed={area==="monitoring"} onClick={()=>{setTab("sources");setSelectedRun(null)}}>Monitoring</button>
-    </div>
-    <p className={styles.muted}>{area==="review"?"Choose a screening, review its articles, then follow the next action shown above the queue.":area==="records"?"Completed screening records and PSUR evidence. Review history and export remain attached to each record.":"Sources, product coverage and automatic checks. Retrieval coverage is separate from QPPV screening completion."}</p>
+    <Tabs label="Literature areas" value={area} items={[{id:"review",label:"Review"},{id:"records",label:"Records"},{id:"monitoring",label:"Monitoring"}]} onChange={value=>{if(busy||readerSaving||loading)return;setSelectedRun(null);setRunFilter("");setFocusedAlertItemId(null);setActiveAlertId(null);setBatchMode(false);setArticleId(null);if(value==="records"){setArea("records");setTabState("runs");setRunView("complete")}else setTab(value==="monitoring"?"sources":"queue")}}/>
+    {area!=="monitoring"?<div className={styles.filterBar} style={{padding:"0 0 14px",border:0}}><select aria-label="Literature company" className={styles.input} value={companyScope} disabled={busy||readerSaving} onChange={e=>{setCompanyScope(e.target.value);setRunFilter("");setSelectedRun(null);setArticleId(null);setTaskContext(null)}}><option value="">All companies</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>{tab==="queue"&&!runFilter?<select aria-label="Screening purpose" className={styles.input} value={searchPurpose} onChange={e=>setSearchPurpose(e.target.value)}><option value="routine">Current work</option><option value="historical">Historical searches</option><option value="all">All screenings</option></select>:null}</div>:null}
+    {taskContext&&area==="review"?<div className={styles.notice} style={{marginBottom:14}}>Weekly literature task{taskContext.due?` · Due ${taskContext.due}`:""} <Link href={`/pvos/tasks/${taskContext.id}#evidence`}>Task & evidence</Link> <Help>Choose the screening for this task’s period. Existing searches remain separate until explicitly linked; screening completion does not automatically complete an unrelated task.</Help></div>:null}
     {automationSetting?<div className={automationFailures.length||automationCoverageGaps.length||automationSetting.last_status==="error"?styles.notice:styles.info} style={{marginBottom:14}}>
       <div className={styles.inlineActions} style={{marginTop:0}}>
         <span>Monitoring · Every {automationSetting.cadence_hours}h · Last check {dateTimeLabel(automationSetting.last_run_at)}</span>
@@ -1521,16 +1528,8 @@ export default function LiteraturePage(){
       {area==="monitoring"&&(automationFailures.length||automationCoverageGaps.length)?<details><summary>Source issues and coverage limitations</summary>{[...automationFailures,...automationCoverageGaps].map((x:any,i:number)=><p key={i}>{x.source||x.name||"Source"}: {x.reason||x.error||JSON.stringify(x)}</p>)}</details>:null}
     </div>:null}
     {message?<div className={styles.notice} role="status" style={{marginBottom:14}}>{message}</div>:null}
-    {area==="review"?<div className={styles.inlineActions} style={{marginBottom:14,flexWrap:"wrap"}}>
-      <button disabled={busy||readerSaving||loading} className={tab==="queue"?styles.button:styles.buttonGhost} onClick={()=>setTab("queue")}>First screening ({openItems.length} open records)</button>
-      <button disabled={busy||readerSaving||loading} className={tab==="second"?styles.button:styles.buttonGhost} onClick={()=>{setSelectedSecondReviewId(null);setTab("second")}}>Second reviews ({myPendingSecondReviews.length} assigned to you)</button>
-      {openAlerts.length?<button disabled={busy||readerSaving||loading} className={tab==="alerts"?styles.button:styles.buttonGhost} onClick={()=>{setTab("alerts");setSelectedRun(null)}}>Urgent alerts ({openAlerts.length})</button>:<span className={styles.muted}>No open alerts</span>}
-    </div>:null}
-    {area==="records"?<div className={styles.inlineActions} style={{marginBottom:14}}>
-      <button disabled={busy||readerSaving||loading} className={tab==="runs"?styles.button:styles.buttonGhost} onClick={()=>{setTabState("runs");setRunView("complete")}}>Screening records</button>
-      <button disabled={busy||readerSaving||loading} className={tab==="psur"?styles.button:styles.buttonGhost} onClick={()=>setTab("psur")}>PSUR evidence</button>
-      <button disabled={busy||readerSaving||loading} className={styles.buttonGhost} onClick={()=>{setTab("alerts");setSelectedRun(null)}}>Alert history</button>
-    </div>:null}
+    {area==="review"?<Tabs label="Review stages" value={tab} items={[{id:"queue",label:"First screening"},{id:"second",label:`Second reviews (${myPendingSecondReviews.filter(x=>!companyScope||runs.find(r=>r.id===x.run_id)?.company_id===companyScope).length})`},{id:"alerts",label:`Alerts (${openAlerts.filter(x=>!companyScope||x.company_id===companyScope).length})`}]} onChange={value=>{if(busy||readerSaving||loading)return;if(value==="second")setSelectedSecondReviewId(null);if(value==="alerts")setSelectedRun(null);setTab(value as Tab)}}/>:null}
+    {area==="records"?<Tabs label="Record types" value={tab} items={[{id:"runs",label:"Screening records"},{id:"psur",label:"PSUR evidence"},{id:"alerts",label:"Alert history"}]} onChange={value=>{if(busy||readerSaving||loading)return;if(value==="runs"){setTabState("runs");setRunView("complete")}else{setTab(value as Tab);setSelectedRun(null)}}}/>:null}
     {workspaceRun&&area!=="monitoring"&&tab!=="psur"&&tab!=="alerts"?<ScreeningWorkspace run={workspaceRun} label={screeningLabel(workspaceRun)} company={companyMap[workspaceRun.company_id]||"Company"} stats={statsForRun(workspaceRun)} record={recordMap[workspaceRun.id]} second={recordMap[workspaceRun.id]?.metadata?.second_review||secondReviewMap[workspaceRun.id]} members={members} userId={session?.user.id} firstReviewerIds={runItems(workspaceRun.id).map(x=>x.reviewer_user_id).filter(Boolean)} reviewer={secondReviewerId} onReviewer={setSecondReviewerId} busy={busy||readerSaving} onReview={()=>openRunDecisions(workspaceRun)} onSecond={()=>openSecondReview(workspaceRun)} onSend={()=>assignSecondReviewer(workspaceRun)} onComplete={()=>completeScreening(workspaceRun)} onExport={()=>exportScreeningRecord(workspaceRun)} onClose={()=>{setSelectedRun(null);setRunFilter("");setSelectedSecondReviewId(null);setBatchMode(false);setTab(area==="records"?"runs":"queue");if(area==="records")setArea("records")}} onManageReviewers={()=>setShowReviewerAccess(true)}/>:null}
     <section className={styles.panel}>
 
@@ -1571,7 +1570,7 @@ export default function LiteraturePage(){
               </div>:s.metadata?.connector_status==="planned"?<Badge>Planned</Badge>:<Badge>{s.method==="manual"?"Manual / pending automation":s.method.toUpperCase()}</Badge>}</td>
               <td>{dateLabel(s.last_checked_at)}</td>
               <td>{dateLabel(s.next_due_at)}</td>
-              <td><Badge tone={!s.active?"default":s.metadata?.connector_status==="error"?"red":s.metadata?.coverage_limitation||due?"amber":"green"}>{!s.active?"Planned":s.metadata?.connector_status==="error"?"Connection issue":s.metadata?.coverage_limitation?"Limited coverage":due?"Due":"Active"}</Badge>{s.active&&s.metadata?.coverage_limitation?<div className={styles.muted} style={{marginTop:4,maxWidth:280}}>{String(s.metadata.coverage_limitation)}</div>:null}</td>
+              <td><Badge tone={!s.active?"default":s.metadata?.connector_status==="error"?"red":s.metadata?.coverage_limitation||due?"amber":"green"}>{!s.active?"Planned":s.metadata?.connector_status==="error"?"Connection issue":s.metadata?.coverage_limitation?"Limited coverage":due?"Due":"Active"}</Badge>{s.active&&s.metadata?.coverage_limitation?<Help>{String(s.metadata.coverage_limitation)}</Help>:null}</td>
             </tr>
           })}</tbody>
         </table></div>:<div className={styles.empty}>No literature sources yet. Add the journals or databases your QPPV team is required to screen.</div>}
@@ -1586,7 +1585,7 @@ export default function LiteraturePage(){
         </div>
         {alerts.length?<div className={styles.tableWrap}><table className={styles.table}>
           <thead><tr><th>Severity</th><th>Article</th><th>Product</th><th>Company</th><th>Type</th><th>Detected</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>{alerts.map(a=>{
+          <tbody>{alerts.filter(a=>!companyScope||a.company_id===companyScope).map(a=>{
             const item=literatureItemMap[a.literature_item_id];
             const product=productMap[a.product_id||item?.product_id];
             const typeLabel=a.alert_type==="saudi_case_context"?"Saudi case / context":a.alert_type==="saudi_journal_match"?"Saudi journal match":"Priority literature";
@@ -1612,15 +1611,12 @@ export default function LiteraturePage(){
       </>:null}
 
       {tab==="queue"?<>
-        <div className={styles.panelHeader}><h2>{runFilter?"Article review":"Active screenings"}</h2><span className={styles.muted}>System suggestions support the QPPV decision.</span></div>
-        {!runFilter&&!focusedAlertItemId?<div className={styles.screeningChoices}>
-          {loading?<p>Loading screenings…</p>:runs.filter(r=>!recordMap[r.id]&&r.status!=="cancelled").map(r=>{
-            const s=statsForRun(r),sr=secondReviewMap[r.id];
-            return <button key={r.id} className={styles.screeningChoice} onClick={()=>{openRunDecisions(r);if(sr?.status==="pending"&&sr.assigned_to===session?.user.id)openSecondReview(r)}}>
-              <span>{companyMap[r.company_id]||"Company"}</span><small>{screeningLabel(r)}</small><small>{r.period_start} → {r.period_end}</small><small>{s.total} records · Created {dateTimeLabel(r.created_at)}</small><small>{sr?.status==="returned"?"Returned for correction":sr?.status==="pending"?"Awaiting second reviewer":sr?.status==="approved"?"Ready to complete":s.open+" decisions open"}</small>
-            </button>;
-          })}
-          {!loading&&!runs.some(r=>!recordMap[r.id]&&r.status!=="cancelled")?<p>No active screenings. Completed evidence is in Records; Monitoring shows collection health.</p>:null}
+        <div className={styles.panelHeader}><h2>{runFilter?"Article review":"Active screenings"}</h2><Help>System suggestions support the QPPV decision; they are not human screening decisions.</Help></div>
+        {!runFilter&&!focusedAlertItemId?<div className={styles.tableWrap}>
+          {loading?<div className={styles.empty}>Loading screenings…</div>:<table className={`${styles.table} ${styles.workTable}`}><thead><tr><th>Company / period</th><th>Search</th><th>Unresolved</th><th>Stage</th><th>Next action</th></tr></thead><tbody>{runs.filter(r=>!recordMap[r.id]&&r.status!=="cancelled"&&(!companyScope||r.company_id===companyScope)&&(searchPurpose==="all"||(searchPurpose==="historical")===isHistoricalRun(r))).map(r=>{
+            const stats=statsForRun(r),sr=secondReviewMap[r.id];return <tr key={r.id}><td><strong>{companyMap[r.company_id]||"Company"}</strong><div>{r.period_start} – {r.period_end}</div></td><td><strong>{screeningLabel(r)}</strong><div className={styles.muted}>{isHistoricalRun(r)?"Historical search":"Current work"} <Help>Created {dateTimeLabel(r.created_at)} · {stats.total} article-product records</Help></div></td><td>{stats.open}</td><td>{sr?.status==="returned"?"Returned":sr?.status==="pending"?"Awaiting second review":sr?.status==="approved"?"Ready to complete":"First screening"}</td><td><button className={styles.buttonGhost} onClick={()=>{openRunDecisions(r);if(sr?.status==="pending"&&sr.assigned_to===session?.user.id)openSecondReview(r)}}>{sr?.status==="pending"&&sr.assigned_to===session?.user.id?"Review":sr?.status==="returned"?"Resolve corrections":"Continue"}</button></td></tr>;
+          })}</tbody></table>}
+          {!loading&&!runs.some(r=>!recordMap[r.id]&&r.status!=="cancelled"&&(!companyScope||r.company_id===companyScope)&&(searchPurpose==="all"||(searchPurpose==="historical")===isHistoricalRun(r)))?<div className={styles.empty}>No screenings in this view.</div>:null}
         </div>:<>
           {focusedAlertItemId?<div className={styles.notice} style={{margin:14}}>Reviewing the exact alerted article. Saving a final decision closes its alert; Needs more information keeps it open.</div>:null}
           <div className={styles.readerToolbar}>
@@ -1655,7 +1651,7 @@ export default function LiteraturePage(){
         </div>
         {loading?<div className={styles.empty}>Loading screening runs…</div>:runs.some(r=>runView==="complete"?!!recordMap[r.id]:!recordMap[r.id])?<div className={styles.tableWrap}><table className={styles.table}>
           <thead><tr><th>Period</th><th>Company</th><th>Sources</th><th>Products</th><th>Results</th><th>Reviewed</th><th>Second review</th><th>Status</th><th></th></tr></thead>
-          <tbody>{runs.filter(r=>runView==="complete"?!!recordMap[r.id]:!recordMap[r.id]).map(r=>{
+          <tbody>{runs.filter(r=>(!companyScope||r.company_id===companyScope)&&(runView==="complete"?!!recordMap[r.id]:!recordMap[r.id])).map(r=>{
             const counts=runCounts[r.id]||{total:r.result_count||0,reviewed:r.reviewed_count||0};
             return <tr key={r.id}>
               <td><strong>{dateLabel(r.period_start)} – {dateLabel(r.period_end)}</strong><div className={styles.muted}>{screeningLabel(r)}</div></td>
@@ -1676,16 +1672,16 @@ export default function LiteraturePage(){
         <div className={styles.panelHeader} style={{marginTop:12}}>
           <div>
             <h2>Second review</h2>
-            <div className={styles.muted} style={{marginTop:4}}>Verify the focused first-review decisions before a screening record is completed.</div>
+            <Help>Verify the focused first-review decisions before a screening record is completed.</Help>
           </div>
           <span className={styles.muted}>{myPendingSecondReviews.length} assigned to you · {secondReviews.filter(x=>x.status==="pending").length} pending in workspace</span>
         </div>
 
         {!selectedSecondReview?<>
           <div style={{padding:14}}><label>Review queue <select className={styles.input} value={secondView} onChange={e=>setSecondView(e.target.value as typeof secondView)}><option value="mine">Pending reviews assigned to me</option><option value="team">All pending reviews</option><option value="history">Review history, including returned cycles</option></select></label></div>
-          {secondReviews.some(sr=>secondView==="mine"?sr.status==="pending"&&sr.assigned_to===session?.user.id:secondView==="team"?sr.status==="pending":sr.status!=="pending")?<div className={styles.tableWrap}><table className={styles.table}>
+          {secondReviews.filter(sr=>!companyScope||runMap[sr.run_id]?.company_id===companyScope).some(sr=>secondView==="mine"?sr.status==="pending"&&sr.assigned_to===session?.user.id:secondView==="team"?sr.status==="pending":sr.status!=="pending")?<div className={styles.tableWrap}><table className={styles.table}>
             <thead><tr><th>Period</th><th>Company</th><th>Review scope</th><th>Assigned to</th><th>Assigned</th><th>Status</th><th></th></tr></thead>
-            <tbody>{secondReviews.filter(sr=>secondView==="mine"?sr.status==="pending"&&sr.assigned_to===session?.user.id:secondView==="team"?sr.status==="pending":sr.status!=="pending").map(sr=>{
+            <tbody>{secondReviews.filter(sr=>(!companyScope||runMap[sr.run_id]?.company_id===companyScope)).filter(sr=>secondView==="mine"?sr.status==="pending"&&sr.assigned_to===session?.user.id:secondView==="team"?sr.status==="pending":sr.status!=="pending").map(sr=>{
               const run=runMap[sr.run_id];
               const summary=sr.metadata?.summary||{};
               return <tr key={sr.id}>
@@ -1778,7 +1774,7 @@ export default function LiteraturePage(){
               {sr.status==="pending"&&assignedToMe?<div className={styles.notice} style={{margin:"14px"}}>
                 <strong>Second-review decision</strong>
                 {Number(summary.needs_review||0)>0?<div style={{marginTop:8}}>Return this screening with a reason so the first reviewer can resolve Needs review articles. Approval requires final decisions.</div>:null}
-                <div className={styles.muted} style={{marginTop:5}}>Check the scoped decisions and their downstream actions. Approve to lock reviewer identity and timestamp, or return the screening with a required note explaining what the first reviewer must revisit.</div>
+                <Help>Check the scoped decisions and their downstream actions. Approve to lock reviewer identity and timestamp, or return the screening with a required note explaining what the first reviewer must revisit.</Help>
                 <textarea className={styles.input} style={{minHeight:88,marginTop:10}} value={secondReviewNote} onChange={e=>setSecondReviewNote(e.target.value)} placeholder="Return note (required only when returning)…"/>
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10,flexWrap:"wrap"}}>
                   <button className={styles.buttonGhost} disabled={busy} onClick={()=>decideSecondReview(run,"returned")}>Return to first reviewer</button>
@@ -1798,13 +1794,13 @@ export default function LiteraturePage(){
         <div className={styles.panelHeader} style={{marginTop:12}}>
           <div>
             <h2>PSUR evidence pool</h2>
-            <div className={styles.muted} style={{marginTop:4}}>Relevant literature findings selected by the QPPV for downstream aggregate reporting.</div>
+            <Help>Relevant literature findings selected by the QPPV for downstream aggregate reporting.</Help>
           </div>
           <span className={styles.muted}>{psurEvidence.length} selected</span>
         </div>
         {loading?<div className={styles.empty}>Loading PSUR evidence…</div>:psurEvidence.length?<div className={styles.tableWrap}><table className={styles.table}>
           <thead><tr><th>Article</th><th>Product</th><th>Source</th><th>Available</th><th>Safety priority</th><th>Evidence status</th></tr></thead>
-          <tbody>{psurEvidence.map(row=>{
+          <tbody>{psurEvidence.filter(row=>!companyScope||row.item?.company_id===companyScope||runMap[row.item?.run_id]?.company_id===companyScope).map(row=>{
             const x=row.item;
             return <tr key={row.followup.id}>
               <td style={{minWidth:360}}>
@@ -1887,11 +1883,11 @@ export default function LiteraturePage(){
     {showReviewerAccess?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setShowReviewerAccess(false)}}>
       <div ref={reviewerAccessRef} className={styles.modalCard} role="dialog" aria-modal="true" aria-labelledby="reviewer-access-title">
         <div className={styles.modalHeader}><h2 id="reviewer-access-title">Reviewer access</h2><button className={styles.modalClose} onClick={()=>setShowReviewerAccess(false)} aria-label="Close reviewer access">×</button></div>
-        <p>Authorize a reviewer account to join this workspace, then choose that member in the screening workspace.</p>
+        <Help>Authorize a reviewer account to join this workspace, then choose that member in the screening workspace.</Help>
         <label>Email <input className={styles.input} type="email" value={reviewerEmail} onChange={e=>setReviewerEmail(e.target.value)} placeholder="reviewer@company.com"/></label>
         <label>Workspace role <select className={styles.input} value={reviewerRole} onChange={e=>setReviewerRole(e.target.value)}><option value="deputy_qppv">Deputy QPPV</option><option value="qppv">QPPV</option><option value="pv_specialist">PV specialist</option><option value="quality">Quality</option></select></label>
         <div className={styles.inlineActions}><button className={styles.button} disabled={busy||!reviewerEmail.trim()} onClick={addReviewerByEmail}>Add reviewer</button></div>
-        <p className={styles.muted}>No email notification is sent. New accounts join when they sign in using the authorized email. First reviewers cannot perform second review on their own decisions.</p>
+        <Help>No email notification is sent. New accounts join when they sign in using the authorized email. First reviewers cannot perform second review on their own decisions.</Help>
         {message?<div className={styles.notice} role="status">{message}</div>:null}
       </div>
     </div>:null}
@@ -1916,7 +1912,7 @@ export default function LiteraturePage(){
     {showRun?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setShowRun(false)}}>
       <form className={styles.modalCard} onSubmit={createRun}>
         <div className={styles.modalHeader}>
-          <div><div className={styles.eyebrow}>Literature screening</div><h2>New screening run</h2><div className={styles.muted} style={{marginTop:5}}>This first live connector searches PubMed for every product in the selected company and sends every retrieved result to the QPPV review queue.</div></div>
+          <div><div className={styles.eyebrow}>Literature screening</div><h2>New screening run</h2><Help>This first live connector searches PubMed for every product in the selected company and sends every retrieved result to the QPPV review queue.</Help></div>
           <button type="button" className={styles.modalClose} onClick={()=>setShowRun(false)}>×</button>
         </div>
         <div className={styles.formGrid}>

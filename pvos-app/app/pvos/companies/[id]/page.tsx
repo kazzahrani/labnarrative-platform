@@ -3,19 +3,26 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Header, Badge, statusTone } from "../../_components";
+import { Header, Badge, Tabs } from "../../_components";
 import { usePVOS } from "../../_provider";
 import { pvosSupabase } from "../../_pvos-supabase";
-import { dueLabel, formatDue, niceStatus } from "../../_utils";
+import { niceStatus } from "../../_utils";
 import styles from "../../pvos.module.css";
 import { ProductRegister } from "../_product-register";
+import {NewTaskModal} from "../../_new-task-modal";
+import {readWork,type WorkData} from "../../_work";
+import {WorkList} from "../../_work-list";
+import {deadlineState} from "../../_work-utils";
+import {CompanyRecords} from "../_company-records";
 import { readProductPages } from "../../_registration";
 
 export default function CompanyPage(){
   const params=useParams<{id:string}>();
-  const {session}=usePVOS();
+  const {session,organizationId,reloadToken,refresh}=usePVOS();
+  const [tab,setTab]=useState("overview"),[workView,setWorkView]=useState("active"),[work,setWork]=useState<WorkData|null>(null),[workError,setWorkError]=useState(""),[showNew,setShowNew]=useState(false);
+  useEffect(()=>{const p=new URLSearchParams(window.location.search);if(["overview","work","products","documents","history"].includes(p.get("tab")||""))setTab(p.get("tab")!);},[]);
+  useEffect(()=>{if(!organizationId||!session)return;let active=true;setWorkError("");readWork(organizationId,session.user.id).then(d=>{if(active)setWork(d)}).catch(e=>{if(active)setWorkError(e.message)});return()=>{active=false}},[organizationId,session?.user.id,reloadToken]);
   const [company,setCompany]=useState<any|null>(null);
-  const [tasks,setTasks]=useState<any[]>([]);
   const [products,setProducts]=useState<any[]>([]);
   const [obligations,setObligations]=useState<any[]>([]);
   const [loading,setLoading]=useState(true);
@@ -23,30 +30,36 @@ export default function CompanyPage(){
 
   useEffect(()=>{ const id=params.id; if(!id)return; let active=true; (async()=>{
     setLoading(true);
-    const [c,t,p,o]=await Promise.all([
+    const [c,p,o]=await Promise.all([
       pvosSupabase.from("pvos_companies").select("*").eq("id",id).single(),
-      pvosSupabase.from("pvos_tasks").select("*").eq("company_id",id).neq("status","cancelled").order("due_at"),
       readProductPages<any>((from,to)=>pvosSupabase.from("pvos_products").select("*").eq("company_id",id).order("brand_name").order("id").range(from,to)),
       pvosSupabase.from("pvos_obligations").select("*").eq("company_id",id).eq("active",true).order("activity_type")
     ]);
-    if(c.error||t.error||o.error)throw new Error(c.error?.message||t.error?.message||o.error?.message||"Could not load company.");
-    if(active){setCompany(c.data);setTasks(t.data??[]);setProducts(p);setObligations(o.data??[]);setError(null);setLoading(false);}
-  })().catch(e=>{if(active){setError(e.message);setLoading(false);}}); return()=>{active=false}; },[params.id]);
+    if(c.error||o.error)throw new Error(c.error?.message||o.error?.message||"Could not load company.");
+    if(active){setCompany(c.data);setProducts(p);setObligations(o.data??[]);setError(null);setLoading(false);}
+  })().catch(e=>{if(active){setError(e.message);setLoading(false);}}); return()=>{active=false}; },[params.id,reloadToken]);
 
   if(error)return <div className={styles.errorBox} role="alert">{error}</div>;
   if(loading||!company) return <div className={styles.empty}>Loading company workspace…</div>;
+  const items=(work?.items||[]).filter(w=>w.company_id===company.id);
+  const active=items.filter(w=>w.status!=="complete"&&(deadlineState(w.due,w.status).days===null||deadlineState(w.due,w.status).days!<=7||w.waiting||["in_progress","returned"].includes(w.status)));
+  const scheduled=items.filter(w=>w.status!=="complete"&&!active.some(a=>a.id===w.id));
+  const completed=items.filter(w=>w.status==="complete");
+  const visible=workView==="scheduled"?scheduled:workView==="completed"?completed:active;
+  function changeTab(value:string){setTab(value);const url=new URL(window.location.href);url.searchParams.set("tab",value);window.history.replaceState({},"",url);}
   return <>
-    <Header eyebrow="Company workspace" title={company.name} sub={company.contract_scope??"PV responsibility scope"} action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Configure</Link><Link className={styles.buttonGhost} href="/pvos/rmp">RMP Tracker</Link><Link className={styles.button} href="/pvos/handover">Start handover</Link></div>}/>
-    <div className={styles.grid2}>
-      <section>
-        <div className={styles.panel}><div className={styles.panelHeader}><h2>Current work</h2><span className={styles.muted}>{tasks.filter(t=>t.status!=="complete").length} active items</span></div>
-        <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Task</th><th>Type</th><th>Due</th><th>Status</th></tr></thead><tbody>{tasks.map(t=>{const s=dueLabel(t.due_at,t.status);return <tr key={t.id}><td><Link href={"/pvos/tasks/"+t.id}>{t.title}</Link></td><td>{t.activity_type}</td><td>{formatDue(t.due_at)}</td><td><Badge tone={statusTone(s)}>{s}</Badge></td></tr>})}</tbody></table></div></div>
-        <ProductRegister companyId={company.id} organizationId={company.organization_id} products={products} onSaved={p=>setProducts(rows=>rows.map(row=>row.id===p.id?p:row))}/>
-      </section>
-      <aside className={styles.stack}>
-        <div className={styles.info}><h3>Coverage</h3><div className={styles.kv}><span>QPPV</span><span>{company.qppv_user_id===session?.user.id?"Me":company.qppv_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Deputy</span><span>{company.deputy_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Contract scope</span><span>{company.contract_scope??"—"}</span></div></div>
-        <div className={styles.info}><h3>Recurring obligations</h3>{obligations.length?obligations.map(o=><div className={styles.kv} key={o.id}><span>{o.activity_type}</span><span>{niceStatus(o.cadence)} · {o.responsibility==="organization"?"Our organization":niceStatus(o.responsibility)}</span></div>):<div className={styles.muted}>No recurring obligations configured yet.</div>}<div className={styles.inlineActions}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Add product / obligation</Link></div></div>
-      </aside>
-    </div>
+    <Header eyebrow="Company workspace" title={company.name} sub={company.contract_scope??"PV responsibility scope"} action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Company settings</Link><button className={styles.button} onClick={()=>setShowNew(true)}>New task</button></div>}/>
+    {workError?<div className={styles.errorBox} role="alert">Work could not load: {workError} <button className={styles.buttonGhost} onClick={refresh}>Retry</button></div>:null}
+    <Tabs label="Company workspace" value={tab} onChange={changeTab} items={[{id:"overview",label:"Overview"},{id:"work",label:"Work"},{id:"products",label:"Products"},{id:"documents",label:"Documents"},{id:"history",label:"History"}]}/>
+    {tab==="overview"?<>
+      <div className={styles.compactSummary}><span><strong>{active.length}</strong> Active items</span><span><strong>{items.filter(w=>deadlineState(w.due,w.status).overdue).length}</strong> Overdue</span><span><strong>{products.length}</strong> Products</span></div>
+      <section className={styles.panel}><div className={styles.panelHeader}><h2>Needs attention</h2><button className={styles.buttonGhost} onClick={()=>changeTab("work")}>All company work</button></div>{work?<WorkList items={active} companies={work.companies} members={work.members} userId={session?.user.id} showCompany={false}/>:<div className={styles.empty}>Loading work and reviews…</div>}</section>
+      <div className={styles.quietActions}><Link href={"/pvos/literature?company="+company.id}>Literature</Link><Link href={"/pvos/signal?company="+company.id}>Signals</Link><Link href={"/pvos/rmp?company="+company.id}>RMP</Link><Link href={"/pvos/inspection?company="+company.id}>Inspection</Link></div>
+      <details className={styles.info} style={{marginTop:20}}><summary>Company coverage & schedules</summary><div className={styles.kv}><span>QPPV</span><span>{company.qppv_user_id===session?.user.id?"Me":company.qppv_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Deputy</span><span>{company.deputy_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Contract scope</span><span>{company.contract_scope??"—"}</span></div>{obligations.map(o=><div className={styles.kv} key={o.id}><span>{o.activity_type}</span><span>{niceStatus(o.cadence)} · {niceStatus(o.responsibility)}</span></div>)}</details>
+    </>:null}
+    {tab==="work"?<section className={styles.panel}><div className={styles.sectionBody}><Tabs label="Company work views" value={workView} onChange={setWorkView} items={[{id:"active",label:`Active (${active.length})`},{id:"scheduled",label:`Scheduled (${scheduled.length})`},{id:"completed",label:`Completed (${completed.length})`}]}/></div>{work?<WorkList items={visible} companies={work.companies} members={work.members} userId={session?.user.id} showCompany={false}/>:<div className={styles.empty}>Loading work…</div>}</section>:null}
+    {tab==="products"?<ProductRegister companyId={company.id} organizationId={company.organization_id} products={products} onSaved={p=>setProducts(rows=>rows.map(row=>row.id===p.id?p:row))}/>:null}
+    {tab==="documents"||tab==="history"?<CompanyRecords companyId={company.id} organizationId={company.organization_id} view={tab}/>:null}
+    <NewTaskModal open={showNew} initialCompanyId={company.id} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);refresh()}}/>
   </>;
 }

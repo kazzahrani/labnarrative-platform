@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {useCallback,useEffect,useState} from "react";
-import {Badge} from "./_components";
+import {Badge,Help} from "./_components";
 import {pvosSupabase} from "./_pvos-supabase";
 import {readApprovalRows,type Member} from "./_approval";
 import styles from "./pvos.module.css";
@@ -22,7 +22,7 @@ export function TaskReviewPanel({task,members,userId,onChanged,onPending}:{task:
   const canSend=task.owner_user_id===userId||["admin","qppv","deputy_qppv"].includes(currentRole||"");
   async function send(){
     if(busy||!reviewer)return;setBusy(true);setError("");setResult("");
-    try{const {data,error}=await pvosSupabase.rpc("pvos_send_task_review",{p_task_id:task.id,p_reviewer_id:reviewer,p_note:note||null});if(error)throw error;setResult("Sent to "+data.assigned_email+". Find this task in Approvals → Waiting.");setNote("");await load();onChanged();}
+    try{const {data,error}=await pvosSupabase.rpc("pvos_send_task_review",{p_task_id:task.id,p_reviewer_id:reviewer,p_note:note||null});if(error)throw error;setResult("Sent to "+data.assigned_email+". Find this task in Dashboard → Reviews.");setNote("");await load();onChanged();}
     catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   async function decide(decision:"approved"|"returned"){
@@ -33,7 +33,7 @@ export function TaskReviewPanel({task,members,userId,onChanged,onPending}:{task:
   return <div className={styles.info} id="task-review">
     <h3>Task review</h3>
     {error?<div className={styles.errorBox} role="alert">{error} <button className={styles.buttonGhost} onClick={load}>Refresh reviews</button></div>:null}
-    {result?<div className={styles.successBox} role="status">{result} <Link href="/pvos/approvals">Open review queue →</Link></div>:null}
+    {result?<div className={styles.successBox} role="status">{result} <Link href="/pvos/dashboard?tab=reviews">Open review queue →</Link></div>:null}
     {loading?<p>Loading review history…</p>:pending?<>
       <p><Badge tone="amber">Awaiting review</Badge></p>
       <p>Waiting for <strong>{pending.assigned_email}</strong> · Sent {reviewTime(pending.sent_at)} Riyadh</p>
@@ -49,7 +49,7 @@ export function TaskReviewPanel({task,members,userId,onChanged,onPending}:{task:
       <label>Reviewer <select className={styles.input} value={reviewer} onChange={e=>setReviewer(e.target.value)} disabled={busy}><option value="">Choose workspace member</option>{members.filter(m=>m.user_id!==userId).map(m=><option key={m.user_id} value={m.user_id}>{m.email}</option>)}</select></label>
       <label style={{display:"block",marginTop:10}}>Submission note <textarea className={styles.input} value={note} onChange={e=>setNote(e.target.value)} placeholder="Optional context for the reviewer"/></label>
       <div className={styles.inlineActions}><button className={styles.button} disabled={busy||!reviewer||!!error} onClick={send}>{busy?"Sending…":rows.length?"Resubmit for review":"Send for review"}</button></div>
-      <p className={styles.muted}>Appears in Approvals → Waiting. Email notifications are not yet enabled.</p>
+      <Help>Appears in the assigned reviewer’s Dashboard → Reviews. Email notifications are not yet enabled.</Help>
     </>:null}
     {rows.length?<details style={{marginTop:14}}><summary>Review history ({rows.length} cycle{rows.length===1?"":"s"})</summary>{rows.map(r=><div key={r.id} className={styles.notice} style={{marginTop:8}}>
       <strong>Cycle {r.cycle} · {r.status}</strong><p>Sent by {r.sent_by_email} to {r.assigned_email} · {reviewTime(r.sent_at)} Riyadh</p>

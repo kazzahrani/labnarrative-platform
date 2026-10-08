@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Header } from "../_components";
+import { Badge, Header, Tabs, Help } from "../_components";
 import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import AuthorityMonitoring from "./_authority-monitoring";
@@ -30,8 +30,9 @@ function assessmentTone(v:string):"default"|"red"|"amber"|"green"|"lime"{
 
 export default function SignalReviewPage(){
   const {organizationId,session}=usePVOS();
+  const [companyScope,setCompanyScope]=useState("all"),[companies,setCompanies]=useState<any[]>([]);
   const [view,setView]=useState<"review"|"authority">("review");
-  useEffect(()=>{const params=new URLSearchParams(window.location.search);if(params.get("view")==="authority"||params.has("authorityPeriod"))setView("authority");},[]);
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);setCompanyScope(params.get("company")||"all");if(params.get("view")==="authority"||params.has("authorityPeriod"))setView("authority");},[]);
   function changeView(next:"review"|"authority"){
     setView(next);const url=new URL(window.location.href);url.searchParams.set("view",next);if(next==="review")url.searchParams.delete("authorityPeriod");window.history.replaceState(window.history.state,"",url);
   }
@@ -50,12 +51,12 @@ export default function SignalReviewPage(){
     setLoading(true);
     try{
       const rows=(table:string)=>readApprovalRows<any>((from,to)=>pvosSupabase.from(table).select("*").eq("organization_id",organizationId).order("id").range(from,to));
-      const [f,i,p,r]=await Promise.all([
+      const [f,i,p,r,c]=await Promise.all([
         readApprovalRows<any>((from,to)=>pvosSupabase.from("pvos_literature_followups").select("*").eq("organization_id",organizationId).eq("destination","signal_review").order("id").range(from,to)),
         rows("pvos_literature_items"),
-        readApprovalRows<any>((from,to)=>pvosSupabase.from("pvos_products").select("*,pvos_companies!inner(organization_id)").eq("pvos_companies.organization_id",organizationId).order("id").range(from,to)),rows("pvos_signal_reviews")
+        readApprovalRows<any>((from,to)=>pvosSupabase.from("pvos_products").select("*,pvos_companies!inner(organization_id)").eq("pvos_companies.organization_id",organizationId).order("id").range(from,to)),rows("pvos_signal_reviews"),rows("pvos_companies")
       ]);
-      setFollowups(f);setItems(i);setProducts(p);setReviews(r);
+      setFollowups(f);setItems(i);setProducts(p);setReviews(r);setCompanies(c);
     }catch(e){setMessage("Signal records could not be fully loaded: "+((e as {message?:string}).message||"Refresh and retry."));}
     finally{setLoading(false);}
   }
@@ -74,7 +75,7 @@ export default function SignalReviewPage(){
   }).filter(x=>x.item).concat(reviews.filter(r=>r.authority_finding_id).map(r=>{
     const f=r.metadata?.finding_snapshot||{},ps=r.metadata?.product_snapshot||[];
     return {followup:{id:r.id,company_id:r.company_id,product_id:r.product_id},item:{id:r.authority_finding_id,title:r.metadata?.title||f.title,article_url:r.metadata?.url||f.url,abstract:f.rationale,journal:r.metadata?.authority_name||"Health authority",publication_date:f.notice_snapshot?.published_at,metadata:{},relevance:"human_confirmed"},product:ps.length?{brand_name:ps.map((p:any)=>p.brand_name).join(", "),active_ingredient:ps.map((p:any)=>p.active_ingredient).filter(Boolean).join(", ")}:productMap[r.product_id],review:r,origin:"authority"};
-  }));
+  })).filter(x=>companyScope==="all"||(x.followup.company_id||x.item.company_id)===companyScope);
 
   const newCount=rows.filter(x=>!x.review||x.review.status==="new").length;
   const inReview=rows.filter(x=>x.review?.status==="under_review").length;
@@ -132,15 +133,10 @@ export default function SignalReviewPage(){
       sub={view==="authority"?"Prepare monthly company monitoring, send it to a named QPPV reviewer and retain the evidence.":"Review findings escalated from literature and health authorities. The QPPV makes the signal assessment."}
     />
 
-    <div className={styles.inlineActions} style={{marginBottom:16}}><button className={view==="review"?styles.button:styles.buttonGhost} aria-pressed={view==="review"} onClick={()=>changeView("review")}>Signal Review</button><button className={view==="authority"?styles.button:styles.buttonGhost} aria-pressed={view==="authority"} onClick={()=>changeView("authority")}>Authority monitoring</button></div>
+    <Tabs label="Signals areas" value={view} onChange={v=>changeView(v as typeof view)} items={[{id:"review",label:"Signal Review"},{id:"authority",label:"Authority monitoring"}]}/>
+    {view==="review"?<div className={styles.filterBar}><select aria-label="Signal company" className={styles.input} value={companyScope} onChange={e=>{setCompanyScope(e.target.value);const u=new URL(window.location.href);if(e.target.value==="all")u.searchParams.delete("company");else u.searchParams.set("company",e.target.value);window.history.replaceState({},"",u)}}><option value="all">All companies</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>:null}
     {view==="authority"?<AuthorityMonitoring/>:<>
-    <section className={styles.cards}>
-      <div className={styles.card}><span>New findings</span><strong>{newCount}</strong></div>
-      <div className={styles.card}><span>Under review</span><strong>{inReview}</strong></div>
-      <div className={[styles.card,potential?styles.warning:""].join(" ")}><span>Potential signals</span><strong>{potential}</strong></div>
-      <div className={styles.card}><span>Closed</span><strong>{closed}</strong></div>
-      <div className={styles.card}><span>Total escalated</span><strong>{rows.length}</strong></div>
-    </section>
+    <div className={styles.compactSummary}><span>{newCount} New</span><span>{inReview} Under review</span><span>{potential} Potential signals</span><span>{closed} Closed</span></div>
 
     {message?<div className={message.includes("saved")||message.includes("updated")?styles.successBox:styles.errorBox} style={{marginBottom:14}}>{message}</div>:null}
 

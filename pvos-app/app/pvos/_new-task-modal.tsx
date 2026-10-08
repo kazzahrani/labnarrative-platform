@@ -5,7 +5,7 @@ import { usePVOS } from "./_provider";
 import { pvosSupabase } from "./_pvos-supabase";
 import styles from "./pvos.module.css";
 
-export function NewTaskModal({open,onClose,onCreated}:{open:boolean,onClose:()=>void,onCreated?:()=>void|Promise<void>}){
+export function NewTaskModal({open,onClose,onCreated,initialCompanyId}:{open:boolean,onClose:()=>void,onCreated?:()=>void|Promise<void>,initialCompanyId?:string}){
   const {organizationId,session}=usePVOS();
   const [companies,setCompanies]=useState<any[]>([]);
   const [products,setProducts]=useState<any[]>([]);
@@ -23,8 +23,8 @@ export function NewTaskModal({open,onClose,onCreated}:{open:boolean,onClose:()=>
   useEffect(()=>{if(!open||!organizationId)return;(async()=>{
     const {data:c}=await pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name");
     setCompanies(c??[]);
-    if(c?.[0]) setCompanyId(v=>v||c[0].id);
-  })()},[open,organizationId]);
+    if(c?.length) setCompanyId(v=>initialCompanyId&&c.some(x=>x.id===initialCompanyId)?initialCompanyId:v||c[0].id);
+  })()},[open,organizationId,initialCompanyId]);
 
   useEffect(()=>{if(!open||!companyId){setProducts([]);setRoutes([]);return;}(async()=>{
     const [p,r]=await Promise.all([
