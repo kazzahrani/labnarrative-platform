@@ -14,7 +14,6 @@ type Invoice={
  events?:{action:string;previous_status:string|null;next_status:string|null;note:string|null;created_at:string;actor_email:string}[];
  files?:{id:string;filename:string;storage_path:string;kind:"invoice"|"payment_proof";created_at:string;uploaded_by:string}[];
 };
-type InboxEvent={id:string;invoice_id:string;event_type:string;created_at:string;delivery_status:string};
 type Company={id:string;name:string};
 const stages:Record<string,string>={
  draft:"Draft · Attach PDF",head_review:"Head approval",returned_head:"Returned by Head",finance_review:"Finance approval",
@@ -31,7 +30,7 @@ function allowed(i:Invoice,uid:string){
 export default function InvoiceProcessingPage(){
  const {session,loading:authLoading}=usePVOS();
  const params=useSearchParams();
- const [rows,setRows]=useState<Invoice[]>([]),[companies,setCompanies]=useState<Company[]>([]),[notices,setNotices]=useState<InboxEvent[]>([]);
+ const [rows,setRows]=useState<Invoice[]>([]),[companies,setCompanies]=useState<Company[]>([]);
  const [opened,setOpened]=useState<string|null>(params.get("invoice")),[detail,setDetail]=useState<Invoice|null>(null);
  const [filter,setFilter]=useState<"mine"|"all"|"completed">("mine"),[search,setSearch]=useState("");
  const [showCreate,setShowCreate]=useState(!!params.get("company")),[companyId,setCompanyId]=useState(params.get("company")||"");
@@ -48,15 +47,13 @@ export default function InvoiceProcessingPage(){
   if(requested)setOpened(requested);
  },[params]);
  const reload=useCallback(async()=>{
-  const [r,c,n]=await Promise.all([
+  const [r,c]=await Promise.all([
    pvosSupabase.rpc("pvos_invoice_list"),
-   pvosSupabase.from("pvos_companies").select("id,name").order("name"),
-   pvosSupabase.rpc("pvos_invoice_inbox_notifications")
+   pvosSupabase.from("pvos_companies").select("id,name").order("name")
   ]);
   if(r.error)throw r.error;
   setRows(r.data||[]);
   if(!c.error)setCompanies(c.data||[]);
-  if(!n.error)setNotices(n.data||[]);
   setLoading(false);
  },[]);
  const loadDetail=useCallback(async(id:string)=>{
@@ -153,13 +150,6 @@ export default function InvoiceProcessingPage(){
     </button>):<div className={styles.empty}>{filter==="mine"?"No invoices currently require your action. Choose All my invoices to view status history.":"No invoices found."}</div>}
    </div>
   </section>
-  <section className={styles.panel}>
-   <div className={styles.panelHeader}><h2>In-app notifications</h2><span className={styles.muted}>{notices.length}</span></div>
-   <div className={styles.sectionBody}>{notices.length?notices.slice(0,15).map(n=><button className={styles.requestListRow} type="button" key={n.id} onClick={()=>setOpened(n.invoice_id)}>
-    <span className={styles.requestRowName}><strong>{stages[n.event_type]||n.event_type}</strong><span>{fmt(n.created_at)} · Email: {n.delivery_status==="sent"?"Sent":n.delivery_status==="failed"?"Retry pending":"Queued / awaiting email setup"}</span></span><span aria-hidden="true">›</span>
-   </button>):<div className={styles.empty}>No invoice notifications yet.</div>}</div>
-  </section>
-
   {showCreate?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setShowCreate(false);}}>
    <div className={styles.requestDialog} role="dialog" aria-modal="true" aria-labelledby="new-processing-title">
     <div className={styles.requestDialogHead}><div><h2 id="new-processing-title">Process invoice</h2><span className={styles.muted}>Select two distinct PVOS accounts for Head and Finance</span></div><button className={styles.modalClose} onClick={()=>setShowCreate(false)} aria-label="Close" disabled={busy}>×</button></div>
