@@ -95,7 +95,7 @@ export default function TaskPage(){
       <section className={styles.stack}>
         <div className={styles.info} hidden={tab!=="work"}><h3>Task details</h3><div className={styles.kv}><span>Company</span><span>{company.name}</span></div>{product?<div className={styles.kv}><span>Product</span><span>{product.brand_name} · {product.active_ingredient}</span></div>:null}<div className={styles.kv}><span>Owner</span><span>{task.owner_user_id===session?.user.id?"Me":"Team"}</span></div><div className={styles.kv}><span>Due</span><span>{formatDue(task.due_at)}</span></div><div className={styles.kv}><span>Priority</span><span>{niceStatus(task.priority)}</span></div><div className={styles.kv}><span>Source</span><span>{niceStatus(task.source)}</span></div>
           <div className={styles.inlineActions}>
-            {authorityLink?<Link className={styles.button} href={authorityLink}>Open authority monitoring →</Link>:<>
+            {authorityLink?<Link className={styles.button} href={authorityLink}>Open authority monitoring →</Link>:task.metadata?.department_request_id?<Link className={styles.button} href={"/pvos/companies/"+task.company_id+"?tab=departments"}>Manage departmental request →</Link>:<>
             {activity.href.startsWith("/pvos/literature")||activity.href.startsWith("/pvos/rmp")?<Link className={styles.button} href={activity.href}>{activity.label}</Link>:null}
             {task.status==="not_started"?<button className={styles.buttonGhost} disabled={busy||reviewPending} onClick={()=>setStatus("in_progress")}>Start work</button>:null}
             {task.status!=="awaiting_review"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("awaiting_review")}>{approvals.length?"Send into approval":"Choose reviewer"}</button>:null}
@@ -103,7 +103,7 @@ export default function TaskPage(){
             {task.status==="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Reopen</button>:null}
             </>}
           </div>
-          {authorityLink?<Help>Prepare source checks and send to the named reviewer in Authority monitoring. This task completes when its monitoring record is independently approved.</Help>:null}
+          {authorityLink?<Help>Prepare source checks and send to the named reviewer in Authority monitoring. This task completes when its monitoring record is independently approved.</Help>:task.metadata?.department_request_id?<Help>Upload received documents under Evidence, then use the company Requests tab to mark receipt, assign an independent reviewer and complete the controlled workflow. Task status follows the request automatically.</Help>:null}
         </div>
 
         <div className={styles.info} id="evidence" hidden={tab!=="evidence"}><h3>Evidence & documents</h3>
