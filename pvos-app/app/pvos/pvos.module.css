@@ -261,3 +261,55 @@
  .requestDrawerBody{padding:16px}
  .requestHistoryItem{grid-template-columns:75px minmax(0,1fr)}
 }
+
+
+/* Notification center */
+.sidebarBrandRow{display:flex;align-items:flex-start;justify-content:space-between;gap:5px}
+.sidebarBrandRow .brand{padding-left:7px;padding-right:0;min-width:0;gap:8px}
+.sidebarBrandRow .brand>div{font-size:19px}
+.notificationRoot{position:relative;flex:0 0 auto;z-index:150}
+.notificationBell{appearance:none;position:relative;display:grid;place-items:center;width:35px;height:35px;margin-top:5px;background:transparent;color:#92a2af;border:1px solid transparent;border-radius:10px;cursor:pointer}
+.notificationBell:hover,.notificationBell[aria-expanded="true"]{color:#e4edf3;background:#1a242c;border-color:#33434c}
+.notificationBell:focus-visible{outline:2px solid #a4ca51;outline-offset:2px}
+.notificationCount{position:absolute;top:-4px;right:-7px;display:grid;place-items:center;min-width:17px;height:17px;padding:0 3px;box-sizing:border-box;font-size:10px;line-height:1;border-radius:10px;background:#c7fe53;color:#1e2a0b;font-weight:800;border:2px solid #0a0e12;white-space:nowrap}
+.notificationPanel{position:fixed;top:71px;left:204px;width:min(390px,calc(100vw - 20px));max-height:min(520px,calc(100vh - 96px));display:flex;flex-direction:column;background:#111820;border:1px solid #30404b;color:#e9f0f5;box-shadow:0 20px 65px rgba(0,0,0,.43);border-radius:15px;overflow:hidden;z-index:2500}
+.notificationPanelHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:15px 16px;border-bottom:1px solid #29343d}
+.notificationPanelHeader>div{display:grid;gap:4px}
+.notificationPanelHeader strong{font-size:14px}
+.notificationPanelHeader span{font-size:11px;color:#93a5b1}
+.notificationPanelHeader button{appearance:none;background:none;border:0;padding:7px 3px;color:#bad8ed;font-weight:600;font-size:11px;cursor:pointer;white-space:nowrap}
+.notificationPanelHeader button:hover:not(:disabled){text-decoration:underline}
+.notificationPanelHeader button:disabled{opacity:.4;cursor:default}
+.notificationList{overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.notificationItem{display:grid;gap:5px;width:100%;appearance:none;background:transparent;text-align:left;color:inherit;border:0;border-bottom:1px solid #26323b;padding:13px 16px;font:inherit;cursor:pointer}
+.notificationItem:last-child{border-bottom:0}
+.notificationItem:hover{background:#1b2730}
+.notificationItem[data-unread="true"]{background:#1c2931}
+.notificationItem[data-unread="true"]:hover{background:#24343e}
+.notificationItem:focus-visible{outline:2px solid #b1d859;outline-offset:-2px}
+.notificationItemTop{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.notificationItemTop strong{font-weight:650;font-size:12.5px}
+.notificationUnreadDot{width:7px;height:7px;border-radius:50%;background:#b6e84a;flex-shrink:0}
+.notificationItemDesc{color:#b3c0c9;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.notificationItemMeta{font-size:11px;color:#8394a2}
+.notificationEmpty{padding:25px 16px;color:#96a5b0;text-align:center;font-size:12px;line-height:1.6}
+.notificationError{margin:10px 12px 0;color:#e99a93;font-size:12px}
+.notificationPanelFooter{padding:10px 14px;border-top:1px solid #29343d;color:#8da0ad;font-size:11px;text-align:center}
+.light .notificationBell{color:#637684}
+.light .notificationBell:hover,.light .notificationBell[aria-expanded="true"]{color:#17262e;background:#e8eef1;border-color:#dbe4e7}
+.light .notificationCount{border-color:#f5f8f9}
+.light .notificationPanel{background:#fff;color:#192831;border-color:#dfe7ea;box-shadow:0 18px 60px #2335442d}
+.light .notificationPanelHeader,.light .notificationItem,.light .notificationPanelFooter{border-color:#e5ecef}
+.light .notificationPanelHeader span,.light .notificationItemMeta{color:#6f828e}
+.light .notificationPanelHeader button{color:#3d606b}
+.light .notificationItemDesc{color:#617580}
+.light .notificationItem:hover{background:#f3f7f8}
+.light .notificationItem[data-unread="true"]{background:#edf5f5}
+.light .notificationItem[data-unread="true"]:hover{background:#e4eeef}
+.light .notificationEmpty{color:#647b88}
+@media(max-width:1000px){
+ .notificationPanel{left:auto;right:16px;top:72px}
+}
+@media(max-width:650px){
+ .notificationPanel{left:12px;right:12px;top:70px;width:calc(100vw - 24px);max-height:min(520px,calc(100vh - 85px))}
+}
