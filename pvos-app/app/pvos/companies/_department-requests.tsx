@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {Badge,Help} from "../_components";
 import {pvosSupabase} from "../_pvos-supabase";
 import styles from "../pvos.module.css";
@@ -43,7 +43,7 @@ function statusFor(r:RequestRow,documents:Evidence[]|undefined=undefined){
 }
 const toneFor=(status:string):"default"|"green"|"amber"|"red"=>status==="Complete"?"green":status==="Corrections needed"?"red":status==="Waiting for department"?"amber":status==="Ready for review"?"green":"default";
 function isOverdue(r:RequestRow){return !["complete","cancelled"].includes(r.status)&&new Date(r.due_at).getTime()<Date.now();}
-export function DepartmentRequests({companyId,organizationId,products,onChanged}:{companyId:string;organizationId:string;products:any[];onChanged?:()=>void}){
+export function DepartmentRequests({companyId,organizationId,products,onChanged,initialRequestId,startCreate}:{companyId:string;organizationId:string;products:any[];onChanged?:()=>void;initialRequestId?:string|null;startCreate?:boolean}){
  const [rows,setRows]=useState<RequestRow[]>([]),[members,setMembers]=useState<Member[]>([]),[currentUser,setCurrentUser]=useState("");
  const [evidenceMap,setEvidenceMap]=useState<Record<string,Evidence[]>>({});
  const [openCreate,setOpenCreate]=useState(false),[opened,setOpened]=useState<string|null>(null),[advanced,setAdvanced]=useState(false);
@@ -56,6 +56,7 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
  const [actionNote,setActionNote]=useState(""),[reviewerAssignment,setReviewerAssignment]=useState("");
  const [selectedEvidence,setSelectedEvidence]=useState("");
  const [revision,setRevision]=useState(0);
+ const externalOpenRef=useRef("");
  const current=rows.find(r=>r.id===opened)||null;
  const memberName=(id:string|null)=>members.find(m=>m.user_id===id)?.email||"Not assigned";
  const load=useCallback(async()=>{
@@ -90,6 +91,14 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
   setEvidence(e.data||[]);setHistory(h.data||[]);
  },[]);
  useEffect(()=>{load().catch(e=>setError(e.message));},[load]);
+ useEffect(()=>{if(startCreate)setOpenCreate(true);},[startCreate]);
+ useEffect(()=>{
+  if(initialRequestId&&rows.some(r=>r.id===initialRequestId)&&externalOpenRef.current!==initialRequestId){
+   externalOpenRef.current=initialRequestId;
+   setOpened(initialRequestId);
+   setRevision(v=>v+1);
+  }
+ },[initialRequestId,rows]);
  useEffect(()=>{
   if(!openCreate&&!opened)return;
   const onKey=(e:KeyboardEvent)=>{if(e.key==="Escape"){setOpenCreate(false);setOpened(null);}};
