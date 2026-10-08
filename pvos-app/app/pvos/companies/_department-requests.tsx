@@ -4,7 +4,7 @@ import {useCallback,useEffect,useState,type FormEvent} from "react";
 import {Badge,Help} from "../_components";
 import {pvosSupabase} from "../_pvos-supabase";
 import styles from "../pvos.module.css";
-type RequestRow={id:string,company_id:string,product_id:string|null,task_id:string,request_type:string,department:string,recipient_user_id:string|null,recipient_email:string|null,requester_user_id:string,reviewer_user_id:string,details:string,external_reference:string|null,status:string,response_note:string|null,decision_note:string|null,followup_count:number,last_followup_at:string|null,due_at:string};
+type RequestRow={id:string,company_id:string,product_id:string|null,task_id:string,request_type:string,department:string,recipient_user_id:string|null,recipient_email:string|null,requester_user_id:string,reviewer_user_id:string|null,details:string,external_reference:string|null,status:string,response_note:string|null,decision_note:string|null,followup_count:number,last_followup_at:string|null,due_at:string};
 type Member={user_id:string,email:string,role:string};
 const types=[["invoice","Invoice"],["regulatory_history","Registration history"],["safety_data","Safety / case data"],["labelling","Label / PIL"],["document","Controlled document"],["other","Other information"]];
 const date=(s:string)=>new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeZone:"Asia/Riyadh"}).format(new Date(s));
@@ -15,6 +15,7 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
  const [recipient,setRecipient]=useState(""),[email,setEmail]=useState(""),[reviewer,setReviewer]=useState("");
  const [details,setDetails]=useState(""),[reference,setReference]=useState(""),[due,setDue]=useState("");
  const [notes,setNotes]=useState<Record<string,string>>({});
+ const [reviewerAssignments,setReviewerAssignments]=useState<Record<string,string>>({});
  const [currentUser,setCurrentUser]=useState("");
  const load=useCallback(async()=>{
   const [r,m,u]=await Promise.all([
@@ -50,6 +51,17 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
    await load();onChanged?.();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
+ async function assignReviewer(id:string){
+  const reviewerId=reviewerAssignments[id];
+  if(!reviewerId)return;
+  setBusy(true);setError("");setMessage("");
+  try{
+   const {error:e}=await pvosSupabase.rpc("pvos_assign_department_reviewer",{p_request_id:id,p_reviewer_id:reviewerId});
+   if(e)throw e;
+   setMessage("Independent reviewer assigned. They can now approve or return received evidence.");
+   await load();onChanged?.();
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
  return <div style={{display:"grid",gap:16}}>
   <section className={styles.panel}>
    <div className={styles.panelHeader}><h2>Departmental information & invoices</h2><Help>Request information from Finance, Regulatory, Medical or another department. Records track who owes what, when, receipt, evidence, and independent review. Mark requested and follow-up actions log external communication; they do not send emails.</Help></div>
@@ -61,12 +73,12 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
       <label>Product (optional)<select className={styles.input} value={product} onChange={e=>setProduct(e.target.value)}><option value="">Company-wide</option>{products.map(p=><option key={p.id} value={p.id}>{p.brand_name}</option>)}</select></label>
       <label>Internal recipient (optional)<select className={styles.input} value={recipient} onChange={e=>setRecipient(e.target.value)}><option value="">External department / not on PVOS</option>{members.map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}</select></label>
       <label>External recipient email (optional)<input className={styles.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="finance@example.com"/></label>
-      <label>Independent reviewer<select required className={styles.input} value={reviewer} onChange={e=>setReviewer(e.target.value)}><option value="">Select reviewer</option>{members.filter(m=>m.user_id!==currentUser).map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}</select></label>
+      <label>Independent reviewer (optional until final review)<select className={styles.input} value={reviewer} onChange={e=>setReviewer(e.target.value)}><option value="">Select reviewer</option>{members.filter(m=>m.user_id!==currentUser).map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}</select></label>
       <label>Deadline<input required className={styles.input} type="date" value={due} onChange={e=>setDue(e.target.value)}/></label>
       <label>Invoice / department reference (optional)<input className={styles.input} value={reference} onChange={e=>setReference(e.target.value)} placeholder="PO or request reference"/></label>
      </div>
      <label>Information or documentation required<textarea required className={styles.input} value={details} onChange={e=>setDetails(e.target.value)} rows={3} placeholder="What exactly must the department provide, and for which regulatory activity?"/></label>
-     <div><button type="submit" className={styles.button} disabled={busy||!reviewer}>Create request</button></div>
+     <div><button type="submit" className={styles.button} disabled={busy}>Create request</button></div>
     </form>
    </div>
   </section>
@@ -85,6 +97,14 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
      </div>
      <Badge tone={r.status==="complete"?"green":r.status==="waiting"?"amber":"default"}>{r.status==="waiting"?"Waiting for department":r.status==="received"?"Ready for review":r.status}</Badge>
     </div>
+    {!r.reviewer_user_id&&r.status!=="complete"&&r.status!=="cancelled"?<div style={{display:"flex",gap:8,alignItems:"center",marginTop:12,flexWrap:"wrap"}}>
+     <select aria-label="Assign reviewer" className={styles.input} value={reviewerAssignments[r.id]||""} onChange={e=>setReviewerAssignments(p=>({...p,[r.id]:e.target.value}))}>
+      <option value="">Assign reviewer when available</option>
+      {members.filter(m=>m.user_id!==r.requester_user_id).map(m=><option key={m.user_id} value={m.user_id}>{m.email} · {m.role}</option>)}
+     </select>
+     <button className={styles.buttonGhost} disabled={busy||!reviewerAssignments[r.id]} onClick={()=>assignReviewer(r.id)}>Assign reviewer</button>
+     <Help>An independent workspace member is required before approval; requests and follow-ups can begin now.</Help>
+    </div>:null}
     {r.status!=="complete"&&r.status!=="cancelled"?<div style={{display:"grid",gap:8,marginTop:12}}>
      <label>Action note<input className={styles.input} value={notes[r.id]||""} onChange={e=>setNotes(p=>({...p,[r.id]:e.target.value}))} placeholder={r.status==="waiting"?"Receipt note required when marking received":"Explain the action or review decision"}/></label>
      <div className={styles.inlineActions}>
