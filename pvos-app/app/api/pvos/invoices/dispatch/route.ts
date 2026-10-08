@@ -1,7 +1,8 @@
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "@supabase/supabase-js";
+import {sendPvosSmtpMessage} from "../_smtp";
 
-// All sends are server-side. A browser never receives Resend or service-role secrets.
+// All sends are server-side. A browser never receives SMTP or service-role secrets.
 // Without configured credentials, notices stay queued and are visible in PVOS.
 export const dynamic="force-dynamic";
 const URL=process.env.NEXT_PUBLIC_PVOS_SUPABASE_URL||"https://kvhmxjfenjtzfavyhnvb.supabase.co";
@@ -17,9 +18,9 @@ const topics:Record<string,string>={
 };
 function serverConfig(){
  const serviceKey=process.env.PVOS_SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY;
- const resendKey=process.env.RESEND_API_KEY;
- const sender=process.env.PVOS_MAIL_FROM;
- return serviceKey&&resendKey&&sender?{serviceKey,resendKey,sender}:null;
+ const smtpUser=process.env.PVOS_SMTP_USER;
+ const smtpPassword=process.env.PVOS_SMTP_PASSWORD;
+ return serviceKey&&smtpUser&&smtpPassword?{serviceKey}:null;
 }
 async function deliver(invoiceId:string|null){
  const cfg=serverConfig();
@@ -37,15 +38,9 @@ async function deliver(invoiceId:string|null){
    const body="PVOS Invoice Processing\n\n"+subject+"\nCompany: "+n.company_name+
       "\n\nSign in to review the current status or take action:\n"+url+
       "\n\nThis is an automated notification. No patient information or invoice attachment is included.\n";
-   const response=await fetch("https://api.resend.com/emails",{
-    method:"POST",headers:{"Authorization":"Bearer "+cfg.resendKey,"Content-Type":"application/json","Idempotency-Key":n.id},
-    body:JSON.stringify({from:cfg.sender,to:[n.recipient_email],subject:"PVOS · "+subject,text:body}),
-    signal:AbortSignal.timeout(15000)
-   });
-   const payload=await response.json().catch(()=>({}));
-   if(response.ok&&payload.id){success=true;providerId=String(payload.id);sent++;}
-   else{failReason="Provider returned HTTP "+response.status;failed++;}
-  }catch{failReason="Email provider could not be reached";failed++;}
+   providerId=await sendPvosSmtpMessage({to:n.recipient_email,subject:"PVOS · "+subject,body});
+   success=true;sent++;
+  }catch{failReason="iCloud SMTP send failed";failed++;}
   const {error:finishError}=await supabase.rpc("pvos_invoice_mail_finish",{
    p_notice_id:n.id,p_success:success,p_provider_id:providerId,p_error:success?null:failReason
   });
