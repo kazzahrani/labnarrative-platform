@@ -12,20 +12,20 @@ type Invoice={
  status:string;due_on:string|null;created_at:string;updated_at:string;completed_at:string|null;payment_reference:string|null;payment_date:string|null;payment_note?:string|null;
  requested_by:string;head_user_id:string;finance_user_id:string;requester_email:string;head_email:string;finance_email:string;last_returned_at?:string|null;file_count?:number;
  events?:{action:string;previous_status:string|null;next_status:string|null;note:string|null;created_at:string;actor_email:string}[];
- files?:{id:string;filename:string;storage_path:string;created_at:string;uploaded_by:string}[];
+ files?:{id:string;filename:string;storage_path:string;kind:"invoice"|"payment_proof";created_at:string;uploaded_by:string}[];
 };
 type InboxEvent={id:string;invoice_id:string;event_type:string;created_at:string;delivery_status:string};
 type Company={id:string;name:string};
 const stages:Record<string,string>={
- head_review:"Head approval",returned_head:"Returned by Head",finance_review:"Finance approval",
+ draft:"Draft · Attach PDF",head_review:"Head approval",returned_head:"Returned by Head",finance_review:"Finance approval",
  returned_finance:"Returned by Finance",awaiting_payment:"Awaiting payment confirmation",paid:"Payment completed"
 };
-const actions:Record<string,string>={created:"Submitted",file_uploaded:"Invoice PDF uploaded",head_approve:"Head approved",head_return:"Head returned",
+const actions:Record<string,string>={created:"Draft created",submit:"Submitted to Head",file_uploaded:"Invoice PDF uploaded",payment_proof_uploaded:"Payment proof attached",head_approve:"Head approved",head_return:"Head returned",
  finance_approve:"Finance approved",finance_return:"Finance returned",resubmit:"Resubmitted",confirm_paid:"Payment executed"};
 function tone(stage:string):"green"|"amber"|"red"|"default"{return stage==="paid"?"green":stage.startsWith("returned")?"red":"amber";}
 const fmt=(d:string)=>new Date(d).toLocaleString("en-GB",{timeZone:"Asia/Riyadh",dateStyle:"medium",timeStyle:"short"});
 function allowed(i:Invoice,uid:string){
- return i.status==="head_review"?i.head_user_id===uid:i.status==="finance_review"||i.status==="awaiting_payment"?i.finance_user_id===uid:
+ return i.status==="draft"?i.requested_by===uid:i.status==="head_review"?i.head_user_id===uid:i.status==="finance_review"||i.status==="awaiting_payment"?i.finance_user_id===uid:
  (i.status==="returned_head"||i.status==="returned_finance")&&i.requested_by===uid;
 }
 export default function InvoiceProcessingPage(){
@@ -85,21 +85,21 @@ export default function InvoiceProcessingPage(){
    });
    if(e2)throw e2;
    setShowCreate(false);setTitle("");setDescription("");setReference("");setAmount("");setHeadEmail("");setFinanceEmail("");setDueOn("");
-   setMessage("Invoice submitted to the Head approval queue. No payment has been made.");
+   setMessage("Draft created. Upload the invoice PDF, then click Submit to Head. No approval notification has been sent yet.");
    await reload();setOpened(data.id);await loadDetail(data.id);void dispatchNotice(data.id);
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- async function upload(file:File|null){
+ async function upload(file:File|null,kind:"invoice"|"payment_proof"="invoice"){
   if(!file||!current)return;
   if(file.type!=="application/pdf"||file.size>25*1024*1024){setError("Upload a PDF under 25 MB.");return;}
   setFileBusy(true);setError("");setMessage("");
   try{
-   const path=current.id+"/"+crypto.randomUUID()+".pdf";
+   const path=current.id+"/"+(kind==="payment_proof"?"proof-":"")+crypto.randomUUID()+".pdf";
    const uploaded=await pvosSupabase.storage.from("pvos-invoices").upload(path,file,{contentType:"application/pdf",upsert:false});
    if(uploaded.error)throw uploaded.error;
-   const r=await pvosSupabase.rpc("pvos_invoice_record_file",{p_invoice_id:current.id,p_path:path,p_filename:file.name});
+   const r=await pvosSupabase.rpc(kind==="payment_proof"?"pvos_invoice_record_payment_proof":"pvos_invoice_record_file",{p_invoice_id:current.id,p_path:path,p_filename:file.name});
    if(r.error)throw r.error;
-   await refresh();setMessage("PDF uploaded as a new immutable invoice version.");
+   await refresh();setMessage(kind==="payment_proof"?"Payment evidence uploaded. Finance must still explicitly confirm execution.":"PDF uploaded as a new immutable invoice version.");
   }catch(e){setError((e as Error).message);}finally{setFileBusy(false);if(fileInput.current)fileInput.current.value="";}
  }
  async function openFile(path:string){
@@ -123,8 +123,9 @@ export default function InvoiceProcessingPage(){
    await refresh();void dispatchNotice(current.id);
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- const canUpload=current&&uid===current.requested_by&&["head_review","returned_head","returned_finance"].includes(current.status);
- const nextActor=current?.status==="head_review"?current.head_email:current?.status==="finance_review"||current?.status==="awaiting_payment"?current.finance_email:current?.status?.startsWith("returned")?current.requester_email:"—";
+ const canUpload=current&&uid===current.requested_by&&["draft","head_review","returned_head","returned_finance"].includes(current.status);
+ const canUploadProof=current&&uid===current.finance_user_id&&current.status==="awaiting_payment";
+ const nextActor=current?.status==="draft"?current.requester_email:current?.status==="head_review"?current.head_email:current?.status==="finance_review"||current?.status==="awaiting_payment"?current.finance_email:current?.status?.startsWith("returned")?current.requester_email:"—";
  return <div>
   <Header eyebrow="Requests · Invoice processing" title="Invoice processing"
    sub="Head approval → Finance approval → payment execution → QPPV confirmation. The system records actions; it does not transfer funds."
@@ -169,8 +170,8 @@ export default function InvoiceProcessingPage(){
      </div>
      <label className={styles.requestField}>Invoice title<input className={styles.input} required minLength={4} value={title} onChange={e=>setTitle(e.target.value)} placeholder="October PV services invoice"/></label>
      <label className={styles.requestField}>Processing details<textarea className={styles.input} required minLength={4} rows={3} value={description} onChange={e=>setDescription(e.target.value)} placeholder="What is being paid, and what must be checked?"/></label>
-     <div className={styles.muted}>Both approvers need existing PVOS login accounts. Each receives access only to their assigned invoice. A PDF must be uploaded before Head approval. Email sending is enabled only after mail transport is configured.</div>
-     <div className={styles.requestDialogActions}><button type="button" className={styles.buttonGhost} onClick={()=>setShowCreate(false)}>Cancel</button><button className={styles.button} type="submit" disabled={busy}>{busy?"Submitting...":"Start processing"}</button></div>
+     <div className={styles.muted}>Both approvers need existing PVOS login accounts. Each receives access only to their assigned invoice. The invoice starts as a draft; attach a PDF and submit it to notify the Head. Email sending requires transport configuration.</div>
+     <div className={styles.requestDialogActions}><button type="button" className={styles.buttonGhost} onClick={()=>setShowCreate(false)}>Cancel</button><button className={styles.button} type="submit" disabled={busy}>{busy?"Saving...":"Create draft"}</button></div>
     </form>
    </div>
   </div>:null}
@@ -194,8 +195,9 @@ export default function InvoiceProcessingPage(){
       </div>
       <section className={styles.requestDetailSection}>
        <h3>Invoice PDF versions</h3>
-       {current.files?.length?current.files.map((file,i)=><div className={styles.requestEvidence} key={file.id}><div><strong>{file.filename}{i===0?" · Latest":""}</strong><span className={styles.muted}>{fmt(file.created_at)} · {file.uploaded_by}</span></div><button className={styles.buttonGhost} onClick={()=>openFile(file.storage_path)}>Open PDF</button></div>):<p className={styles.muted}>No invoice PDF uploaded yet.</p>}
-       {canUpload?<div><input ref={fileInput} type="file" accept="application/pdf,.pdf" className={styles.input} onChange={e=>{void upload(e.target.files?.[0]||null)}} disabled={fileBusy}/>{fileBusy?<p className={styles.muted}>Uploading...</p>:<p className={styles.muted}>Private PDF · max 25 MB · every upload creates a new version.</p>}</div>:null}
+       {current.files?.length?current.files.map((file,i)=><div className={styles.requestEvidence} key={file.id}><div><strong>{file.filename}{file.kind==="payment_proof"?" · Payment proof":i===0?" · Latest":""}</strong><span className={styles.muted}>{fmt(file.created_at)} · {file.uploaded_by}</span></div><button className={styles.buttonGhost} onClick={()=>openFile(file.storage_path)}>Open PDF</button></div>):<p className={styles.muted}>No invoice PDF uploaded yet.</p>}
+       {canUpload?<div><input ref={fileInput} type="file" accept="application/pdf,.pdf" className={styles.input} onChange={e=>{void upload(e.target.files?.[0]||null)}} disabled={fileBusy}/>{fileBusy?<p className={styles.muted}>Uploading...</p>:<p className={styles.muted}>Private invoice PDF · max 25 MB · every upload creates a new version.</p>}</div>:null}
+       {canUploadProof?<div><label className={styles.requestField}>Payment proof (optional)<input type="file" accept="application/pdf,.pdf" className={styles.input} onChange={e=>{void upload(e.target.files?.[0]||null,"payment_proof")}} disabled={fileBusy}/></label><p className={styles.muted}>Upload a PDF receipt if available, then confirm the payment separately.</p></div>:null}
       </section>
       {current.status==="paid"?<div className={styles.requestApproved}><strong>Payment confirmed by Finance</strong><p>{current.payment_reference} · {current.payment_date}</p>{current.payment_note?<p>{current.payment_note}</p>:null}<p className={styles.muted}>This records Finance's confirmation; PVOS did not execute a transfer.</p></div>:null}
       {allowed(current,uid)?<section className={styles.requestDetailSection}>
@@ -206,11 +208,13 @@ export default function InvoiceProcessingPage(){
         <label>Actual payment date<input className={styles.input} type="date" value={payDate} onChange={e=>setPayDate(e.target.value)}/></label>
        </div>:null}
        <div className={styles.requestActionRow}>
-        {current.status==="head_review"?<><button className={styles.button} disabled={busy||!current.files?.length} onClick={()=>act("head_approve")}>Approve → Finance</button><button className={styles.buttonGhost} disabled={busy||note.trim().length<4} onClick={()=>act("head_return")}>Return for corrections</button></>:null}
+        {current.status==="draft"?<button className={styles.button} disabled={busy||!(current.files||[]).some(f=>f.kind==="invoice")} onClick={()=>act("submit")}>Submit to Head for approval</button>:null}
+        {current.status==="head_review"?<><button className={styles.button} disabled={busy||!(current.files||[]).some(f=>f.kind==="invoice")} onClick={()=>act("head_approve")}>Approve → Finance</button><button className={styles.buttonGhost} disabled={busy||note.trim().length<4} onClick={()=>act("head_return")}>Return for corrections</button></>:null}
         {current.status==="finance_review"?<><button className={styles.button} disabled={busy} onClick={()=>act("finance_approve")}>Finance approve</button><button className={styles.buttonGhost} disabled={busy||note.trim().length<4} onClick={()=>act("finance_return")}>Return for corrections</button></>:null}
         {current.status==="awaiting_payment"?<button className={styles.button} disabled={busy||payRef.trim().length<3||!payDate} onClick={()=>act("confirm_paid")}>Confirm payment executed</button>:null}
-        {current.status.startsWith("returned")?<button className={styles.button} disabled={busy||!(current.files||[]).some(f=>current.last_returned_at&&new Date(f.created_at)>new Date(current.last_returned_at))} onClick={()=>act("resubmit")}>Resubmit corrected PDF</button>:null}
+        {current.status.startsWith("returned")?<button className={styles.button} disabled={busy||!(current.files||[]).some(f=>f.kind==="invoice"&&current.last_returned_at&&new Date(f.created_at)>new Date(current.last_returned_at))} onClick={()=>act("resubmit")}>Resubmit corrected PDF</button>:null}
        </div>
+       {current.status==="draft"&&!current.files?.some(f=>f.kind==="invoice")?<p className={styles.muted}>Upload the invoice PDF to enable Submit to Head.</p>:null}
        {current.status==="head_review"&&!current.files?.length?<p className={styles.muted}>The requester must upload a PDF before Head approval.</p>:null}
        {current.status.startsWith("returned")?<p className={styles.muted}>Requester must upload a fresh PDF version after the return before resubmitting.</p>:null}
       </section>:null}
