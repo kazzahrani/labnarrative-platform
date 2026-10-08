@@ -47,13 +47,6 @@ begin
  if p_action='return' and (r.reviewer_user_id is null or auth.uid()<>r.reviewer_user_id) then
    raise exception 'Assign an independent reviewer before making a review decision'; end if;
  if p_action in ('mark_received','return') and length(trim(coalesce(p_note,'')))<4 then raise exception 'Provide a receipt/return note'; end if;
- if false and not exists(
-  select 1 from public.pvos_task_evidence e
-  where e.task_id=r.task_id and e.archived_at is null
-    and (r.request_type not in ('invoice','document','labelling')
-      or e.file_path is not null or e.external_url is not null)
- ) then
-  raise exception 'Attach received evidence (a document is required for invoices, labelling and controlled documents) before approval'; end if;
  update public.pvos_department_requests set status=next_status,
   requested_at=case when p_action='mark_requested' then now() else requested_at end,
   received_at=case when p_action='mark_received' then now() else received_at end,
