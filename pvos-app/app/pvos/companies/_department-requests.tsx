@@ -112,8 +112,10 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
   setError("");setMessage("");setActionNote("");setSelectedEvidence("");setReviewerAssignment("");
   setEvidence([]);setHistory([]);setOpened(r.id);setRevision(v=>v+1);
  }
- async function create(e:FormEvent){
-  e.preventDefault();setBusy(true);setError("");setMessage("");
+ async function create(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();
+  const markRequested=(e.nativeEvent as SubmitEvent).submitter?.getAttribute("data-create-mode")==="requested";
+  setBusy(true);setError("");setMessage("");
   try{
    const {data,error:e2}=await pvosSupabase.rpc("pvos_new_department_request",{
     p_company_id:companyId,p_product_id:product||null,p_request_type:type,p_department:department.trim(),
@@ -121,8 +123,21 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
     p_details:details.trim(),p_reference:reference.trim()||null,p_due_date:due
    });
    if(e2)throw e2;
+   // Creation and requesting are deliberately separate audited actions. A failed
+   // transition must never trigger a second creation or suggest contact was sent.
+   let transitionError="";
+   if(markRequested&&data?.request_id){
+    const result=await pvosSupabase.rpc("pvos_act_department_request",{
+     p_request_id:data.request_id,p_action:"mark_requested",p_note:null
+    });
+    if(result.error)transitionError=result.error.message;
+   }
    await load();onChanged?.();resetModal();setFilter("open");setSearch("");
-   setMessage("Request created. Mark it requested after contacting the department; no email was sent.");
+   setMessage(transitionError?
+    "Request saved as Draft, but marking it requested failed: "+transitionError+" Open the request to retry.":
+    markRequested?
+     "Request created and marked as Waiting for department. No email was sent by PVOS.":
+     "Request saved as Draft. Nothing was sent.");
    if(data?.request_id){setOpened(data.request_id);setRevision(v=>v+1);}
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
@@ -208,9 +223,9 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
       <label>Internal recipient<select className={styles.input} value={recipient} onChange={e=>setRecipient(e.target.value)}><option value="">External department</option>{members.map(m=><option key={m.user_id} value={m.user_id}>{m.email}</option>)}</select></label>
       <label>Independent reviewer<select className={styles.input} value={reviewer} onChange={e=>setReviewer(e.target.value)}><option value="">Assign later</option>{members.filter(m=>m.user_id!==currentUser).map(m=><option key={m.user_id} value={m.user_id}>{m.email}</option>)}</select></label>
      </div>:null}
-     <div className={styles.muted}>Creating a request does not email the department. You'll record when it has been sent.</div>
+     <div className={styles.muted}>Choose <strong>Save as draft</strong> if you have not contacted the department. Choose <strong>Create &amp; mark requested</strong> only if you already contacted them (or are simulating this in a test). PVOS does not send an email.</div>
      {error?<div className={styles.errorBox} role="alert">{error}</div>:null}
-     <div className={styles.requestDialogActions}><button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>setOpenCreate(false)}>Cancel</button><button type="submit" className={styles.button} disabled={busy}>{busy?"Creating...":"Create request"}</button></div>
+     <div className={styles.requestDialogActions}><button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>setOpenCreate(false)}>Cancel</button><button type="submit" data-create-mode="draft" className={styles.buttonGhost} disabled={busy}>{busy?"Saving...":"Save as draft"}</button><button type="submit" data-create-mode="requested" className={styles.button} disabled={busy}>{busy?"Saving...":"Create & mark requested"}</button></div>
     </form>
    </div>
   </div>:null}
