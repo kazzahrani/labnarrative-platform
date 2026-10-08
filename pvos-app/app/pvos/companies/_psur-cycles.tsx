@@ -180,12 +180,17 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      <td>{c.submission_due_date}</td><td>{c.jurisdiction==="reference_only"?"Unverified":c.jurisdiction.toUpperCase()}</td>
      <td title={c.source_revision}>{c.source_revision}</td><td><Badge tone={c.status==="confirmed"?"green":"amber"}>{c.status==="draft"?"Needs confirmation":c.status}</Badge></td>
      <td>
-      <div className={styles.inlineActions}>
-       {c.task_id?<Link className={styles.buttonGhost} href={"/pvos/tasks/"+c.task_id}>Open task</Link>:c.status==="draft"?<>
-        <button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button>
-        <button type="button" className={styles.buttonGhost} disabled={busy||c.jurisdiction==="reference_only"||!c.authority_basis} style={c.jurisdiction==="reference_only"||!c.authority_basis?{opacity:0.4,cursor:"not-allowed",filter:"grayscale(1)"}:undefined} title={c.jurisdiction==="reference_only"?"Verify the applicable authority before scheduling":!c.authority_basis?"Record the regulatory basis before scheduling":undefined} onClick={()=>confirm(c.id)}>{c.jurisdiction==="reference_only"?"Scheduling blocked — verify authority":!c.authority_basis?"Scheduling blocked — document basis":"Confirm & schedule"}</button>
-       </>:null}
-       <button type="button" className={styles.buttonGhost} onClick={()=>{setPreviewId(c.id===previewId?null:c.id);setPreviewOffset(30);}}>{c.id===previewId?"Hide preview":"Preview reminders"}</button>
+      <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-start"}}>
+       <div className={styles.inlineActions} style={{marginTop:0}}>
+        {c.task_id?<Link className={styles.buttonGhost} href={"/pvos/tasks/"+c.task_id}>Open task</Link>:c.status==="draft"?<button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button>:null}
+        <button type="button" className={styles.buttonGhost} onClick={()=>{setPreviewId(c.id===previewId?null:c.id);setPreviewOffset(30);}}>{c.id===previewId?"Hide preview":"Preview reminders"}</button>
+       </div>
+       {c.status==="draft"&&!c.task_id?c.jurisdiction==="reference_only"?
+        <span className={styles.muted} style={{fontSize:12}}>Scheduling blocked — verify authority</span>:
+        !c.authority_basis?.trim()?
+        <span className={styles.muted} style={{fontSize:12}}>Scheduling blocked — document regulatory basis</span>:
+        <button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>confirm(c.id)}>Confirm &amp; schedule</button>
+       :null}
       </div>
      </td>
     </tr>)}
