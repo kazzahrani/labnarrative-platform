@@ -22,7 +22,13 @@ export default function CompanyPage(){
   const params=useParams<{id:string}>();
   const {session,organizationId,reloadToken,refresh}=usePVOS();
   const [tab,setTab]=useState("overview"),[workView,setWorkView]=useState("active"),[work,setWork]=useState<WorkData|null>(null),[workError,setWorkError]=useState(""),[showNew,setShowNew]=useState(false);
-  useEffect(()=>{const p=new URLSearchParams(window.location.search);if(["overview","work","products","psur","departments","documents","history"].includes(p.get("tab")||""))setTab(p.get("tab")!);},[]);
+  const [initialRequestId,setInitialRequestId]=useState<string|null>(null),[startDepartmentRequest,setStartDepartmentRequest]=useState(false);
+  useEffect(()=>{
+   const p=new URLSearchParams(window.location.search);
+   if(["overview","work","products","psur","departments","documents","history"].includes(p.get("tab")||""))setTab(p.get("tab")!);
+   setInitialRequestId(p.get("request"));
+   setStartDepartmentRequest(p.get("new")==="1");
+  },[]);
   useEffect(()=>{if(!organizationId||!session)return;let active=true;setWorkError("");readWork(organizationId,session.user.id).then(d=>{if(active)setWork(d)}).catch(e=>{if(active)setWorkError(e.message)});return()=>{active=false}},[organizationId,session?.user.id,reloadToken]);
   const [company,setCompany]=useState<any|null>(null);
   const [products,setProducts]=useState<any[]>([]);
@@ -62,7 +68,7 @@ export default function CompanyPage(){
     {tab==="work"?<section className={styles.panel}><div className={styles.sectionBody}><Tabs label="Company work views" value={workView} onChange={setWorkView} items={[{id:"active",label:`Active (${active.length})`},{id:"scheduled",label:`Scheduled (${scheduled.length})`},{id:"completed",label:`Completed (${completed.length})`}]}/></div>{work?<WorkList items={visible} companies={work.companies} members={work.members} userId={session?.user.id} showCompany={false}/>:<div className={styles.empty}>Loading work…</div>}</section>:null}
     {tab==="products"?<ProductRegister companyId={company.id} organizationId={company.organization_id} products={products} onSaved={p=>setProducts(rows=>rows.map(row=>row.id===p.id?p:row))}/>:null}
     {tab==="psur"?<PsurCycles companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh}/>:null}
-    {tab==="departments"?<DepartmentRequests companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh}/>:null}
+    {tab==="departments"?<DepartmentRequests companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh} initialRequestId={initialRequestId} startCreate={startDepartmentRequest}/>:null}
     {tab==="documents"||tab==="history"?<CompanyRecords companyId={company.id} organizationId={company.organization_id} view={tab}/>:null}
     <NewTaskModal open={showNew} initialCompanyId={company.id} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);refresh()}}/>
   </>;
