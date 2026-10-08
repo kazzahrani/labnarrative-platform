@@ -134,7 +134,7 @@ export default function InvoiceProcessingPage(){
  return <div>
   <Header eyebrow="Requests · Invoice processing" title="Invoice processing"
    sub="Head approval → Finance approval → payment execution → QPPV confirmation. The system records actions; it does not transfer funds."
-   action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href="/pvos/companies">Companies</Link>{companies.length?<button className={styles.button} onClick={()=>{setError("");setShowCreate(true);}}>+ Process invoice</button>:null}</div>}/>
+   action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href="/pvos/requests">← All requests</Link>{companies.length?<button className={styles.button} onClick={()=>{setError("");setShowCreate(true);}}>+ Process invoice</button>:null}</div>}/>
   {message?<div className={styles.successBox} role="status" style={{marginBottom:12}}>{message}</div>:null}
   {error?<div className={styles.errorBox} role="alert" style={{marginBottom:12}}>{error}</div>:null}
   <section className={styles.panel}>
