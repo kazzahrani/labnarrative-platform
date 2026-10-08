@@ -71,7 +71,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
       setOrganizationId(orgId as string);
       setLoading(false);
-      if (isLogin) router.replace("/pvos/dashboard");
+      if (isLogin) router.replace(redirectAfterLogin());
     } catch (e:any) {
       initUserRef.current=null;
       setError(e?.message ?? "Could not prepare demo workspace.");
