@@ -14,7 +14,7 @@ type RequestRow={
  followup_count:number;last_followup_at:string|null;due_at:string;created_at:string;received_at:string|null;
 };
 type Member={user_id:string;email:string;role:string};
-type Evidence={id:string;title:string;created_at:string;file_path:string|null;external_url:string|null;evidence_type:string;archived_at:string|null};
+type Evidence={id:string;task_id?:string;title:string;created_at:string;file_path:string|null;external_url:string|null;evidence_type:string;archived_at:string|null};
 type History={id:number;created_at:string;event_type:string;actor_user_id:string|null;metadata:Record<string,unknown>|null};
 const types=[["invoice","Invoice"],["regulatory_history","Registration history"],["safety_data","Safety / case data"],["labelling","Label / PIL"],["document","Controlled document"],["other","Information request"]];
 const labelType=(v:string)=>types.find(x=>x[0]===v)?.[1]||v;
@@ -33,8 +33,10 @@ function statusFor(r:RequestRow,documents:Evidence[]|undefined=undefined){
  if(r.status==="waiting")return "Waiting for department";
  if(r.status==="returned")return "Corrections needed";
  if(r.status==="received"){
+   const hasEvidence=documents?.some(e=>(!docNeeded(r)||e.file_path||e.external_url)&&(!r.last_returned_at||new Date(e.created_at)>new Date(r.last_returned_at)))??false;
+   if(!hasEvidence&&!r.reviewer_user_id)return "Evidence & reviewer needed";
+   if(!hasEvidence)return "Evidence needed";
    if(!r.reviewer_user_id)return "Reviewer needed";
-   if(documents&&docNeeded(r)&&!documents.some(e=>(e.file_path||e.external_url)&&(!r.last_returned_at||new Date(e.created_at)>new Date(r.last_returned_at))))return "Evidence needed";
    return "Ready for review";
  }
  return r.status;
@@ -43,6 +45,7 @@ const toneFor=(status:string):"default"|"green"|"amber"|"red"=>status==="Complet
 function isOverdue(r:RequestRow){return !["complete","cancelled"].includes(r.status)&&new Date(r.due_at).getTime()<Date.now();}
 export function DepartmentRequests({companyId,organizationId,products,onChanged}:{companyId:string;organizationId:string;products:any[];onChanged?:()=>void}){
  const [rows,setRows]=useState<RequestRow[]>([]),[members,setMembers]=useState<Member[]>([]),[currentUser,setCurrentUser]=useState("");
+ const [evidenceMap,setEvidenceMap]=useState<Record<string,Evidence[]>>({});
  const [openCreate,setOpenCreate]=useState(false),[opened,setOpened]=useState<string|null>(null),[advanced,setAdvanced]=useState(false);
  const [evidence,setEvidence]=useState<Evidence[]>([]),[history,setHistory]=useState<History[]>([]);
  const [busy,setBusy]=useState(false),[detailsBusy,setDetailsBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
@@ -62,6 +65,18 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
    pvosSupabase.auth.getUser()
   ]);
   if(r.error||m.error)throw r.error||m.error;
+  const ids=(r.data||[]).map((item:{task_id:string})=>item.task_id).filter(Boolean);
+  if(ids.length){
+   const evidenceResult=await pvosSupabase.from("pvos_task_evidence")
+    .select("id,task_id,title,created_at,file_path,external_url,evidence_type,archived_at")
+    .in("task_id",ids).is("archived_at",null).order("created_at",{ascending:false}).limit(1000);
+   if(evidenceResult.error)throw evidenceResult.error;
+   const grouped:Record<string,Evidence[]>={};
+   for(const item of evidenceResult.data||[]){
+    (grouped[item.task_id]??=[]).push(item);
+   }
+   setEvidenceMap(grouped);
+  }else setEvidenceMap({});
   setRows(r.data||[]);setMembers(m.data||[]);setCurrentUser(u.data.user?.id||"");
  },[organizationId,companyId]);
  const loadDetail=useCallback(async(row:RequestRow)=>{
@@ -86,7 +101,7 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
   const matches=filter==="all"||filter==="open"&&!["complete","cancelled"].includes(r.status)||filter==="complete"&&r.status==="complete";
   return matches&&[labelType(r.request_type),r.department,r.details,r.external_reference||""].join(" ").toLowerCase().includes(search.trim().toLowerCase());
  }),[rows,filter,search]);
- const counts={waiting:rows.filter(r=>r.status==="waiting").length,review:rows.filter(r=>r.status==="received").length,overdue:rows.filter(isOverdue).length};
+ const counts={waiting:rows.filter(r=>r.status==="waiting").length,review:rows.filter(r=>statusFor(r,evidenceMap[r.task_id])==="Ready for review").length,overdue:rows.filter(isOverdue).length};
  const detailsStatus=current?statusFor(current,evidence):"";
  const eligibleEvidence=current?evidence.filter(e=>(!docNeeded(current)||e.file_path||e.external_url)&&(!current.last_returned_at||new Date(e.created_at)>new Date(current.last_returned_at))):[];
  const latest=eligibleEvidence[0];
@@ -158,7 +173,7 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
     <div className={styles.requestList}>
      {filtered.length?filtered.map(r=>{
       const title=r.request_type==="invoice"?"Invoice":labelType(r.request_type);
-      const status=statusFor(r);
+      const status=statusFor(r,evidenceMap[r.task_id]);
       return <button type="button" key={r.id} className={styles.requestListRow} onClick={()=>showRequest(r)}>
        <span className={styles.requestRowName}><strong>{title} <span className={styles.requestRowDot}>·</span> {r.department}</strong>
         <span>{r.external_reference||r.details} · Due {date(r.due_at)}{r.followup_count?" · "+r.followup_count+" follow-up"+(r.followup_count===1?"":"s"):""}</span>
