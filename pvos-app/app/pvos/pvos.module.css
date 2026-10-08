@@ -313,3 +313,54 @@
 @media(max-width:650px){
  .notificationPanel{left:12px;right:12px;top:70px;width:calc(100vw - 24px);max-height:min(520px,calc(100vh - 85px))}
 }
+
+
+/* Unified cross-company Requests workspace */
+.unifiedRequests{min-width:0}
+.requestUnifiedTabs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.requestUnifiedTab,.requestUnifiedTabActive{appearance:none;border:1px solid transparent;border-radius:9px;padding:9px 12px;background:transparent;color:#a6b5c0;font:inherit;font-size:13px;font-weight:550;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.requestUnifiedTab:hover{background:#1b242c;color:#e8f1f4}
+.requestUnifiedTabActive{background:#202b32;border-color:#33434c;color:#f2f7f8}
+.requestUnifiedTab span,.requestUnifiedTabActive span{font-size:11px;color:#a1b0ba;font-weight:650}
+.requestUnifiedFilters{display:grid;grid-template-columns:minmax(200px,1fr) minmax(145px,195px) minmax(160px,240px);gap:10px}
+.requestUnifiedFilters .input{width:100%;min-width:0}
+.requestUnifiedHead{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-top:1px solid #29333d;border-bottom:1px solid #29333d;color:#97a9b5;font-size:12px}
+.requestUnifiedHead .infoTip{margin-top:0}
+.requestUnifiedRow{display:flex;align-items:center;gap:15px;padding:16px;text-decoration:none;color:inherit;border-bottom:1px solid #26313b;transition:background .15s ease}
+.requestUnifiedRow:last-child{border-bottom:0}
+.requestUnifiedRow:hover{background:#192129}
+.requestUnifiedRow:focus-visible{outline:2px solid #b5df5e;outline-offset:-2px}
+.requestUnifiedMain{display:grid;gap:6px;min-width:0;flex:1}
+.requestUnifiedMain>strong{font-size:14px;font-weight:650;line-height:1.35;overflow-wrap:anywhere}
+.requestUnifiedMeta,.requestUnifiedDescription{font-size:12px;line-height:1.4;color:#94a5b2;white-space:normal;overflow-wrap:anywhere}
+.requestUnifiedDescription{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:640px;color:#879aa7}
+.requestUnifiedEnd{flex:0 0 auto;display:grid;justify-items:end;gap:6px;text-align:right}
+.requestUnifiedDate{font-size:11px;color:#8295a2}
+.requestUnifiedAction{font-size:11px;color:#caea81}
+.requestUnifiedArrow{font-size:23px;color:#647784}
+.requestUnifiedChooser{padding:16px;display:grid;gap:18px}
+.requestUnifiedChooser label{font-size:12px;font-weight:650;display:grid;gap:8px}
+.requestUnifiedChoices{display:grid;gap:9px}
+.requestUnifiedChoice,.requestUnifiedChoiceSelected{appearance:none;display:grid;gap:7px;text-align:left;padding:14px;border:1px solid #34414a;background:#121a20;color:#edf3f5;border-radius:10px;cursor:pointer;font:inherit}
+.requestUnifiedChoice:hover{background:#1c262d;border-color:#6d838e}
+.requestUnifiedChoiceSelected{border-color:#c5ff58;background:#202d29;box-shadow:0 0 0 1px #c5ff58}
+.requestUnifiedChoice strong,.requestUnifiedChoiceSelected strong{font-size:13px}
+.requestUnifiedChoice span,.requestUnifiedChoiceSelected span{font-size:12px;color:#91a4af;line-height:1.5}
+.light .requestUnifiedTab{color:#657985}
+.light .requestUnifiedTab:hover{background:#f0f4f6;color:#23353f}
+.light .requestUnifiedTabActive{background:#eaf0f2;border-color:#d7e2e5;color:#172c34}
+.light .requestUnifiedTab span,.light .requestUnifiedTabActive span{color:#6e8490}
+.light .requestUnifiedHead{border-color:#e3eaed;color:#738792}
+.light .requestUnifiedRow{border-color:#e5ebed}
+.light .requestUnifiedRow:hover{background:#f6f9fa}
+.light .requestUnifiedMeta{color:#697d88}
+.light .requestUnifiedDescription{color:#788c96}
+.light .requestUnifiedDate{color:#7e9099}
+.light .requestUnifiedAction{color:#52751b}
+.light .requestUnifiedArrow{color:#8496a0}
+.light .requestUnifiedChoice,.light .requestUnifiedChoiceSelected{border-color:#dce5e9;background:#fff;color:#21323a}
+.light .requestUnifiedChoice:hover{background:#f5f9fa;border-color:#9cafb9}
+.light .requestUnifiedChoiceSelected{border-color:#8cae32;background:#f4fae9;box-shadow:0 0 0 1px #8cae32}
+.light .requestUnifiedChoice span,.light .requestUnifiedChoiceSelected span{color:#667b87}
+@media(max-width:850px){.requestUnifiedFilters{grid-template-columns:minmax(0,1fr) minmax(145px,1fr)}.requestUnifiedFilters input:first-child{grid-column:1/-1}}
+@media(max-width:600px){.requestUnifiedFilters{grid-template-columns:1fr}.requestUnifiedFilters input:first-child{grid-column:auto}.requestUnifiedRow{gap:8px;padding:14px 10px}.requestUnifiedEnd{max-width:140px}.requestUnifiedArrow{display:none}.requestUnifiedDescription{display:none}.requestUnifiedTab,.requestUnifiedTabActive{padding:8px 9px;font-size:12px}}
