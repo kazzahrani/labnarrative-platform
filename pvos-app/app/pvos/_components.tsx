@@ -28,14 +28,14 @@ export function AppShell({children}:{children:ReactNode}) {
   const navItems=[
     ["/pvos/dashboard","Dashboard"],
     ["/pvos/companies","Companies"],
-    ["/pvos/invoices","Invoice approvals"],
+    ["/pvos/requests","Requests"],
     ["/pvos/literature","Literature"],
     ["/pvos/signal","Signals"],
     ["/pvos/rmp","RMP"],
     ["/pvos/inspection","Inspection"],
     ["/pvos/automation","Settings"],
   ] as const;
-  const isActive=(href:string)=>pathname===href || (href==="/pvos/dashboard"&&["/pvos/tasks","/pvos/approvals","/pvos/handover"].some(x=>pathname===x||pathname.startsWith(x+"/"))) || (href!=="/pvos/dashboard" && pathname.startsWith(href+"/"));
+  const isActive=(href:string)=>(href==="/pvos/requests"&&pathname==="/pvos/invoices") || pathname===href || (href==="/pvos/dashboard"&&["/pvos/tasks","/pvos/approvals","/pvos/handover"].some(x=>pathname===x||pathname.startsWith(x+"/"))) || (href!=="/pvos/dashboard" && pathname.startsWith(href+"/"));
 
   if(pathname==="/pvos/login") return <div className={rootClass}>{children}</div>;
 
