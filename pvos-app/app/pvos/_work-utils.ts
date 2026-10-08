@@ -28,5 +28,10 @@ export function activityLink(t:any) {
 }
 export function isHistoricalRun(run:any,now:Date=new Date()) {
   if(run.metadata?.automated||run.metadata?.purpose==="routine")return false;
-  return run.metadata?.purpose==="historical"||run.period_end<riyadhDay(new Date(now.getTime()-14*86400000));
+  if(run.metadata?.purpose==="historical")return true;
+  // Ad-hoc manual searches belong in Literature history unless they are
+  // explicitly marked as routine work. Recency alone must not make a test or
+  // retrospective search appear in the QPPV's weekly inbox.
+  return true;
 }
+

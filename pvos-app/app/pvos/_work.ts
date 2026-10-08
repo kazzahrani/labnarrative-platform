@@ -1,7 +1,7 @@
 "use client";
 import {pvosSupabase} from "./_pvos-supabase";
 import {readApprovalRows,canApproveStep,type Member} from "./_approval";
-import {activityLink,isHistoricalRun} from "./_work-utils";
+import {activityLink,isHistoricalRun,riyadhDay} from "./_work-utils";
 export type WorkItem={id:string,company_id:string,title:string,kind:string,status:string,owner?:string|null,due?:string|null,href:string,action:string,review:boolean,waiting?:boolean};
 export type WorkData={tasks:any[],companies:any[],members:Member[],items:WorkItem[]};
 export async function readWork(org:string,userId:string):Promise<WorkData> {
@@ -15,15 +15,33 @@ export async function readWork(org:string,userId:string):Promise<WorkData> {
   const routeIds=[...new Set(approvals.map(a=>a.route_id).filter(Boolean))] as string[];
   const steps:any[]=[];for(let i=0;i<routeIds.length;i+=100)steps.push(...await readApprovalRows<any>((from,to)=>pvosSupabase.from("pvos_approval_steps").select("*").in("route_id",routeIds.slice(i,i+100)).order("id").range(from,to)));
   const stepBy=Object.fromEntries(steps.map(s=>[s.route_id+"|"+s.position,s]));
-  const items:WorkItem[]=tasks.filter(t=>t.status!=="cancelled").map(t=>({id:"task:"+t.id,company_id:t.company_id,title:t.title,kind:t.activity_type,status:t.status,owner:t.owner_user_id,due:t.due_at,...activityLink(t),action:activityLink(t).label,review:false,waiting:["awaiting_review","awaiting_external"].includes(t.status)}));
   const completed=new Set(records.map(r=>r.run_id));
   const decisionBy=new Map<string,any[]>();for(const d of decisions){const list=decisionBy.get(d.run_id)||[];list.push(d);decisionBy.set(d.run_id,list);}
   const secondBy=Object.fromEntries(second.map(s=>[s.run_id,s]));
   const companyBy=Object.fromEntries(companies.map(c=>[c.id,c]));
+  const activeRuns=runs.filter(r=>!completed.has(r.id)&&r.status!=="cancelled"),claimedRunIds=new Set<string>(),taskRun=new Map<string,any>();
+  for(const t of tasks.filter(t=>t.status!=="cancelled"&&t.status!=="complete"&&t.activity_type==="Literature")) {
+    const explicit=t.metadata?.literature_run_id||t.metadata?.run_id;
+    let run=explicit?activeRuns.find(r=>r.id===explicit):null;
+    if(!run&&t.due_at) {
+      const due=riyadhDay(t.due_at);
+      run=activeRuns.filter(r=>!claimedRunIds.has(r.id)&&r.company_id===t.company_id&&!isHistoricalRun(r)&&r.period_end===due).sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")))[0];
+    }
+    if(run){taskRun.set(t.id,run);claimedRunIds.add(run.id);}
+  }
+  const items:WorkItem[]=tasks.filter(t=>t.status!=="cancelled").map(t=>{
+    const run=taskRun.get(t.id),sr=run?secondBy[run.id]:null,ds=run?decisionBy.get(run.id)||[]:[],open=ds.filter(d=>["unreviewed","needs_review"].includes(d.review_status)).length;
+    const linked=run?{...t,metadata:{...t.metadata,literature_run_id:run.id}}:t,link=activityLink(linked);
+    const status=run?(sr?.status==="pending"?"awaiting_review":sr?.status==="returned"?"returned":sr?.status==="approved"?"ready_to_complete":open?`${open} unresolved`:"ready_for_review"):t.status;
+    return {id:"task:"+t.id,company_id:t.company_id,title:t.title,kind:t.activity_type,status,owner:t.owner_user_id,due:t.due_at,...link,action:link.label,review:false,waiting:["awaiting_review","awaiting_external"].includes(status)};
+  });
   for(const run of runs.filter(r=>!completed.has(r.id)&&r.status!=="cancelled")) {
     const sr=secondBy[run.id],ds=decisionBy.get(run.id)||[],open=ds.filter(d=>["unreviewed","needs_review"].includes(d.review_status)).length;
     // Historical searches remain in Literature; they do not inflate the weekly inbox.
     if(isHistoricalRun(run)&&sr?.status!=="pending"&&sr?.status!=="returned")continue;
+    // A scheduled literature task and its generated run are one piece of work.
+    // The task row keeps the deadline while linking straight to the run.
+    if(claimedRunIds.has(run.id))continue;
     const mine=sr?.status==="pending"&&sr.assigned_to===userId;
     items.push({id:"screening:"+run.id,company_id:run.company_id,title:`Literature · ${run.period_start} – ${run.period_end}`,kind:mine?"Literature second review":"Literature screening",status:completed.has(run.id)?"complete":sr?.status==="pending"?"awaiting_review":sr?.status==="returned"?"returned":sr?.status==="approved"?"ready_to_complete":open?`${open} unresolved`:"ready_for_review",owner:sr?.status==="pending"?sr.assigned_to:run.started_by||companyBy[run.company_id]?.qppv_user_id,due:null,href:`/pvos/literature?company=${run.company_id}&view=${sr?.status==="pending"?"second":"queue"}&run=${run.id}`,action:mine?"Review screening":sr?.status==="pending"?"View review":sr?.status==="returned"?"Resolve corrections":sr?.status==="approved"?"Complete record":"Continue screening",review:mine,waiting:sr?.status==="pending"});
   }
@@ -43,3 +61,4 @@ export async function readWork(org:string,userId:string):Promise<WorkData> {
   }
   return {tasks,companies,members,items};
 }
+

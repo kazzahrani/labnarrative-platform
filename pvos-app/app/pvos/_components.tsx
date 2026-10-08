@@ -49,7 +49,6 @@ export function AppShell({children}:{children:ReactNode}) {
       </nav>
       <div className={styles.foot}>
         <div className={styles.userEmail}>{session.user.email}</div>
-        <div>Private prototype · no patient data</div>
         <div className={styles.footerActions}>
           <button className={styles.signOut} onClick={()=>pvosSupabase.auth.signOut()}>Sign out</button>
           <button className={styles.themeToggle} onClick={toggleTheme} title={theme==="light"?"Switch to dark theme":"Switch to light theme"} aria-label={theme==="light"?"Switch to dark theme":"Switch to light theme"}>{theme==="light"?"☾":"☀"}</button>
@@ -93,3 +92,4 @@ export function statusTone(status:string):"default"|"red"|"amber"|"green"|"lime"
   if(status==="In progress") return "lime";
   return "default";
 }
+

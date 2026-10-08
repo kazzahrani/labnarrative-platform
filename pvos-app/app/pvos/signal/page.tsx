@@ -142,10 +142,7 @@ export default function SignalReviewPage(){
 
     <section className={styles.panel}>
       <div className={styles.panelHeader}>
-        <div>
-          <h2>Escalated findings for signal assessment</h2>
-          <div className={styles.muted} style={{marginTop:4}}>Only findings explicitly escalated by the reviewer appear here.</div>
-        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}><h2>Escalated findings for signal assessment</h2><Help>Only findings explicitly escalated by the reviewer appear here.</Help></div>
       </div>
 
       {loading?<div className={styles.empty}>Loading signal review…</div>:rows.length?<div className={styles.tableWrap}><table className={styles.table}>
@@ -212,3 +209,4 @@ export default function SignalReviewPage(){
     </>}
   </>;
 }
+
