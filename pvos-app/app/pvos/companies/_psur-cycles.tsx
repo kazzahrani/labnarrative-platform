@@ -58,6 +58,7 @@ function readEurdFile(data:ArrayBuffer):EurdRow[]{
 export function PsurCycles({companyId,organizationId,products,onChanged}:{companyId:string,organizationId:string,products:any[],onChanged?:()=>void}){
  const [entries,setEntries]=useState<Entry[]>([]),[parsed,setParsed]=useState<EurdRow[]>([]);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
+ const [editingId,setEditingId]=useState<string|null>(null);
  const [productId,setProductId]=useState(""),[substance,setSubstance]=useState(""),[dlp,setDlp]=useState(""),[due,setDue]=useState("");
  const [frequency,setFrequency]=useState(""),[jurisdiction,setJurisdiction]=useState("reference_only");
  const [basis,setBasis]=useState(""),[revision,setRevision]=useState("EMA EURD Rev. 164 (23 Sep 2026)");
@@ -85,6 +86,14 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
   }catch(e){setParsed([]);setError((e as Error).message);}
  }
  function choose(r:EurdRow){setSelectedRow(r);setSubstance(r.substance);setDlp(r.dlp);setDue(r.due);setFrequency(String(freqMonths(r.frequency)||""));setSearch(r.substance);setMessage("Source row selected. Verify the jurisdiction and regulatory basis before confirming.");}
+ function edit(c:Entry){
+  setEditingId(c.id);setProductId(c.product_id);setSubstance(c.active_substance);
+  setDlp(c.data_lock_point);setDue(c.submission_due_date);setFrequency(String(c.frequency_months||""));
+  setJurisdiction(c.jurisdiction);setBasis(c.authority_basis||"");setRevision(c.source_revision);
+  setSelectedRow({substance:c.active_substance,dlp:c.data_lock_point,due:c.submission_due_date,frequency:"",
+   raw:c.source_row||{}});setError("");setMessage("Review the dates against the current authority reference, then save this draft.");
+  document.getElementById("psur-edit-form")?.scrollIntoView({behavior:"smooth",block:"start"});
+ }
  async function save(e:FormEvent){
   e.preventDefault();setBusy(true);setError("");setMessage("");
   try{
@@ -93,10 +102,13 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
     data_lock_point:dlp,submission_due_date:due,frequency_months:frequency?Number(frequency):null,jurisdiction,
     authority_basis:basis.trim()||null,source_url:EMA_URL,source_revision:revision.trim(),source_published_at:published||null,
     source_row:selectedRow?.raw||{entered_manually:true}};
-   const {error:e2}=await pvosSupabase.from("pvos_psur_cycles").insert(payload);
+   const request=editingId
+    ?pvosSupabase.from("pvos_psur_cycles").update(payload).eq("id",editingId).eq("status","draft")
+    :pvosSupabase.from("pvos_psur_cycles").insert(payload);
+   const {error:e2}=await request;
    if(e2)throw e2;
-   setMessage("Draft saved. A PV lead must confirm applicability before PVOS creates a deadline task.");
-   setSelectedRow(null);await load();onChanged?.();
+   setMessage(editingId?"Draft updated. Confirm the regulatory basis to create the PSUR task.":"Draft saved. A PV lead must confirm applicability before PVOS creates a deadline task.");
+   setEditingId(null);setSelectedRow(null);await load();onChanged?.();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function confirm(id:string){
@@ -123,7 +135,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      </tbody></table></div>
      {suggestions.length===0?<div className={styles.muted}>No automatic match. Search the official file; never assume a similar substance is equivalent.</div>:null}
     </div>:null}
-    <form onSubmit={save} style={{display:"grid",gap:12,marginTop:18}}>
+    <form id="psur-edit-form" onSubmit={save} style={{display:"grid",gap:12,marginTop:18}}>
      <div className={styles.formGrid}>
       <label>Product<select className={styles.input} required value={productId} onChange={e=>{setProductId(e.target.value);setSearch("");}}>{products.map(p=><option key={p.id} value={p.id}>{p.brand_name} · {p.active_ingredient||"no ingredient recorded"}</option>)}</select></label>
       <label>Matched active substance<input className={styles.input} required value={substance} onChange={e=>setSubstance(e.target.value)}/></label>
@@ -135,7 +147,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
       <label>Source publication<input className={styles.input} type="date" value={published} onChange={e=>setPublished(e.target.value)}/></label>
      </div>
      <label>Regulatory basis / documented verification<textarea className={styles.input} rows={2} value={basis} onChange={e=>setBasis(e.target.value)} placeholder="Applicable authority, licence condition or regulatory instruction; cite the source and scope"/></label>
-     <div><button className={styles.button} type="submit" disabled={busy||!products.length}>Save draft for confirmation</button></div>
+     <div className={styles.inlineActions}><button className={styles.button} type="submit" disabled={busy||!products.length}>{editingId?"Update draft":"Save draft for confirmation"}</button>{editingId?<button className={styles.buttonGhost} type="button" disabled={busy} onClick={()=>{setEditingId(null);setSelectedRow(null);}}>Cancel editing</button>:null}</div>
     </form>
    </div>
   </section>
@@ -147,7 +159,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
     {entries.map(c=><tr key={c.id}><td>{products.find(p=>p.id===c.product_id)?.brand_name||c.active_substance}<div className={styles.muted}>DLP {c.data_lock_point}</div></td>
      <td>{c.submission_due_date}</td><td>{c.jurisdiction==="reference_only"?"Unverified":c.jurisdiction.toUpperCase()}</td>
      <td title={c.source_revision}>{c.source_revision}</td><td><Badge tone={c.status==="confirmed"?"green":"amber"}>{c.status==="draft"?"Needs confirmation":c.status}</Badge></td>
-     <td>{c.task_id?<Link className={styles.buttonGhost} href={"/pvos/tasks/"+c.task_id}>Open task</Link>:c.status==="draft"?<button className={styles.buttonGhost} disabled={busy||c.jurisdiction==="reference_only"||!c.authority_basis} onClick={()=>confirm(c.id)}>Confirm & schedule</button>:null}</td>
+     <td>{c.task_id?<Link className={styles.buttonGhost} href={"/pvos/tasks/"+c.task_id}>Open task</Link>:c.status==="draft"?<div className={styles.inlineActions}><button className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button><button className={styles.buttonGhost} disabled={busy||c.jurisdiction==="reference_only"||!c.authority_basis} onClick={()=>confirm(c.id)}>Confirm & schedule</button></div>:null}</td>
     </tr>)}
    </tbody></table>{!entries.length?<div className={styles.empty}>No EURD cycles recorded for this company.</div>:null}</div>
   </section>
