@@ -1,12 +1,12 @@
 "use client";
 import {Badge} from "../_components";
 import styles from "../pvos.module.css";
-type Props={run:any,company:string,stats:any,record:any,second:any,members:any[],userId?:string,firstReviewerIds:string[],reviewer:string,onReviewer:(id:string)=>void,busy:boolean,onReview:()=>void,onSecond:()=>void,onSend:()=>void,onComplete:()=>void,onExport:()=>void,onClose:()=>void,onManageReviewers:()=>void};
+type Props={run:any,label:string,company:string,stats:any,record:any,second:any,members:any[],userId?:string,firstReviewerIds:string[],reviewer:string,onReviewer:(id:string)=>void,busy:boolean,onReview:()=>void,onSecond:()=>void,onSend:()=>void,onComplete:()=>void,onExport:()=>void,onClose:()=>void,onManageReviewers:()=>void};
 export function ScreeningWorkspace(p:Props){
   const stage=p.record?3:p.second?.status==="approved"?2:p.second?.status==="pending"?1:0;
   const eligible=p.members.filter(m=>m.user_id!==p.userId&&!p.firstReviewerIds.includes(m.user_id));
   return <section className={styles.screeningWorkspace} aria-label="Screening progress">
-    <div className={styles.panelHeader}><div><h2>{p.company}</h2><div className={styles.muted}>{p.run.period_start} → {p.run.period_end} · {p.stats.total} article-product records</div></div><button className={styles.buttonGhost} onClick={p.onClose} disabled={p.busy}>Change screening</button></div>
+    <div className={styles.panelHeader}><div><h2>{p.company}</h2><div className={styles.muted}>{p.label}</div><div className={styles.muted}>{p.run.period_start} → {p.run.period_end} · {p.stats.total} article-product records</div></div><button className={styles.buttonGhost} onClick={p.onClose} disabled={p.busy}>Change screening</button></div>
     <ol className={styles.screeningStages} aria-label="Screening stages">{['First screening','Second review','Completion'].map((label,i)=><li key={label} aria-current={stage===i?'step':undefined}><Badge tone={stage>i?'green':stage===i?'lime':'default'}>{stage>i?'✓':i+1}</Badge> {label}</li>)}</ol>
     <div className={styles.screeningNext}>
       <div>

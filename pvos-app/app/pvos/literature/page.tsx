@@ -33,6 +33,9 @@ function dateTimeLabel(v?:string|null){
   const d=new Date(v);
   return Number.isNaN(d.getTime())?"—":d.toLocaleString(undefined,{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
 }
+function screeningLabel(run:any){
+  return `Screening ${String(run.id).slice(0,8).toUpperCase()} · ${run.metadata?.automated?"Automatic":"Manual"}`;
+}
 function relevanceLabel(v:string){
   if(v==="likely_relevant")return "Likely relevant";
   if(v==="possible")return "Possible";
@@ -155,7 +158,7 @@ export default function LiteraturePage(){
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
   const [selectedRun,setSelectedRun]=useState<any|null>(null);
-  const inspectionLinkOpened=useRef(false);
+  const [navigationReady,setNavigationReady]=useState(false);
   const [selectedSecondReviewId,setSelectedSecondReviewId]=useState<string|null>(null);
   const [rapidOpen,setRapidOpen]=useState(false);
   const [rapidItemId,setRapidItemId]=useState<string|null>(null);
@@ -232,14 +235,49 @@ export default function LiteraturePage(){
   useEffect(()=>{load()},[organizationId]);
 
   useEffect(()=>{
-    if(loading||inspectionLinkOpened.current)return;
-    const id=new URLSearchParams(window.location.search).get("inspectionRun");
-    if(!id)return;
-    inspectionLinkOpened.current=true;
-    const run=runs.find(r=>r.id===id);
-    if(run){setSelectedRun(run);setRunFilter(run.id);setArea("records");setTabState("runs");setRunView("complete");}
-    else setMessage("The linked screening run is not available in this workspace.");
-  },[loading,runs]);
+    if(loading||!organizationId||navigationReady)return;
+    const params=new URLSearchParams(window.location.search);
+    const inspectionId=params.get("inspectionRun"),id=inspectionId||params.get("run");
+    const view=inspectionId?"runs":params.get("view");
+    if(view==="sources"){setArea("monitoring");setTabState("sources");}
+    else if(view==="runs"||view==="psur"){setArea("records");setTabState(view);setRunView("complete");}
+    else if(view==="second"||view==="alerts"){setTabState(view);}
+    if(id){
+      const run=runs.find(r=>r.id===id);
+      if(!run)setMessage("The linked screening run is not available in this workspace.");
+      else{
+        setRunFilter(run.id);
+        if(view==="runs")setSelectedRun(run);
+        if(view==="second"){
+          const second=secondReviews.find(r=>r.run_id===run.id);
+          if(second){setSelectedSecondReviewId(second.id);setSecondReviewNote(second.note||"");}
+        }
+        if(!view||view==="queue"){
+          const open=items.some(x=>x.run_id===run.id&&(x.review_status==="unreviewed"||x.review_status==="needs_review"));
+          const filter=params.get("queueView");
+          setQueueFilter(["open","fulltext","reviewed","all"].includes(filter||"")?filter as "open"|"fulltext"|"reviewed"|"all":open?"open":"reviewed");
+          const article=items.find(x=>x.run_id===run.id&&x.id===params.get("article"));
+          if(article)setArticleId(article.id);
+          const alert=alerts.find(x=>x.id===params.get("alert")&&items.some(i=>i.id===x.literature_item_id&&i.run_id===run.id));
+          if(alert){setActiveAlertId(alert.id);setFocusedAlertItemId(alert.literature_item_id);setArticleId(alert.literature_item_id);setQueueFilter("all");}
+        }
+      }
+    }
+    setNavigationReady(true);
+  },[loading,organizationId,navigationReady,runs,items,secondReviews,alerts]);
+
+  useEffect(()=>{
+    if(loading||!navigationReady)return;
+    const url=new URL(window.location.href);
+    url.searchParams.delete("inspectionRun");
+    url.searchParams.set("view",tab);
+    const id=selectedRun?.id||runFilter;
+    if(id)url.searchParams.set("run",id);else url.searchParams.delete("run");
+    if(id&&tab==="queue")url.searchParams.set("queueView",queueFilter);else url.searchParams.delete("queueView");
+    if(id&&tab==="queue"&&articleId)url.searchParams.set("article",articleId);else url.searchParams.delete("article");
+    if(tab==="queue"&&activeAlertId)url.searchParams.set("alert",activeAlertId);else url.searchParams.delete("alert");
+    if(url.href!==window.location.href)window.history.replaceState(window.history.state,"",url.href);
+  },[loading,navigationReady,tab,runFilter,selectedRun?.id,articleId,activeAlertId,queueFilter]);
 
   const companyMap=useMemo(()=>Object.fromEntries(companies.map(x=>[x.id,x.name])),[companies]);
   const productMap=useMemo(()=>Object.fromEntries(products.map(x=>[x.id,x])),[products]);
@@ -1493,7 +1531,7 @@ export default function LiteraturePage(){
       <button disabled={busy||readerSaving||loading} className={tab==="psur"?styles.button:styles.buttonGhost} onClick={()=>setTab("psur")}>PSUR evidence</button>
       <button disabled={busy||readerSaving||loading} className={styles.buttonGhost} onClick={()=>{setTab("alerts");setSelectedRun(null)}}>Alert history</button>
     </div>:null}
-    {workspaceRun&&area!=="monitoring"&&tab!=="psur"&&tab!=="alerts"?<ScreeningWorkspace run={workspaceRun} company={companyMap[workspaceRun.company_id]||"Company"} stats={statsForRun(workspaceRun)} record={recordMap[workspaceRun.id]} second={recordMap[workspaceRun.id]?.metadata?.second_review||secondReviewMap[workspaceRun.id]} members={members} userId={session?.user.id} firstReviewerIds={runItems(workspaceRun.id).map(x=>x.reviewer_user_id).filter(Boolean)} reviewer={secondReviewerId} onReviewer={setSecondReviewerId} busy={busy||readerSaving} onReview={()=>openRunDecisions(workspaceRun)} onSecond={()=>openSecondReview(workspaceRun)} onSend={()=>assignSecondReviewer(workspaceRun)} onComplete={()=>completeScreening(workspaceRun)} onExport={()=>exportScreeningRecord(workspaceRun)} onClose={()=>{setSelectedRun(null);setRunFilter("");setSelectedSecondReviewId(null);setBatchMode(false);setTab(area==="records"?"runs":"queue");if(area==="records")setArea("records")}} onManageReviewers={()=>setShowReviewerAccess(true)}/>:null}
+    {workspaceRun&&area!=="monitoring"&&tab!=="psur"&&tab!=="alerts"?<ScreeningWorkspace run={workspaceRun} label={screeningLabel(workspaceRun)} company={companyMap[workspaceRun.company_id]||"Company"} stats={statsForRun(workspaceRun)} record={recordMap[workspaceRun.id]} second={recordMap[workspaceRun.id]?.metadata?.second_review||secondReviewMap[workspaceRun.id]} members={members} userId={session?.user.id} firstReviewerIds={runItems(workspaceRun.id).map(x=>x.reviewer_user_id).filter(Boolean)} reviewer={secondReviewerId} onReviewer={setSecondReviewerId} busy={busy||readerSaving} onReview={()=>openRunDecisions(workspaceRun)} onSecond={()=>openSecondReview(workspaceRun)} onSend={()=>assignSecondReviewer(workspaceRun)} onComplete={()=>completeScreening(workspaceRun)} onExport={()=>exportScreeningRecord(workspaceRun)} onClose={()=>{setSelectedRun(null);setRunFilter("");setSelectedSecondReviewId(null);setBatchMode(false);setTab(area==="records"?"runs":"queue");if(area==="records")setArea("records")}} onManageReviewers={()=>setShowReviewerAccess(true)}/>:null}
     <section className={styles.panel}>
 
       {tab==="sources"?<>
@@ -1579,7 +1617,7 @@ export default function LiteraturePage(){
           {loading?<p>Loading screenings…</p>:runs.filter(r=>!recordMap[r.id]&&r.status!=="cancelled").map(r=>{
             const s=statsForRun(r),sr=secondReviewMap[r.id];
             return <button key={r.id} className={styles.screeningChoice} onClick={()=>{openRunDecisions(r);if(sr?.status==="pending"&&sr.assigned_to===session?.user.id)openSecondReview(r)}}>
-              <span>{companyMap[r.company_id]||"Company"}</span><small>{r.period_start} → {r.period_end}</small><small>{sr?.status==="returned"?"Returned for correction":sr?.status==="pending"?"Awaiting second reviewer":sr?.status==="approved"?"Ready to complete":s.open+" decisions open"}</small>
+              <span>{companyMap[r.company_id]||"Company"}</span><small>{screeningLabel(r)}</small><small>{r.period_start} → {r.period_end}</small><small>{s.total} records · Created {dateTimeLabel(r.created_at)}</small><small>{sr?.status==="returned"?"Returned for correction":sr?.status==="pending"?"Awaiting second reviewer":sr?.status==="approved"?"Ready to complete":s.open+" decisions open"}</small>
             </button>;
           })}
           {!loading&&!runs.some(r=>!recordMap[r.id]&&r.status!=="cancelled")?<p>No active screenings. Completed evidence is in Records; Monitoring shows collection health.</p>:null}
@@ -1620,7 +1658,7 @@ export default function LiteraturePage(){
           <tbody>{runs.filter(r=>runView==="complete"?!!recordMap[r.id]:!recordMap[r.id]).map(r=>{
             const counts=runCounts[r.id]||{total:r.result_count||0,reviewed:r.reviewed_count||0};
             return <tr key={r.id}>
-              <td><strong>{dateLabel(r.period_start)} – {dateLabel(r.period_end)}</strong></td>
+              <td><strong>{dateLabel(r.period_start)} – {dateLabel(r.period_end)}</strong><div className={styles.muted}>{screeningLabel(r)}</div></td>
               <td>{companyMap[r.company_id]||"All companies"}</td>
               <td>{r.source_count}</td>
               <td>{r.product_count}</td>

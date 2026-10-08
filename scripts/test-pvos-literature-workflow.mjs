@@ -13,13 +13,18 @@ let actor='first',dirty=true,view=[],current,index,effects=[];
 const hooks=new Map(),modules=new Map(),requests=[];
 const clone=x=>JSON.parse(JSON.stringify(x));
 const now='2026-10-07T21:00:00Z';
+const browserWindow={
+  location:{href:'https://pvos.site/pvos/literature',get search(){return new URL(this.href).search;}},
+  history:{state:null,replaceState(state,_title,url){this.state=state;browserWindow.location.href=String(url);}},
+  confirm:()=>true,addEventListener(){},removeEventListener(){}
+};
 const members=[{user_id:'first',email:'first@example.invalid'},{user_id:'second',email:'second@example.invalid'}];
 const row=(x)=>({organization_id:'org',created_at:now,metadata:{},...x});
 const db={
   pvos_companies:[row({id:'company',name:'Fixture company'})],
   pvos_products:[row({id:'product',company_id:'company',brand_name:'Fixture product',active_ingredient:'Ingredient'})],
   pvos_literature_sources:[row({id:'source',name:'Fixture journal',active:true,method:'pubmed',screening_frequency:'daily'})],
-  pvos_literature_runs:[row({id:'active',company_id:'company',period_start:'2026-10-01',period_end:'2026-10-07',status:'review'}),row({id:'past',company_id:'company',period_start:'2026-09-01',period_end:'2026-09-30',status:'complete'})],
+  pvos_literature_runs:[row({id:'active',company_id:'company',period_start:'2026-10-01',period_end:'2026-10-07',status:'review',metadata:{automated:true}}),row({id:'parallel',company_id:'company',period_start:'2026-10-01',period_end:'2026-10-07',status:'review'}),row({id:'past',company_id:'company',period_start:'2026-09-01',period_end:'2026-09-30',status:'complete'})],
   pvos_literature_items:[row({id:'a',run_id:'active',product_id:'product',source_id:'source',title:'First safety article',abstract:'Fixture abstract',review_status:'unreviewed',relevance:'likely_relevant'}),row({id:'b',run_id:'active',product_id:'product',source_id:'source',title:'Second article',abstract:'Fixture abstract',review_status:'unreviewed',relevance:'possible'}),...Array.from({length:1003},(_,i)=>row({id:'past-'+i,run_id:'past',title:'Archived article '+i,review_status:'not_relevant'}))],
   pvos_literature_followups:[],pvos_literature_second_reviews:[],pvos_literature_alerts:[],
   pvos_literature_screening_records:[row({id:'past-record',run_id:'past',decision_snapshot:[],metadata:{}})],
@@ -78,7 +83,7 @@ function load(file){
     if(id.endsWith('_rank'))return {PRIORITIZATION_VERSION:'fixture'};
     return load(path.resolve(path.dirname(file),id+'.tsx'));
   };
-  vm.runInNewContext('(function(require,exports){'+source+'\n})',{console,URLSearchParams,window:{location:{search:''},confirm:()=>true,addEventListener(){},removeEventListener(){}},document:{activeElement:null},Blob,URL})(localRequire,exports);
+  vm.runInNewContext('(function(require,exports){'+source+'\n})',{console,URLSearchParams,window:browserWindow,document:{activeElement:null},Blob,URL})(localRequire,exports);
   return exports;
 }
 const Page=load(path.join(app,'app/pvos/literature/page.tsx')).default;
@@ -101,8 +106,20 @@ const article=()=>all().find(x=>x.type==='article'&&x.props['aria-label']==='Sel
 await flush();
 assert.ok(requests.some(x=>x.table==='pvos_literature_items'&&x.start===1000),'Complete paginated item load');
 assert.ok(text(view).includes('2 open records'));
+const choices=all().filter(n=>n.type==='button'&&n.props.className==='screeningChoice');
+assert.ok(text(choices[0]).includes('Screening ACTIVE · Automatic'));
+assert.ok(text(choices[1]).includes('Screening PARALLEL · Manual'),'Same-period runs have different references');
+assert.ok(text(choices[0]).includes('2 records · Created'),'Run size and creation time are visible');
 const choice=all().find(n=>n.type==='button'&&n.props.className==='screeningChoice');await choice.props.onClick();await flush();
 assert.ok(text(article()).includes('First safety article'));
+assert.equal(new URL(browserWindow.location.href).searchParams.get('run'),'active');
+hooks.clear();dirty=true;await flush();
+assert.ok(text(article()).includes('First safety article'),'Refresh restores the selected screening');
+assert.ok(text(view).includes('Screening ACTIVE · Automatic'),'Reader shows the same screening reference');
+assert.equal(new URL(browserWindow.location.href).searchParams.get('run'),'active','Initial render must not erase the run link');
+await click('Change screening');
+assert.equal(new URL(browserWindow.location.href).searchParams.has('run'),false,'Changing screening clears the old link');
+await all().find(n=>n.type==='button'&&n.props.className==='screeningChoice'&&text(n).includes('Screening ACTIVE')).props.onClick();await flush();
 await click('Relevant');
 let checkbox=all().find(n=>n.type==='input'&&n.props.type==='checkbox');checkbox.props.onChange({target:{checked:true}});await flush();
 await click('Save & next');
@@ -121,21 +138,28 @@ assert.ok(!text(select).includes('first@example.invalid'),'First reviewer exclud
 assert.ok(text(view).includes('Awaiting second@example.invalid'));
 assert.equal(all().filter(x=>x.type==='button'&&text(x)==='Complete & create screening record').length,0,'No pending completion action');
 actor='second';dirty=true;await flush();await click('Open your second review');
+hooks.clear();dirty=true;await flush();
+assert.ok(text(view).includes('First-review decisions'),'Refresh restores the second-review workspace');
 assert.ok(text(view).includes('first@example.invalid'),'First actor is visible in second review');
 const approve=all().find(n=>n.type==='button'&&/Approve second review/.test(text(n)));assert.ok(approve);await approve.props.onClick();await flush();
 await click('Complete & create screening record');
 assert.ok(text(view).includes('Screening record completed'));await click('Records');
 assert.equal(all().filter(x=>x.type==='button'&&text(x)==='Open record').length,2,'Completed records available');
+browserWindow.location.href='https://pvos.site/pvos/literature?inspectionRun=past';hooks.clear();dirty=true;await flush();
+assert.ok(text(view).includes('Screening PAST · Manual'),'Existing inspection links open the correct record');
+assert.ok(text(view).includes('Screening record completed'));
+assert.equal(new URL(browserWindow.location.href).searchParams.get('view'),'runs');
 await click('Monitoring');assert.ok(text(view).includes('Connection failed'),'Source failure remains visible');
 
 // A failed alert acknowledgment must remain retryable after the decision was saved.
 db.pvos_literature_runs.push(row({id:'alert-run',company_id:'company',period_start:'2026-10-07',period_end:'2026-10-07',status:'review'}));
 db.pvos_literature_items.push(row({id:'alert-item',run_id:'alert-run',product_id:'product',source_id:'source',title:'Exact alerted article',review_status:'unreviewed',metadata:{urgent_saudi:true}}));
 db.pvos_literature_alerts.push(row({id:'alert',literature_item_id:'alert-item',status:'open',severity:'high'}));
-hooks.clear();dirty=true;await flush();await click('Urgent alerts (1)');
+browserWindow.location.href='https://pvos.site/pvos/literature';hooks.clear();dirty=true;await flush();await click('Urgent alerts (1)');
 const open=all().find(n=>n.type==='button'&&/Open in queue/.test(text(n)));assert.ok(open);await open.props.onClick();await flush();
 assert.ok(text(article()).includes('Exact alerted article'));assert.equal(all().filter(x=>x.type==='button'&&x.props['aria-pressed']!==undefined&&text(x).includes('First safety article')).length,0);
+hooks.clear();dirty=true;await flush();assert.ok(text(article()).includes('Exact alerted article'),'Refresh retains exact alert context');
 failAck=true;await click('Not relevant');await click('Save & next');
 assert.ok(text(view).includes('Fixture acknowledgment failed'));assert.ok(text(article()).includes('Exact alerted article'));assert.equal(db.pvos_literature_alerts[0].status,'open');
 await click('Save & next');assert.equal(db.pvos_literature_alerts[0].status,'acknowledged');assert.equal(article(),undefined);
-console.log('PASS: pagination, reader decisions, retained downstream choice/retry, next article, unresolved information, independent assignment UI, pending completion block, approval/completion rendering, records, source failure, exact alert and acknowledgment retry. Fixture UI logic only; no browser/auth/database security claims.');
+console.log('PASS: distinct run references, run and exact-alert refresh restoration, changing screening, pagination, reader decisions, retained downstream choice/retry, next article, unresolved information, independent assignment UI, pending completion block, approval/completion rendering, records, source failure, exact alert and acknowledgment retry. Fixture UI logic only; no browser/auth/database security claims.');
