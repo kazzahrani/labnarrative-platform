@@ -1,62 +1,22 @@
 "use client";
 import Link from "next/link";
 import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
-import * as XLSX from "xlsx";
+import {readEurdFile,parseEurdRows,eurdFrequencyMonths,type EurdRow,type EurdColumns,type EurdImport} from "./_eurd-import";
 import {Badge,Help} from "../_components";
 import {pvosSupabase} from "../_pvos-supabase";
 import styles from "../pvos.module.css";
 
 const EMA_URL="https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/periodic-safety-update-reports-psurs";
 type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any};
-type EurdRow={substance:string,dlp:string,due:string,frequency:string,raw:Record<string,string>};
+type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any};
 const norm=(v:any)=>String(v??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
-function dateFromCell(v:any):string{
- if(v instanceof Date&&!isNaN(v.getTime()))return v.toISOString().slice(0,10);
- if(typeof v==="number"&&v>20000&&v<100000){
-   const d=XLSX.SSF.parse_date_code(v);if(d)return [d.y,String(d.m).padStart(2,"0"),String(d.d).padStart(2,"0")].join("-");
- }
- const s=String(v??"").trim();
- if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
- const m=s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
- if(m)return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
- return "";
-}
-function freqMonths(value:string):number|null{
- const s=norm(value);
- if(/six monthly|6 month|half yearly|semi annual|twice yearly/.test(s))return 6;
- if(/quarterly|3 month/.test(s))return 3;
- if(/12 month|once yearly|yearly|annual/.test(s))return 12;
- if(/24 month|2 yearly|2 year|biennial/.test(s))return 24;
- if(/36 month|3 yearly|3 year|triennial/.test(s))return 36;
- return null;
-}
-function readEurdFile(data:ArrayBuffer):EurdRow[]{
- const book=XLSX.read(data,{type:"array",cellDates:true});
- const result:EurdRow[]=[];
- for(const name of book.SheetNames){
-  const grid=XLSX.utils.sheet_to_json<any[]>(book.Sheets[name],{header:1,raw:true,defval:""});
-  const headerIndex=grid.slice(0,60).findIndex(row=>Array.isArray(row)&&row.some(v=>/active substance|inn\b|substance\/combination/i.test(String(v))));
-  if(headerIndex<0)continue;
-  const heads=grid[headerIndex].map((x:any)=>norm(x));
-  function column(pattern:RegExp){return heads.findIndex((h:string)=>pattern.test(h));}
-  const ingredient=column(/active substance|substance combination|\binn\b/);
-  const dlp=column(/data lock point|\bdlp\b/);
-  const submission=column(/submission date|deadline.*submission|date of submission/);
-  const freq=column(/frequency|interval/);
-  if(ingredient<0||dlp<0||submission<0)continue;
-  for(const row of grid.slice(headerIndex+1)){
-    if(!Array.isArray(row))continue;
-    const substance=String(row[ingredient]??"").trim(),lock=dateFromCell(row[dlp]),due=dateFromCell(row[submission]);
-    if(!substance||!lock||!due)continue;
-    const raw:Record<string,string>={};
-    heads.forEach((h:string,i:number)=>{if(h&&row[i]!==undefined&&String(row[i]).trim())raw[h]=String(row[i]);});
-    result.push({substance,dlp:lock,due,frequency:String(row[freq]??""),raw});
-  }
- }
- return result;
-}
+const colLetter=(value:number)=>{let n=value+1,s="";while(n>0){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26);}return s;};
 export function PsurCycles({companyId,organizationId,products,onChanged}:{companyId:string,organizationId:string,products:any[],onChanged?:()=>void}){
  const [entries,setEntries]=useState<Entry[]>([]),[parsed,setParsed]=useState<EurdRow[]>([]);
+ const [importData,setImportData]=useState<EurdImport|null>(null);
+ const [mapSheet,setMapSheet]=useState(0),[headerRow,setHeaderRow]=useState(0);
+ const [columns,setColumns]=useState<EurdColumns>({substance:-1,dlp:-1,due:-1,frequency:-1});
+ const [showMapping,setShowMapping]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const [editingId,setEditingId]=useState<string|null>(null);
  const [productId,setProductId]=useState(""),[substance,setSubstance]=useState(""),[dlp,setDlp]=useState(""),[due,setDue]=useState("");
@@ -78,14 +38,35 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  },[parsed,p?.active_ingredient,search]);
  async function upload(file:File|undefined){
   if(!file)return;
-  setError("");setMessage("");
+  setError("");setMessage("");setParsed([]);setImportData(null);setSelectedRow(null);
   try{
-   const rows=readEurdFile(await file.arrayBuffer());setParsed(rows);
-   if(!rows.length)throw Error("Could not identify the active-substance, DLP and submission-date columns. Check the EMA XLSX layout; do not create a deadline from uncertain data.");
-   setMessage(rows.length+" EURD rows parsed locally. Choose the matching substance and verify its values.");
-  }catch(e){setParsed([]);setError((e as Error).message);}
+   const parsedFile=readEurdFile(await file.arrayBuffer());
+   if(!parsedFile.sheets.length)throw Error("No worksheets found in the XLSX file.");
+   const selected=parsedFile.sheets[parsedFile.bestSheet];
+   setImportData(parsedFile);setMapSheet(parsedFile.bestSheet);
+   setHeaderRow(selected.headerRow);setColumns({...selected.columns});
+   setParsed(parsedFile.rows);
+   setShowMapping(parsedFile.rows.length===0);
+   if(parsedFile.rows.length){
+    setMessage(parsedFile.rows.length+" EURD entries parsed from '"+selected.name+"'. Select the correct substance and verify the dates.");
+   }else{
+    setError("The spreadsheet was opened, but no valid DLP/submission pairs could be verified automatically. Select the source columns below; PVOS has not created any deadlines.");
+   }
+  }catch(e){setParsed([]);setImportData(null);setError((e as Error).message);}
  }
- function choose(r:EurdRow){setSelectedRow(r);setSubstance(r.substance);setDlp(r.dlp);setDue(r.due);setFrequency(String(freqMonths(r.frequency)||""));setSearch(r.substance);setMessage("Source row selected. Verify the jurisdiction and regulatory basis before confirming.");}
+ const sheet=importData?.sheets[mapSheet];
+ function selectSheet(index:number){
+  const target=importData?.sheets[index];if(!target)return;
+  setMapSheet(index);setHeaderRow(target.headerRow);setColumns({...target.columns});
+ }
+ function manualParse(){
+  setError("");if(!sheet)return;
+  const rows=parseEurdRows(sheet,columns,headerRow);
+  if(!rows.length){setError("No valid EURD rows were found using these columns. Check the header row and ensure you selected DLP and Submission date (not Next DLP or the EU reference date).");return;}
+  setParsed(rows);setShowMapping(false);
+  setMessage(rows.length+" rows validated from '"+sheet.name+"'. Check the substance and dates before saving.");
+ }
+ function choose(r:EurdRow){setSelectedRow(r);setSubstance(r.substance);setDlp(r.dlp);setDue(r.due);setFrequency(String(eurdFrequencyMonths(r.frequency)||""));setSearch(r.substance);setMessage("Source row selected. Verify the jurisdiction and regulatory basis before confirming.");}
  function edit(c:Entry){
   setEditingId(c.id);setProductId(c.product_id);setSubstance(c.active_substance);
   setDlp(c.data_lock_point);setDue(c.submission_due_date);setFrequency(String(c.frequency_months||""));
@@ -128,6 +109,39 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      <label className={styles.buttonGhost}>Import EMA XLSX <input type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>{upload(e.target.files?.[0]);e.target.value="";}}/></label>
      {parsed.length?<Badge tone="green">{parsed.length} source rows</Badge>:null}
     </div>
+    {importData?<div style={{marginTop:12}}>
+     <div className={styles.inlineActions}>
+      <button type="button" className={styles.buttonGhost} onClick={()=>setShowMapping(v=>!v)}>
+       {showMapping?"Hide spreadsheet mapping":"Review spreadsheet columns"}
+      </button>
+      <span className={styles.muted}>Workbook inspected locally; no file uploaded to PVOS</span>
+     </div>
+     {showMapping&&sheet?<div className={styles.info} style={{display:"grid",gap:12,marginTop:10}}>
+      <div className={styles.formGrid}>
+       <label>Worksheet<select className={styles.input} value={mapSheet} onChange={e=>selectSheet(Number(e.target.value))}>
+        {importData.sheets.map((sh,i)=><option key={sh.name} value={i}>{sh.name} ({sh.grid.length} rows)</option>)}
+       </select></label>
+       <label>Header row (in Excel)<input className={styles.input} type="number" min={1} max={Math.max(1,sheet.grid.length)} value={headerRow+1} onChange={e=>setHeaderRow(Math.max(0,Number(e.target.value)-1))}/></label>
+      </div>
+      <div className={styles.formGrid}>
+       {([{id:"substance",title:"Active substance"},{id:"dlp",title:"DLP (not Next DLP)"},{id:"due",title:"Submission date (not Next)"},{id:"frequency",title:"Frequency (optional)"}] as const).map(field=><label key={field.id}>{field.title}
+        <select className={styles.input} value={columns[field.id]} onChange={e=>setColumns(c=>({...c,[field.id]:Number(e.target.value)}))}>
+         <option value={-1}>Select column</option>
+         {Array.from({length:Math.min(80,Math.max((sheet.grid[headerRow]||[]).length,(sheet.grid[headerRow+1]||[]).length,15))},(_,i)=><option key={i} value={i}>
+          {colLetter(i)} · {String(sheet.grid[headerRow]?.[i]??sheet.grid[headerRow+1]?.[i]??"").replace(/\s+/g," ").slice(0,65)||"(blank header)"}
+         </option>)}
+        </select>
+       </label>)}
+      </div>
+      <div className={styles.muted}>Source preview (first three rows after the selected header):</div>
+      <div className={styles.tableWrap} style={{maxHeight:190,overflow:"auto"}}>
+       <table className={styles.table}><thead><tr>{(["substance","dlp","due"] as const).map(k=><th key={k}>{k.toUpperCase()}</th>)}</tr></thead>
+        <tbody>{sheet.grid.slice(headerRow+1,headerRow+4).map((row,i)=><tr key={i}>{(["substance","dlp","due"] as const).map(k=><td key={k}>{columns[k]<0?"—":String(row[columns[k]]??"").slice(0,90)}</td>)}</tr>)}</tbody>
+       </table>
+      </div>
+      <div><button type="button" className={styles.button} onClick={manualParse} disabled={[columns.substance,columns.dlp,columns.due].some(c=>c<0)}>Validate mapped columns</button></div>
+     </div>:null}
+    </div>:null}
     {parsed.length?<div style={{marginTop:16}}>
      <label>Find substance<input className={styles.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search an active substance"/></label>
      <div className={styles.tableWrap} style={{maxHeight:240,overflowY:"auto",marginTop:10}}><table className={styles.table}><thead><tr><th>EURD active substance</th><th>DLP</th><th>Submission</th><th></th></tr></thead><tbody>
