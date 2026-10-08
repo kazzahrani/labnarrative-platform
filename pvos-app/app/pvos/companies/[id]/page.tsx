@@ -14,13 +14,15 @@ import {readWork,type WorkData} from "../../_work";
 import {WorkList} from "../../_work-list";
 import {deadlineState} from "../../_work-utils";
 import {CompanyRecords} from "../_company-records";
+import {PsurCycles} from "../_psur-cycles";
+import {DepartmentRequests} from "../_department-requests";
 import { readProductPages } from "../../_registration";
 
 export default function CompanyPage(){
   const params=useParams<{id:string}>();
   const {session,organizationId,reloadToken,refresh}=usePVOS();
   const [tab,setTab]=useState("overview"),[workView,setWorkView]=useState("active"),[work,setWork]=useState<WorkData|null>(null),[workError,setWorkError]=useState(""),[showNew,setShowNew]=useState(false);
-  useEffect(()=>{const p=new URLSearchParams(window.location.search);if(["overview","work","products","documents","history"].includes(p.get("tab")||""))setTab(p.get("tab")!);},[]);
+  useEffect(()=>{const p=new URLSearchParams(window.location.search);if(["overview","work","products","psur","departments","documents","history"].includes(p.get("tab")||""))setTab(p.get("tab")!);},[]);
   useEffect(()=>{if(!organizationId||!session)return;let active=true;setWorkError("");readWork(organizationId,session.user.id).then(d=>{if(active)setWork(d)}).catch(e=>{if(active)setWorkError(e.message)});return()=>{active=false}},[organizationId,session?.user.id,reloadToken]);
   const [company,setCompany]=useState<any|null>(null);
   const [products,setProducts]=useState<any[]>([]);
@@ -42,7 +44,7 @@ export default function CompanyPage(){
   if(error)return <div className={styles.errorBox} role="alert">{error}</div>;
   if(loading||!company) return <div className={styles.empty}>Loading company workspace…</div>;
   const items=(work?.items||[]).filter(w=>w.company_id===company.id);
-  const active=items.filter(w=>w.status!=="complete"&&(deadlineState(w.due,w.status).days===null||deadlineState(w.due,w.status).days!<=7||w.waiting||["in_progress","returned"].includes(w.status)));
+  const active=items.filter(w=>w.status!=="complete"&&(deadlineState(w.due,w.status).days===null||(deadlineState(w.due,w.status).days!<=7||(w.kind==="PSUR/PBRER"&&deadlineState(w.due,w.status).days!<=90))||w.waiting||["in_progress","returned"].includes(w.status)));
   const scheduled=items.filter(w=>w.status!=="complete"&&!active.some(a=>a.id===w.id));
   const completed=items.filter(w=>w.status==="complete");
   const visible=workView==="scheduled"?scheduled:workView==="completed"?completed:active;
@@ -50,7 +52,7 @@ export default function CompanyPage(){
   return <>
     <Header eyebrow="Company workspace" title={company.name} sub={company.contract_scope??"PV responsibility scope"} action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Company settings</Link><button className={styles.button} onClick={()=>setShowNew(true)}>New task</button></div>}/>
     {workError?<div className={styles.errorBox} role="alert">Work could not load: {workError} <button className={styles.buttonGhost} onClick={refresh}>Retry</button></div>:null}
-    <Tabs label="Company workspace" value={tab} onChange={changeTab} items={[{id:"overview",label:"Overview"},{id:"work",label:"Work"},{id:"products",label:"Products"},{id:"documents",label:"Documents"},{id:"history",label:"History"}]}/>
+    <Tabs label="Company workspace" value={tab} onChange={changeTab} items={[{id:"overview",label:"Overview"},{id:"work",label:"Work"},{id:"products",label:"Products"},{id:"psur",label:"PSUR"},{id:"departments",label:"Requests"},{id:"documents",label:"Documents"},{id:"history",label:"History"}]}/>
     {tab==="overview"?<>
       <div className={styles.compactSummary}><span><strong>{active.length}</strong> Active items</span><span><strong>{items.filter(w=>deadlineState(w.due,w.status).overdue).length}</strong> Overdue</span><span><strong>{products.length}</strong> Products</span></div>
       <section className={styles.panel}><div className={styles.panelHeader}><h2>Needs attention</h2><button className={styles.buttonGhost} onClick={()=>changeTab("work")}>All company work</button></div>{work?<WorkList items={active} companies={work.companies} members={work.members} userId={session?.user.id} showCompany={false}/>:<div className={styles.empty}>Loading work and reviews…</div>}</section>
@@ -59,6 +61,8 @@ export default function CompanyPage(){
     </>:null}
     {tab==="work"?<section className={styles.panel}><div className={styles.sectionBody}><Tabs label="Company work views" value={workView} onChange={setWorkView} items={[{id:"active",label:`Active (${active.length})`},{id:"scheduled",label:`Scheduled (${scheduled.length})`},{id:"completed",label:`Completed (${completed.length})`}]}/></div>{work?<WorkList items={visible} companies={work.companies} members={work.members} userId={session?.user.id} showCompany={false}/>:<div className={styles.empty}>Loading work…</div>}</section>:null}
     {tab==="products"?<ProductRegister companyId={company.id} organizationId={company.organization_id} products={products} onSaved={p=>setProducts(rows=>rows.map(row=>row.id===p.id?p:row))}/>:null}
+    {tab==="psur"?<PsurCycles companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh}/>:null}
+    {tab==="departments"?<DepartmentRequests companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh}/>:null}
     {tab==="documents"||tab==="history"?<CompanyRecords companyId={company.id} organizationId={company.organization_id} view={tab}/>:null}
     <NewTaskModal open={showNew} initialCompanyId={company.id} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);refresh()}}/>
   </>;
