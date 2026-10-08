@@ -18,6 +18,8 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  const [showMapping,setShowMapping]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const [editingId,setEditingId]=useState<string|null>(null);
+ const [previewId,setPreviewId]=useState<string|null>(null);
+ const [previewOffset,setPreviewOffset]=useState(30);
  const [productId,setProductId]=useState(""),[substance,setSubstance]=useState(""),[dlp,setDlp]=useState(""),[due,setDue]=useState("");
  const [frequency,setFrequency]=useState(""),[jurisdiction,setJurisdiction]=useState("reference_only");
  const [basis,setBasis]=useState(""),[revision,setRevision]=useState("EMA EURD Rev. 164 (23 Sep 2026)");
@@ -30,6 +32,11 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  useEffect(()=>{load().catch(e=>setError(e.message));},[load]);
  useEffect(()=>{if(products.length&&!productId)setProductId(products[0].id)},[products,productId]);
  const p=products.find(x=>x.id===productId);
+ const preview=entries.find(c=>c.id===previewId);
+ const previewAsOf=preview?new Date(Date.parse(preview.submission_due_date+"T00:00:00Z")-previewOffset*86400000).toISOString().slice(0,10):"";
+ const previewCountdown=previewOffset<0?`${Math.abs(previewOffset)} days overdue`:previewOffset===0?"Due today":`${previewOffset} day${previewOffset===1?"":"s"} remaining`;
+ const previewActivity=preview?products.find(p=>p.id===preview.product_id)?.brand_name||preview.active_substance:"";
+
  const suggestions=useMemo(()=>{
   const term=norm(search||p?.active_ingredient||"");
   if(!term)return parsed.slice(0,20);
@@ -172,9 +179,45 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
     {entries.map(c=><tr key={c.id}><td>{products.find(p=>p.id===c.product_id)?.brand_name||c.active_substance}<div className={styles.muted}>DLP {c.data_lock_point}</div></td>
      <td>{c.submission_due_date}</td><td>{c.jurisdiction==="reference_only"?"Unverified":c.jurisdiction.toUpperCase()}</td>
      <td title={c.source_revision}>{c.source_revision}</td><td><Badge tone={c.status==="confirmed"?"green":"amber"}>{c.status==="draft"?"Needs confirmation":c.status}</Badge></td>
-     <td>{c.task_id?<Link className={styles.buttonGhost} href={"/pvos/tasks/"+c.task_id}>Open task</Link>:c.status==="draft"?<div className={styles.inlineActions}><button className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button><button className={styles.buttonGhost} disabled={busy||c.jurisdiction==="reference_only"||!c.authority_basis} style={c.jurisdiction==="reference_only"||!c.authority_basis?{opacity:0.4,cursor:"not-allowed",filter:"grayscale(1)"}:undefined} title={c.jurisdiction==="reference_only"?"Verify the applicable authority before scheduling":!c.authority_basis?"Record the regulatory basis before scheduling":undefined} onClick={()=>confirm(c.id)}>{c.jurisdiction==="reference_only"?"Scheduling blocked — verify authority":!c.authority_basis?"Scheduling blocked — document basis":"Confirm & schedule"}</button></div>:null}</td>
+     <td>
+      <div className={styles.inlineActions}>
+       {c.task_id?<Link className={styles.buttonGhost} href={"/pvos/tasks/"+c.task_id}>Open task</Link>:c.status==="draft"?<>
+        <button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button>
+        <button type="button" className={styles.buttonGhost} disabled={busy||c.jurisdiction==="reference_only"||!c.authority_basis} style={c.jurisdiction==="reference_only"||!c.authority_basis?{opacity:0.4,cursor:"not-allowed",filter:"grayscale(1)"}:undefined} title={c.jurisdiction==="reference_only"?"Verify the applicable authority before scheduling":!c.authority_basis?"Record the regulatory basis before scheduling":undefined} onClick={()=>confirm(c.id)}>{c.jurisdiction==="reference_only"?"Scheduling blocked — verify authority":!c.authority_basis?"Scheduling blocked — document basis":"Confirm & schedule"}</button>
+       </>:null}
+       <button type="button" className={styles.buttonGhost} onClick={()=>{setPreviewId(c.id===previewId?null:c.id);setPreviewOffset(30);}}>{c.id===previewId?"Hide preview":"Preview reminders"}</button>
+      </div>
+     </td>
     </tr>)}
    </tbody></table>{!entries.length?<div className={styles.empty}>No EURD cycles recorded for this company.</div>:null}</div>
+   {preview?<div className={styles.sectionBody} style={{borderTop:"1px solid var(--line,#dce2e5)",display:"grid",gap:14}}>
+     <div>
+      <h3 style={{fontSize:15,margin:"0 0 7px"}}>PSUR deadline & reminder simulation</h3>
+      <div className={styles.muted}>PREVIEW ONLY · No task, reminder, email or regulatory obligation is created. The real Dashboard is unchanged.</div>
+     </div>
+     <div className={styles.formGrid}>
+      <label>Simulate deadline position
+       <select className={styles.input} value={previewOffset} onChange={e=>setPreviewOffset(Number(e.target.value))}>
+        <option value={90}>90 days remaining</option>
+        <option value={30}>30 days remaining</option>
+        <option value={7}>7 days remaining</option>
+        <option value={1}>1 day remaining</option>
+        <option value={0}>Due today</option>
+        <option value={-2}>2 days overdue</option>
+       </select>
+      </label>
+      <div style={{alignSelf:"end"}}><span className={styles.muted}>Simulated today: </span><strong>{previewAsOf}</strong><div className={styles.muted}>Actual filing deadline: {preview.submission_due_date}</div></div>
+     </div>
+     <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Activity</th><th>Deadline</th><th>Status</th><th>Reminder state</th></tr></thead><tbody>
+      <tr><td>PSUR/PBRER · {previewActivity}<div className={styles.muted}>DLP {preview.data_lock_point}</div></td>
+      <td>{preview.submission_due_date}<div className={previewOffset<0?styles.bad:styles.muted}>{previewCountdown}</div></td>
+      <td><Badge tone="default">Not Started · simulated</Badge></td>
+      <td><Badge tone={previewOffset<0?"red":previewOffset<=7?"amber":"default"}>{previewOffset<0?"Overdue":previewOffset<=7?"Due soon":"PSUR advance reminder"}</Badge></td>
+      </tr>
+     </tbody></table></div>
+     <div className={styles.muted}>This preview tests timing and labels only. Creating a real Dashboard task still requires an applicable authority requirement and a recorded regulatory basis. Email/push reminders are not yet implemented.</div>
+     <div><button type="button" className={styles.buttonGhost} onClick={()=>setPreviewId(null)}>Close simulation</button></div>
+    </div>:null}
   </section>
  </div>;
 }
