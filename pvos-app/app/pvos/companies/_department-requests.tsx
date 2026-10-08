@@ -170,6 +170,7 @@ export function DepartmentRequests({companyId,organizationId,products,onChanged}
     <div><h2>Requests</h2><div className={styles.muted} style={{marginTop:5}}>Track information, documents and invoices across departments</div></div>
     <div className={styles.inlineActions} style={{marginTop:0}}>
      <Help>Mark requested and follow-ups record external communication only; they do not send email. Reviewer approval is independent and evidence-linked.</Help>
+     <Link className={styles.buttonGhost} href={"/pvos/invoices?company="+companyId}>Process invoice →</Link>
      <button type="button" className={styles.button} onClick={()=>{setError("");setMessage("");setOpenCreate(true);}}>+ New request</button>
     </div>
    </div>
