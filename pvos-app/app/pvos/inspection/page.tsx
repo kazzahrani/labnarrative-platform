@@ -8,6 +8,8 @@ import { pvosSupabase } from "../_pvos-supabase";
 import { niceStatus } from "../_utils";
 import { registrationLabel, registrationTone } from "../_registration";
 import { loadInspection, loadInspectionAudit, scopeInspection, inspectionAccount, inspectionApprovals, inspectionChecks, inspectionExport, auditDescription, type InspectionData } from "../_inspection";
+import InspectionChecklist from "./_checklist";
+import { loadInspectionChecklist } from "../_inspection-checklist";
 import styles from "../pvos.module.css";
 
 type Tab="literature"|"handover"|"approvals"|"registration"|"tasks"|"audit";
@@ -42,7 +44,8 @@ function AuditDetail({row,organizationId}:{row:Row,organizationId:string}){
 }
 
 export default function Inspection(){
-  const {organizationId}=usePVOS();
+  const {organizationId,session}=usePVOS();
+  const [view,setView]=useState<"checklist"|"evidence">("checklist");
   const [data,setData]=useState<InspectionData|null>(null);
   const [companyFilter,setCompanyFilter]=useState("all");
   const [tab,setTab]=useState<Tab>("literature");
@@ -68,11 +71,19 @@ export default function Inspection(){
   const linkRun=(id:string)=><Link href={"/pvos/literature?inspectionRun="+id}>Open screening run →</Link>;
   const shared=!!scoped&&companyFilter!=="all"&&scoped.handoverEvidence.some(e=>e.snapshot?.companies?.some((c:Row)=>c.company_id!==companyFilter));
 
+  async function refreshChecklist(){
+    if(!organizationId)return;
+    const organization=organizationId;
+    const next=await loadInspectionChecklist(pvosSupabase,organization);
+    setData(current=>current?.organizationId===organization?{...current,...next}:current);
+  }
+
   async function download(kind:"csv"|"json"){
     if(!data||loading||error||exporting)return;setExporting(kind);setExportError(null);
     try{
       const audit=kind==="json"?await loadInspectionAudit(pvosSupabase,data.organizationId):data.audit;
-      const complete=scopeInspection({...data,audit,auditLoadedAt:kind==="json"?new Date().toISOString():data.loadedAt},companyFilter);
+      const checklist=await loadInspectionChecklist(pvosSupabase,data.organizationId);
+      const complete=scopeInspection({...data,...checklist,audit,auditLoadedAt:kind==="json"?new Date().toISOString():data.loadedAt},companyFilter);
       const out=inspectionExport(complete,companyFilter);
       const stamp=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Riyadh",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
       const name=`PVOS-inspection-${companyFilter}-${stamp}.${kind}`;
@@ -82,7 +93,7 @@ export default function Inspection(){
   }
 
   return <>
-    <Header eyebrow="Inspection evidence" title="Can we prove the work was done?" sub="Inspect recorded decisions, acknowledgements and supporting evidence. These checks identify workflow gaps; they do not certify regulatory compliance." action={<button className={styles.buttonGhost} onClick={load} disabled={loading||!!exporting}>Refresh</button>}/>
+    <Header eyebrow="Inspection evidence" title="Prepare for inspection" sub="Prepare company evidence, record QPPV conclusions and inspect the supporting history." action={<button className={styles.buttonGhost} onClick={load} disabled={loading||!!exporting}>Refresh</button>}/>
     <div className={styles.inlineActions} style={{marginBottom:14,flexWrap:"wrap"}}>
       <label>Company <select className={styles.input} value={companyFilter} onChange={e=>setCompanyFilter(e.target.value)} disabled={loading||!!exporting}><option value="all">All companies</option>{data?.companies.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
       <button className={styles.button} disabled={!data||loading||!!error||!!exporting} onClick={()=>download("csv")}>{exporting==="csv"?"Loading full history…":"Export CSV"}</button>
@@ -92,6 +103,8 @@ export default function Inspection(){
     {error?<div className={styles.errorBox} role="alert">Inspection could not load every record: {error}. Refresh before exporting.</div>:loading?<div className={styles.empty}>Loading complete inspection registers…</div>:scoped&&checks?<>
       <p className={styles.muted}>Reads completed {time(scoped.loadedAt)} · All displayed times are Riyadh time; export timestamps are UTC. Exports contain file references, not attached document bytes.</p>
       {shared?<div className={styles.notice}>This scope includes shared handovers. The JSON export retains their full original snapshots, including other covered companies, so the recorded SHA-256 still refers to the original evidence.</div>:null}
+      <div className={styles.inlineActions} style={{marginBottom:16}}><button className={view==="checklist"?styles.button:styles.buttonGhost} aria-pressed={view==="checklist"} onClick={()=>setView("checklist")}>Checklist</button><button className={view==="evidence"?styles.button:styles.buttonGhost} aria-pressed={view==="evidence"} onClick={()=>setView("evidence")}>Evidence & history</button></div>
+      {view==="checklist"?<InspectionChecklist key={companyFilter} data={data!} companyId={companyFilter} userId={session?.user.id} onCompany={setCompanyFilter} onRefresh={refreshChecklist}/>:<>
       <div className={styles.cards}>
         {[['Literature evidence records',scoped.literatureRecords.length],['Frozen handover snapshots',scoped.handoverEvidence.length],['Attributed approval decisions',approvals.filter(a=>a.actor.recorded).length],['Registration history events',registrationHistory.length]].map(([label,count])=><div className={styles.card} key={label}><div className={styles.muted}>{label}</div><div style={{fontSize:28,marginTop:8}}>{count}</div></div>)}
       </div>
@@ -131,6 +144,7 @@ export default function Inspection(){
           time(a.created_at),company(a.company_id),<>{niceStatus(a.entity_type)}<div className={styles.muted}><RecordId value={a.entity_id}/></div><div>{auditDescription(a)}</div></>,actor(a.actor_user_id,a.metadata?.actor_email||a.actor_email),<AuditDetail key={String(a.id)+scoped.loadedAt} row={a} organizationId={scoped.organizationId}/>
         ]}/>:null}
       </section>
+      </>}
     </>:null}
   </>;
 }

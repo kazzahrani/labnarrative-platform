@@ -1,0 +1,83 @@
+-- Real database verification. Every fixture, review and audit event is rolled back.
+begin;
+do $test$
+declare actor uuid; org uuid; company uuid; other_company uuid; alien_company uuid; other_org uuid; item uuid; task uuid; other_task uuid; doc uuid; rev integer; review uuid; result jsonb; denied boolean;
+begin
+ select user_id,organization_id into actor,org from public.pvos_memberships where role='admin' order by organization_id,user_id limit 1;
+ if actor is null then raise exception 'Verification requires an existing workspace administrator'; end if;
+ perform set_config('request.jwt.claim.sub',actor::text,true);
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated')::text,true);
+ insert into public.pvos_companies(organization_id,name) values(org,'Rollback inspection verification') returning id into company;
+ insert into public.pvos_companies(organization_id,name) values(org,'Rollback other company') returning id into other_company;
+ insert into public.pvos_organizations(name) values('Rollback inaccessible workspace') returning id into other_org;
+ insert into public.pvos_companies(organization_id,name) values(other_org,'Rollback inaccessible company') returning id into alien_company;
+ insert into public.pvos_inspection_checklist_items(organization_id,company_id,requirement_key,area_order,area_title,title) values(other_org,alien_company,'01.01',1,'QPPV','Foreign checkpoint');
+ perform set_config('test.inspection_company',company::text,true);
+ perform set_config('test.inspection_org',org::text,true);
+ perform set_config('test.inspection_other_org',other_org::text,true);
+ if public.pvos_start_inspection_checklist(company)<>46 or public.pvos_start_inspection_checklist(company)<>0 then raise exception 'Template initialization is not complete and idempotent'; end if;
+ if (select count(distinct area_order) from public.pvos_inspection_checklist_items where company_id=company)<>15 or not exists(select 1 from public.pvos_inspection_checklist_items where company_id=company and area_title='Interview') then raise exception 'Template areas lost'; end if;
+ select id,revision into item,rev from public.pvos_inspection_checklist_items where company_id=company order by requirement_key limit 1;
+ denied:=false;begin perform public.pvos_review_inspection_checkpoint(item,rev,'reviewed','No supporting evidence'); exception when others then denied:=true;end;
+ if not denied then raise exception 'Reviewed accepted without evidence'; end if;
+ denied:=false;begin perform public.pvos_review_inspection_checkpoint(item,rev,'not_applicable',' ');exception when others then denied:=true;end;
+ if not denied then raise exception 'Not applicable accepted without justification'; end if;
+ denied:=false;begin perform public.pvos_link_inspection_evidence(item,rev,'external',null,'Version missing','https://example.invalid/document',null);exception when others then denied:=true;end;
+ if not denied then raise exception 'Unversioned external reference accepted'; end if;
+ denied:=false;begin perform public.pvos_link_inspection_evidence(item,rev,'external',null,'Unsafe URL','https://user:password@example.invalid/document','v1');exception when others then denied:=true;end;
+ if not denied then raise exception 'Credential URL accepted'; end if;
+ insert into public.pvos_tasks(organization_id,company_id,title,activity_type,status) values(org,company,'Rollback verification record','inspection','complete') returning id into task;
+ insert into public.pvos_tasks(organization_id,company_id,title,activity_type) values(org,other_company,'Rollback cross-company record','inspection') returning id into other_task;
+ denied:=false;begin perform public.pvos_link_inspection_evidence(item,rev,'task',other_task,'Cross-company evidence');exception when others then denied:=true;end;
+ if not denied then raise exception 'Cross-company link accepted'; end if;
+ perform public.pvos_link_inspection_evidence(item,rev,'task',task,'Task only');
+ select revision into rev from public.pvos_inspection_checklist_items where id=item;
+ denied:=false;begin perform public.pvos_review_inspection_checkpoint(item,rev,'reviewed','Task is complete');exception when others then denied:=true;end;
+ if not denied then raise exception 'Complete task without document accepted as supporting evidence'; end if;
+ insert into public.pvos_task_evidence(task_id,title,file_path,version,uploaded_by) values(task,'Rollback reference','verification-only/not-an-upload.pdf','v1',actor) returning id into doc;
+ review:=public.pvos_review_inspection_checkpoint(item,rev,'reviewed','Rollback human conclusion');
+ result:=public.pvos_get_inspection_checklist(org);
+ if not exists(select 1 from jsonb_array_elements(result) j where j->>'id'=item::text and j->>'effective_status'='reviewed') then raise exception 'Successful human review not shown'; end if;
+ if not exists(select 1 from public.pvos_inspection_checklist_reviews where id=review and reviewed_by=actor and reviewer_email is not null and reviewed_at is not null and jsonb_array_length(snapshot->'sources')=1) then raise exception 'Reviewer identity/time/evidence snapshot missing'; end if;
+ denied:=false;begin perform public.pvos_review_inspection_checkpoint(item,rev,'not_applicable','Stale decision');exception when others then denied:=true;end;
+ if not denied then raise exception 'Stale browser review accepted'; end if;
+ denied:=false;begin perform public.pvos_review_inspection_checkpoint(item,null,'not_applicable','Missing revision');exception when others then denied:=true;end;
+ if not denied then raise exception 'Null revision bypassed concurrency guard'; end if;
+ update public.pvos_task_evidence set archived_at=now() where id=doc;
+ result:=public.pvos_get_inspection_checklist(org);
+ if not exists(select 1 from jsonb_array_elements(result) j where j->>'id'=item::text and j->>'effective_status'='needs_review') then raise exception 'Changed evidence did not require re-review'; end if;
+ if (select snapshot->'sources'->0->'source'->'active_evidence'->0->>'archived_at' from public.pvos_inspection_checklist_reviews where id=review) is not null then raise exception 'Original review snapshot was altered'; end if;
+ denied:=false;begin update public.pvos_inspection_checklist_reviews set conclusion='Altered' where id=review;exception when others then denied:=true;end;
+ if not denied then raise exception 'Review history mutable'; end if;
+ select revision into rev from public.pvos_inspection_checklist_items where id=item;
+ perform public.pvos_prepare_inspection_checkpoint(item,rev,actor,'Verification SOP v1','Evidence needs replacement');
+ select revision into rev from public.pvos_inspection_checklist_items where id=item;
+ perform public.pvos_review_inspection_checkpoint(item,rev,'missing_evidence','Replacement document required');
+ select revision into rev from public.pvos_inspection_checklist_items where id=item;
+ perform public.pvos_review_inspection_checkpoint(item,rev,'not_applicable','Rollback applicability justification');
+ if (select count(*) from public.pvos_inspection_checklist_reviews where item_id=item)<>3 then raise exception 'Review cycles not retained'; end if;
+ if not exists(select 1 from public.pvos_audit_events where company_id=company and entity_type='inspection_checklist_reviews' and actor_user_id=actor) then raise exception 'Audit events missing'; end if;
+ -- Role is read live, not trusted from client arguments or cached metadata.
+ update public.pvos_memberships set role='quality' where organization_id=org and user_id=actor;
+ select revision into rev from public.pvos_inspection_checklist_items where id=item;
+ denied:=false;begin perform public.pvos_review_inspection_checkpoint(item,rev,'not_applicable','Unauthorized role');exception when others then denied:=true;end;
+ if not denied then raise exception 'Non-QPPV role could record review'; end if;
+ update public.pvos_memberships set role='admin' where organization_id=org and user_id=actor;
+end $test$;
+set local role authenticated;
+do $test$
+declare denied boolean; company uuid:=current_setting('test.inspection_company')::uuid; other_org uuid:=current_setting('test.inspection_other_org')::uuid;
+begin
+ if jsonb_array_length(public.pvos_get_inspection_checklist(current_setting('test.inspection_org')::uuid))<46 then raise exception 'Authorized read failed'; end if;
+ denied:=false;begin perform public.pvos_get_inspection_checklist(other_org);exception when others then denied:=true;end;
+ if not denied then raise exception 'Cross-workspace RPC read allowed'; end if;
+ if exists(select 1 from public.pvos_inspection_checklist_items where organization_id=other_org) then raise exception 'Cross-workspace RLS read allowed'; end if;
+ denied:=false;begin update public.pvos_inspection_checklist_items set status='reviewed' where company_id=company;exception when insufficient_privilege then denied:=true;end;
+ if not denied then raise exception 'Direct client write accepted'; end if;
+ if has_function_privilege('anon','public.pvos_get_inspection_checklist(uuid)','EXECUTE') or has_function_privilege('authenticated','public.pvos_inspection_sources(uuid)','EXECUTE') then raise exception 'Function privileges are too broad'; end if;
+ -- Execute the actual mutation entry point under authenticated database role.
+ if public.pvos_start_inspection_checklist(company)<>0 then raise exception 'Authenticated idempotent initialization failed'; end if;
+end $test$;
+reset role;
+select 'PASS: 46 checkpoints/15 areas, initialization, evidence requirements, company scope, human actor/time, immutable snapshots/history, stale decision protection, source changes, live QPPV roles, RPC grants and RLS' as verification;
+rollback;

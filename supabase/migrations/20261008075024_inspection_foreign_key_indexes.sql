@@ -1,0 +1,9 @@
+-- Cover checklist foreign keys and item-local history/reference lookups.
+create index pvos_inspection_items_owner_user_id on public.pvos_inspection_checklist_items(owner_user_id);
+create index pvos_inspection_items_current_review_id on public.pvos_inspection_checklist_items(current_review_id);
+create index pvos_inspection_links_company_id on public.pvos_inspection_checklist_links(company_id);
+create index pvos_inspection_links_created_by on public.pvos_inspection_checklist_links(created_by);
+create index pvos_inspection_links_item_id on public.pvos_inspection_checklist_links(item_id);
+create index pvos_inspection_reviews_company_id on public.pvos_inspection_checklist_reviews(company_id);
+create index pvos_inspection_reviews_item_id on public.pvos_inspection_checklist_reviews(item_id);
+create index pvos_inspection_reviews_reviewed_by on public.pvos_inspection_checklist_reviews(reviewed_by);
