@@ -9,7 +9,7 @@ import styles from "../pvos.module.css";
 type RecordRow={
  id:string;cycle_id:string;organization_id:string;company_id:string;product_id:string;task_id:string;
  stage:string;owner_user_id:string|null;reviewer_user_id:string|null;submission_date:string|null;
- submission_reference:string|null;submission_evidence_id:string|null;acknowledgement_evidence_id:string|null;
+ submission_reference:string|null;draft_evidence_id:string|null;submission_evidence_id:string|null;acknowledgement_evidence_id:string|null;
  completed_at:string|null;created_at:string;updated_at:string
 };
 type InputRow={id:string;record_id:string;kind:string;label:string;owner_user_id:string|null;due_on:string|null;
@@ -164,6 +164,7 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
     <div><span>Submission deadline</span><strong>{cycle.submission_due_date}</strong></div>
     <div><span>Owner</span><strong>{member(record.owner_user_id)}</strong></div>
     <div><span>Reviewer</span><strong>{member(record.reviewer_user_id)}</strong></div>
+    {record.draft_evidence_id?<div><span>Reviewed draft</span><strong>{evidence.find(x=>x.id===record.draft_evidence_id)?.title||"Uploaded document"}</strong></div>:null}
     {record.submission_date?<div><span>Actual submission</span><strong>{record.submission_date} · {record.submission_reference}</strong></div>:null}
     <div className={styles.psurFullRow}><Link href={fileHref}>Open work, evidence and documents →</Link></div>
    </div>:null}
@@ -194,7 +195,7 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
     </form>:null}
    </>:null}
    {panel==="documents"?<>
-    <div className={styles.muted}>Documents are securely stored in the existing PSUR work record. Upload drafts, final reports, submission receipts or authority acknowledgement there; select the appropriate document at each lifecycle step.</div>
+    <div className={styles.muted}>Documents are securely stored in the existing PSUR work record. Select the reviewed draft and a different submission receipt; upload final reports and acknowledgements there as needed.</div>
     <div className={styles.inlineActions}><Link href={fileHref} className={styles.buttonGhost}>Upload or review documents →</Link></div>
     <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Evidence / document</th><th>Type</th><th>Added</th></tr></thead><tbody>
      {evidence.map(x=><tr key={x.id}><td>{x.title}</td><td>{docEvidence(x)?"Uploaded document":"Evidence note"}</td><td>{fmt(x.created_at)}</td></tr>)}
@@ -222,8 +223,11 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
     {record.stage==="draft"?<div className={styles.psurActionBlock}>
      <label>Independent reviewer<select className={styles.input} value={reviewer} onChange={e=>setReviewer(e.target.value)}>
       <option value="">Choose reviewer</option>{members.map(m=><option key={m.user_id} value={m.user_id}>{m.email}</option>)}</select></label>
-     <span className={styles.muted}>An uploaded draft document must be present before review.</span>
-     <button disabled={busy||!reviewer||!fileOptions.length} className={styles.button} onClick={()=>void advance("send_review",{p_reviewer:reviewer})}>Send draft for review →</button>
+     <label>Draft document to freeze for review<select className={styles.input} value={draftFile} onChange={e=>setDraftFile(e.target.value)}>
+      <option value="">Select uploaded draft</option>{fileOptions.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}
+     </select></label>
+     <button disabled={busy||!reviewer||!draftFile} className={styles.button}
+      onClick={()=>void advance("send_review",{p_reviewer:reviewer,p_evidence_id:draftFile})}>Send draft for review →</button>
      {!fileOptions.length?<Link href={fileHref}>Upload draft document first →</Link>:null}
     </div>:null}
     {record.stage==="review"?<div className={styles.psurActionBlock}>
@@ -236,7 +240,7 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
       <label>Actual submission date<input type="date" className={styles.input} value={submissionDate} onChange={e=>setSubmissionDate(e.target.value)}/></label>
       <label>Submission reference<input className={styles.input} placeholder="Authority receipt / tracking reference" value={submissionReference} onChange={e=>setSubmissionReference(e.target.value)}/></label>
       <label>Submission proof document<select className={styles.input} value={proofFile} onChange={e=>setProofFile(e.target.value)}>
-       <option value="">Select uploaded proof</option>{fileOptions.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
+       <option value="">Select uploaded proof</option>{fileOptions.filter(x=>x.id!==record.draft_evidence_id).map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
      </div>
      <button disabled={busy||!submissionDate||!submissionReference.trim()||!proofFile} className={styles.button}
       onClick={()=>void advance("submitted",{p_date:submissionDate,p_reference:submissionReference,p_evidence_id:proofFile})}>Record submission →</button>
