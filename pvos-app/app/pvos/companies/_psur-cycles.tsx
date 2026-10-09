@@ -8,7 +8,7 @@ import {pvosSupabase} from "../_pvos-supabase";
 import styles from "../pvos.module.css";
 
 const EMA_URL="https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/periodic-safety-update-reports-psurs";
-type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any,confirmed_at:string|null};
+type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any,confirmed_at:string|null,is_simulated:boolean};
 const norm=(v:any)=>String(v??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const colLetter=(value:number)=>{let n=value+1,s="";while(n>0){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26);}return s;};
 export function PsurCycles({companyId,organizationId,products,onChanged}:{companyId:string,organizationId:string,products:any[],onChanged?:()=>void}){
@@ -25,6 +25,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  const [previewOffset,setPreviewOffset]=useState(30);
  const [productId,setProductId]=useState(""),[substance,setSubstance]=useState(""),[dlp,setDlp]=useState(""),[due,setDue]=useState("");
  const [frequency,setFrequency]=useState(""),[jurisdiction,setJurisdiction]=useState("reference_only");
+ const [simulated,setSimulated]=useState(false);
  const [basis,setBasis]=useState(""),[revision,setRevision]=useState("EMA EURD Rev. 164 (23 Sep 2026)");
  const [published,setPublished]=useState("2026-09-23"),[selectedRow,setSelectedRow]=useState<EurdRow|null>(null),[search,setSearch]=useState("");
  const load=useCallback(async()=>{
@@ -80,27 +81,51 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  function edit(c:Entry){
   setEditingId(c.id);setProductId(c.product_id);setSubstance(c.active_substance);
   setDlp(c.data_lock_point);setDue(c.submission_due_date);setFrequency(String(c.frequency_months||""));
-  setJurisdiction(c.jurisdiction);setBasis(c.authority_basis||"");setRevision(c.source_revision);
+  setJurisdiction(c.jurisdiction);setSimulated(Boolean(c.is_simulated));setBasis(c.authority_basis||"");setRevision(c.source_revision);setPublished(c.is_simulated?"":c.source_published_at||"");
   setSelectedRow({substance:c.active_substance,dlp:c.data_lock_point,due:c.submission_due_date,frequency:"",
    raw:c.source_row||{}});setError("");setMessage("Review the dates against the current authority reference, then save this draft.");
   setShowEurdEditor(true);
   setTimeout(()=>document.getElementById("psur-edit-form")?.scrollIntoView({behavior:"smooth",block:"start"}),80);
  }
+ function toggleSimulation(value:boolean){
+  setSimulated(value);
+  if(value){
+   setJurisdiction("reference_only");setFrequency("");setPublished("");
+   setRevision(v=>v.toUpperCase().startsWith("TEST ONLY")?v:"TEST ONLY — Simulated PSUR UAT");
+   setBasis(v=>v.toUpperCase().startsWith("TEST ONLY")?v:"TEST ONLY — PVOS simulation. Not a verified regulatory obligation or an actual filing deadline.");
+   setSelectedRow(null);
+  }
+ }
  async function save(e:FormEvent){
   e.preventDefault();setBusy(true);setError("");setMessage("");
   try{
    if(!productId||!substance.trim()||!dlp||!due)throw Error("Choose a product, active substance, DLP and submission date.");
+   if(simulated&&(!revision.toUpperCase().startsWith("TEST ONLY")||!basis.toUpperCase().startsWith("TEST ONLY")))
+    throw Error("Simulation records must be clearly labelled TEST ONLY in both source and basis.");
    const payload={organization_id:organizationId,company_id:companyId,product_id:productId,active_substance:substance.trim(),
-    data_lock_point:dlp,submission_due_date:due,frequency_months:frequency?Number(frequency):null,jurisdiction,
-    authority_basis:basis.trim()||null,source_url:EMA_URL,source_revision:revision.trim(),source_published_at:published||null,
-    source_row:selectedRow?.raw||{entered_manually:true}};
+    data_lock_point:dlp,submission_due_date:due,frequency_months:simulated?null:frequency?Number(frequency):null,
+    jurisdiction:simulated?"reference_only":jurisdiction,is_simulated:simulated,
+    authority_basis:basis.trim()||null,source_url:simulated?"https://pvos.site":EMA_URL,
+    source_revision:revision.trim(),source_published_at:simulated?null:published||null,
+    source_row:simulated?{test_only:true,entered_manually:true}:selectedRow?.raw||{entered_manually:true}};
    const request=editingId
     ?pvosSupabase.from("pvos_psur_cycles").update(payload).eq("id",editingId).eq("status","draft")
     :pvosSupabase.from("pvos_psur_cycles").insert(payload);
    const {error:e2}=await request;
    if(e2)throw e2;
-   setMessage(editingId?"Draft updated. Confirm the regulatory basis to create the PSUR task.":"Draft saved. A PV lead must confirm applicability before PVOS creates a deadline task.");
+   setMessage(simulated?"TEST ONLY draft saved. Start the simulation from the register; no regulatory deadline has been created.":
+    editingId?"Draft updated. Confirm the regulatory basis to create the PSUR task.":"Draft saved. A PV lead must confirm applicability before PVOS creates a deadline task.");
    setEditingId(null);setSelectedRow(null);setShowEurdEditor(false);await load();onChanged?.();
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function startSimulation(id:string){
+  setBusy(true);setError("");setMessage("");
+  try{
+   const {data,error:e}=await pvosSupabase.rpc("pvos_start_psur_simulation",{p_cycle_id:id});
+   if(e)throw e;
+   setActiveLifecycle(id);
+   setMessage(data?.already_started?"TEST ONLY simulation already running.":"TEST ONLY simulation started. No regulatory confirmation, real deadline or recurring schedule was created.");
+   await load();onChanged?.();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function confirm(id:string){
@@ -166,15 +191,24 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      {suggestions.length===0?<div className={styles.muted}>No automatic match. Search the official file; never assume a similar substance is equivalent.</div>:null}
     </div>:null}
     <form id="psur-edit-form" onSubmit={save} style={{display:"grid",gap:12,marginTop:18}}>
+     <label style={{display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650}}>
+      <input type="checkbox" checked={simulated} onChange={e=>toggleSimulation(e.target.checked)}
+       style={{accentColor:"#c4f85e"}}/>
+      TEST ONLY — Simulated PSUR workflow (demo company)
+     </label>
+     {simulated?<p className={styles.info} style={{margin:0}}>
+      <strong>Simulation only.</strong> No SFDA/EU regulatory obligation is confirmed. Dates are fictional references;
+      PVOS will create a clearly labelled test workflow without a real deadline, reminder schedule or recurring projection.
+     </p>:null}
      <div className={styles.formGrid}>
       <label>Product<select className={styles.input} required value={productId} onChange={e=>{setProductId(e.target.value);setSearch("");}}>{products.map(p=><option key={p.id} value={p.id}>{p.brand_name} · {p.active_ingredient||"no ingredient recorded"}</option>)}</select></label>
       <label>Matched active substance<input className={styles.input} required value={substance} onChange={e=>setSubstance(e.target.value)}/></label>
       <label>Data lock point<input className={styles.input} type="date" required value={dlp} onChange={e=>setDlp(e.target.value)}/></label>
       <label>Submission deadline<input className={styles.input} type="date" required value={due} min={dlp||undefined} onChange={e=>setDue(e.target.value)}/></label>
-      <label>Frequency (source-confirmed)<select className={styles.input} value={frequency} onChange={e=>setFrequency(e.target.value)}><option value="">Unspecified</option>{[3,6,12,24,36].map(m=><option key={m} value={m}>{m} months</option>)}</select></label>
-      <label>Applicable authority<select className={styles.input} value={jurisdiction} onChange={e=>setJurisdiction(e.target.value)}><option value="reference_only">Reference only — do not schedule</option><option value="eu">EU EURD obligation confirmed</option><option value="sfda">SFDA/local obligation separately verified</option></select></label>
+      <label>Frequency (source-confirmed)<select className={styles.input} disabled={simulated} value={frequency} onChange={e=>setFrequency(e.target.value)}><option value="">Unspecified</option>{[3,6,12,24,36].map(m=><option key={m} value={m}>{m} months</option>)}</select></label>
+      <label>Applicable authority<select className={styles.input} disabled={simulated} value={jurisdiction} onChange={e=>setJurisdiction(e.target.value)}><option value="reference_only">Reference only — do not schedule</option><option value="eu">EU EURD obligation confirmed</option><option value="sfda">SFDA/local obligation separately verified</option></select></label>
       <label>EURD revision<input className={styles.input} required value={revision} onChange={e=>setRevision(e.target.value)}/></label>
-      <label>Source publication<input className={styles.input} type="date" value={published} onChange={e=>setPublished(e.target.value)}/></label>
+      <label>Source publication<input className={styles.input} type="date" disabled={simulated} value={published} onChange={e=>setPublished(e.target.value)}/></label>
      </div>
      <label>Regulatory basis / documented verification<textarea className={styles.input} rows={2} value={basis} onChange={e=>setBasis(e.target.value)} placeholder="Applicable authority, licence condition or regulatory instruction; cite the source and scope"/></label>
      <div className={styles.inlineActions}><button className={styles.button} type="submit" disabled={busy||!products.length}>{editingId?"Update draft":"Save draft for confirmation"}</button>{editingId?<button className={styles.buttonGhost} type="button" disabled={busy} onClick={()=>{setEditingId(null);setSelectedRow(null);}}>Cancel editing</button>:null}</div>
@@ -184,11 +218,17 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
   {error?<div className={styles.errorBox} role="alert">{error}</div>:null}
   {message?<div className={styles.info} role="status">{message}</div>:null}
   <section className={styles.panel}>
-   <div className={styles.panelHeader}><h2>PSUR/PBRER register</h2><Help>Only confirmed cycles create actual deadline tasks. Recurrence forecasts are drafts and require checking against a current EURD revision before approval.</Help></div>
+   <div className={styles.panelHeader}><h2>PSUR/PBRER register</h2><Help>Only independently confirmed regulatory cycles create actual deadlines. TEST ONLY simulations are isolated from regulatory confirmation and generate no due-date task or recurring schedule.</Help></div>
    <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Product / DLP</th><th>Submission deadline</th><th>Authority</th><th>Source</th><th>Status</th><th></th></tr></thead><tbody>
-    {entries.map(c=><tr key={c.id}><td>{products.find(p=>p.id===c.product_id)?.brand_name||c.active_substance}<div className={styles.muted}>DLP {c.data_lock_point}</div></td>
-     <td>{c.submission_due_date}</td><td>{c.jurisdiction==="reference_only"?"Unverified":c.jurisdiction.toUpperCase()}</td>
-     <td title={c.source_revision}>{c.source_revision}</td><td><Badge tone={c.status==="confirmed"?"green":"amber"}>{c.status==="draft"?"Needs confirmation":c.status==="confirmed"?"Basis confirmed":c.status}</Badge></td>
+    {entries.map(c=><tr key={c.id}><td>{products.find(p=>p.id===c.product_id)?.brand_name||c.active_substance}
+       {c.is_simulated?<div className={styles.muted}>TEST ONLY · Simulation</div>:null}
+       <div className={styles.muted}>DLP {c.data_lock_point}</div></td>
+     <td>{c.submission_due_date}{c.is_simulated||c.status==="draft"?<div className={styles.muted}>Reference date · not scheduled</div>:null}</td>
+     <td>{c.is_simulated?"None · simulation":c.jurisdiction==="reference_only"?"Unverified":c.jurisdiction.toUpperCase()}</td>
+     <td title={c.source_revision}>{c.source_revision}</td>
+     <td><Badge tone={c.is_simulated?"amber":c.status==="confirmed"?"green":"amber"}>
+      {c.status==="simulated"?"TEST ONLY · Running":c.is_simulated?"TEST ONLY · Draft":c.status==="draft"?"Needs confirmation":c.status==="confirmed"?"Basis confirmed":c.status}
+     </Badge></td>
      <td>
       <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-start"}}>
        <div className={styles.inlineActions} style={{marginTop:0}}>
@@ -196,10 +236,12 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
          setActiveLifecycle(activeLifecycle===c.id?null:c.id);
          setTimeout(()=>document.getElementById("psur-lifecycle")?.scrollIntoView({behavior:"smooth",block:"start"}),100);
         }}>{activeLifecycle===c.id?"Close PSUR":"Open PSUR"}</button>:c.status==="draft"?<button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button>:null}
-        <button type="button" className={styles.buttonGhost} onClick={()=>{setPreviewId(c.id===previewId?null:c.id);setPreviewOffset(30);}}>{c.id===previewId?"Hide preview":"Preview reminders"}</button>
+        {!c.is_simulated?<button type="button" className={styles.buttonGhost} onClick={()=>{setPreviewId(c.id===previewId?null:c.id);setPreviewOffset(30);}}>{c.id===previewId?"Hide preview":"Preview reminders"}</button>:null}
        </div>
-       {c.status==="draft"&&!c.task_id?c.jurisdiction==="reference_only"?
-        <span className={styles.muted} style={{fontSize:12}}>Scheduling blocked — verify authority</span>:
+       {c.status==="draft"&&!c.task_id?c.is_simulated?
+        <button type="button" className={styles.button} disabled={busy} onClick={()=>startSimulation(c.id)}>Start TEST ONLY simulation →</button>:
+        c.jurisdiction==="reference_only"?
+        <span className={styles.muted} style={{fontSize:12}}>{c.source_revision.toUpperCase().startsWith("TEST ONLY")?"TEST ONLY draft — enable simulation mode in Review draft":"Scheduling blocked — verify authority"}</span>:
         !c.authority_basis?.trim()?
         <span className={styles.muted} style={{fontSize:12}}>Scheduling blocked — document regulatory basis</span>:
         <button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>confirm(c.id)}>Confirm &amp; schedule</button>
