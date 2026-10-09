@@ -41,7 +41,11 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       initUserRef.current=null;
       setOrganizationId(null);
       setLoading(false);
-      if (!isLogin) router.replace(pathname==="/pvos/invoices"?"/pvos/login?next="+encodeURIComponent(pathname+window.location.search):"/pvos/login");
+      if (!isLogin) {
+        const preserveDeepLink=pathname==="/pvos/invoices"||pathname==="/pvos/requests"||pathname.startsWith("/pvos/requests/")||
+          (pathname.startsWith("/pvos/companies/")&&new URLSearchParams(window.location.search).get("tab")==="departments");
+        router.replace(preserveDeepLink?"/pvos/login?next="+encodeURIComponent(pathname+window.location.search):"/pvos/login");
+      }
       return;
     }
 
