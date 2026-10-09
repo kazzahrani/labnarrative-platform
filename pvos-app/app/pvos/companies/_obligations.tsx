@@ -10,7 +10,7 @@ type Obligation={
  id:string;company_id:string;product_id:string|null;activity_type:string;title:string;
  requirement_text:string|null;responsibility:string;owner_user_id:string|null;reviewer_user_id:string|null;
  cadence:string;cadence_config:Record<string,unknown>;evidence_required:boolean;active:boolean;
- source_type:string|null;source_reference:string|null;next_due_at:string|null;created_at:string;updated_at:string;
+ source_type:string|null;source_reference:string|null;basis_confirmed:boolean;next_due_at:string|null;created_at:string;updated_at:string;
 };
 type Work={id:string;obligation_id:string|null;title:string;activity_type:string;status:string;
  due_at:string|null;completed_at:string|null;owner_user_id:string|null;reviewer_user_id:string|null;created_at:string};
@@ -22,7 +22,7 @@ type Product={id:string;brand_name:string;active_ingredient?:string|null};
 type Draft={
  title:string;requirement_text:string;activity_type:string;product_id:string;source_type:string;source_reference:string;
  cadence:string;next_due_at:string;responsibility:string;owner_user_id:string;reviewer_user_id:string;
- evidence_required:boolean;active:boolean;
+ evidence_required:boolean;active:boolean;basis_confirmed:boolean;
 };
 const cadenceOptions=[["daily","Daily"],["weekly","Weekly"],["monthly","Monthly"],["quarterly","Quarterly"],["semiannual","Every 6 months"],["annual","Annual"],["event","Event-triggered"]];
 const sourceOptions=[["","Not documented"],["sfda","SFDA requirement"],["eurd","EURD / applicability decision"],["pva","PVA / SDEA"],["rmp","RMP commitment"],["sop","SOP / internal"],["contract","Contract scope"],["inquiry","Regulatory inquiry"],["manual","QPPV decision"],["template","Template (confirm basis)"],["other","Other"]];
@@ -36,7 +36,7 @@ const defaultDue=()=>{const d=new Date();d.setDate(d.getDate()+30);return dateIn
 const blank=():Draft=>({
  title:"",requirement_text:"",activity_type:"Literature",product_id:"",source_type:"",source_reference:"",
  cadence:"monthly",next_due_at:defaultDue(),responsibility:"organization",owner_user_id:"",reviewer_user_id:"",
- evidence_required:true,active:true
+ evidence_required:true,active:true,basis_confirmed:false
 });
 const statusText=(s:string)=>({not_started:"Not started",in_progress:"In progress",awaiting_review:"Awaiting review",
  awaiting_external:"Waiting for input",complete:"Complete",cancelled:"Cancelled"} as Record<string,string>)[s]||s;
@@ -129,7 +129,7 @@ export function CompanyObligations({
    title:o.title,requirement_text:o.requirement_text||"",activity_type:o.activity_type,product_id:o.product_id||"",
    source_type:o.source_type||"",source_reference:o.source_reference||"",cadence:o.cadence,
    next_due_at:dateInput(o.next_due_at),responsibility:o.responsibility,owner_user_id:o.owner_user_id||"",
-   reviewer_user_id:o.reviewer_user_id||"",evidence_required:o.evidence_required,active:o.active
+   reviewer_user_id:o.reviewer_user_id||"",evidence_required:o.evidence_required,active:o.active,basis_confirmed:o.basis_confirmed
   });
   setError("");setMessage("");setModal(true);
  }
@@ -143,6 +143,8 @@ export function CompanyObligations({
    if(draft.owner_user_id&&!members.some(m=>m.user_id===draft.owner_user_id))throw new Error("Choose an owner from the company team.");
    if(draft.reviewer_user_id&&!members.some(m=>m.user_id===draft.reviewer_user_id))throw new Error("Choose a reviewer from the company team.");
    if(draft.cadence!=="event"&&!draft.next_due_at)throw new Error("Enter the next scheduled date.");
+   if(draft.basis_confirmed&&(!draft.requirement_text.trim()||!draft.source_reference.trim()||!draft.source_type||draft.source_type==="template"))
+    throw new Error("Record a specific non-template source, its reference and the rationale before confirming applicability.");
    const next=draft.cadence==="event"?null:new Date(draft.next_due_at).toISOString();
    const payload={
     company_id:companyId,title:draft.title.trim(),requirement_text:draft.requirement_text.trim()||null,
@@ -150,7 +152,7 @@ export function CompanyObligations({
     source_type:draft.source_type||null,source_reference:draft.source_reference.trim()||null,
     cadence:draft.cadence,next_due_at:next,responsibility:draft.responsibility,
     owner_user_id:draft.owner_user_id||null,reviewer_user_id:draft.reviewer_user_id||null,
-    evidence_required:draft.evidence_required,active:draft.active
+    evidence_required:draft.evidence_required,active:draft.active,basis_confirmed:draft.basis_confirmed
    };
    const result=editing?
     await pvosSupabase.from("pvos_obligations").update(payload).eq("id",editing).eq("company_id",companyId):
@@ -188,25 +190,29 @@ export function CompanyObligations({
     </div>
    </div>
    <div className={styles.tableWrap}>
-    <table className={styles.table} style={{minWidth:1250}}>
+    <table className={styles.table} style={{minWidth:890}}>
      <thead><tr>
-      <th>Obligation</th><th>Product</th><th>Source / basis</th><th>Cadence</th><th>Responsibility</th>
-      <th>Owner</th><th>Reviewer</th><th>Next due</th><th>Last completed</th><th>Evidence</th><th>Status</th>
+      <th>Obligation</th><th>Applies to</th><th>Basis</th><th>Frequency</th>
+      <th>Next due</th><th>Work</th><th>Evidence</th><th>Execution</th>
      </tr></thead>
      <tbody>
       {visible.map(o=>{
-       const s=stats(o),label=!o.active?"Inactive":s.overdue?"Overdue":s.missing?"Evidence missing":o.cadence==="event"?"Event-triggered":"Active";
+       const s=stats(o);
+       const label=!o.active?"Inactive":s.overdue?"Overdue":s.missing?"Evidence gap":s.pendingReviews?"In review":s.outstanding.length?"Pending work":s.completed.length?"Up to date":o.cadence==="event"?"Event-based":"Scheduled";
+       const labelTone=s.overdue?"red":s.missing||s.pendingReviews?"amber":"default";
        return <tr key={o.id} className={selected===o.id?styles.obligationSelected:undefined}>
         <td><button className={styles.obligationLink} type="button" onClick={()=>{setSelected(o.id);setDetailTab("requirement");}}>{o.title}</button><div className={styles.muted}>{o.activity_type}</div></td>
         <td>{productName(o.product_id)}</td>
-        <td><span>{sourceLabel(o.source_type)}</span>{o.source_reference?<div className={styles.muted}>{o.source_reference}</div>:null}</td>
-        <td>{cadenceLabel(o.cadence)}</td><td>{roleText(o.responsibility)}</td>
-        <td className={styles.obligationMember}>{memberName(o.owner_user_id)}</td>
-        <td className={styles.obligationMember}>{memberName(o.reviewer_user_id)}</td>
-        <td>{fmt(s.due)}{s.nextOutstanding?<div className={styles.muted}>Outstanding work</div>:null}</td>
-        <td>{fmt(s.completed[0]?.completed_at||null)}</td>
-        <td>{s.evidenceCount} file{ s.evidenceCount===1?"":"s"}</td>
-        <td><Badge tone={s.overdue?"red":!o.active?"default":s.missing?"amber":"green"}>{label}</Badge></td>
+        <td><div className={styles.obligationBasis}><span>{sourceLabel(o.source_type)}</span>
+          <Badge tone={o.basis_confirmed?"green":"amber"}>{o.basis_confirmed?"Confirmed":"Needs confirmation"}</Badge>
+         </div></td>
+        <td>{cadenceLabel(o.cadence)}</td>
+        <td>{fmt(s.due)}{s.nextOutstanding?<div className={styles.muted}>Outstanding</div>:null}</td>
+        <td><span>{s.outstanding.length} open</span><div className={styles.muted}>{s.completed.length} complete</div></td>
+        <td>{s.evidenceCount} item{s.evidenceCount===1?"":"s"}
+         {s.missing?<div className={styles.obligationGapInline}>{s.missing} missing</div>:null}
+        </td>
+        <td><Badge tone={labelTone}>{label}</Badge></td>
        </tr>;
       })}
      </tbody>
@@ -234,8 +240,9 @@ export function CompanyObligations({
       <div><span>Requirement</span><strong>{current.requirement_text||"Not yet documented"}</strong></div>
       <div><span>Applies to</span><strong>{productName(current.product_id)}</strong></div>
       <div><span>Source / basis</span><strong>{sourceLabel(current.source_type)}</strong></div>
+      <div><span>Applicability</span><strong>{current.basis_confirmed?"Confirmed by QPPV":"Needs confirmation"}</strong></div>
       <div><span>Reference / applicability decision</span><strong>{current.source_reference||"Not yet documented"}</strong></div>
-      {!current.source_type||!current.source_reference?<p className={styles.muted}>Confirm and document the applicable regulatory, contractual or internal basis before relying on this as a compliance obligation.</p>:null}
+      {!current.basis_confirmed?<p className={styles.muted}>This is a scheduling record, not a confirmed regulatory obligation. Verify the applicable source and document the decision before confirming its basis.</p>:null}
      </div>:null}
      {detailTab==="schedule"?<div className={styles.obligationFacts}>
       <div><span>Frequency</span><strong>{cadenceLabel(current.cadence)}</strong></div>
@@ -303,11 +310,11 @@ export function CompanyObligations({
        {[...new Set([...activityOptions,draft.activity_type])].map(x=><option key={x}>{x}</option>)}</select></label>
       <label>Product<select className={styles.input} value={draft.product_id} onChange={e=>update("product_id",e.target.value)}>
        <option value="">Company-wide</option>{products.map(p=><option key={p.id} value={p.id}>{p.brand_name}</option>)}</select></label>
-      <label className={styles.full}>Why is this activity required?<textarea className={styles.input} rows={2} maxLength={4000} value={draft.requirement_text} onChange={e=>update("requirement_text",e.target.value)} placeholder="Short requirement or applicability rationale"/></label>
-      <label>Source / basis<select className={styles.input} value={draft.source_type} onChange={e=>update("source_type",e.target.value)}>
+      <label className={styles.full}>Why is this activity required?<textarea className={styles.input} rows={2} maxLength={4000} value={draft.requirement_text} onChange={e=>{update("requirement_text",e.target.value);update("basis_confirmed",false);}} placeholder="Short requirement or applicability rationale"/></label>
+      <label>Source / basis<select className={styles.input} value={draft.source_type} onChange={e=>{update("source_type",e.target.value);update("basis_confirmed",false);}}>
        {[...sourceOptions,...(draft.source_type&&!sourceOptions.some(s=>s[0]===draft.source_type)?[[draft.source_type,draft.source_type]]:[])].map(x=><option value={x[0]} key={x[0]}>{x[1]}</option>)}
       </select></label>
-      <label>Source reference<input className={styles.input} maxLength={500} value={draft.source_reference} onChange={e=>update("source_reference",e.target.value)} placeholder="SOP ID, agreement, SFDA reference, decision"/></label>
+      <label>Source reference<input className={styles.input} maxLength={500} value={draft.source_reference} onChange={e=>{update("source_reference",e.target.value);update("basis_confirmed",false);}} placeholder="SOP ID, agreement, SFDA reference, decision"/></label>
       <label>Cadence<select className={styles.input} value={draft.cadence} onChange={e=>update("cadence",e.target.value)}>{cadenceOptions.map(x=><option key={x[0]} value={x[0]}>{x[1]}</option>)}</select></label>
       {draft.cadence!=="event"?<label>Next scheduled date<input className={styles.input} type="datetime-local" required value={draft.next_due_at} onChange={e=>update("next_due_at",e.target.value)}/></label>:<label>Schedule<input className={styles.input} disabled value="Triggered manually"/></label>}
       <label>Responsible party<select className={styles.input} value={draft.responsibility} onChange={e=>update("responsibility",e.target.value)}>
@@ -318,6 +325,9 @@ export function CompanyObligations({
        <option value="">Not assigned</option>{members.map(m=><option key={m.user_id} value={m.user_id}>{m.email}</option>)}</select></label>
       <div className={styles.obligationChecks}>
        <label><input type="checkbox" checked={draft.evidence_required} onChange={e=>update("evidence_required",e.target.checked)}/> Evidence required</label>
+       <label title="Only confirm after checking the source, reference and applicability rationale"><input type="checkbox" checked={draft.basis_confirmed}
+        disabled={!draft.requirement_text.trim()||!draft.source_reference.trim()||!draft.source_type||draft.source_type==="template"}
+        onChange={e=>update("basis_confirmed",e.target.checked)}/> Confirmed basis</label>
        <label><input type="checkbox" checked={draft.active} onChange={e=>update("active",e.target.checked)}/> Active</label>
       </div>
      </div>
