@@ -404,3 +404,10 @@
 .light .obligationGap{color:#9c611c}
 .light .obligationEvidenceItem:hover{background:#f5f8f9}
 @media(max-width:680px){.obligationFacts{grid-template-columns:1fr}.obligationEvidenceItem{gap:6px}.obligationFilters{display:grid}.obligationMember{max-width:125px}}
+
+/* Compact Obligation table: separate applicability from execution. */
+.obligationBasis{display:grid;gap:6px;min-width:130px}
+.obligationBasis>span{font-size:12px;line-height:1.35}
+.obligationBasis .badge{justify-self:start}
+.obligationGapInline{margin-top:5px;font-size:11px;color:#efb674}
+.light .obligationGapInline{color:#945a21}
