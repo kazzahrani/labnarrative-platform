@@ -16,8 +16,28 @@ function safeName(name:string){return name.replace(/[^a-zA-Z0-9._-]+/g,"-").slic
 
 export default function TaskPage(){
   const [tab,setTab]=useState("work");
-  function changeTab(value:string){setTab(value);const hash=value==="review"?"task-review":value==="evidence"?"evidence":value==="history"?"history":"";window.history.replaceState({},"",window.location.pathname+(hash?"#"+hash:""));}
-  useEffect(()=>{const hash=window.location.hash;if(["#task-review","#approval"].includes(hash))setTab("review");else if(hash==="#evidence")setTab("evidence");else if(hash==="#history")setTab("history");},[]);
+  function changeTab(value:string){
+    setTab(value);
+    const hash=value==="review"?"task-review":value==="evidence"?"evidence":value==="history"?"history":"";
+    window.history.replaceState({},"",window.location.pathname+window.location.search+(hash?"#"+hash:""));
+  }
+  useEffect(()=>{
+    function syncTab(){
+      // Older login redirects sometimes produced #task-review#task-review.
+      // Normalize existing bookmarks and select the requested record tab.
+      const fragment=window.location.hash.slice(1).split("#")[0];
+      const normalized=fragment?"#"+fragment:"";
+      if(window.location.hash!==normalized)
+        window.history.replaceState({},"",window.location.pathname+window.location.search+normalized);
+      if(["task-review","approval"].includes(fragment))setTab("review");
+      else if(fragment==="evidence")setTab("evidence");
+      else if(fragment==="history")setTab("history");
+      else setTab("work");
+    }
+    syncTab();
+    window.addEventListener("hashchange",syncTab);
+    return ()=>window.removeEventListener("hashchange",syncTab);
+  },[]);
   const params=useParams<{id:string}>(); const {session,organizationId}=usePVOS();
   const [task,setTask]=useState<any|null>(null); const [company,setCompany]=useState<any|null>(null); const [product,setProduct]=useState<any|null>(null);
   const [evidence,setEvidence]=useState<any[]>([]); const [approvals,setApprovals]=useState<any[]>([]); const [steps,setSteps]=useState<any[]>([]); const [audit,setAudit]=useState<any[]>([]);
