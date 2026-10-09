@@ -21,7 +21,7 @@ type Review={id:string;cycle:number;status:string;assigned_email:string;sent_at:
 type Member={user_id:string;email:string;role:string};
 type Event={id:number;entity_type:string;entity_id:string|null;event_type:string;created_at:string;actor_user_id:string|null;metadata:Record<string,unknown>};
 type Cycle={id:string;status:string;active_substance:string;source_revision:string;authority_basis:string|null;
- jurisdiction:string;data_lock_point:string;submission_due_date:string;confirmed_at:string|null};
+ jurisdiction:string;data_lock_point:string;submission_due_date:string;confirmed_at:string|null;is_simulated:boolean};
 const steps=["planning","inputs","draft","review","approved","submitted","complete"];
 const kinds=[
  ["sales_exposure","Sales / exposure data"],["medical","Medical input"],["regulatory","Regulatory changes"],
@@ -144,9 +144,14 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
  const reviewHref=record?"/pvos/tasks/"+record.task_id+"#task-review":"#";
  return <section className={styles.panel} id="psur-lifecycle" style={{scrollMarginTop:20}}>
   <div className={styles.panelHeader}>
-   <div><h2>PSUR/PBRER · {productName}</h2><div className={styles.muted} style={{marginTop:5}}>DLP {cycle.data_lock_point} · Due {cycle.submission_due_date}</div></div>
+   <div><h2>{cycle.is_simulated?"TEST ONLY · ":""}PSUR/PBRER · {productName}</h2><div className={styles.muted} style={{marginTop:5}}>DLP {cycle.data_lock_point} · {cycle.is_simulated?"Fictional deadline":"Due"} {cycle.submission_due_date}</div></div>
    {record?<Badge tone={record.stage==="complete"?"green":record.stage==="review"?"amber":"default"}>{record.stage[0].toUpperCase()+record.stage.slice(1)}</Badge>:null}
   </div>
+  {cycle.is_simulated?<div className={styles.info} style={{margin:"12px 16px"}}>
+   <strong>TEST ONLY — Simulated PSUR lifecycle.</strong> This is not an SFDA/EU requirement,
+   the listed dates are fictional, and completion does not represent a real filing.
+   No regulatory deadline or recurring schedule is created.
+  </div>:null}
   {loading?<div className={styles.empty}>Loading PSUR lifecycle…</div>:!record?<div className={styles.sectionBody}>
    This cycle is not confirmed. Verify regulatory applicability in the EURD register before creating a PSUR lifecycle record.
   </div>:<div className={styles.sectionBody} style={{display:"grid",gap:18}}>
@@ -163,11 +168,11 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
    </div>
    {panel==="overview"?<div className={styles.psurFacts}>
     <div><span>Active substance</span><strong>{cycle.active_substance}</strong></div>
-    <div><span>Jurisdiction</span><strong>{cycle.jurisdiction==="sfda"?"SFDA (locally confirmed)":cycle.jurisdiction.toUpperCase()}</strong></div>
-    <div><span>Regulatory basis</span><strong>{cycle.authority_basis||"Not recorded"}</strong></div>
+    <div><span>Jurisdiction</span><strong>{cycle.is_simulated?"None — simulated":cycle.jurisdiction==="sfda"?"SFDA (locally confirmed)":cycle.jurisdiction.toUpperCase()}</strong></div>
+    <div><span>{cycle.is_simulated?"Simulation declaration":"Regulatory basis"}</span><strong>{cycle.authority_basis||"Not recorded"}</strong></div>
     <div><span>EURD source revision</span><strong>{cycle.source_revision}</strong></div>
     <div><span>DLP</span><strong>{cycle.data_lock_point}</strong></div>
-    <div><span>Submission deadline</span><strong>{cycle.submission_due_date}</strong></div>
+    <div><span>{cycle.is_simulated?"Test reference date":"Submission deadline"}</span><strong>{cycle.submission_due_date}</strong></div>
     <div><span>Owner</span><strong>{member(record.owner_user_id)}</strong></div>
     <div><span>Reviewer</span><strong>{member(record.reviewer_user_id)}</strong></div>
     {record.draft_evidence_id?<div><span>Reviewed draft</span><strong>{evidence.find(x=>x.id===record.draft_evidence_id)?.title||"Uploaded document"}</strong></div>:null}
@@ -252,17 +257,17 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
        <option value="">Select uploaded proof</option>{fileOptions.filter(x=>x.id!==record.draft_evidence_id).map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
      </div>
      <button disabled={busy||!submissionDate||!submissionReference.trim()||!proofFile} className={styles.button}
-      onClick={()=>void advance("submitted",{p_date:submissionDate,p_reference:submissionReference,p_evidence_id:proofFile})}>Record submission →</button>
+      onClick={()=>void advance("submitted",{p_date:submissionDate,p_reference:submissionReference,p_evidence_id:proofFile})}>{cycle.is_simulated?"Record simulated submission →":"Record submission →"}</button>
      <Link href={fileHref}>Upload submission proof →</Link>
     </div>:null}
     {record.stage==="submitted"?<div className={styles.psurActionBlock}>
      <div className={styles.muted}>Submitted {fmt(record.submission_date)} · Reference {record.submission_reference}. An acknowledgement document is optional when the authority has not provided one.</div>
      <label>Authority acknowledgement (optional)<select className={styles.input} value={ackFile} onChange={e=>setAckFile(e.target.value)}>
       <option value="">Not available</option>{fileOptions.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
-     <button className={styles.button} disabled={busy} onClick={()=>void advance("complete",{p_evidence_id:ackFile||null})}>Mark PSUR complete →</button>
+     <button className={styles.button} disabled={busy} onClick={()=>void advance("complete",{p_evidence_id:ackFile||null})}>{cycle.is_simulated?"Complete TEST ONLY cycle →":"Mark PSUR complete →"}</button>
     </div>:null}
     {record.stage==="complete"?<div className={styles.psurActionBlock}><Badge tone="green">PSUR complete</Badge>
-     <span>Submitted {fmt(record.submission_date)} · {record.submission_reference} · Completed {when(record.completed_at)}</span>
+     <span>{cycle.is_simulated?"Simulated submission":"Submitted"} {fmt(record.submission_date)} · {record.submission_reference} · Completed {when(record.completed_at)}</span>
      <Link href={fileHref}>View final evidence →</Link></div>:null}
    </div>
   </div>}
