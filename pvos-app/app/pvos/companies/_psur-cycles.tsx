@@ -3,11 +3,12 @@ import Link from "next/link";
 import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
 import {readEurdFile,parseEurdRows,eurdFrequencyMonths,type EurdRow,type EurdColumns,type EurdImport} from "./_eurd-import";
 import {Badge,Help} from "../_components";
+import {PSURLifecycle} from "./_psur-lifecycle";
 import {pvosSupabase} from "../_pvos-supabase";
 import styles from "../pvos.module.css";
 
 const EMA_URL="https://www.ema.europa.eu/en/human-regulatory-overview/post-authorisation/pharmacovigilance-post-authorisation/periodic-safety-update-reports-psurs";
-type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any};
+type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any,confirmed_at:string|null};
 const norm=(v:any)=>String(v??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const colLetter=(value:number)=>{let n=value+1,s="";while(n>0){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26);}return s;};
 export function PsurCycles({companyId,organizationId,products,onChanged}:{companyId:string,organizationId:string,products:any[],onChanged?:()=>void}){
@@ -19,6 +20,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const [editingId,setEditingId]=useState<string|null>(null);
  const [previewId,setPreviewId]=useState<string|null>(null);
+ const [activeLifecycle,setActiveLifecycle]=useState<string|null>(null);
  const [previewOffset,setPreviewOffset]=useState(30);
  const [productId,setProductId]=useState(""),[substance,setSubstance]=useState(""),[dlp,setDlp]=useState(""),[due,setDue]=useState("");
  const [frequency,setFrequency]=useState(""),[jurisdiction,setJurisdiction]=useState("reference_only");
@@ -33,6 +35,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  useEffect(()=>{if(products.length&&!productId)setProductId(products[0].id)},[products,productId]);
  const p=products.find(x=>x.id===productId);
  const preview=entries.find(c=>c.id===previewId);
+ const selectedLifecycle=entries.find(c=>c.id===activeLifecycle);
  const previewAsOf=preview?new Date(Date.parse(preview.submission_due_date+"T00:00:00Z")-previewOffset*86400000).toISOString().slice(0,10):"";
  const previewCountdown=previewOffset<0?`${Math.abs(previewOffset)} days overdue`:previewOffset===0?"Due today":`${previewOffset} day${previewOffset===1?"":"s"} remaining`;
  const previewActivity=preview?products.find(p=>p.id===preview.product_id)?.brand_name||preview.active_substance:"";
@@ -102,7 +105,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
   setBusy(true);setError("");setMessage("");
   try{
    const {data,error:e}=await pvosSupabase.rpc("pvos_confirm_psur_cycle",{p_cycle_id:id});
-   if(e)throw e;setMessage(data?.already_confirmed?"Already confirmed.":"Confirmed. PSUR task is now in the Dashboard with a source-linked deadline.");
+   if(e)throw e;setActiveLifecycle(id);setMessage(data?.already_confirmed?"Already confirmed.":"Confirmed. PSUR lifecycle record created, with a source-linked deadline.");
    await load();onChanged?.();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
@@ -182,7 +185,10 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      <td>
       <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-start"}}>
        <div className={styles.inlineActions} style={{marginTop:0}}>
-        {c.task_id?<Link className={styles.buttonGhost} href={"/pvos/tasks/"+c.task_id}>Open task</Link>:c.status==="draft"?<button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button>:null}
+        {c.task_id?<button type="button" className={styles.buttonGhost} onClick={()=>{
+         setActiveLifecycle(activeLifecycle===c.id?null:c.id);
+         setTimeout(()=>document.getElementById("psur-lifecycle")?.scrollIntoView({behavior:"smooth",block:"start"}),100);
+        }}>{activeLifecycle===c.id?"Close PSUR":"Open PSUR"}</button>:c.status==="draft"?<button type="button" className={styles.buttonGhost} disabled={busy} onClick={()=>edit(c)}>Review draft</button>:null}
         <button type="button" className={styles.buttonGhost} onClick={()=>{setPreviewId(c.id===previewId?null:c.id);setPreviewOffset(30);}}>{c.id===previewId?"Hide preview":"Preview reminders"}</button>
        </div>
        {c.status==="draft"&&!c.task_id?c.jurisdiction==="reference_only"?
@@ -195,6 +201,10 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      </td>
     </tr>)}
    </tbody></table>{!entries.length?<div className={styles.empty}>No EURD cycles recorded for this company.</div>:null}</div>
+   {selectedLifecycle?.task_id?<div className={styles.sectionBody}>
+    <PSURLifecycle key={selectedLifecycle.id} cycle={selectedLifecycle} companyId={companyId} organizationId={organizationId}
+     productName={products.find(x=>x.id===selectedLifecycle.product_id)?.brand_name||selectedLifecycle.active_substance} onChanged={onChanged}/>
+   </div>:null}
    {preview?<div className={styles.sectionBody} style={{borderTop:"1px solid var(--line,#dce2e5)",display:"grid",gap:14}}>
      <div>
       <h3 style={{fontSize:15,margin:"0 0 7px"}}>PSUR deadline & reminder simulation</h3>
