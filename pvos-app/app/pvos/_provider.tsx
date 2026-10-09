@@ -30,7 +30,17 @@ export function PVOSProvider({children}:{children:ReactNode}) {
   function redirectAfterLogin(){
     const raw=new URLSearchParams(window.location.search).get("next")||"";
     // Accept only internal PVOS links, never an external redirect.
-    return raw.startsWith("/pvos/")&&!raw.startsWith("//")&&!raw.startsWith("/pvos/login")?raw:"/pvos/dashboard";
+    if(!raw.startsWith("/pvos/")||raw.startsWith("//")||raw.startsWith("/pvos/login")||raw.includes("\\"))
+      return "/pvos/dashboard";
+    // Some client redirects preserve an existing URL hash: accept one fragment only.
+    const [path, ...fragments]=raw.split("#");
+    return path+(fragments.length?"#"+fragments[0]:"");
+  }
+  function goAfterLogin(){
+    const destination=redirectAfterLogin();
+    // Native replacement avoids the client router appending the old fragment.
+    if(destination.includes("#"))window.location.replace(destination);
+    else router.replace(destination);
   }
 
   async function initialize(nextSession:Session|null) {
@@ -45,12 +55,18 @@ export function PVOSProvider({children}:{children:ReactNode}) {
         // Every authenticated PVOS screen can be linked from an email or the
         // notification bell. Preserve the whole internal destination, including
         // filters and a task's #task-review/#evidence tab, across sign-in.
-        const deepLink=pathname.startsWith("/pvos/")
-          ?pathname+window.location.search+window.location.hash
+        const fragment=window.location.hash
+          ?"#"+window.location.hash.slice(1).split("#")[0]
           :"";
-        router.replace(deepLink
+        const deepLink=pathname.startsWith("/pvos/")
+          ?pathname+window.location.search+fragment
+          :"";
+        const loginUrl=deepLink
           ?"/pvos/login?next="+encodeURIComponent(deepLink)
-          :"/pvos/login");
+          :"/pvos/login";
+        // Don't copy the fragment twice when redirecting an unauthenticated visitor.
+        if(fragment)window.location.replace(loginUrl);
+        else router.replace(loginUrl);
       }
       return;
     }
@@ -61,7 +77,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       if(organizationId){
         await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
         setLoading(false);
-        if(isLogin) router.replace(redirectAfterLogin());
+        if(isLogin) goAfterLogin();
       }
       return;
     }
@@ -81,7 +97,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
       setOrganizationId(orgId as string);
       setLoading(false);
-      if (isLogin) router.replace(redirectAfterLogin());
+      if(isLogin) goAfterLogin();
     } catch (e:any) {
       initUserRef.current=null;
       setError(e?.message ?? "Could not prepare demo workspace.");
