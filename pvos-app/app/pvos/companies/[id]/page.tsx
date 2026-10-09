@@ -15,6 +15,7 @@ import {WorkList} from "../../_work-list";
 import {deadlineState} from "../../_work-utils";
 import {CompanyRecords} from "../_company-records";
 import {PsurCycles} from "../_psur-cycles";
+import {CompanyObligations} from "../_obligations";
 import { readProductPages } from "../../_registration";
 
 export default function CompanyPage(){
@@ -22,6 +23,7 @@ export default function CompanyPage(){
   const router=useRouter();
   const {session,organizationId,reloadToken,refresh}=usePVOS();
   const [tab,setTab]=useState("overview"),[workView,setWorkView]=useState("active"),[work,setWork]=useState<WorkData|null>(null),[workError,setWorkError]=useState(""),[showNew,setShowNew]=useState(false);
+  const [requestedObligation,setRequestedObligation]=useState<string|null>(null);
   useEffect(()=>{
    const p=new URLSearchParams(window.location.search);
    // Preserve existing company-request bookmarks after removing the duplicate tab.
@@ -33,7 +35,8 @@ export default function CompanyPage(){
     router.replace("/pvos/requests"+(details?"/department":"")+"?"+target.toString());
     return;
    }
-   if(["overview","work","products","psur","documents","history"].includes(p.get("tab")||""))setTab(p.get("tab")!);
+   if(["overview","work","products","obligations","psur","documents","history"].includes(p.get("tab")||""))setTab(p.get("tab")!);
+   setRequestedObligation(p.get("obligation"));
   },[params.id,router]);
   useEffect(()=>{if(!organizationId||!session)return;let active=true;setWorkError("");readWork(organizationId,session.user.id).then(d=>{if(active)setWork(d)}).catch(e=>{if(active)setWorkError(e.message)});return()=>{active=false}},[organizationId,session?.user.id,reloadToken]);
   const [company,setCompany]=useState<any|null>(null);
@@ -64,15 +67,16 @@ export default function CompanyPage(){
   return <>
     <Header eyebrow="Company workspace" title={company.name} sub={company.contract_scope??"PV responsibility scope"} action={<div className={styles.inlineActions} style={{marginTop:0}}><Link className={styles.buttonGhost} href={"/pvos/companies/"+company.id+"/setup"}>Company settings</Link><button className={styles.button} onClick={()=>setShowNew(true)}>New task</button></div>}/>
     {workError?<div className={styles.errorBox} role="alert">Work could not load: {workError} <button className={styles.buttonGhost} onClick={refresh}>Retry</button></div>:null}
-    <Tabs label="Company workspace" value={tab} onChange={changeTab} items={[{id:"overview",label:"Overview"},{id:"work",label:"Work"},{id:"products",label:"Products"},{id:"psur",label:"PSUR"},{id:"documents",label:"Documents"},{id:"history",label:"History"}]}/>
+    <Tabs label="Company workspace" value={tab} onChange={changeTab} items={[{id:"overview",label:"Overview"},{id:"products",label:"Products"},{id:"obligations",label:"Obligations"},{id:"work",label:"Work"},{id:"psur",label:"PSUR"},{id:"documents",label:"Documents"},{id:"history",label:"History"}]}/>
     {tab==="overview"?<>
       <div className={styles.compactSummary}><span><strong>{active.length}</strong> Active items</span><span><strong>{items.filter(w=>deadlineState(w.due,w.status).overdue).length}</strong> Overdue</span><span><strong>{products.length}</strong> Products</span></div>
       <section className={styles.panel}><div className={styles.panelHeader}><h2>Needs attention</h2><button className={styles.buttonGhost} onClick={()=>changeTab("work")}>All company work</button></div>{work?<WorkList items={active} companies={work.companies} members={work.members} userId={session?.user.id} showCompany={false}/>:<div className={styles.empty}>Loading work and reviews…</div>}</section>
-      <div className={styles.quietActions}><Link href={"/pvos/requests?company="+encodeURIComponent(company.id)}>View requests →</Link><Link href={"/pvos/literature?company="+company.id}>Literature</Link><Link href={"/pvos/signal?company="+company.id}>Signals</Link><Link href={"/pvos/rmp?company="+company.id}>RMP</Link><Link href={"/pvos/inspection?company="+company.id}>Inspection</Link></div>
+      <div className={styles.quietActions}><button type="button" onClick={()=>changeTab("obligations")}>View obligations →</button><Link href={"/pvos/requests?company="+encodeURIComponent(company.id)}>View requests →</Link><Link href={"/pvos/literature?company="+company.id}>Literature</Link><Link href={"/pvos/signal?company="+company.id}>Signals</Link><Link href={"/pvos/rmp?company="+company.id}>RMP</Link><Link href={"/pvos/inspection?company="+company.id}>Inspection</Link></div>
       <details className={styles.info} style={{marginTop:20}}><summary>Company coverage & schedules</summary><div className={styles.kv}><span>QPPV</span><span>{company.qppv_user_id===session?.user.id?"Me":company.qppv_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Deputy</span><span>{company.deputy_user_id?"Assigned":"Not assigned"}</span></div><div className={styles.kv}><span>Contract scope</span><span>{company.contract_scope??"—"}</span></div>{obligations.map(o=><div className={styles.kv} key={o.id}><span>{o.activity_type}</span><span>{niceStatus(o.cadence)} · {niceStatus(o.responsibility)}</span></div>)}</details>
     </>:null}
     {tab==="work"?<section className={styles.panel}><div className={styles.sectionBody}><Tabs label="Company work views" value={workView} onChange={setWorkView} items={[{id:"active",label:`Active (${active.length})`},{id:"scheduled",label:`Scheduled (${scheduled.length})`},{id:"completed",label:`Completed (${completed.length})`}]}/></div>{work?<WorkList items={visible} companies={work.companies} members={work.members} userId={session?.user.id} showCompany={false}/>:<div className={styles.empty}>Loading work…</div>}</section>:null}
     {tab==="products"?<ProductRegister companyId={company.id} organizationId={company.organization_id} products={products} onSaved={p=>setProducts(rows=>rows.map(row=>row.id===p.id?p:row))}/>:null}
+    {tab==="obligations"?<CompanyObligations companyId={company.id} organizationId={company.organization_id} products={products} initialObligationId={requestedObligation}/>:null}
     {tab==="psur"?<PsurCycles companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh}/>:null}
     {tab==="documents"||tab==="history"?<CompanyRecords companyId={company.id} organizationId={company.organization_id} view={tab}/>:null}
     <NewTaskModal open={showNew} initialCompanyId={company.id} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);refresh()}}/>
