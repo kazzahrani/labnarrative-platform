@@ -16,6 +16,7 @@ type InputRow={id:string;record_id:string;kind:string;label:string;owner_user_id
  request_id:string|null;source_task_id:string|null;status:string;created_at:string;updated_at:string};
 type Evidence={id:string;title:string;evidence_type:string;file_path:string|null;created_at:string};
 type Request={id:string;department:string;request_type:string;status:string;details:string;product_id:string|null;due_at:string;external_reference:string|null};
+type SourceTask={id:string;title:string;activity_type:string;status:string;product_id:string|null};
 type Review={id:string;cycle:number;status:string;assigned_email:string;sent_at:string;decided_at:string|null;decision_note:string|null};
 type Member={user_id:string;email:string;role:string};
 type Event={id:number;entity_type:string;entity_id:string|null;event_type:string;created_at:string;actor_user_id:string|null;metadata:Record<string,unknown>};
@@ -35,12 +36,12 @@ type Props={cycle:Cycle;companyId:string;organizationId:string;productName:strin
 export function PSURLifecycle({cycle,companyId,organizationId,productName,onChanged}:Props){
  const [record,setRecord]=useState<RecordRow|null>(null);
  const [inputs,setInputs]=useState<InputRow[]>([]),[evidence,setEvidence]=useState<Evidence[]>([]);
- const [requests,setRequests]=useState<Request[]>([]),[members,setMembers]=useState<Member[]>([]);
+ const [requests,setRequests]=useState<Request[]>([]),[sourceTasks,setSourceTasks]=useState<SourceTask[]>([]),[members,setMembers]=useState<Member[]>([]);
  const [reviews,setReviews]=useState<Review[]>([]),[history,setHistory]=useState<Event[]>([]);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const [panel,setPanel]=useState<"overview"|"inputs"|"documents"|"review"|"history">("overview");
  const [kind,setKind]=useState("sales_exposure"),[label,setLabel]=useState(""),[owner,setOwner]=useState(""),[due,setDue]=useState("");
- const [requestId,setRequestId]=useState(""),[inputStatus,setInputStatus]=useState("waiting");
+ const [requestId,setRequestId]=useState(""),[sourceTaskId,setSourceTaskId]=useState(""),[inputStatus,setInputStatus]=useState("waiting");
  const [reviewer,setReviewer]=useState(""),[submissionDate,setSubmissionDate]=useState(""),[submissionReference,setSubmissionReference]=useState("");
  const [draftFile,setDraftFile]=useState(""),[proofFile,setProofFile]=useState(""),[ackFile,setAckFile]=useState("");
  const [expanded,setExpanded]=useState(false);
@@ -49,19 +50,21 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
   if(e)throw e;
   setRecord(r);
   if(!r){setLoading(false);return;}
-  const [i,ev,req,m,rev,a]=await Promise.all([
+  const [i,ev,req,tasks,m,rev,a]=await Promise.all([
    pvosSupabase.from("pvos_psur_inputs").select("*").eq("record_id",r.id).order("created_at"),
    pvosSupabase.from("pvos_task_evidence").select("id,title,evidence_type,file_path,created_at").eq("task_id",r.task_id).is("archived_at",null).order("created_at",{ascending:false}),
    pvosSupabase.from("pvos_department_requests").select("id,department,request_type,status,details,product_id,due_at,external_reference")
     .eq("company_id",companyId).order("created_at",{ascending:false}).limit(500),
+   pvosSupabase.from("pvos_tasks").select("id,title,activity_type,status,product_id")
+    .eq("company_id",companyId).order("updated_at",{ascending:false}).limit(500),
    pvosSupabase.rpc("pvos_member_directory",{p_organization_id:organizationId}),
    pvosSupabase.from("pvos_task_reviews").select("id,cycle,status,assigned_email,sent_at,decided_at,decision_note")
     .eq("task_id",r.task_id).order("cycle",{ascending:false}),
    pvosSupabase.from("pvos_audit_events").select("id,entity_type,entity_id,event_type,created_at,actor_user_id,metadata")
     .eq("company_id",companyId).in("entity_type",["psur_record","psur_input"]).order("created_at",{ascending:false}).limit(600)
   ]);
-  for(const x of [i,ev,req,m,rev,a])if(x.error)throw x.error;
-  setInputs(i.data||[]);setEvidence(ev.data||[]);setRequests(req.data||[]);
+  for(const x of [i,ev,req,tasks,m,rev,a])if(x.error)throw x.error;
+  setInputs(i.data||[]);setEvidence(ev.data||[]);setRequests(req.data||[]);setSourceTasks(tasks.data||[]);
   setMembers(m.data||[]);setReviews(rev.data||[]);
   setHistory((a.data||[]).filter((x:Event)=>x.entity_type==="psur_record"&&x.entity_id===r.id||
     x.entity_type==="psur_input"&&x.metadata?.psur_record_id===r.id));
@@ -80,10 +83,13 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
  const kindLabel=(k:string)=>kinds.find(([id])=>id===k)?.[1]||k;
  const member=(id:string|null)=>id?members.find(x=>x.user_id===id)?.email||"Workspace member":"Unassigned";
  const matchingRequests=requests.filter(x=>!x.product_id||x.product_id===record?.product_id);
+ const matchingSourceTasks=sourceTasks.filter(x=>x.id!==record?.task_id&&(!x.product_id||x.product_id===record?.product_id));
  const effective=(input:InputRow)=>{
   const r=requests.find(x=>x.id===input.request_id);
-  if(!r)return statusLabel[input.status]||input.status;
-  return requestStatus[r.status]||r.status;
+  if(r)return requestStatus[r.status]||r.status;
+  const linkedTask=sourceTasks.find(x=>x.id===input.source_task_id);
+  if(linkedTask)return linkedTask.status==="complete"?"Complete":linkedTask.status==="awaiting_review"?"In review":linkedTask.status==="in_progress"?"In progress":"Waiting";
+  return statusLabel[input.status]||input.status;
  };
  const openInputs=inputs.filter(x=>!["Complete","Cancelled"].includes(effective(x)));
  const lastReview=reviews[0]||null;
@@ -116,10 +122,10 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
   try{
    const {error:x}=await pvosSupabase.rpc("pvos_psur_save_input",{
     p_record_id:record.id,p_id:null,p_kind:kind,p_label:label.trim(),
-    p_owner:owner||null,p_due:due||null,p_request:requestId||null,p_source_task:null,p_status:inputStatus
+    p_owner:owner||null,p_due:due||null,p_request:requestId||null,p_source_task:sourceTaskId||null,p_status:inputStatus
    });
    if(x)throw x;
-   setLabel("");setRequestId("");setDue("");setOwner("");await refresh();setMessage("PSUR input added.");
+   setLabel("");setRequestId("");setSourceTaskId("");setDue("");setOwner("");await refresh();setMessage("PSUR input added.");
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function changeInput(i:InputRow,next:string){
@@ -171,13 +177,13 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
    {panel==="inputs"?<>
     <div className={styles.muted}>Link inputs from departmental Requests or document PV-owned inputs directly. Linked request statuses update with the request.</div>
     <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Input</th><th>Owner</th><th>Due</th><th>State</th><th>Source</th></tr></thead>
-     <tbody>{inputs.map(i=>{const req=requests.find(r=>r.id===i.request_id);return <tr key={i.id}>
+     <tbody>{inputs.map(i=>{const req=requests.find(r=>r.id===i.request_id);const linkedTask=sourceTasks.find(t=>t.id===i.source_task_id);return <tr key={i.id}>
       <td><strong>{i.label}</strong><div className={styles.muted}>{kindLabel(i.kind)}</div></td>
       <td>{member(i.owner_user_id)}</td><td>{fmt(i.due_on)}</td>
-      <td>{req?<Badge tone={req.status==="complete"?"green":"amber"}>{effective(i)}</Badge>:
+      <td>{req||linkedTask?<Badge tone={effective(i)==="Complete"?"green":"amber"}>{effective(i)}</Badge>:
        <select className={styles.input} aria-label={"Status of "+i.label} value={i.status} disabled={busy||!["planning","inputs","draft"].includes(record.stage)}
         onChange={e=>{void changeInput(i,e.target.value);}}>{Object.entries(statusLabel).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>}</td>
-      <td>{req?<Link href={rowLink(req)}>{req.department} request →</Link>:i.source_task_id?<Link href={"/pvos/tasks/"+i.source_task_id}>Source work →</Link>:"Manual"}</td>
+      <td>{req?<Link href={rowLink(req)}>{req.department} request →</Link>:linkedTask?<Link href={"/pvos/tasks/"+linkedTask.id}>{linkedTask.title} →</Link>:"Manual"}</td>
      </tr>;})}</tbody></table>{!inputs.length?<div className={styles.empty}>No PSUR inputs yet. Add literature, signal, medical, sales/exposure or regulatory input as needed.</div>:null}</div>
     {["planning","inputs","draft"].includes(record.stage)?<form onSubmit={createInput} className={styles.psurInputForm}>
      <div className={styles.formGrid}>
@@ -185,9 +191,12 @@ export function PSURLifecycle({cycle,companyId,organizationId,productName,onChan
       <label>Requirement<input required className={styles.input} minLength={2} maxLength={220} placeholder="e.g. October sales data" value={label} onChange={e=>setLabel(e.target.value)}/></label>
       <label>Owner<select className={styles.input} value={owner} onChange={e=>setOwner(e.target.value)}><option value="">Not assigned</option>{members.map(x=><option key={x.user_id} value={x.user_id}>{x.email}</option>)}</select></label>
       <label>Due<input type="date" className={styles.input} value={due} onChange={e=>setDue(e.target.value)}/></label>
-      <label>Linked department request<select className={styles.input} value={requestId} onChange={e=>setRequestId(e.target.value)}>
+      <label>Linked department request<select className={styles.input} disabled={Boolean(sourceTaskId)} value={requestId} onChange={e=>setRequestId(e.target.value)}>
        <option value="">No linked request</option>{matchingRequests.map(x=><option key={x.id} value={x.id}>{x.department} · {x.details.slice(0,70)}</option>)}</select></label>
-      <label>Manual input state<select className={styles.input} disabled={Boolean(requestId)} value={inputStatus} onChange={e=>setInputStatus(e.target.value)}>
+      <label>Linked PV work (literature / signals / RMP)<select className={styles.input} value={sourceTaskId}
+       disabled={Boolean(requestId)} onChange={e=>setSourceTaskId(e.target.value)}>
+       <option value="">No linked PV record</option>{matchingSourceTasks.map(x=><option key={x.id} value={x.id}>{x.activity_type} · {x.title}</option>)}</select></label>
+      <label>Manual input state<select className={styles.input} disabled={Boolean(requestId||sourceTaskId)} value={inputStatus} onChange={e=>setInputStatus(e.target.value)}>
        {Object.entries(statusLabel).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
      </div>
      <div className={styles.inlineActions}><button className={styles.buttonGhost} type="submit" disabled={busy||!label.trim()}>+ Add input</button>
