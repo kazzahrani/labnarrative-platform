@@ -42,9 +42,15 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       setOrganizationId(null);
       setLoading(false);
       if (!isLogin) {
-        const preserveDeepLink=pathname==="/pvos/invoices"||pathname==="/pvos/requests"||pathname.startsWith("/pvos/requests/")||
-          (pathname.startsWith("/pvos/companies/")&&new URLSearchParams(window.location.search).get("tab")==="departments");
-        router.replace(preserveDeepLink?"/pvos/login?next="+encodeURIComponent(pathname+window.location.search):"/pvos/login");
+        // Every authenticated PVOS screen can be linked from an email or the
+        // notification bell. Preserve the whole internal destination, including
+        // filters and a task's #task-review/#evidence tab, across sign-in.
+        const deepLink=pathname.startsWith("/pvos/")
+          ?pathname+window.location.search+window.location.hash
+          :"";
+        router.replace(deepLink
+          ?"/pvos/login?next="+encodeURIComponent(deepLink)
+          :"/pvos/login");
       }
       return;
     }
