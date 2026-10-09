@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {useCallback,useEffect,useMemo,useState} from "react";
-import {useRouter} from "next/navigation";
+import {useRouter,useSearchParams} from "next/navigation";
 import {Badge,Header,Help} from "../_components";
 import {usePVOS} from "../_provider";
 import {pvosSupabase} from "../_pvos-supabase";
@@ -47,6 +47,7 @@ function tone(r:Row):"green"|"amber"|"red"|"default"{
 }
 export default function RequestsPage(){
  const router=useRouter();
+ const query=useSearchParams();
  const {session,loading:authLoading,organizationId}=usePVOS();
  const [invoices,setInvoices]=useState<Invoice[]>([]);
  const [departments,setDepartments]=useState<Department[]>([]);
@@ -57,6 +58,7 @@ export default function RequestsPage(){
  const [company,setCompany]=useState("all"),[search,setSearch]=useState("");
  const [chooser,setChooser]=useState(false),[newType,setNewType]=useState<"department"|"invoice">("department"),[newCompany,setNewCompany]=useState("");
  const uid=session?.user.id||"";
+ useEffect(()=>{setCompany(query.get("company")||"all");},[query]);
 
  const reload=useCallback(async()=>{
   const [inv,dep,co]=await Promise.all([
@@ -107,7 +109,7 @@ export default function RequestsPage(){
     d.status==="received"&&d.reviewer_user_id===uid ||
     d.status==="returned"&&d.requester_user_id===uid,
    complete:d.status==="complete"||d.status==="cancelled",
-   url:"/pvos/companies/"+encodeURIComponent(d.company_id)+"?tab=departments&request="+encodeURIComponent(d.id)
+   url:"/pvos/requests/department?company="+encodeURIComponent(d.company_id)+"&request="+encodeURIComponent(d.id)
   }));
   return [...invoiceRows,...departmentRows].sort((a,b)=>b.created.localeCompare(a.created));
  },[invoices,departments,companies,uid]);
@@ -123,7 +125,7 @@ export default function RequestsPage(){
   if(!newCompany||!companies.some(c=>c.id===newCompany))return;
   setChooser(false);
   if(newType==="invoice")router.push("/pvos/invoices?company="+encodeURIComponent(newCompany));
-  else router.push("/pvos/companies/"+encodeURIComponent(newCompany)+"?tab=departments&new=1");
+  else router.push("/pvos/requests/department?company="+encodeURIComponent(newCompany)+"&new=1");
  }
  return <div className={styles.unifiedRequests}>
   <Header eyebrow="Workspace" title="Requests"
