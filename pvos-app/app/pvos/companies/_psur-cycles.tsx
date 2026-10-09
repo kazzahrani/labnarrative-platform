@@ -19,6 +19,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  const [showMapping,setShowMapping]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const [editingId,setEditingId]=useState<string|null>(null);
+ const [showEurdEditor,setShowEurdEditor]=useState(false);
  const [previewId,setPreviewId]=useState<string|null>(null);
  const [activeLifecycle,setActiveLifecycle]=useState<string|null>(null);
  const [previewOffset,setPreviewOffset]=useState(30);
@@ -82,7 +83,8 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
   setJurisdiction(c.jurisdiction);setBasis(c.authority_basis||"");setRevision(c.source_revision);
   setSelectedRow({substance:c.active_substance,dlp:c.data_lock_point,due:c.submission_due_date,frequency:"",
    raw:c.source_row||{}});setError("");setMessage("Review the dates against the current authority reference, then save this draft.");
-  document.getElementById("psur-edit-form")?.scrollIntoView({behavior:"smooth",block:"start"});
+  setShowEurdEditor(true);
+  setTimeout(()=>document.getElementById("psur-edit-form")?.scrollIntoView({behavior:"smooth",block:"start"}),80);
  }
  async function save(e:FormEvent){
   e.preventDefault();setBusy(true);setError("");setMessage("");
@@ -98,7 +100,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
    const {error:e2}=await request;
    if(e2)throw e2;
    setMessage(editingId?"Draft updated. Confirm the regulatory basis to create the PSUR task.":"Draft saved. A PV lead must confirm applicability before PVOS creates a deadline task.");
-   setEditingId(null);setSelectedRow(null);await load();onChanged?.();
+   setEditingId(null);setSelectedRow(null);setShowEurdEditor(false);await load();onChanged?.();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function confirm(id:string){
@@ -110,8 +112,13 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  return <div style={{display:"grid",gap:16}}>
-  <section className={styles.panel}>
-   <div className={styles.panelHeader}><h2>EURD / PSUR deadlines</h2><Help>EMA EURD dates are binding for applicable EU submissions, not automatically for Saudi-authorised products. Record and confirm the actual authority obligation before creating a task. The official EURD file changes monthly.</Help></div>
+  <div className={styles.inlineActions} style={{marginTop:0,justifyContent:"space-between"}}>
+   <span className={styles.muted}>Confirmed obligations become structured PSUR records. EURD references require explicit applicability confirmation.</span>
+   <button type="button" className={styles.buttonGhost} onClick={()=>setShowEurdEditor(x=>!x)}>
+    {showEurdEditor?"Close EURD form":"+ Import EURD / New cycle"}</button>
+  </div>
+  {showEurdEditor?<section className={styles.panel}>
+   <div className={styles.panelHeader}><h2>EURD import & applicability</h2><Help>EMA EURD dates are binding for applicable EU submissions, not automatically for Saudi-authorised products. Record and confirm the actual authority obligation before creating a task. The official EURD file changes monthly.</Help></div>
    <div className={styles.sectionBody}>
     <div className={styles.inlineActions}>
      <a href={EMA_URL} target="_blank" rel="noreferrer" className={styles.buttonGhost}>Official EMA EURD list ↗</a>
@@ -173,15 +180,15 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      <div className={styles.inlineActions}><button className={styles.button} type="submit" disabled={busy||!products.length}>{editingId?"Update draft":"Save draft for confirmation"}</button>{editingId?<button className={styles.buttonGhost} type="button" disabled={busy} onClick={()=>{setEditingId(null);setSelectedRow(null);}}>Cancel editing</button>:null}</div>
     </form>
    </div>
-  </section>
+  </section>:null}
   {error?<div className={styles.errorBox} role="alert">{error}</div>:null}
   {message?<div className={styles.info} role="status">{message}</div>:null}
   <section className={styles.panel}>
-   <div className={styles.panelHeader}><h2>PSUR cycle register</h2><Help>Only confirmed cycles create actual deadline tasks. Recurrence forecasts are drafts and require checking against a current EURD revision before approval.</Help></div>
+   <div className={styles.panelHeader}><h2>PSUR/PBRER register</h2><Help>Only confirmed cycles create actual deadline tasks. Recurrence forecasts are drafts and require checking against a current EURD revision before approval.</Help></div>
    <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>Product / DLP</th><th>Submission deadline</th><th>Authority</th><th>Source</th><th>Status</th><th></th></tr></thead><tbody>
     {entries.map(c=><tr key={c.id}><td>{products.find(p=>p.id===c.product_id)?.brand_name||c.active_substance}<div className={styles.muted}>DLP {c.data_lock_point}</div></td>
      <td>{c.submission_due_date}</td><td>{c.jurisdiction==="reference_only"?"Unverified":c.jurisdiction.toUpperCase()}</td>
-     <td title={c.source_revision}>{c.source_revision}</td><td><Badge tone={c.status==="confirmed"?"green":"amber"}>{c.status==="draft"?"Needs confirmation":c.status}</Badge></td>
+     <td title={c.source_revision}>{c.source_revision}</td><td><Badge tone={c.status==="confirmed"?"green":"amber"}>{c.status==="draft"?"Needs confirmation":c.status==="confirmed"?"Basis confirmed":c.status}</Badge></td>
      <td>
       <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-start"}}>
        <div className={styles.inlineActions} style={{marginTop:0}}>
