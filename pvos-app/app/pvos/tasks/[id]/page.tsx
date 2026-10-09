@@ -125,13 +125,14 @@ export default function TaskPage(){
             {activity.href.startsWith("/pvos/literature")||activity.href.startsWith("/pvos/rmp")?<Link className={styles.button} href={activity.href}>{activity.label}</Link>:null}
             {task.status==="not_started"?<button className={styles.buttonGhost} disabled={busy||reviewPending} onClick={()=>setStatus("in_progress")}>Start work</button>:null}
             {task.status!=="awaiting_review"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("awaiting_review")}>{approvals.length?"Send into approval":"Choose reviewer"}</button>:null}
-            {!approvals.length&&!reviewHistory&&task.status!=="complete"&&!needsObligationReview?
+            {!task.metadata?.psur_cycle_id&&!approvals.length&&!reviewHistory&&task.status!=="complete"&&!needsObligationReview?
               <button className={styles.button} disabled={busy||reviewPending||missingObligationEvidence}
                title={missingObligationEvidence?"Add required evidence before completing":""}
                onClick={()=>setStatus("complete")}>Mark complete</button>:null}
             {task.status==="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Reopen</button>:null}
             </>}
           </div>
+          {task.metadata?.psur_cycle_id?<p className={styles.muted}>This PSUR has a separate regulatory lifecycle. Review, submission evidence and completion are managed under <Link href={"/pvos/companies/"+task.company_id+"?tab=psur"}>Company → PSUR</Link>, not by manually completing the deadline task.</p>:null}
           {task.obligation_id&&missingObligationEvidence?<p className={styles.muted}>Evidence required by this obligation. Open the Evidence tab and add supporting evidence before completing the activity.</p>:null}
           {task.obligation_id&&needsObligationReview&&task.status!=="complete"?
            <p className={styles.muted}>An independent reviewer is assigned. Use Review to obtain approval; manual completion is unavailable.</p>:null}
