@@ -40,6 +40,7 @@ export default function TaskPage(){
   },[]);
   const params=useParams<{id:string}>(); const {session,organizationId}=usePVOS();
   const [task,setTask]=useState<any|null>(null); const [company,setCompany]=useState<any|null>(null); const [product,setProduct]=useState<any|null>(null);
+  const [obligation,setObligation]=useState<{evidence_required:boolean;reviewer_user_id:string|null}|null>(null);
   const [evidence,setEvidence]=useState<any[]>([]); const [approvals,setApprovals]=useState<any[]>([]); const [steps,setSteps]=useState<any[]>([]); const [audit,setAudit]=useState<any[]>([]);
   const [evidenceTitle,setEvidenceTitle]=useState(""); const [busy,setBusy]=useState(false); const [uploadMessage,setUploadMessage]=useState<string|null>(null);
   const [members,setMembers]=useState<Member[]>([]);const [workflowMessage,setWorkflowMessage]=useState<string|null>(null);
@@ -49,18 +50,20 @@ export default function TaskPage(){
   async function load(){
     const id=params.id;if(!id)return;
     const {data:t}=await pvosSupabase.from("pvos_tasks").select("*").eq("id",id).single();setTask(t);if(!t)return;
-    const [c,e,a,au,p,m]=await Promise.all([
+    const [c,e,a,au,p,m,o]=await Promise.all([
       pvosSupabase.from("pvos_companies").select("*").eq("id",t.company_id).single(),
       pvosSupabase.from("pvos_task_evidence").select("*").eq("task_id",id).is("archived_at",null).order("created_at",{ascending:false}),
       pvosSupabase.from("pvos_task_approvals").select("*").eq("task_id",id).order("step_position"),
       pvosSupabase.from("pvos_audit_events").select("*").or(`and(entity_type.eq.task,entity_id.eq.${id}),and(entity_type.eq.approval,metadata->>task_id.eq.${id})`).order("created_at",{ascending:false}).limit(30),
       t.product_id?pvosSupabase.from("pvos_products").select("*").eq("id",t.product_id).single():Promise.resolve({data:null}),
-      pvosSupabase.rpc("pvos_member_directory",{p_organization_id:t.organization_id})
+      pvosSupabase.rpc("pvos_member_directory",{p_organization_id:t.organization_id}),
+      t.obligation_id?pvosSupabase.from("pvos_obligations").select("evidence_required,reviewer_user_id").eq("id",t.obligation_id).single():Promise.resolve({data:null})
     ]);
     setCompany(c.data);setEvidence(e.data??[]);setApprovals(a.data??[]);setAudit(au.data??[]);setProduct((p as any).data);
     if(t.metadata?.authority_period_id){setReviewPending(["awaiting_review","complete"].includes(t.status));setReviewHistory(true);}
     if(a.data?.length)setReviewPending(false);
-    setMembers(m.data??[]);if(m.error||a.error||au.error)setWorkflowMessage((m.error||a.error||au.error)?.message??"Could not load approval history");
+    setMembers(m.data??[]);setObligation((o as any).data||null);
+    if(m.error||a.error||au.error)setWorkflowMessage((m.error||a.error||au.error)?.message??"Could not load approval history");
     const routeIds=[...new Set((a.data??[]).map((x:any)=>x.route_id).filter(Boolean))] as string[];
     if(routeIds.length){const {data:s}=await pvosSupabase.from("pvos_approval_steps").select("*").in("route_id",routeIds);setSteps(s??[])}else setSteps([]);
   }
@@ -105,6 +108,8 @@ export default function TaskPage(){
 
   if(!task||!company)return <div className={styles.empty}>Loading task…</div>;
   const displayStatus=niceStatus(task.status),deadline=deadlineState(task.due_at,task.status),activity=activityLink(task);
+  const missingObligationEvidence=Boolean(task.obligation_id&&obligation?.evidence_required&&evidence.length===0);
+  const needsObligationReview=Boolean(task.obligation_id&&task.reviewer_user_id);
   const authorityPeriod=task.metadata?.authority_period_id;
   const authorityLink=authorityPeriod?`/pvos/signal?view=authority&authorityPeriod=${authorityPeriod}`:null;
   return <>
@@ -120,10 +125,16 @@ export default function TaskPage(){
             {activity.href.startsWith("/pvos/literature")||activity.href.startsWith("/pvos/rmp")?<Link className={styles.button} href={activity.href}>{activity.label}</Link>:null}
             {task.status==="not_started"?<button className={styles.buttonGhost} disabled={busy||reviewPending} onClick={()=>setStatus("in_progress")}>Start work</button>:null}
             {task.status!=="awaiting_review"&&task.status!=="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("awaiting_review")}>{approvals.length?"Send into approval":"Choose reviewer"}</button>:null}
-            {!approvals.length&&!reviewHistory&&task.status!=="complete"?<button className={styles.button} disabled={busy||reviewPending} onClick={()=>setStatus("complete")}>Mark complete</button>:null}
+            {!approvals.length&&!reviewHistory&&task.status!=="complete"&&!needsObligationReview?
+              <button className={styles.button} disabled={busy||reviewPending||missingObligationEvidence}
+               title={missingObligationEvidence?"Add required evidence before completing":""}
+               onClick={()=>setStatus("complete")}>Mark complete</button>:null}
             {task.status==="complete"?<button className={styles.buttonGhost} disabled={busy} onClick={()=>setStatus("in_progress")}>Reopen</button>:null}
             </>}
           </div>
+          {task.obligation_id&&missingObligationEvidence?<p className={styles.muted}>Evidence required by this obligation. Open the Evidence tab and add supporting evidence before completing the activity.</p>:null}
+          {task.obligation_id&&needsObligationReview&&task.status!=="complete"?
+           <p className={styles.muted}>An independent reviewer is assigned. Use Review to obtain approval; manual completion is unavailable.</p>:null}
           {authorityLink?<Help>Prepare source checks and send to the named reviewer in Authority monitoring. This task completes when its monitoring record is independently approved.</Help>:task.metadata?.department_request_id?<Help>Upload received documents under Evidence, then use the company Requests tab to mark receipt, assign an independent reviewer and complete the controlled workflow. Task status follows the request automatically.</Help>:null}
         </div>
 
