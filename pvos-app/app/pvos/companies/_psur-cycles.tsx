@@ -26,6 +26,7 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  const [productId,setProductId]=useState(""),[substance,setSubstance]=useState(""),[dlp,setDlp]=useState(""),[due,setDue]=useState("");
  const [frequency,setFrequency]=useState(""),[jurisdiction,setJurisdiction]=useState("reference_only");
  const [simulated,setSimulated]=useState(false);
+ const [isDemoCompany,setIsDemoCompany]=useState(false);
  const [basis,setBasis]=useState(""),[revision,setRevision]=useState("EMA EURD Rev. 164 (23 Sep 2026)");
  const [published,setPublished]=useState("2026-09-23"),[selectedRow,setSelectedRow]=useState<EurdRow|null>(null),[search,setSearch]=useState("");
  const load=useCallback(async()=>{
@@ -34,6 +35,13 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
   setEntries(data||[]);
  },[companyId,organizationId]);
  useEffect(()=>{load().catch(e=>setError(e.message));},[load]);
+ useEffect(()=>{
+  let active=true;
+  setIsDemoCompany(false);
+  pvosSupabase.from("pvos_companies").select("seed_key").eq("id",companyId).eq("organization_id",organizationId).single()
+   .then(({data,error})=>{if(active&&!error)setIsDemoCompany(String(data?.seed_key||"").startsWith("demo-"));});
+  return ()=>{active=false;};
+ },[companyId,organizationId]);
  useEffect(()=>{if(products.length&&!productId)setProductId(products[0].id)},[products,productId]);
  const p=products.find(x=>x.id===productId);
  const preview=entries.find(c=>c.id===previewId);
@@ -191,11 +199,12 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
      {suggestions.length===0?<div className={styles.muted}>No automatic match. Search the official file; never assume a similar substance is equivalent.</div>:null}
     </div>:null}
     <form id="psur-edit-form" onSubmit={save} style={{display:"grid",gap:12,marginTop:18}}>
-     <label style={{display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650}}>
+     {isDemoCompany||simulated?<label style={{display:"flex",alignItems:"center",gap:9,fontSize:13,fontWeight:650}}>
       <input type="checkbox" checked={simulated} onChange={e=>toggleSimulation(e.target.checked)}
+       disabled={Boolean(editingId&&entries.find(c=>c.id===editingId)?.is_simulated)}
        style={{accentColor:"#c4f85e"}}/>
       TEST ONLY — Simulated PSUR workflow (demo company)
-     </label>
+     </label>:null}
      {simulated?<p className={styles.info} style={{margin:0}}>
       <strong>Simulation only.</strong> No SFDA/EU regulatory obligation is confirmed. Dates are fictional references;
       PVOS will create a clearly labelled test workflow without a real deadline, reminder schedule or recurring projection.
