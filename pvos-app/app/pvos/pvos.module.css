@@ -411,3 +411,39 @@
 .obligationBasis .badge{justify-self:start}
 .obligationGapInline{margin-top:5px;font-size:11px;color:#efb674}
 .light .obligationGapInline{color:#945a21}
+
+
+/* Company PSUR/PBRER lifecycle, contained within its existing company tab */
+.psurStages{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.psurStages span{background:#1a252c;color:#8195a0;border:1px solid #34434b;padding:10px 4px;border-radius:8px;text-align:center;font-size:11px;font-weight:600;line-height:1.2}
+.psurStages span[data-passed="true"]{background:#25342a;border-color:#526a50;color:#c3dfa1}
+.psurStages span[data-current="true"]{background:#304222;border-color:#b5ec53;color:#dcfca9}
+.psurWorkflowTabs{display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-bottom:1px solid #29353e;padding-bottom:11px}
+.psurWorkflowTab,.psurWorkflowTabActive{appearance:none;border:1px solid transparent;border-radius:8px;background:transparent;color:#8fa5b3;padding:9px 11px;font:inherit;font-weight:550;font-size:12px;cursor:pointer}
+.psurWorkflowTab:hover{background:#202b33;color:#eef5f7}
+.psurWorkflowTabActive{background:#28353e;border-color:#3c4b52;color:#edf6f7}
+.psurFacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 20px}
+.psurFacts>div{display:grid;gap:7px;padding:11px 2px;border-bottom:1px solid #2b3640;overflow-wrap:anywhere}
+.psurFacts>div span{font-size:11px;color:#91a3ae}
+.psurFacts>div strong{font-size:13px;font-weight:550;line-height:1.45}
+.psurFacts .psurFullRow{grid-column:1/-1}
+.psurInputForm{display:grid;gap:14px;padding:17px;border:1px solid #33434b;border-radius:12px;background:#151f26}
+.psurStageActions{border-top:1px solid #2b3942;padding-top:17px}
+.psurActionBlock{display:grid;justify-items:start;gap:11px;max-width:640px}
+.psurActionBlock label{display:grid;gap:6px;width:min(100%,360px);font-size:12px;font-weight:550}
+.psurActionBlock a{font-size:12px}
+.psurHistory{display:grid;gap:0}
+.psurHistoryRow{display:grid;gap:5px;padding:12px 2px;border-bottom:1px solid #334049}
+.psurHistoryRow strong{font-size:12px;font-weight:650}
+.psurHistoryRow span{font-size:11px;color:#91a5b0;line-height:1.5}
+.light .psurStages span{background:#f1f5f6;border-color:#dfe8eb;color:#70838d}
+.light .psurStages span[data-passed="true"]{background:#f0f8e7;border-color:#c4d8ad;color:#46632b}
+.light .psurStages span[data-current="true"]{background:#e9f5d6;border-color:#8cb64a;color:#31471d}
+.light .psurWorkflowTabs,.light .psurFacts>div,.light .psurStageActions,.light .psurHistoryRow{border-color:#e1eaed}
+.light .psurWorkflowTab{color:#69818c}
+.light .psurWorkflowTab:hover{background:#f1f6f7;color:#283d48}
+.light .psurWorkflowTabActive{background:#ecf2f4;border-color:#dce7e9;color:#25363e}
+.light .psurFacts>div span,.light .psurHistoryRow span{color:#718690}
+.light .psurInputForm{background:#f8fbfc;border-color:#e0e8eb}
+@media(max-width:850px){.psurStages{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:620px){.psurFacts{grid-template-columns:1fr}.psurStages{grid-template-columns:repeat(2,minmax(0,1fr))}.psurStageActions{padding-top:14px}}
