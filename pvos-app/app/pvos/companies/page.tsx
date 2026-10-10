@@ -8,37 +8,46 @@ import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import { dueLabel } from "../_utils";
 import styles from "../pvos.module.css";
+import {getPVOSCache,pvosCacheKey,setPVOSCache,shouldRefreshPVOSCache} from "../_session-cache";
 
 export default function Companies(){
   const {organizationId,session}=usePVOS();
-  const [companies,setCompanies]=useState<any[]>([]);
-  const [products,setProducts]=useState<any[]>([]);
-  const [tasks,setTasks]=useState<any[]>([]);
+  const key=pvosCacheKey(session?.user.id,organizationId,"companies-list");
+  type Snapshot={companies:any[];products:any[];tasks:any[]};
+  const previous=getPVOSCache<Snapshot>(key)?.data;
+  const [companies,setCompanies]=useState<any[]>(()=>previous?.companies||[]);
+  const [products,setProducts]=useState<any[]>(()=>previous?.products||[]);
+  const [tasks,setTasks]=useState<any[]>(()=>previous?.tasks||[]);
   const [showAdd,setShowAdd]=useState(false);
   const [name,setName]=useState("");
   const [scope,setScope]=useState("PV full service");
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
 
-  async function load(){
+  async function load(preferCache=false){
     if(!organizationId)return;
+    const cached=getPVOSCache<Snapshot>(key);
+    if(preferCache&&cached){
+      setCompanies(cached.data.companies);setProducts(cached.data.products);setTasks(cached.data.tasks);
+      if(!shouldRefreshPVOSCache(cached,30000))return;
+    }
     const [c,t]=await Promise.all([
       pvosSupabase.from("pvos_companies").select("*").eq("organization_id",organizationId).order("name"),
       pvosSupabase.from("pvos_tasks").select("*").eq("organization_id",organizationId).neq("status","cancelled")
     ]);
     if(c.error||t.error){setError(c.error?.message||t.error?.message||"Could not load companies.");return;}
     const cs=c.data??[];
-    setCompanies(cs);
-    setTasks(t.data??[]);
+    let ps:any[]=[];
     if(cs.length){
       try{
-        const p=await readProductPages<any>((from,to)=>pvosSupabase.from("pvos_products").select("id,company_id,registration_status").in("company_id",cs.map(x=>x.id)).order("id").range(from,to));
-        setProducts(p);setError(null);
-      }catch(e){setError((e as Error).message);setProducts([]);}
-    }else setProducts([]);
+        ps=await readProductPages<any>((from,to)=>pvosSupabase.from("pvos_products").select("id,company_id,registration_status").in("company_id",cs.map(x=>x.id)).order("id").range(from,to));
+      }catch(e){setError((e as Error).message);return;}
+    }
+    const snapshot={companies:cs,products:ps,tasks:t.data??[]};
+    setPVOSCache(key,snapshot);setCompanies(cs);setTasks(snapshot.tasks);setProducts(ps);setError(null);
   }
 
-  useEffect(()=>{load()},[organizationId]);
+  useEffect(()=>{void load(true);},[organizationId,session?.user.id]);
 
   const stats=useMemo<Record<string,{products:number,registration:ReturnType<typeof registrationSummary>,dueWeek:number,overdue:number}>>(()=>Object.fromEntries(companies.map(c=>{
     const ct=tasks.filter(t=>t.company_id===c.id);
