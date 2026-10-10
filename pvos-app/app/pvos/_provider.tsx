@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { usePathname, useRouter } from "next/navigation";
 import { pvosSupabase } from "./_pvos-supabase";
 import { ensureDemoWorkspace } from "./_seed";
+import {clearPVOSCache,invalidatePVOSCache} from "./_session-cache";
 
 type PVOSContextValue = {
   session: Session | null;
@@ -48,6 +49,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
     setError(null);
 
     if (!nextSession) {
+      if(initUserRef.current)clearPVOSCache();
       initUserRef.current=null;
       setOrganizationId(null);
       setLoading(false);
@@ -75,7 +77,8 @@ export function PVOSProvider({children}:{children:ReactNode}) {
       // A second auth callback can arrive while the first workspace bootstrap is
       // still in flight. Do not seed the same fresh organization twice.
       if(organizationId){
-        await pvosSupabase.rpc("pvos_materialize_due_obligations",{horizon_days:30});
+        // Materialize obligations once during bootstrap; navigating between
+        // sections must not trigger another write RPC and loading sequence.
         setLoading(false);
         if(isLogin) goAfterLogin();
       }
@@ -118,7 +121,7 @@ export function PVOSProvider({children}:{children:ReactNode}) {
 
   const value = useMemo(()=>({
     session, organizationId, loading, error, reloadToken,
-    refresh:()=>setReloadToken(v=>v+1)
+    refresh:()=>{invalidatePVOSCache();setReloadToken(v=>v+1);}
   }),[session,organizationId,loading,error,reloadToken]);
 
   return <PVOSContext.Provider value={value}>{children}</PVOSContext.Provider>;
