@@ -8,12 +8,26 @@ import {readWork,type WorkData} from "../_work";
 import {WorkList} from "../_work-list";
 import {deadlineState} from "../_work-utils";
 import styles from "../pvos.module.css";
+import {getPVOSCache,pvosCacheKey,setPVOSCache,shouldRefreshPVOSCache} from "../_session-cache";
 export default function Dashboard(){
   const {organizationId,session,reloadToken,refresh}=usePVOS();
-  const [data,setData]=useState<WorkData|null>(null),[error,setError]=useState(""),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
+  const key=pvosCacheKey(session?.user.id,organizationId,"work");
+  const [data,setData]=useState<WorkData|null>(()=>getPVOSCache<WorkData>(key)?.data||null);
+  const [error,setError]=useState(""),[loading,setLoading]=useState(()=>!getPVOSCache<WorkData>(key)),[retry,setRetry]=useState(0);
   const [tab,setTab]=useState("mine"),[company,setCompany]=useState("all"),[filter,setFilter]=useState("attention"),[kind,setKind]=useState("all"),[search,setSearch]=useState(""),[showNew,setShowNew]=useState(false);
   useEffect(()=>{const p=new URLSearchParams(window.location.search);if(["mine","reviews","team"].includes(p.get("tab")||""))setTab(p.get("tab")!);if(p.get("company"))setCompany(p.get("company")!);},[]);
-  useEffect(()=>{if(!organizationId||!session)return;let active=true;setLoading(true);setError("");readWork(organizationId,session.user.id).then(d=>{if(active)setData(d)}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[organizationId,session?.user.id,reloadToken,retry]);
+  useEffect(()=>{
+   if(!organizationId||!session)return;
+   let active=true;
+   const cached=getPVOSCache<WorkData>(key);
+   if(cached){setData(cached.data);setLoading(false);}else setLoading(true);
+   setError("");
+   if(!shouldRefreshPVOSCache(cached,retry?0:20000))return;
+   readWork(organizationId,session.user.id).then(d=>{
+    if(active){setPVOSCache(key,d);setData(d);setLoading(false);}
+   }).catch(e=>{if(active){setError(e.message);setLoading(false);}});
+   return()=>{active=false};
+  },[organizationId,session?.user.id,key,reloadToken,retry]);
   function changeTab(value:string){setTab(value);setFilter("attention");const u=new URL(window.location.href);u.searchParams.set("tab",value);window.history.replaceState({},"",u);}
   const scoped=(data?.items||[]).filter(w=>company==="all"||w.company_id===company);
   const role=data?.members.find(m=>m.user_id===session?.user.id)?.role,canTeam=["admin","qppv","deputy_qppv","manager"].includes(role||"");
@@ -35,7 +49,8 @@ export default function Dashboard(){
         <select aria-label="Activity type" className={styles.input} value={kind} onChange={e=>setKind(e.target.value)}><option value="all">All activities</option>{[...new Set(base.map(w=>w.kind))].sort().map(k=><option key={k}>{k}</option>)}</select>
         <input aria-label="Search work" className={styles.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search work"/>
       </div>
-      {error?<div className={styles.errorBox} role="alert">{error} <button className={styles.buttonGhost} onClick={()=>setRetry(n=>n+1)}>Retry</button></div>:loading?<div className={styles.empty}>Loading work and reviews…</div>:data?<WorkList items={visible} companies={data.companies} members={data.members} userId={session?.user.id}/>:null}
+      {error?<div className={styles.errorBox} role="alert">{error} <button className={styles.buttonGhost} onClick={()=>setRetry(n=>n+1)}>Retry</button></div>:null}
+      {data?<WorkList items={visible} companies={data.companies} members={data.members} userId={session?.user.id}/>:loading?<div className={styles.empty}>Loading work and reviews…</div>:null}
     </section>
     <div className={styles.inlineActions}><Link className={styles.buttonGhost} href="/pvos/approvals">Review history</Link><Link className={styles.buttonGhost} href="/pvos/handover">Handover records</Link></div>
     <NewTaskModal open={showNew} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);refresh()}}/>
