@@ -6,6 +6,7 @@ import { usePVOS } from "../_provider";
 import { pvosSupabase } from "../_pvos-supabase";
 import { PRIORITIZATION_VERSION } from "../../api/pvos/literature/_rank";
 import styles from "../pvos.module.css";
+import {getPVOSCache,pvosCacheKey,setPVOSCache,shouldRefreshPVOSCache} from "../_session-cache";
 import {ArticleReader} from "./_reader";
 import Link from "next/link";
 import {isHistoricalRun} from "../_work-utils";
@@ -121,6 +122,10 @@ function secondPassSuggestion(x:any):SecondPassDecision{
 
 export default function LiteraturePage(){
   const {organizationId,session}=usePVOS();
+  type Snapshot={sources:any[];runs:any[];items:any[];companies:any[];products:any[];
+   followups:any[];records:any[];secondReviews:any[];members:any[];alerts:any[];automationSetting:any|null};
+  const key=pvosCacheKey(session?.user.id,organizationId,"literature");
+  const previous=getPVOSCache<Snapshot>(key)?.data;
   const [area,setArea]=useState<"review"|"records"|"monitoring">("review");
   const [tab,setTabState]=useState<Tab>("queue");
   function setTab(next:Tab){setTabState(next);setArea(next==="sources"?"monitoring":next==="psur"?"records":"review");}
@@ -145,21 +150,21 @@ export default function LiteraturePage(){
     return ()=>{dialog?.removeEventListener("keydown",onKey);previous?.focus();};
   },[showReviewerAccess]);
   const [secondView,setSecondView]=useState<"mine"|"team"|"history">("mine");
-  const [sources,setSources]=useState<any[]>([]);
-  const [runs,setRuns]=useState<any[]>([]);
-  const [items,setItems]=useState<any[]>([]);
-  const [companies,setCompanies]=useState<any[]>([]);
-  const [products,setProducts]=useState<any[]>([]);
-  const [followups,setFollowups]=useState<any[]>([]);
-  const [records,setRecords]=useState<any[]>([]);
+  const [sources,setSources]=useState<any[]>(()=>previous?.sources||[]);
+  const [runs,setRuns]=useState<any[]>(()=>previous?.runs||[]);
+  const [items,setItems]=useState<any[]>(()=>previous?.items||[]);
+  const [companies,setCompanies]=useState<any[]>(()=>previous?.companies||[]);
+  const [products,setProducts]=useState<any[]>(()=>previous?.products||[]);
+  const [followups,setFollowups]=useState<any[]>(()=>previous?.followups||[]);
+  const [records,setRecords]=useState<any[]>(()=>previous?.records||[]);
   const [companyScope,setCompanyScope]=useState("");
   const [searchPurpose,setSearchPurpose]=useState("routine");
   const [taskContext,setTaskContext]=useState<{id:string,due:string}|null>(null);
-  const [secondReviews,setSecondReviews]=useState<any[]>([]);
-  const [members,setMembers]=useState<any[]>([]);
-  const [alerts,setAlerts]=useState<any[]>([]);
-  const [automationSetting,setAutomationSetting]=useState<any|null>(null);
-  const [loading,setLoading]=useState(true);
+  const [secondReviews,setSecondReviews]=useState<any[]>(()=>previous?.secondReviews||[]);
+  const [members,setMembers]=useState<any[]>(()=>previous?.members||[]);
+  const [alerts,setAlerts]=useState<any[]>(()=>previous?.alerts||[]);
+  const [automationSetting,setAutomationSetting]=useState<any|null>(()=>previous?.automationSetting||null);
+  const [loading,setLoading]=useState(()=>!previous);
   const [showSource,setShowSource]=useState(false);
   const [showRun,setShowRun]=useState(false);
   const [selectedRun,setSelectedRun]=useState<any|null>(null);
@@ -200,9 +205,18 @@ export default function LiteraturePage(){
     }
   }
 
-  async function load(){
+  async function load(preferCache=false){
     if(!organizationId)return;
-    setLoading(true);
+    const cached=getPVOSCache<Snapshot>(key);
+    if(preferCache&&cached){
+      const v=cached.data;
+      setSources(v.sources);setRuns(v.runs);setItems(v.items);
+      setCompanies(v.companies);setProducts(v.products);setFollowups(v.followups);
+      setRecords(v.records);setSecondReviews(v.secondReviews);setMembers(v.members);
+      setAlerts(v.alerts);setAutomationSetting(v.automationSetting);
+      setLoading(false);
+      if(!shouldRefreshPVOSCache(cached,30000))return;
+    }else if(!cached)setLoading(true);
     const [s,r,i,c,f,rec,sr,mem,al,auto]=await Promise.all([
       loadRows("pvos_literature_sources"),
       loadRows("pvos_literature_runs"),
@@ -222,22 +236,22 @@ export default function LiteraturePage(){
     if(cs.length){
       for(let offset=0;;offset+=1000){const {data,error}=await pvosSupabase.from("pvos_products").select("id,company_id,brand_name,active_ingredient").in("company_id",cs.map(x=>x.id)).order("id").range(offset,offset+999);if(error){setMessage("Could not load product scope: "+error.message);setLoading(false);return;}ps.push(...(data||[]));if((data||[]).length<1000)break;}
     }
-    setSources((s.data||[]).sort((a:any,b:any)=>a.name.localeCompare(b.name)));
-    setRuns(r.data||[]);
-    setItems(i.data||[]);
-    setCompanies(cs);
-    setProducts(ps);
-    setFollowups(f.data||[]);
-    setRecords(rec.data||[]);
-    setSecondReviews(sr.data||[]);
-    setMembers(mem.data||[]);
-    setAlerts(al.data||[]);
-    setAutomationSetting(auto.data||null);
+    const snapshot:Snapshot={
+      sources:(s.data||[]).sort((a:any,b:any)=>a.name.localeCompare(b.name)),
+      runs:r.data||[],items:i.data||[],companies:cs,products:ps,followups:f.data||[],
+      records:rec.data||[],secondReviews:sr.data||[],members:mem.data||[],
+      alerts:al.data||[],automationSetting:auto.data||null
+    };
+    setPVOSCache(key,snapshot);
+    setSources(snapshot.sources);setRuns(snapshot.runs);setItems(snapshot.items);
+    setCompanies(cs);setProducts(ps);setFollowups(snapshot.followups);
+    setRecords(snapshot.records);setSecondReviews(snapshot.secondReviews);setMembers(snapshot.members);
+    setAlerts(snapshot.alerts);setAutomationSetting(snapshot.automationSetting);
     setRunForm(v=>({...v,companyId:new URLSearchParams(window.location.search).get("company")||v.companyId||cs[0]?.id||""}));
     setLoading(false);
   }
 
-  useEffect(()=>{load()},[organizationId]);
+  useEffect(()=>{void load(true);},[organizationId,session?.user.id]);
 
   useEffect(()=>{
     if(loading||!organizationId||navigationReady)return;
