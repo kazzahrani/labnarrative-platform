@@ -8,6 +8,7 @@ import {RmpExcelImport} from "../_rmp-excel-import";
 import Link from "next/link";
 import {deadlineState} from "../_work-utils";
 import styles from "../pvos.module.css";
+import {getPVOSCache,pvosCacheKey,setPVOSCache,shouldRefreshPVOSCache} from "../_session-cache";
 
 type V={id:string,type:"initial"|"subsequent",dlp:string,submission_date:string,identified_risks:string,potential_risks:string,missing_information:string,comments_reason:string,additional_rmm:string,created_at:string};
 type R={submitted_to:string,frequency:string,next_due_date:string,status:string,versions:V[]};
@@ -20,16 +21,52 @@ const id=()=>crypto.randomUUID();
 
 export default function RmpPage(){
  const {organizationId,session,reloadToken}=usePVOS();
- const [companies,setCompanies]=useState<any[]>([]),[products,setProducts]=useState<any[]>([]),[sel,setSel]=useState<any|null>(null);
+ const key=pvosCacheKey(session?.user.id,organizationId,"rmp-portfolio");
+ type Snapshot={companies:any[];products:any[]};
+ const previous=getPVOSCache<Snapshot>(key)?.data;
+ const [companies,setCompanies]=useState<any[]>(()=>previous?.companies||[]),[products,setProducts]=useState<any[]>(()=>previous?.products||[]),[sel,setSel]=useState<any|null>(null);
  const [r,setR]=useState<R>({...blank}),[initial,setInitial]=useState<V|null>(null),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false),[tab,setTab]=useState<"overview"|"initial"|"updates">("overview");
- const [companyScope,setCompanyScope]=useState(""),[filter,setFilter]=useState("all"),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ const [companyScope,setCompanyScope]=useState(""),[filter,setFilter]=useState("all"),[loading,setLoading]=useState(()=>!previous),[error,setError]=useState("");
  const deepLinkOpened=useRef(false);
  const [taskContext,setTaskContext]=useState("");
  const [addOpen,setAddOpen]=useState(false),[expanded,setExpanded]=useState<string|null>(null);
  const [u,setU]=useState<V>({id:"",type:"subsequent",dlp:"",submission_date:"",identified_risks:"",potential_risks:"",missing_information:"",comments_reason:"",additional_rmm:"",created_at:""});
 
- async function load(){if(!organizationId)return;setLoading(true);setError("");try{const {data:c,error:ce}=await pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name");if(ce)throw ce;const cs=c||[];setCompanies(cs);if(!cs.length){setProducts([]);return;}const {data:p,error:pe}=await pvosSupabase.from("pvos_products").select("*").in("company_id",cs.map(x=>x.id)).order("brand_name");if(pe)throw pe;setProducts(p||[]);const q=new URLSearchParams(window.location.search);if(!deepLinkOpened.current){setCompanyScope(cs.some(c=>c.id===q.get("company"))?q.get("company")||"":"");setTaskContext(q.get("task")||"");const target=p?.find(x=>x.id===q.get("product"));if(target)open(target);deepLinkOpened.current=true;}}catch(e:any){setError(e.message||"Could not load RMP portfolio");}finally{setLoading(false);}}
- useEffect(()=>{load()},[organizationId,reloadToken]);
+ async function load(preferCache=false){
+  if(!organizationId)return;
+  const cached=getPVOSCache<Snapshot>(key);
+  const initializeDeepLink=(cs:any[],ps:any[])=>{
+   if(deepLinkOpened.current)return;
+   const q=new URLSearchParams(window.location.search);
+   setCompanyScope(cs.some(c=>c.id===q.get("company"))?q.get("company")||"":"");
+   setTaskContext(q.get("task")||"");
+   const target=ps.find(x=>x.id===q.get("product"));
+   if(target)open(target);
+   deepLinkOpened.current=true;
+  };
+  if(preferCache&&cached){
+   setCompanies(cached.data.companies);setProducts(cached.data.products);
+   setLoading(false);initializeDeepLink(cached.data.companies,cached.data.products);
+   if(!shouldRefreshPVOSCache(cached,30000))return;
+  }else if(!cached)setLoading(true);
+  setError("");
+  try{
+   const {data:c,error:ce}=await pvosSupabase.from("pvos_companies").select("id,name").eq("organization_id",organizationId).order("name");
+   if(ce)throw ce;
+   const cs=c||[];
+   let ps:any[]=[];
+   if(cs.length){
+    const {data:p,error:pe}=await pvosSupabase.from("pvos_products").select("*").in("company_id",cs.map(x=>x.id)).order("brand_name");
+    if(pe)throw pe;
+    ps=p||[];
+   }
+   setPVOSCache(key,{companies:cs,products:ps});
+   setCompanies(cs);setProducts(ps);
+   initializeDeepLink(cs,ps);
+  }catch(e:any){setError(e.message||"Could not load RMP portfolio");}
+  finally{setLoading(false);}
+ }
+ useEffect(()=>{void load(true);},[organizationId,session?.user.id,reloadToken]);
  const cm=useMemo(()=>Object.fromEntries(companies.map(c=>[c.id,c.name])),[companies]);
  const scoped=products.filter(p=>!companyScope||p.company_id===companyScope),tracked=scoped.filter(p=>rv(p).versions.length);
  const dueState=(p:any)=>deadlineState(rv(p).next_due_date,["Closed","Not required"].includes(rv(p).status)?"complete":"in_progress");
@@ -65,9 +102,9 @@ export default function RmpPage(){
   {taskContext?<div className={styles.notice}><Link href={"/pvos/tasks/"+taskContext+"#evidence"}>Task evidence & review →</Link> <Help>Saving the RMP register preserves its versions. Open the task to manage evidence and review.</Help></div>:null}
   <div className={styles.workSummary}><span>{tracked.length} tracked</span><button className={styles.summaryButton} onClick={()=>setFilter("overdue")}>{overdue} overdue</button><button className={styles.summaryButton} onClick={()=>setFilter("due")}>{dueSoon} due in 30 days</button><span>{withArmm} with additional RMM <Help>Additional risk minimization measures are recorded in the latest submitted version.</Help></span></div>
   <section className={styles.panel}>
-   <div className={styles.panelHeader}><h2>RMP portfolio</h2><RmpExcelImport organizationId={organizationId} userId={session?.user.id} companies={companies} products={products} onImported={load}/></div>
+   <div className={styles.panelHeader}><h2>RMP portfolio</h2><RmpExcelImport organizationId={organizationId} userId={session?.user.id} companies={companies} products={products} onImported={()=>void load()}/></div>
    <div className={styles.filterBar}><select aria-label="RMP company" className={styles.input} value={companyScope} onChange={e=>{setCompanyScope(e.target.value);const q=new URL(window.location.href);if(e.target.value)q.searchParams.set("company",e.target.value);else q.searchParams.delete("company");q.searchParams.delete("product");q.searchParams.delete("task");setTaskContext("");window.history.replaceState({},"",q)}}><option value="">All companies</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><select aria-label="RMP work filter" className={styles.input} value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All products</option><option value="overdue">Overdue</option><option value="due">Due in 30 days</option><option value="untracked">Not set up</option></select></div>
-   {error?<div className={styles.errorBox} role="alert">{error} <button className={styles.buttonGhost} onClick={load}>Retry</button></div>:loading?<div className={styles.empty}>Loading RMP portfolio…</div>:<div className={styles.tableWrap}><table className={`${styles.table} ${styles.workTable}`}><thead><tr><th>Company / product</th><th>RMP status</th><th>Latest submission</th><th>Next due</th><th>Additional RMM</th><th>Next action</th></tr></thead><tbody>{visible.map(p=>{const x=rv(p),v=last(x),due=dueState(p);return <tr key={p.id}><td><strong>{p.brand_name}</strong><div>{cm[p.company_id]}</div></td><td><Badge>{v?x.status:"Not set up"}</Badge></td><td>{fmt(v?.submission_date)}{v?<div className={styles.muted}>{v.type==="initial"?"Initial":"Subsequent"} · {x.versions.length} versions</div>:null}</td><td>{x.next_due_date?fmt(x.next_due_date):v?"On request / not set":"—"}{due.label?<div><Badge tone={due.overdue?"red":"default"}>{due.label}</Badge></div>:null}</td><td>{v?arm(v)?"Yes":"No":"—"}</td><td><button className={styles.buttonGhost} onClick={()=>open(p)}>{v?due.overdue?"Review overdue RMP":"Open RMP":"Set up RMP"}</button></td></tr>})}</tbody></table>{!visible.length?<div className={styles.empty}>No products in this view.</div>:null}</div>}
+   {error?<div className={styles.errorBox} role="alert">{error} <button className={styles.buttonGhost} onClick={()=>void load()}>Retry</button></div>:loading?<div className={styles.empty}>Loading RMP portfolio…</div>:<div className={styles.tableWrap}><table className={`${styles.table} ${styles.workTable}`}><thead><tr><th>Company / product</th><th>RMP status</th><th>Latest submission</th><th>Next due</th><th>Additional RMM</th><th>Next action</th></tr></thead><tbody>{visible.map(p=>{const x=rv(p),v=last(x),due=dueState(p);return <tr key={p.id}><td><strong>{p.brand_name}</strong><div>{cm[p.company_id]}</div></td><td><Badge>{v?x.status:"Not set up"}</Badge></td><td>{fmt(v?.submission_date)}{v?<div className={styles.muted}>{v.type==="initial"?"Initial":"Subsequent"} · {x.versions.length} versions</div>:null}</td><td>{x.next_due_date?fmt(x.next_due_date):v?"On request / not set":"—"}{due.label?<div><Badge tone={due.overdue?"red":"default"}>{due.label}</Badge></div>:null}</td><td>{v?arm(v)?"Yes":"No":"—"}</td><td><button className={styles.buttonGhost} onClick={()=>open(p)}>{v?due.overdue?"Review overdue RMP":"Open RMP":"Set up RMP"}</button></td></tr>})}</tbody></table>{!visible.length?<div className={styles.empty}>No products in this view.</div>:null}</div>}
   </section>
 
   {sel&&initial?<div className={styles.modalBackdrop} onMouseDown={e=>{if(e.target===e.currentTarget)setSel(null)}}>
