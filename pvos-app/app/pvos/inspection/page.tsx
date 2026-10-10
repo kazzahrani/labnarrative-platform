@@ -109,7 +109,7 @@ export default function Inspection(){
   }
 
   return <>
-    <Header eyebrow="Inspection evidence" title="Prepare for inspection" sub="Prepare company evidence, record QPPV conclusions and inspect the supporting history." action={<button className={styles.buttonGhost} onClick={load} disabled={loading||!!exporting}>Refresh</button>}/>
+    <Header eyebrow="Inspection evidence" title="Prepare for inspection" sub="Prepare company evidence, record QPPV conclusions and inspect the supporting history." action={<button className={styles.buttonGhost} onClick={()=>void load()} disabled={loading||!!exporting}>Refresh</button>}/>
     <div className={styles.inlineActions} style={{marginBottom:14,flexWrap:"wrap"}}>
       <label>Company <select className={styles.input} value={companyFilter} onChange={e=>setCompanyFilter(e.target.value)} disabled={loading||!!exporting}><option value="all">All companies</option>{data?.companies.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
       <button className={styles.button} disabled={!data||loading||!!error||!!exporting} onClick={()=>download("csv")}>{exporting==="csv"?"Loading full history…":"Export CSV"}</button>
