@@ -117,8 +117,8 @@ export default function CompanyPage(){
         restores its complete UI/state immediately rather than remounting
         and repeating its initial Supabase requests. */}
     {visitedTabs.includes("products")?<div hidden={tab!=="products"}><ProductRegister companyId={company.id} organizationId={company.organization_id} products={products} onSaved={p=>{setProducts(rows=>rows.map(row=>row.id===p.id?p:row));refresh();}}/></div>:null}
-    {visitedTabs.includes("obligations")?<div hidden={tab!=="obligations"}><CompanyObligations companyId={company.id} organizationId={company.organization_id} products={products} initialObligationId={requestedObligation}/></div>:null}
-    {visitedTabs.includes("psur")?<div hidden={tab!=="psur"}><PsurCycles companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh}/></div>:null}
+    {visitedTabs.includes("obligations")?<div hidden={tab!=="obligations"}><CompanyObligations companyId={company.id} organizationId={company.organization_id} products={products} initialObligationId={requestedObligation} active={tab==="obligations"}/></div>:null}
+    {visitedTabs.includes("psur")?<div hidden={tab!=="psur"}><PsurCycles companyId={company.id} organizationId={company.organization_id} products={products} onChanged={refresh} active={tab==="psur"}/></div>:null}
     {visitedTabs.includes("documents")?<div hidden={tab!=="documents"}><CompanyRecords companyId={company.id} organizationId={company.organization_id} view="documents"/></div>:null}
     {visitedTabs.includes("history")?<div hidden={tab!=="history"}><CompanyRecords companyId={company.id} organizationId={company.organization_id} view="history"/></div>:null}
     <NewTaskModal open={showNew} initialCompanyId={company.id} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);refresh()}}/>
