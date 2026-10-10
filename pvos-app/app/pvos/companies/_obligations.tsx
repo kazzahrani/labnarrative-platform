@@ -43,8 +43,8 @@ const statusText=(s:string)=>({not_started:"Not started",in_progress:"In progres
 const roleText=(s:string)=>({organization:"Our organization",shared:"Shared",client:"Client"} as Record<string,string>)[s]||s;
 
 export function CompanyObligations({
- companyId,organizationId,products,initialObligationId
-}:{companyId:string;organizationId:string;products:Product[];initialObligationId?:string|null}){
+ companyId,organizationId,products,initialObligationId,active=true
+}:{companyId:string;organizationId:string;products:Product[];initialObligationId?:string|null;active?:boolean}){
  const [obligations,setObligations]=useState<Obligation[]>([]);
  const [work,setWork]=useState<Work[]>([]),[evidence,setEvidence]=useState<Evidence[]>([]);
  const [reviews,setReviews]=useState<Review[]>([]),[audit,setAudit]=useState<History[]>([]);
@@ -56,6 +56,7 @@ export function CompanyObligations({
  const [detailTab,setDetailTab]=useState("requirement");
  const [editing,setEditing]=useState<string|null>(null),[modal,setModal]=useState(false),[draft,setDraft]=useState<Draft>(blank);
  const detailRef=useRef<HTMLDivElement>(null);
+ const lastLoadedAt=useRef(0);
  const [revision,setRevision]=useState(0);
 
  const load=useCallback(async()=>{
@@ -81,10 +82,12 @@ export function CompanyObligations({
   }
   setObligations((o.data||[]) as Obligation[]);setWork(workRows);setMembers((m.data||[]) as Member[]);
   setEvidence(files);setAudit((a.data||[]) as History[]);setReviews((r.data||[]) as Review[]);
+  lastLoadedAt.current=Date.now();
   setLoading(false);
  },[companyId,organizationId]);
 
  useEffect(()=>{let active=true;setLoading(true);setError("");load().catch(e=>{if(active){setError((e as Error).message);setLoading(false);}});return ()=>{active=false;};},[load,revision]);
+ useEffect(()=>{if(active&&lastLoadedAt.current&&Date.now()-lastLoadedAt.current>30000){void load().catch(e=>setError((e as Error).message));}},[active,load]);
  useEffect(()=>{if(initialObligationId)setSelected(initialObligationId);},[initialObligationId]);
  useEffect(()=>{if(selected&&detailRef.current)detailRef.current.scrollIntoView({behavior:"smooth",block:"nearest"});},[selected]);
  useEffect(()=>{if(!modal)return;const onKey=(e:KeyboardEvent)=>{if(e.key==="Escape"&&!busy)setModal(false);};window.addEventListener("keydown",onKey);return ()=>window.removeEventListener("keydown",onKey);},[modal,busy]);
