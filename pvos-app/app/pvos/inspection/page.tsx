@@ -11,6 +11,7 @@ import { loadInspection, loadInspectionAudit, scopeInspection, inspectionAccount
 import InspectionChecklist from "./_checklist";
 import { loadInspectionChecklist } from "../_inspection-checklist";
 import styles from "../pvos.module.css";
+import {getPVOSCache,pvosCacheKey,setPVOSCache,shouldRefreshPVOSCache} from "../_session-cache";
 
 type Tab="authority"|"literature"|"handover"|"approvals"|"registration"|"tasks"|"audit";
 type Row=Record<string,any>;
@@ -45,20 +46,35 @@ function AuditDetail({row,organizationId}:{row:Row,organizationId:string}){
 
 export default function Inspection(){
   const {organizationId,session}=usePVOS();
+  const key=pvosCacheKey(session?.user.id,organizationId,"inspection");
   const [view,setView]=useState<"checklist"|"evidence">("checklist");
-  const [data,setData]=useState<InspectionData|null>(null);
+  const [data,setData]=useState<InspectionData|null>(()=>getPVOSCache<InspectionData>(key)?.data||null);
   const [companyFilter,setCompanyFilter]=useState("all");
   const [tab,setTab]=useState<Tab>("literature");
-  const [loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null);
+  const [loading,setLoading]=useState(()=>!getPVOSCache<InspectionData>(key)),[error,setError]=useState<string|null>(null);
   const [exporting,setExporting]=useState<"csv"|"json"|null>(null),[exportError,setExportError]=useState<string|null>(null);
   const request=useRef(0);
-  const load=useCallback(async()=>{
-    if(!organizationId)return;const id=++request.current;setLoading(true);setError(null);
-    try{const next=await loadInspection(pvosSupabase,organizationId);if(id===request.current)setData(next);}
+  const load=useCallback(async(preferCache=false)=>{
+    if(!organizationId)return;
+    const id=++request.current;
+    const cached=getPVOSCache<InspectionData>(key);
+    if(preferCache&&cached){
+      setData(cached.data);setLoading(false);
+      if(!shouldRefreshPVOSCache(cached,30000))return;
+    }else if(!cached)setLoading(true);
+    setError(null);
+    try{
+      const next=await loadInspection(pvosSupabase,organizationId);
+      if(id===request.current){setPVOSCache(key,next);setData(next);}
+    }
     catch(e){if(id===request.current)setError(e instanceof Error?e.message:"Could not load inspection records.");}
     finally{if(id===request.current)setLoading(false);}
-  },[organizationId]);
-  useEffect(()=>{setData(null);setCompanyFilter(new URLSearchParams(window.location.search).get("company")||"all");load();return()=>{request.current++;};},[load]);
+  },[organizationId,key]);
+  useEffect(()=>{
+    setCompanyFilter(new URLSearchParams(window.location.search).get("company")||"all");
+    void load(true);
+    return()=>{request.current++;};
+  },[load]);
   const scoped=useMemo(()=>data?scopeInspection(data,companyFilter):null,[data,companyFilter]);
   const approvals=useMemo(()=>scoped?inspectionApprovals(scoped):[],[scoped]);
   const checks=useMemo(()=>scoped?inspectionChecks(scoped):null,[scoped]);
