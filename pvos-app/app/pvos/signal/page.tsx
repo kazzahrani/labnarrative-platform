@@ -7,6 +7,7 @@ import { pvosSupabase } from "../_pvos-supabase";
 import AuthorityMonitoring from "./_authority-monitoring";
 import { readApprovalRows } from "../_approval";
 import styles from "../pvos.module.css";
+import {getPVOSCache,pvosCacheKey,setPVOSCache,shouldRefreshPVOSCache} from "../_session-cache";
 
 type Assessment="unassessed"|"potential_signal"|"no_signal_concern"|"needs_more_info";
 
@@ -30,25 +31,34 @@ function assessmentTone(v:string):"default"|"red"|"amber"|"green"|"lime"{
 
 export default function SignalReviewPage(){
   const {organizationId,session}=usePVOS();
-  const [companyScope,setCompanyScope]=useState("all"),[companies,setCompanies]=useState<any[]>([]);
+  type Snapshot={companies:any[];followups:any[];items:any[];products:any[];reviews:any[]};
+  const key=pvosCacheKey(session?.user.id,organizationId,"signal-review");
+  const previous=getPVOSCache<Snapshot>(key)?.data;
+  const [companyScope,setCompanyScope]=useState("all"),[companies,setCompanies]=useState<any[]>(()=>previous?.companies||[]);
   const [view,setView]=useState<"review"|"authority">("review");
   useEffect(()=>{const params=new URLSearchParams(window.location.search);setCompanyScope(params.get("company")||"all");if(params.get("view")==="authority"||params.has("authorityPeriod"))setView("authority");},[]);
   function changeView(next:"review"|"authority"){
     setView(next);const url=new URL(window.location.href);url.searchParams.set("view",next);if(next==="review")url.searchParams.delete("authorityPeriod");window.history.replaceState(window.history.state,"",url);
   }
-  const [followups,setFollowups]=useState<any[]>([]);
-  const [items,setItems]=useState<any[]>([]);
-  const [products,setProducts]=useState<any[]>([]);
-  const [reviews,setReviews]=useState<any[]>([]);
-  const [loading,setLoading]=useState(true);
+  const [followups,setFollowups]=useState<any[]>(()=>previous?.followups||[]);
+  const [items,setItems]=useState<any[]>(()=>previous?.items||[]);
+  const [products,setProducts]=useState<any[]>(()=>previous?.products||[]);
+  const [reviews,setReviews]=useState<any[]>(()=>previous?.reviews||[]);
+  const [loading,setLoading]=useState(()=>!previous);
   const [busy,setBusy]=useState(false);
   const [selected,setSelected]=useState<any|null>(null);
   const [notes,setNotes]=useState("");
   const [message,setMessage]=useState("");
 
-  async function load(){
+  async function load(preferCache=false){
     if(!organizationId)return;
-    setLoading(true);
+    const cached=getPVOSCache<Snapshot>(key);
+    if(preferCache&&cached){
+      setCompanies(cached.data.companies);setFollowups(cached.data.followups);
+      setItems(cached.data.items);setProducts(cached.data.products);setReviews(cached.data.reviews);
+      setLoading(false);
+      if(!shouldRefreshPVOSCache(cached,30000))return;
+    }else if(!cached)setLoading(true);
     try{
       const rows=(table:string)=>readApprovalRows<any>((from,to)=>pvosSupabase.from(table).select("*").eq("organization_id",organizationId).order("id").range(from,to));
       const [f,i,p,r,c]=await Promise.all([
@@ -56,12 +66,13 @@ export default function SignalReviewPage(){
         rows("pvos_literature_items"),
         readApprovalRows<any>((from,to)=>pvosSupabase.from("pvos_products").select("*,pvos_companies!inner(organization_id)").eq("pvos_companies.organization_id",organizationId).order("id").range(from,to)),rows("pvos_signal_reviews"),rows("pvos_companies")
       ]);
+      setPVOSCache(key,{followups:f,items:i,products:p,reviews:r,companies:c});
       setFollowups(f);setItems(i);setProducts(p);setReviews(r);setCompanies(c);
     }catch(e){setMessage("Signal records could not be fully loaded: "+((e as {message?:string}).message||"Refresh and retry."));}
     finally{setLoading(false);}
   }
 
-  useEffect(()=>{load()},[organizationId]);
+  useEffect(()=>{void load(true);},[organizationId,session?.user.id]);
 
   const itemMap=useMemo(()=>Object.fromEntries(items.map(x=>[x.id,x])),[items]);
   const productMap=useMemo(()=>Object.fromEntries(products.map(x=>[x.id,x])),[products]);
