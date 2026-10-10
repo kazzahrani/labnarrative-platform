@@ -7,6 +7,7 @@ import {Badge,Header,Help} from "../_components";
 import {usePVOS} from "../_provider";
 import {pvosSupabase} from "../_pvos-supabase";
 import styles from "../pvos.module.css";
+import {getPVOSCache,pvosCacheKey,setPVOSCache,shouldRefreshPVOSCache} from "../_session-cache";
 
 type Invoice={
  id:string;company_id:string;company_name:string;title:string;invoice_ref:string|null;description:string;
@@ -49,10 +50,13 @@ export default function RequestsPage(){
  const router=useRouter();
  const query=useSearchParams();
  const {session,loading:authLoading,organizationId}=usePVOS();
- const [invoices,setInvoices]=useState<Invoice[]>([]);
- const [departments,setDepartments]=useState<Department[]>([]);
- const [companies,setCompanies]=useState<Company[]>([]);
- const [loading,setLoading]=useState(true),[error,setError]=useState("");
+ type Snapshot={invoices:Invoice[];departments:Department[];companies:Company[]};
+ const key=pvosCacheKey(session?.user.id,organizationId,"requests-inbox");
+ const previous=getPVOSCache<Snapshot>(key)?.data;
+ const [invoices,setInvoices]=useState<Invoice[]>(()=>previous?.invoices||[]);
+ const [departments,setDepartments]=useState<Department[]>(()=>previous?.departments||[]);
+ const [companies,setCompanies]=useState<Company[]>(()=>previous?.companies||[]);
+ const [loading,setLoading]=useState(()=>!previous),[error,setError]=useState("");
  const [view,setView]=useState<"all"|"mine"|"complete">("all");
  const [type,setType]=useState<"all"|"invoice"|"department">("all");
  const [company,setCompany]=useState("all"),[search,setSearch]=useState("");
@@ -71,18 +75,26 @@ export default function RequestsPage(){
   if(inv.error)throw inv.error;
   if(dep.error)throw dep.error;
   if(co.error)throw co.error;
-  setInvoices(inv.data||[]);
-  setDepartments(dep.data||[]);
-  setCompanies(co.data||[]);
+  const snapshot={invoices:inv.data||[],departments:dep.data||[],companies:co.data||[]};
+  setPVOSCache(key,snapshot);
+  setInvoices(snapshot.invoices);
+  setDepartments(snapshot.departments);
+  setCompanies(snapshot.companies);
   setLoading(false);
- },[]);
+ },[key]);
  useEffect(()=>{
-  if(!session)return;
+  if(!session||!organizationId)return;
   let active=true;
-  setLoading(true);setError("");
+  const cached=getPVOSCache<Snapshot>(key);
+  if(cached){
+   setInvoices(cached.data.invoices);setDepartments(cached.data.departments);
+   setCompanies(cached.data.companies);setLoading(false);
+   if(!shouldRefreshPVOSCache(cached,15000))return;
+  }else setLoading(true);
+  setError("");
   reload().catch(e=>{if(active){setError((e as Error).message);setLoading(false);}});
   return ()=>{active=false;};
- },[session?.user.id,organizationId,reload]);
+ },[session?.user.id,organizationId,reload,key]);
  useEffect(()=>{
   const onFocus=()=>{if(document.visibilityState==="visible"&&session)reload().catch(()=>{});};
   window.addEventListener("focus",onFocus);
