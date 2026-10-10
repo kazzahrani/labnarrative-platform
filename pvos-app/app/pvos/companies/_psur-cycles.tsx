@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {readEurdFile,parseEurdRows,eurdFrequencyMonths,type EurdRow,type EurdColumns,type EurdImport} from "./_eurd-import";
 import {Badge,Help} from "../_components";
 import {PSURLifecycle} from "./_psur-lifecycle";
@@ -11,8 +11,9 @@ const EMA_URL="https://www.ema.europa.eu/en/human-regulatory-overview/post-autho
 type Entry={id:string,product_id:string,active_substance:string,data_lock_point:string,submission_due_date:string,frequency_months:number|null,jurisdiction:string,authority_basis:string|null,source_revision:string,status:string,task_id:string|null,source_row:any,source_published_at:string|null,confirmed_at:string|null,is_simulated:boolean};
 const norm=(v:any)=>String(v??"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const colLetter=(value:number)=>{let n=value+1,s="";while(n>0){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26);}return s;};
-export function PsurCycles({companyId,organizationId,products,onChanged}:{companyId:string,organizationId:string,products:any[],onChanged?:()=>void}){
+export function PsurCycles({companyId,organizationId,products,onChanged,active=true}:{companyId:string,organizationId:string,products:any[],onChanged?:()=>void,active?:boolean}){
  const [entries,setEntries]=useState<Entry[]>([]),[parsed,setParsed]=useState<EurdRow[]>([]);
+ const lastLoadedAt=useRef(0);
  const [importData,setImportData]=useState<EurdImport|null>(null);
  const [mapSheet,setMapSheet]=useState(0),[headerRow,setHeaderRow]=useState(0);
  const [columns,setColumns]=useState<EurdColumns>({substance:-1,dlp:-1,due:-1,frequency:-1});
@@ -32,9 +33,10 @@ export function PsurCycles({companyId,organizationId,products,onChanged}:{compan
  const load=useCallback(async()=>{
   const {data,error:e}=await pvosSupabase.from("pvos_psur_cycles").select("*").eq("company_id",companyId).eq("organization_id",organizationId).order("submission_due_date",{ascending:true});
   if(e)throw e;
-  setEntries(data||[]);
+  setEntries(data||[]);lastLoadedAt.current=Date.now();
  },[companyId,organizationId]);
  useEffect(()=>{load().catch(e=>setError(e.message));},[load]);
+ useEffect(()=>{if(active&&lastLoadedAt.current&&Date.now()-lastLoadedAt.current>30000){void load().catch(e=>setError(e.message));}},[active,load]);
  useEffect(()=>{
   let active=true;
   setIsDemoCompany(false);
