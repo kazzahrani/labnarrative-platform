@@ -59,6 +59,7 @@ export default function CryptohopperAlternativePage() {
       date="Updated 30 Sep 2026"
       readTime="6 min read"
       visualKicker="Make profit first. Pay us second."
+      visual="cryptohopper"
       comparisonHero={{
         competitor: "Cryptohopper",
         slug: "cryptohopper",

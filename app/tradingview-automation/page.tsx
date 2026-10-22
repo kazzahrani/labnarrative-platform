@@ -70,6 +70,7 @@ export default function TradingViewAutomationPage() {
       date="Updated 15 Sep 2026"
       readTime="10 min read"
       visualKicker="Signal to execution"
+      visual="tradingview"
       toc={toc}
       relatedGuides={[
         {

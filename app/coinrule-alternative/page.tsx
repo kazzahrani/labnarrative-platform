@@ -68,6 +68,7 @@ export default function CoinruleAlternativePage() {
       date="Updated 15 Sep 2026"
       readTime="6 min read"
       visualKicker="Map the rules"
+      visual="coinrule"
       toc={toc}
       relatedGuides={[
         { href: "/dca-bot", category: "DCA Bots", title: "Crypto DCA Bots: Entries, Averaging and Exit Rules Explained", excerpt: "Understand the position logic that must be preserved when translating a Spot automation." },

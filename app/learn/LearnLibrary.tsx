@@ -2,24 +2,15 @@
 
 import { useMemo, useState } from "react";
 import styles from "./learn.module.css";
+import LearnIllustration, { visualForCategory } from "../LearnIllustration";
 import { learnCategories, learnGuides, type LearnGuide } from "./content";
 
-function coverClass(visual: LearnGuide["visual"]) {
-  const map = {
-    paper: styles.coverPaper,
-    dca: styles.coverDca,
-    tradingview: styles.coverTradingview,
-    threecommas: styles.coverThreecommas,
-    bitsgap: styles.coverBitsgap,
-    cryptohopper: styles.coverCryptohopper,
-    coinrule: styles.coverCoinrule,
-  };
-  return map[visual];
-}
-
 function Cover({ guide }: { guide: LearnGuide }) {
+  const visual = guide.visual ?? visualForCategory(guide.category);
   return (
-    <div className={`${styles.cover} ${coverClass(guide.visual)}`} aria-hidden="true">
+    <div className={styles.cover} aria-hidden="true">
+      <div className={styles.coverGlow} />
+      <LearnIllustration visual={visual} className={styles.coverIllustration} />
       <span className={styles.coverLabel}>LabNarrative Learn · {guide.category}</span>
       <strong className={styles.coverTitle}>{guide.kicker}</strong>
     </div>
