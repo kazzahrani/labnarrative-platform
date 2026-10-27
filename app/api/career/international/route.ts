@@ -96,7 +96,7 @@ export async function GET() {
           "User-Agent": "LabNarrative-Career-Radar/1.0",
           "X-GitHub-Api-Version": "2022-11-28"
         },
-        next: { revalidate: 600 }
+        cache: "no-store"
       });
       if (!r.ok) throw new Error("GitHub job index returned " + r.status);
       const rows = await r.json();
@@ -112,10 +112,10 @@ export async function GET() {
         seen.add(key);
         return true;
       })
-      .sort((a, b) => b.fit_score - a.fit_score || b.verified_on.localeCompare(a.verified_on))
+      .sort((a, b) => b.verified_on.localeCompare(a.verified_on) || b.id - a.id || b.fit_score - a.fit_score)
       .slice(0, 60);
     return NextResponse.json({ ok: true, source: "public_vacancy_records", jobs, note: "Separate from private App2 applications. No automatic submission." }, {
-      headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=600" }
+      headers: { "Cache-Control": "no-store, max-age=0, must-revalidate" }
     });
   } catch {
     return NextResponse.json({ ok: false, jobs: [], error: "The international feed is temporarily unavailable." }, { status: 503 });
